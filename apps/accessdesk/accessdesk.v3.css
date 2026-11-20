@@ -1,0 +1,79 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：无障碍操作台（accessdesk）—— 家族：作者案头 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/accessdesk/accessdesk-view.js（_rows / _levels / _prefs / _states / _audit / _html）；accessdesk-app.js 只读写偏好，无 DOM。
+   屏幕与状态：页头（标题、说明、备注）· 操作回执 .axd-flash / -bad · 「这一屏会怎么排」读数 · 操作层档位（档位胶囊、已保存、
+               预览中警示 .axd-warn、保存 / 退出预览）· 个性化（主题胶囊、紧凑列表开关按钮、只读说明）·
+               状态怎么读（本页状态 .axd-tone-*、图例 .axd-legend、会话读数）· 可达性自检 .axd-self / -bad。
+               根上的 data-ax-band="large"（大字号档）与 data-ax-narrow="1"（窄屏：胶囊与按钮改成整行）是 App 的排版状态，皮肤保留其效果。
+   设计：iOS inset grouped（这个 App 本身讲「放大不遮挡、状态不只靠颜色」，所以每个状态都保留文字，颜色只是 14% 浅底的辅助）。
+         键值行 = 左 k（次级）右 v（主文字，可换行）；档位 / 主题胶囊 = 分段式选择，选中是绿色浅底（与旧版语义一致：已选 = 成功色）。
+   本 App 的「深色操作主题」（html[data-ax-theme="dark"]）是用户在这里选的设置：旧样式把 .axd-wrap / .axd-box 写死成 #1c1c1e / #2a2a2c；
+   v3.5 在该主题下把本页切到深色岛 token（末节），外壳面板 .phone-body-panel 不归本皮肤。
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构 / data-* 不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 7 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    #phone-panel[data-rp-ios="3"] :is(.axd-root, .axd-wrap) { --rp33-accent: var(--lt-sys-blue); --rp36-accent-text: var(--rp36-text-blue); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-blue) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-blue) 40%, transparent); }
+
+    /* ===== 屏：页面底 + 页头 ===== */
+    #phone-panel[data-rp-ios="3"] .axd-wrap { min-block-size: 100%; box-sizing: border-box; padding: var(--rp33-sp-2) var(--rp33-margin) var(--rp33-sp-8); background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .axd-head { display: grid; gap: var(--rp33-sp-1); margin-block-end: var(--rp33-sp-4); padding: var(--rp33-sp-2) var(--rp33-sp-1) 0; border: 0; }
+    #phone-panel[data-rp-ios="3"] .axd-title { font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .axd-sub { font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .axd-note { margin-block-start: var(--rp33-sp-1); font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+
+    /* ===== 状态：操作回执 ===== */
+    #phone-panel[data-rp-ios="3"] .axd-flash { margin-block-end: var(--rp33-sp-3); padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: color-mix(in srgb, var(--lt-sys-green) 12%, transparent); color: var(--rp36-text-green); font: 600 var(--lt-ios-footnote-size) / 1.35 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .axd-flash-bad { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+
+    /* ===== 组件：分组卡 + 键值行 ===== */
+    #phone-panel[data-rp-ios="3"] .axd-box { margin-block-end: var(--rp33-sp-4); padding: var(--rp33-sp-3) var(--rp33-sp-4) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .axd-box h3 { margin: 0 0 var(--rp33-sp-2); font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .axd-row { align-items: baseline; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) 0; box-sizing: border-box; border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .axd-box h3 + .axd-row { border-block-start: 0; }
+    #phone-panel[data-rp-ios="3"] .axd-k { flex: none; min-inline-size: 88px; font: var(--lt-type-subhead); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .axd-v { flex: 1 1 auto; min-inline-size: 0; font: var(--lt-type-subhead); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .axd-dim { font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .axd-mark { font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .axd-tone-good { color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"] .axd-tone-bad { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .axd-tone-muted { color: var(--rp33-label-2); }
+
+    /* ===== 屏：操作层档位 / 个性化 · 选择胶囊 ===== */
+    #phone-panel[data-rp-ios="3"] .axd-caps { flex-wrap: wrap; gap: var(--rp33-sp-2); margin-block: var(--rp33-sp-1) var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .axd-cap { position: relative; min-block-size: 36px; padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label); font: 500 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .axd-cap::after { content: ""; position: absolute; inset: -4px 0; }
+    #phone-panel[data-rp-ios="3"] .axd-cap-on { border: 0; background: color-mix(in srgb, var(--lt-sys-green) 16%, transparent); color: var(--rp36-text-green); font-weight: 600; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lt-sys-green) 40%, transparent); }
+    #phone-panel[data-rp-ios="3"] .axd-cap:focus-visible { outline: 2px solid var(--rp33-accent-ring); outline-offset: 2px; }
+    #phone-panel[data-rp-ios="3"] .axd-warn { margin-block: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); color: var(--rp33-label); font: var(--lt-type-footnote); }
+
+    /* ===== 组件：动作按钮（保存 = 强调浅底；退出预览 = 中性） ===== */
+    #phone-panel[data-rp-ios="3"] .axd-acts { flex-wrap: wrap; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .axd-btn { position: relative; flex: none; min-block-size: 36px; padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-accent-soft); color: var(--rp36-accent-text); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .axd-btn::after { content: ""; position: absolute; inset: -4px 0; }
+    #phone-panel[data-rp-ios="3"] .axd-btn-dim { background: var(--rp33-fill); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .axd-btn:active, #phone-panel[data-rp-ios="3"] .axd-cap:active { filter: brightness(0.92); scale: 0.97; }
+    #phone-panel[data-rp-ios="3"] .axd-btn:focus-visible { outline: 2px solid var(--rp33-accent-ring); outline-offset: 2px; }
+    #phone-panel[data-rp-ios="3"] .axd-row .axd-btn { min-block-size: 28px; padding: 0 var(--rp33-sp-3); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .axd-row .axd-btn::after { inset: -8px -2px; }
+    /* App 的排版状态（大字号档 / 窄屏）：只调字号，整行宽度沿用旧样式 */
+    #phone-panel[data-rp-ios="3"] .axd-root[data-ax-band="large"] :is(.axd-cap, .axd-btn) { font-size: var(--lt-ios-body-size); min-block-size: var(--rp33-hit); }
+
+    /* ===== 屏：状态怎么读 · 图例 ===== */
+    #phone-panel[data-rp-ios="3"] .axd-legend { flex-wrap: wrap; gap: var(--rp33-sp-2); margin-block: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .axd-legend-i { padding: 2px var(--rp33-sp-2); border-radius: 999px; background: var(--rp33-fill); font: 600 var(--lt-ios-caption1-size) / 1.4 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .axd-legend-i.axd-tone-good { background: color-mix(in srgb, var(--lt-sys-green) 14%, transparent); }
+    #phone-panel[data-rp-ios="3"] .axd-legend-i.axd-tone-bad { background: var(--rp33-danger-soft); }
+
+    /* ===== 屏：可达性自检 ===== */
+    #phone-panel[data-rp-ios="3"] .axd-self { margin-block-start: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: color-mix(in srgb, var(--lt-sys-green) 12%, transparent); color: var(--rp33-label); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .axd-self-bad { border: 0; background: var(--rp33-danger-soft); color: var(--rp36-text-red); font-weight: 600; }
+
+    /* ===== 状态：用户在无障碍台选了「深色操作主题」（html[data-ax-theme="dark"]）—— 尊重用户设置：本页就地切到深色岛取值 ===== */
+    #phone-panel[data-rp-ios="3"]:where(html[data-ax-theme="dark"] *) :is(.axd-root, .axd-wrap) { --rp33-bg: var(--rp34-dk-bg); --rp33-bg-plain: var(--rp34-dk-bg); --rp33-label: var(--rp34-dk-label); --rp33-label-2: var(--rp34-dk-label-2); --rp33-label-3: var(--rp34-dk-label-3); --rp33-surface: var(--rp34-dk-surface); --rp33-surface-2: var(--rp34-dk-surface-2); --rp33-fill: var(--rp34-dk-fill); --rp33-fill-2: var(--rp34-dk-fill-2); --rp33-field-bg: var(--rp34-dk-fill); --rp33-sep: var(--rp34-dk-sep); --rp33-card-shadow: var(--rp34-dk-shadow); --rp33-rim: none; color-scheme: dark; }
+}

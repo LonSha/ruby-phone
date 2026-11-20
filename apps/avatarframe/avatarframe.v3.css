@@ -1,0 +1,82 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：头像框（avatarframe）—— 家族：媒体 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/avatarframe/avatarframe-view.js（_buildHTML：状态条、回执、未保存提示、挂载列表、统计、框库列表、新建 / 粘贴、导入、设置）；其余文件无 DOM。
+   屏幕与状态：页头 · 状态条（ok / warn / err）· 回执 .avf-flash · 未保存 .avf-dirty（保存 / 放弃挂载）·
+               挂载（行：名称 / 挂的什么 / 动作：换框 .avf-pick / 卸下 .avf-unmount；孤儿 .is-orphan）· 统计行 ·
+               框库（行：名称 / 类型 / 使用中 / 删除 .avf-item-del；空）· 新建（名称 / 地址 / 添加 / 清空）· 导入（文本框）·
+               设置（允许外链 / 注入 / 最多注入数）· 小按钮二次确认 .avf-mini-armed · 禁用态 · 提示。
+   设计：iOS「设置 · 墙纸」语气：跟随系统 inset grouped，强调色系统青；与 punchcard / widget 同一套暗色 rgba 源样式的整改方式：
+         所有 rgba(255,255,255,.0x) 面板换成 surface / surface-2，写死的亮色字（#e2e8f0 等）换成 label 层级；孤儿挂载 = 红色浅底（旧版 2px 左线去掉）。
+   audit-allow: avf-face-ok avf-face-warn avf-face-err —— 'avf-face-' + tone 拼出来的
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 6 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    /* 渲染自查（v3.5）：白字在本强调色上只有 2.57:1（浅）/ 1.99:1（深），不到 4.5:1；填充按钮 / 选中胶囊的文字改用带一点强调色相的近黑墨（7.23:1 / 9.13:1）。 */
+    #phone-panel[data-rp-ios="3"] .avf-root { --rp33-accent: var(--lt-sys-teal); --rp36-accent-text: var(--rp36-text-teal); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-teal) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-teal) 40%, transparent); --rp33-on-accent: color-mix(in srgb, var(--lt-sys-black) 88%, var(--rp33-accent)); }
+
+    /* ===== 屏：外壳（页面底 / 页头 / 状态条 / 回执 / 未保存） ===== */
+    #phone-panel[data-rp-ios="3"] .avf-root { gap: var(--rp33-sp-3); min-block-size: 100%; box-sizing: border-box; padding: var(--rp33-sp-2) var(--rp33-margin) var(--rp33-sp-8); background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .avf-header { padding: var(--rp33-sp-2) var(--rp33-sp-1) 0; }
+    #phone-panel[data-rp-ios="3"] .avf-header h2 { margin: 0; font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .avf-face { align-items: center; gap: var(--rp33-sp-2); padding: var(--rp33-sp-3) var(--rp33-sp-4); border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .avf-face-ok { background: color-mix(in srgb, var(--lt-sys-green) 14%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .avf-face-warn { background: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .avf-face-err { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .avf-face-icon { font-size: 17px; line-height: 1; }
+    #phone-panel[data-rp-ios="3"] .avf-face-label { font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .avf-flash { padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: var(--rp33-accent-soft); color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1.35 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .avf-dirty { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1.35 var(--lt-font-ios); }
+
+    /* ===== 组件：分组卡 / 标题 / 空 / 提示 ===== */
+    #phone-panel[data-rp-ios="3"] :is(.avf-mounts, .avf-stats, .avf-create, .avf-import, .avf-settings) { padding: var(--rp33-sp-3) var(--rp33-sp-4) var(--rp33-sp-4); border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .avf-list-title { margin: 0 0 var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .avf-empty { padding: var(--rp33-sp-2) 0; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .avf-hint { margin-block-start: var(--rp33-sp-2); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：挂载列表 ===== */
+    #phone-panel[data-rp-ios="3"] .avf-mount { flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--rp33-sp-2); min-block-size: 52px; padding: var(--rp33-sp-2) 0; border-radius: 0; background: transparent; border-block-start: 0.5px solid var(--rp33-sep); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .avf-mount.is-orphan { border: 0; margin-inline: calc(var(--rp33-sp-2) * -1); padding-inline: var(--rp33-sp-2); border-radius: var(--rp33-field-radius); background: var(--rp33-danger-soft); }
+    #phone-panel[data-rp-ios="3"] .avf-mount-head { flex-direction: column; gap: 2px; min-inline-size: 0; }
+    #phone-panel[data-rp-ios="3"] .avf-mount-name { color: var(--rp33-label); font: var(--lt-type-body); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .avf-mount-what { color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .avf-mount-actions { gap: var(--rp33-sp-2); }
+
+    /* ===== 屏：统计 ===== */
+    #phone-panel[data-rp-ios="3"] .avf-stat-row { justify-content: space-between; align-items: center; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-1) 0; border: 0; color: var(--rp33-label); font: var(--lt-type-subhead); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .avf-stat-row + .avf-stat-row { border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .avf-stat-row span:last-child { color: var(--rp33-label); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+
+    /* ===== 屏：框库列表 ===== */
+    #phone-panel[data-rp-ios="3"] .avf-list { gap: 0; }
+    #phone-panel[data-rp-ios="3"] .avf-item { align-items: center; justify-content: space-between; gap: var(--rp33-sp-2); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) 0; border-radius: 0; background: transparent; border-block-start: 0.5px solid var(--rp33-sep); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .avf-item-main { flex-wrap: wrap; align-items: baseline; gap: var(--rp33-sp-2); min-inline-size: 0; }
+    #phone-panel[data-rp-ios="3"] .avf-item-name { color: var(--rp33-label); font: var(--lt-type-body); }
+    #phone-panel[data-rp-ios="3"] .avf-item-kind { padding: 1px var(--rp33-sp-2); border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label-2); font: 600 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .avf-item-used { color: var(--rp36-accent-text); font: var(--lt-type-caption1); }
+
+    /* ===== 组件：输入 / 按钮 / 小按钮 ===== */
+    #phone-panel[data-rp-ios="3"] .avf-input { min-block-size: var(--rp33-hit); margin-block-end: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .avf-textarea { min-block-size: 112px; font: 400 var(--lt-ios-footnote-size) / 1.45 var(--lt-font-ios-mono); }
+    #phone-panel[data-rp-ios="3"] .avf-input::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .avf-input:focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .avf-actions { flex-wrap: wrap; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .avf-btn { min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .avf-btn-primary { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .avf-mini { position: relative; min-block-size: 28px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .avf-mini::after { content: ""; position: absolute; inset: -8px -2px; }
+    #phone-panel[data-rp-ios="3"] .avf-pick { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] :is(.avf-item-del, .avf-unmount) { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .avf-mini-armed { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] :is(.avf-btn, .avf-mini):disabled { background: var(--rp33-fill); color: var(--rp33-label-3); opacity: 1; cursor: default; }
+    #phone-panel[data-rp-ios="3"] :is(.avf-btn, .avf-mini):not(:disabled):active { filter: brightness(0.92); scale: 0.97; }
+
+    /* ===== 屏：设置 ===== */
+    #phone-panel[data-rp-ios="3"] :is(.avf-toggle, .avf-field) { align-items: center; justify-content: space-between; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-1) 0; border-block-start: 0.5px solid var(--rp33-sep); color: var(--rp33-label); font: var(--lt-type-body); accent-color: var(--lt-sys-green); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .avf-field input[type="number"] { inline-size: 88px; min-block-size: 36px; padding: 0 var(--rp33-sp-2); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); font: var(--lt-type-body); font-variant-numeric: tabular-nums; text-align: end; }
+}

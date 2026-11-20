@@ -1,0 +1,115 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：对话水壶（kettle）—— 家族：角色扮演专属 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/kettle/kettle-view.js（_buildHTML / _notePanel / _detailPanel / _roundPanel / _optionPanel / _ledgerPanel / _policyPanel）；其余文件无 DOM。
+   屏幕与状态：页头 · 状态条（.ktl-face-ok / -warn / -err：首行颜色）· 回执 · 页签（.is-on）·
+               便签（表单：标签 / 输入 / 文本框 / 按钮；捕获列表：.ktl-cap.is-on、序号 / 人 / 店 / 正文 / 徽标（回合 .is-known / .is-unk、场景、独白 / 冲刺 .is-hit）/ 按钮；空）·
+               详情（标题 / 行 / 按钮 / 草稿 / 字段文本框）· 回合与选项（行：.ktl-rd-short / -eventful / -long 与 .ktl-op-ok / -too-few / -too-many / -absent 决定标题色；
+               补充项）· 台账（按钮、计数、记录：人 / 回合 .is-unk / 选项 / 正文；空）· 策略（分类行）。
+   设计：原生是米色纸面「笔记本」。v3.5 跟随系统 inset grouped，强调色系统橙；做法同杂志：17 个 --ktl-* 调色变量在根上逐个指到语义 token，
+         其中 7 个分类色（回合长短 / 选项多少）指到 7 个系统色——它们是分类数据，不当装饰；写死的 #fff5f5 / #fffefb 逐条换掉。
+   audit-allow: ktl-face-ok ktl-face-warn ktl-face-err ktl-rd-short ktl-rd-eventful ktl-rd-long ktl-op-ok ktl-op-too-few ktl-op-too-many ktl-op-absent —— 'ktl-face-' / 'ktl-rd-' / 'ktl-op-' + 值 拼出来的
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 7 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+ * v3.6：可点元素热区补到 44pt（v3.5 审计 W3：.ktl-cap）。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    /* ===== 作用域：App 自己的调色变量 -> 语义 token ===== */
+    #phone-panel[data-rp-ios="3"] .ktl-root {
+    /* 渲染自查（v3.5）：白字在本强调色上只有 2.2:1（浅）/ 2.06:1（深），不到 4.5:1；填充按钮 / 选中胶囊的文字改用带一点强调色相的近黑墨（8.36:1 / 8.87:1）。 */
+        --rp33-accent: var(--lt-sys-orange); --rp36-accent-text: var(--rp36-text-orange); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-orange) 40%, transparent); --rp33-on-accent: color-mix(in srgb, var(--lt-sys-black) 88%, var(--rp33-accent));
+        --ktl-bg: var(--rp33-bg); --ktl-panel: var(--rp33-surface); --ktl-panel-2: var(--rp33-surface-2); --ktl-line: var(--rp33-sep);
+        --ktl-ink: var(--rp33-label); --ktl-ink-2: var(--rp33-label-2); --ktl-ink-3: var(--rp33-label-3);
+        --ktl-rd-short: var(--lt-sys-teal); --rp36-t-ktl-rd-short: var(--rp36-text-teal); --ktl-rd-eventful: var(--lt-sys-blue); --rp36-t-ktl-rd-eventful: var(--rp36-text-blue); --ktl-rd-long: var(--lt-sys-purple); --rp36-t-ktl-rd-long: var(--rp36-text-purple);
+        --ktl-op-ok: var(--lt-sys-green); --rp36-t-ktl-op-ok: var(--rp36-text-green); --ktl-op-too-few: var(--lt-sys-orange); --rp36-t-ktl-op-too-few: var(--rp36-text-orange); --ktl-op-too-many: var(--lt-sys-pink); --rp36-t-ktl-op-too-many: var(--rp36-text-pink); --ktl-op-absent: var(--rp33-label-2);
+        --ktl-ok: var(--lt-sys-green); --rp36-t-ktl-ok: var(--rp36-text-green); --ktl-warn: var(--lt-sys-orange); --rp36-t-ktl-warn: var(--rp36-text-orange); --ktl-err: var(--lt-sys-red); --rp36-t-ktl-err: var(--rp36-text-red);
+    }
+
+    /* ===== 屏：外壳（页面底 / 页头 / 状态条 / 回执 / 页签） ===== */
+    #phone-panel[data-rp-ios="3"] .ktl-root { gap: var(--rp33-sp-3); padding: var(--rp33-sp-2) var(--rp33-margin) var(--rp33-sp-8); background: var(--ktl-bg); color: var(--ktl-ink); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .ktl-header { align-items: baseline; gap: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-1) 0; }
+    #phone-panel[data-rp-ios="3"] .ktl-header h2 { margin: 0; font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); color: var(--ktl-ink); }
+    #phone-panel[data-rp-ios="3"] .ktl-header-sub { color: var(--ktl-ink-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .ktl-face { gap: 2px; padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-feed-radius); background: var(--ktl-panel); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .ktl-face-label { font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .ktl-face-sub { color: var(--ktl-ink-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .ktl-face-err { background: var(--rp33-danger-soft); }
+    #phone-panel[data-rp-ios="3"] .ktl-flash { padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: var(--rp33-accent-soft); color: var(--ktl-ink); font: 500 var(--lt-ios-footnote-size) / 1.35 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .ktl-tabs { flex-wrap: wrap; gap: var(--rp33-sp-2); padding-block-end: 0; border: 0; }
+    #phone-panel[data-rp-ios="3"] .ktl-tab { position: relative; min-block-size: var(--rp33-tab-h); padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--ktl-panel); box-shadow: var(--rp33-rim); color: var(--ktl-ink); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .ktl-tab::after { content: ""; position: absolute; inset: -6px -2px; }
+    #phone-panel[data-rp-ios="3"] .ktl-tab.is-on { background: var(--rp33-accent); box-shadow: none; color: var(--rp33-on-accent); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .ktl-panel { gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .ktl-hint { margin: 0; color: var(--ktl-ink-2); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：便签 · 表单 ===== */
+    #phone-panel[data-rp-ios="3"] .ktl-form { gap: var(--rp33-sp-2); padding: var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--ktl-panel); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .ktl-form label { color: var(--ktl-ink-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] :is(.ktl-form input, .ktl-form textarea, .ktl-draft, .ktl-detail textarea[data-k]) { min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--ktl-ink); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] :is(.ktl-form textarea, .ktl-draft, .ktl-detail textarea[data-k]) { min-block-size: 88px; line-height: 1.5; }
+    #phone-panel[data-rp-ios="3"] .ktl-draft { font: 400 var(--lt-ios-footnote-size) / 1.5 var(--lt-font-ios-mono); }
+    #phone-panel[data-rp-ios="3"] :is(.ktl-form input, .ktl-form textarea, .ktl-draft, .ktl-detail textarea[data-k]):focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] :is(.ktl-form button, .ktl-detail-btns button, .ktl-cap-btns button, .ktl-led-btns button) { position: relative; min-block-size: 36px; padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] :is(.ktl-form button, .ktl-detail-btns button, .ktl-cap-btns button, .ktl-led-btns button)::after { content: ""; position: absolute; inset: -4px 0; }
+    #phone-panel[data-rp-ios="3"] :is(.ktl-form button, .ktl-detail-btns button, .ktl-cap-btns button, .ktl-led-btns button, .ktl-tab):active { filter: brightness(0.92); scale: 0.97; }
+
+    /* ===== 屏：便签 · 捕获列表 + 徽标 ===== */
+    #phone-panel[data-rp-ios="3"] .ktl-list { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(.ktl-list-none, .ktl-led-none) { padding: var(--rp33-sp-4); border: 0; border-radius: var(--rp33-feed-radius); background: var(--ktl-panel); color: var(--ktl-ink-2); font: var(--lt-type-footnote); text-align: center; }
+    #phone-panel[data-rp-ios="3"] .ktl-cap { gap: var(--rp33-sp-1); padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-feed-radius); background: var(--ktl-panel); box-shadow: var(--rp33-card-shadow); min-block-size: var(--rp33-hit); cursor: pointer; }   /* v3.6：整卡可点，内容很短（只有一行标签）时也保证 44pt */
+    #phone-panel[data-rp-ios="3"] .ktl-cap.is-on { box-shadow: var(--rp33-card-shadow), inset 0 0 0 1.5px var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .ktl-cap-top { align-items: baseline; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .ktl-cap-idx { color: var(--ktl-ink-3); font: 400 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios-mono); }
+    #phone-panel[data-rp-ios="3"] .ktl-cap-who { color: var(--ktl-ink); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .ktl-cap-shop { color: var(--ktl-ink-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .ktl-cap-line { color: var(--ktl-ink); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .ktl-cap-meta { flex-wrap: wrap; gap: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .ktl-cap-btns { flex-wrap: wrap; gap: var(--rp33-sp-2); margin-block-start: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .ktl-b { padding: 1px var(--rp33-sp-2); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--ktl-ink-2); font: 600 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .ktl-b-round.is-known { background: color-mix(in srgb, var(--lt-sys-blue) 14%, transparent); color: var(--rp36-text-blue); }
+    #phone-panel[data-rp-ios="3"] .ktl-b-round.is-unk { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .ktl-b-scene { color: var(--ktl-ink-2); }
+    #phone-panel[data-rp-ios="3"] .ktl-b-solo.is-hit { background: color-mix(in srgb, var(--lt-sys-orange) 16%, transparent); color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .ktl-b-dash.is-hit { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .ktl-pct { color: var(--ktl-ink-2); font: 600 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+
+    /* ===== 屏：详情 ===== */
+    #phone-panel[data-rp-ios="3"] .ktl-detail { gap: var(--rp33-sp-2); padding: var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--ktl-panel); box-shadow: var(--rp33-card-shadow), inset 0 0 0 1px var(--ktl-line); }
+    #phone-panel[data-rp-ios="3"] .ktl-detail-head { color: var(--ktl-ink); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .ktl-detail-line { color: var(--ktl-ink-2); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .ktl-detail-lab { color: var(--ktl-ink-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .ktl-detail-btns { flex-wrap: wrap; gap: var(--rp33-sp-2); }
+
+    /* ===== 屏：回合 / 选项 · 行（分类色 = 数据） ===== */
+    #phone-panel[data-rp-ios="3"] .ktl-rows { gap: 0; padding: var(--rp33-sp-1) var(--rp33-sp-4); border-radius: var(--rp33-card-radius); background: var(--ktl-panel); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .ktl-row { flex-wrap: wrap; align-items: baseline; gap: var(--rp33-sp-1) var(--rp33-sp-2); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) 0; border: 0; border-radius: 0; background: transparent; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .ktl-row + .ktl-row { border-block-start: 0.5px solid var(--ktl-line); }
+    #phone-panel[data-rp-ios="3"] .ktl-row-k { color: var(--ktl-ink); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] :is(.ktl-row-floor, .ktl-row-sub) { color: var(--ktl-ink-3); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .ktl-row-count { margin-inline-start: auto; color: var(--ktl-ink); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .ktl-row-why { flex: 1 1 100%; color: var(--ktl-ink-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .ktl-extra { align-items: baseline; gap: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--ktl-panel-2); }
+    #phone-panel[data-rp-ios="3"] .ktl-extra-k { color: var(--ktl-ink); font: var(--lt-type-footnote); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .ktl-extra-v { color: var(--ktl-ink-2); font: var(--lt-type-caption1); }
+
+    /* ===== 屏：台账 / 策略 ===== */
+    #phone-panel[data-rp-ios="3"] .ktl-led-btns { flex-wrap: wrap; align-items: center; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .ktl-led-cap { color: var(--ktl-ink-3); font: var(--lt-type-caption1); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .ktl-led { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .ktl-rec { gap: 2px; padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-feed-radius); background: var(--ktl-panel); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .ktl-rec-top { align-items: baseline; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .ktl-rec-who { color: var(--ktl-ink); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .ktl-rec-round { color: var(--ktl-ink-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .ktl-rec-round.is-unk { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .ktl-rec-opt { color: var(--rp36-accent-text); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .ktl-rec-body { color: var(--ktl-ink-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .ktl-cats { gap: 0; padding: var(--rp33-sp-1) var(--rp33-sp-4); border-radius: var(--rp33-card-radius); background: var(--ktl-panel); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .ktl-cat { justify-content: space-between; align-items: baseline; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) 0; border: 0; border-radius: 0; background: transparent; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .ktl-cat + .ktl-cat { border-block-start: 0.5px solid var(--ktl-line); }
+    #phone-panel[data-rp-ios="3"] .ktl-cat-k { color: var(--ktl-ink); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .ktl-cat-v { color: var(--ktl-ink-2); font: var(--lt-type-footnote); text-align: end; }
+}

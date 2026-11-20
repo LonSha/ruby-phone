@@ -1,0 +1,92 @@
+/* ============================================================
+   RubyPhone 主题包 · Material You 动态取色（rp.themes 层，只覆盖 token）
+   ------------------------------------------------------------
+   灵感：Android 12+ 的 Material You —— 从壁纸提取种子色，派生整套色调；大圆角、圆形图标、
+   药丸形开关。只借思路，不使用任何 Google 资产 / 字体 / 图标。
+   色值来源（优先级从高到低）：
+     1. theme-controller.js -> refreshDynamicColor()：用 lonsha-dynamic-color.js 从当前壁纸取色，
+        把精确色阶写到手机根节点的 --lt-dyn-{l,d}-*（已做 WCAG 对比度校正）；
+     2. 只有种子色 --lt-dyn-seed 时：lonsha-tokens.css 用 OKLCH 相对颜色语法兜底派生；
+     3. 都没有：回退到品牌强调色（var(--lt-accent)）。
+   启用：data-rp-pack="material-you"（setPack('material-you')）
+   ============================================================ */
+@layer rp.themes {
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="material-you"] {
+    --rp-font: "Google Sans Text", "Roboto Flex", Roboto, "HarmonyOS Sans SC", "PingFang SC", system-ui, sans-serif;
+    --rp-lock-font: "Google Sans", "Roboto Flex", Roboto, var(--rp-font);
+    --rp-lock-time-weight: 400;
+    --rp-lock-time-size: 96px;
+    --rp-icon-radius: 50%;
+    --rp-dock-radius: 32px;
+    --rp-widget-radius: 28px;
+    --rp-cc-module-radius: 28px;
+    --rp-group-radius: 24px;
+    --rp-row-icon-radius: 50%;
+    --rp-card-radius: 24px;
+    --rp-sheet-radius: 28px;
+    --rp-btn-radius: var(--rp-r-pill);
+    --rp-bubble-radius: 20px;
+    --rp-bubble-radius-tight: 6px;
+    --rp-bubble-tail: 0;               /* Material 气泡没有尾巴，靠贴合角区分分组 */
+    --rp-toggle-w: 52px;
+    --rp-toggle-h: 32px;
+
+    --rp-accent: var(--lt-dyn-l-primary, var(--lt-accent));
+    --rp-on-accent: var(--lt-dyn-l-on-primary, var(--lt-on-accent));
+    --app-accent: var(--rp-accent);
+    --app-on-accent: var(--rp-on-accent);
+    --rp-accent-soft: var(--lt-dyn-l-container, var(--lt-accent-soft));
+    --rp-bg: var(--lt-dyn-l-surface, var(--lt-bg));
+    --rp-surface-1: var(--lt-dyn-l-surface-2, var(--lt-surface-1));
+    --rp-surface-2: var(--lt-dyn-l-surface-3, var(--lt-surface-2));
+    --rp-surface-3: var(--lt-dyn-l-container, var(--lt-surface-3));
+    --rp-line: color-mix(in srgb, var(--lt-dyn-l-outline, var(--lt-line)) 40%, transparent);
+    --rp-separator: var(--rp-line);
+    --rp-toggle-on: var(--rp-accent);
+    --rp-bubble-me-bg: var(--rp-accent);
+    --rp-bubble-me-fg: var(--rp-on-accent);
+    --rp-imsg-me-bg: var(--rp-accent);
+    --rp-imsg-me-fg: var(--rp-on-accent);
+    --rp-widget-bg: var(--lt-dyn-l-container, var(--rp-mat-regular-bg));
+    --rp-widget-fg: var(--lt-dyn-l-on-container, var(--rp-text-1));
+    --rp-widget-fg-2: color-mix(in srgb, var(--rp-widget-fg) 72%, transparent);
+    --rp-widget-blur: none;
+    --rp-dock-bg: color-mix(in srgb, var(--lt-dyn-l-container, var(--rp-surface-1)) 70%, transparent);
+    --rp-notif-bg: var(--lt-dyn-l-surface-2, rgb(var(--lt-paper-rgb) / 0.78));
+    --rp-cc-module-bg: color-mix(in srgb, var(--lt-dyn-d-container, var(--rp-surface-3)) 82%, transparent);
+    --rp-cc-tile-on: var(--lt-dyn-d-primary, var(--rp-static-white));
+    --rp-cc-tile-on-fg: var(--lt-dyn-d-on-primary, var(--rp-static-black));
+    --rp-cc-tile-accent: var(--lt-dyn-d-primary, var(--app-accent));
+    --rp-moments-name: var(--rp-accent);
+    --rp-chip-fg: var(--lt-dyn-l-on-container, var(--rp-static-white));
+    --rp-mat-chrome-bg: var(--lt-dyn-l-surface-2, var(--lt-mat-chrome-bg));
+    --rp-mat-chrome-blur: none;
+}
+/* 设置图标与通知图标：Material「主题化图标」—— 容器色底 + 主色图形（覆盖每个 data-chip） */
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="material-you"] [data-chip],
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="material-you"] .rp-notif2-ico,
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="material-you"] .rp-island-lead {
+    --chip: var(--lt-dyn-l-container, var(--rp-chip-gray));
+}
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="material-you"][data-lonsha-theme="dark"],
+[data-lonsha-theme="dark"] :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="material-you"]:not([data-lonsha-theme="light"]) {
+    --rp-accent: var(--lt-dyn-d-primary, var(--lt-accent));
+    --rp-on-accent: var(--lt-dyn-d-on-primary, var(--lt-on-accent));
+    --rp-accent-soft: var(--lt-dyn-d-container, var(--lt-accent-soft));
+    --rp-bg: var(--lt-dyn-d-surface, var(--lt-bg));
+    --rp-surface-1: var(--lt-dyn-d-surface-2, var(--lt-surface-1));
+    --rp-surface-2: var(--lt-dyn-d-surface-3, var(--lt-surface-2));
+    --rp-surface-3: var(--lt-dyn-d-container, var(--lt-surface-3));
+    --rp-line: color-mix(in srgb, var(--lt-dyn-d-outline, var(--lt-line)) 45%, transparent);
+    --rp-widget-bg: var(--lt-dyn-d-container, var(--rp-mat-regular-bg));
+    --rp-widget-fg: var(--lt-dyn-d-on-container, var(--rp-text-1));
+    --rp-dock-bg: color-mix(in srgb, var(--lt-dyn-d-container, var(--rp-surface-1)) 70%, transparent);
+    --rp-notif-bg: var(--lt-dyn-d-surface-2, rgb(var(--lt-paper-rgb) / 0.78));
+    --rp-chip-fg: var(--lt-dyn-d-on-container, var(--rp-static-white));
+    --rp-mat-chrome-bg: var(--lt-dyn-d-surface-2, var(--lt-mat-chrome-bg));
+}
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="material-you"][data-lonsha-theme="dark"] [data-chip],
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="material-you"][data-lonsha-theme="dark"] :is(.rp-notif2-ico, .rp-island-lead) {
+    --chip: var(--lt-dyn-d-container, var(--rp-chip-gray));
+}
+}

@@ -79,7 +79,7 @@
     "update_gap_ms_n2000": 0.07
   },
   "scan": {
-    "files": 847,
+    "files": 848,
     "full_materialize": 9,
     "bounded_slice": 5,
     "indexed_loop": 15,
@@ -142,7 +142,7 @@
       "id": "L5",
       "desc": "静态扫描器未失效：四类站点计数都 > 0 且枚举面 > 150",
       "pass": true,
-      "got_text": "files=847，全表物化=9，slice(-n)=5，下标直取=15，长度读=56"
+      "got_text": "files=848，全表物化=9，slice(-n)=5，下标直取=15，长度读=56"
     }
   ],
   "timing_criteria": [
@@ -812,8 +812,15 @@
       "not_done": [
         "小时级长会话的上下文截断行为需要真宿主，本层不可测。"
       ]
+    },
+    "ds-v3": {
+      "why": "设计系统收编后现场复算：扫描面 +1/+2 文件（scripts/gen-legacy-layer.mjs 与 phone/ 下新模块），枚举面读数随之漂移；本行数字由探针当场跑出来写回，非手抄。",
+      "diff": [
+        "criteria: 漂移（按探针重写）",
+        "scan: 漂移（按探针重写）"
+      ]
     }
   },
-  "refreshed_at": "v4.157.0",
-  "refresh_note": "R26-X5 后按探针现场重跑刷新静态读数（timing 不动）。"
+  "refreshed_at": "2026-11-20T19:51:07Z",
+  "refresh_note": "设计系统收编后现场复算：扫描面 +1/+2 文件（scripts/gen-legacy-layer.mjs 与 phone/ 下新模块），枚举面读数随之漂移；本行数字由探针当场跑出来写回，非手抄。"
 }

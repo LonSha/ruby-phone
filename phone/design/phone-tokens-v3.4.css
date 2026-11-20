@@ -1,0 +1,181 @@
+/* ============================================================
+   RubyPhone · App 皮肤 token v3.4（自带 @layer rp.tokens，只声明自定义属性）
+   ------------------------------------------------------------
+   v3.4 给 12 个由 done-partial 升到 done 的 App 补的语义 token。命名：--rp34-*。
+   颜色字面量只出现在 token 文件里（本文件 + v3 / v3.3 的 token 文件）；皮肤 CSS 与运行时只引用变量。
+   选择器与 v3 / v3.3 相同（:root, [data-lonsha-theme]），#phone-panel 上的明暗切换会就地重算。
+   六组：
+     1. 媒体之上（直播间 / 通话 / 音乐卡 / 万象插画）：深色玻璃 + 白字，浅深色都一样（底是画面，不是系统表面）
+     2. 微信消息卡片：红包 / 转账 / 礼物 / 位置 / 卡片页脚
+     3. 万象：插画上的「世界」岛（固定深色语境，青色强调）
+     4. 棋盘与牌面：木纹盘、方格、棋子、棋石、落点 / 选中环（几何不变，只换色）
+     5. 2048 方块色阶（11 级）与数独格子
+     6. 内联样式角色（运行时 data-rp34 令牌）用到的少量补充色
+     7. 深色「岛」：画面本身是深色的场景（直播画面、通话、狼人杀 / 猫箱 / 海龟汤 / 你画我猜 / 迷案 / 德州牌桌）
+        在系统浅色下也保持深色。岛根节点把 --rp33-* / --lt-sys-* 语义色就地改指向这一组，
+        于是 v3.3 角色表与 v3.4 精修在岛内自动得到一致的深色取值（不会出现「黑字压在深色画面上」）。
+   ============================================================ */
+@layer rp.tokens {
+:root, [data-lonsha-theme] {
+    /* ---------- 1. 媒体之上 ---------- */
+    --rp34-media-glass: rgb(20 20 24 / 0.38);
+    --rp34-media-glass-strong: rgb(20 20 24 / 0.56);
+    --rp34-media-glass-blur: blur(22px) saturate(170%);
+    --rp34-media-rim: inset 0 0 0 0.5px rgb(255 255 255 / 0.18), inset 0 1px 0 rgb(255 255 255 / 0.14);
+    --rp34-media-fg: #ffffff;
+    --rp34-media-fg-2: rgb(255 255 255 / 0.74);
+    --rp34-media-fg-3: rgb(255 255 255 / 0.52);
+    --rp34-media-fill: rgb(255 255 255 / 0.16);
+    --rp34-media-fill-2: rgb(255 255 255 / 0.26);
+    --rp34-media-line: rgb(255 255 255 / 0.2);
+    --rp34-media-scrim-top: linear-gradient(180deg, rgb(0 0 0 / 0.42) 0%, rgb(0 0 0 / 0) 100%);
+    --rp34-media-scrim-bottom: linear-gradient(0deg, rgb(0 0 0 / 0.5) 0%, rgb(0 0 0 / 0) 100%);
+    --rp34-media-text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+    --rp34-call-bg: #1c1c1e;
+    --rp34-live-dot: #30d158;
+
+    /* ---------- 2. 微信消息卡片 ---------- */
+    --rp34-wx-redpacket: #fa9d3b;
+    --rp34-wx-redpacket-pressed: #e8902f;
+    --rp34-wx-redpacket-opened: #fbcf9c;
+    --rp34-wx-redpacket-fg: #ffffff;
+    --rp34-wx-redpacket-foot: rgb(255 255 255 / 0.82);
+    --rp34-wx-redpacket-rule: rgb(255 255 255 / 0.32);
+    --rp34-wx-red: #f25542;
+    --rp34-wx-gold: #f5d98a;
+    --rp34-wx-card: #ffffff;
+    --rp34-wx-card-foot: #f7f7f7;
+    --rp34-wx-card-line: rgb(0 0 0 / 0.06);
+    --rp34-wx-location-icon-bg: #e8f1ff;
+    --rp34-wx-music-on: #1ed760;
+
+    /* ---------- 3. 万象「世界」岛（插画之上，固定深色语境） ---------- */
+    --rp34-wanx-bg: #050d13;
+    --rp34-wanx-glass: rgb(10 22 32 / 0.62);
+    --rp34-wanx-glass-2: rgb(16 34 47 / 0.78);
+    --rp34-wanx-rim: inset 0 0 0 0.5px rgb(143 224 255 / 0.28), inset 0 1px 0 rgb(255 255 255 / 0.08);
+    --rp34-wanx-line: rgb(143 224 255 / 0.18);
+    --rp34-wanx-fg: #e6edf3;
+    --rp34-wanx-fg-2: #9db4c4;
+    --rp34-wanx-fg-3: #6f8697;
+    --rp34-wanx-accent: #5cc8ff;
+    --rp34-wanx-accent-soft: rgb(92 200 255 / 0.16);
+    --rp34-wanx-on-accent: #04121b;
+    --rp34-wanx-green: #4ade80;
+    --rp34-wanx-orange: #ffb057;
+    --rp34-wanx-purple: #b49cff;
+    --rp34-wanx-red: #ff7a72;
+
+    /* ---------- 4. 棋盘与牌面 ---------- */
+    --rp34-board-wood: #d2a670;
+    --rp34-board-wood-2: #c79a62;
+    --rp34-board-line: rgb(74 46 18 / 0.72);
+    --rp34-board-sq-light: #ecd8b6;
+    --rp34-board-sq-dark: #b78a5f;
+    --rp34-board-grass: #5d7f50;
+    --rp34-board-water: #4a86ad;
+    --rp34-board-trap: #94653a;
+    --rp34-board-den: #8a3a36;
+    --rp34-board-frame-shadow: 0 1px 0 rgb(255 255 255 / 0.35) inset, 0 10px 28px -14px rgb(0 0 0 / 0.45);
+    --rp34-piece-face: #f6ead0;
+    --rp34-piece-rim: rgb(80 52 22 / 0.35);
+    --rp34-piece-shadow: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 2px 4px -1px rgb(0 0 0 / 0.35);
+    --rp34-piece-red: #b8261b;
+    --rp34-piece-black: #1f2933;
+    --rp34-chess-white: #fbfaf7;
+    --rp34-chess-black: #1b1b1d;
+    --rp34-chess-white-edge: 0 0 1px rgb(0 0 0 / 0.75), 0 1px 1px rgb(0 0 0 / 0.4);
+    --rp34-chess-black-edge: 0 1px 0 rgb(255 255 255 / 0.22);
+    --rp34-stone-black: radial-gradient(circle at 35% 30%, #5a5a5e 0%, #1c1c1e 46%, #050505 100%);
+    --rp34-stone-white: radial-gradient(circle at 35% 30%, #ffffff 0%, #f0eee8 50%, #cfcbc2 100%);
+    --rp34-stone-shadow: 0 2px 3px -1px rgb(0 0 0 / 0.45);
+    --rp34-board-target: rgb(52 199 89 / 0.9);
+    --rp34-board-select: rgb(0 122 255 / 0.85);
+    --rp34-felt: #1f5c43;
+    --rp34-felt-2: #174634;
+
+    /* ---------- 5. 2048 方块色阶与数独 ---------- */
+    --rp34-g2048-board: #bcae9f;
+    --rp34-g2048-empty: rgb(238 228 218 / 0.38);
+    --rp34-g2048-2: #eee4da;    --rp34-g2048-4: #ede0c8;    --rp34-g2048-8: #f2b179;    --rp34-g2048-16: #f59563;
+    --rp34-g2048-32: #f67c5f;   --rp34-g2048-64: #f65e3b;   --rp34-g2048-128: #edcf72;  --rp34-g2048-256: #edcc61;
+    --rp34-g2048-512: #edc850;  --rp34-g2048-1024: #edc53f; --rp34-g2048-2048: #edc22e; --rp34-g2048-max: #3c3a32;
+    --rp34-g2048-ink: #776e65;
+    --rp34-g2048-ink-hi: #f9f6f2;
+    --rp34-g2048-ink-gold: #3d2c00;      /* 128 以上的金色方块用深墨字（经典配色的白字在金底上对比度不到 2:1） */
+    --rp34-sudoku-bg: #ffffff;
+    --rp34-sudoku-grid: #1c1c1e;
+    --rp34-sudoku-line: rgb(60 60 67 / 0.29);
+    --rp34-sudoku-related: rgb(0 122 255 / 0.07);
+    --rp34-sudoku-same: rgb(0 122 255 / 0.16);
+    --rp34-sudoku-selected: rgb(0 122 255 / 0.26);
+    --rp34-sudoku-wrong: rgb(255 59 48 / 0.16);
+    --rp34-sudoku-given: #000000;
+    --rp34-sudoku-entry: #007aff;
+
+    /* ---------- 6. 内联样式角色补充 ---------- */
+    --rp34-on-color: #ffffff;
+    --rp34-on-color-2: rgb(255 255 255 / 0.8);
+    --rp34-tint-yellow-ink: #8a5a00;
+    --rp34-glass-light: rgb(255 255 255 / 0.62);
+    --rp34-field-rim: inset 0 0 0 0.5px rgb(0 0 0 / 0.04);
+
+    /* ---------- 7. 深色岛（不随系统明暗变化） ---------- */
+    --rp34-dk-bg: #000000;
+    --rp34-dk-surface: #1c1c1e;
+    --rp34-dk-surface-2: #2c2c2e;
+    --rp34-dk-label: #ffffff;
+    --rp34-dk-label-2: rgb(235 235 245 / 0.62);
+    --rp34-dk-label-3: rgb(235 235 245 / 0.32);
+    --rp34-dk-sep: rgb(84 84 88 / 0.65);
+    --rp34-dk-fill: rgb(118 118 128 / 0.24);
+    --rp34-dk-fill-2: rgb(118 118 128 / 0.18);
+    --rp34-dk-seg-on: #636366;
+    --rp34-dk-glassbtn-bg: rgb(58 58 62 / 0.58);
+    --rp34-dk-glassbtn-rim: inset 0 1px 0.5px rgb(255 255 255 / 0.22), inset 0 0 0 0.5px rgb(255 255 255 / 0.1), 0 2px 10px -2px rgb(0 0 0 / 0.4);
+    --rp34-dk-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.06);
+}
+[data-lonsha-theme="dark"] {
+    --rp34-call-bg: #000000;
+    --rp34-live-dot: #32d74b;
+    --rp34-wx-redpacket: #d9862f;
+    --rp34-wx-redpacket-pressed: #c47a2a;
+    --rp34-wx-redpacket-opened: #7a5a36;
+    --rp34-wx-redpacket-foot: rgb(255 255 255 / 0.72);
+    --rp34-wx-red: #e04b3a;
+    --rp34-wx-gold: #d9bf75;
+    --rp34-wx-card: #2c2c2e;
+    --rp34-wx-card-foot: #262628;
+    --rp34-wx-card-line: rgb(255 255 255 / 0.08);
+    --rp34-wx-location-icon-bg: #1d2b40;
+    --rp34-board-wood: #a8814f;
+    --rp34-board-wood-2: #9a7646;
+    --rp34-board-sq-light: #c9b18c;
+    --rp34-board-sq-dark: #8e6a47;
+    --rp34-board-frame-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.08), 0 10px 28px -14px rgb(0 0 0 / 0.7);
+    --rp34-piece-face: #eadbbb;
+    --rp34-board-target: rgb(48 209 88 / 0.9);
+    --rp34-board-select: rgb(10 132 255 / 0.9);
+    --rp34-g2048-board: #3a3632;
+    --rp34-g2048-empty: rgb(255 255 255 / 0.06);
+    --rp34-g2048-2: #5b534b;    --rp34-g2048-4: #6a5f50;    --rp34-g2048-8: #b9784a;    --rp34-g2048-16: #c76a41;
+    --rp34-g2048-32: #cc5a3e;   --rp34-g2048-64: #cf4a2a;   --rp34-g2048-128: #c9ab4f;  --rp34-g2048-256: #c9a843;
+    --rp34-g2048-512: #c9a437;  --rp34-g2048-1024: #c9a12c; --rp34-g2048-2048: #c99e1f; --rp34-g2048-max: #8c84ff;
+    --rp34-g2048-ink: #f2ece4;
+    --rp34-sudoku-bg: #1c1c1e;
+    --rp34-sudoku-grid: #8e8e93;
+    --rp34-sudoku-line: rgb(84 84 88 / 0.65);
+    --rp34-sudoku-related: rgb(10 132 255 / 0.1);
+    --rp34-sudoku-same: rgb(10 132 255 / 0.22);
+    --rp34-sudoku-selected: rgb(10 132 255 / 0.36);
+    --rp34-sudoku-wrong: rgb(255 69 58 / 0.24);
+    --rp34-sudoku-given: #ffffff;
+    --rp34-sudoku-entry: #0a84ff;
+    --rp34-tint-yellow-ink: #ffd60a;
+    --rp34-glass-light: rgb(58 58 62 / 0.6);
+    --rp34-field-rim: inset 0 0 0 0.5px rgb(255 255 255 / 0.06);
+}
+[data-rp-pack="pixel"] {
+    --rp34-media-glass-blur: none;
+}
+}

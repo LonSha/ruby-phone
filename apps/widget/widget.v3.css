@@ -1,0 +1,89 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：自定义组件（widget）—— 家族：媒体 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/widget/widget-view.js（_buildHTML / _htmlEditor / _htmlTemplates / _htmlInstances / _htmlIO / _htmlSettings，以及草稿 _newDraft / _restoreDraft / _persistDraft）。
+   屏幕与状态：页头 · 状态条（ok / warn / err）· 回执 · 说明 note · 统计（行 + 警告 .wgt-stat-warn）·
+               编辑器（分组 .wgt-sec：标签 / 名称 / HTML / CSS / 尺寸 / 备注；示例胶囊；变量表：名称 / 类型 / 值；警告）·
+               模板列表（卡：头（名称 + tag）/ 元信息 / 动作）· 实例（卡：头 / 变量行）· 导入导出（输出框）· 设置（行 + 勾选）·
+               按钮：主 / 危险 / 小钮二次确认 .is-armed / 禁用 · 空态 · 提示。
+   设计：iOS「小组件库」语气：跟随系统 inset grouped，强调色系统靛蓝；代码框 = 等宽 field；模板 / 实例卡 = 次级表面圆角卡（实例旧版 3px 紫线去掉）。
+         示例模板 .wg-note / .wg-photo / .wg-count / .wg-plain 是用户组件自带的 HTML + CSS（用户内容），皮肤不碰。
+   audit-allow: wgt-face-ok wgt-face-warn wgt-face-err —— 'wgt-face-' + tone 拼出来的
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 8 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    #phone-panel[data-rp-ios="3"] .wgt-root { --rp33-accent: var(--lt-sys-indigo); --rp36-accent-text: var(--rp36-text-indigo); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-indigo) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-indigo) 40%, transparent); }
+
+    /* ===== 屏：外壳（页面底 / 页头 / 状态条 / 回执 / 说明） ===== */
+    #phone-panel[data-rp-ios="3"] .wgt-root { gap: var(--rp33-sp-3); min-block-size: 100%; box-sizing: border-box; padding: var(--rp33-sp-2) var(--rp33-margin) var(--rp33-sp-8); background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .wgt-header { padding: var(--rp33-sp-2) var(--rp33-sp-1) 0; }
+    #phone-panel[data-rp-ios="3"] .wgt-header h2 { margin: 0; font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .wgt-face { align-items: center; gap: var(--rp33-sp-2); padding: var(--rp33-sp-3) var(--rp33-sp-4); border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .wgt-face-ok { background: color-mix(in srgb, var(--lt-sys-green) 14%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .wgt-face-warn { background: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .wgt-face-err { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .wgt-face-icon { font-size: 17px; line-height: 1; }
+    #phone-panel[data-rp-ios="3"] .wgt-face-label { font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .wgt-flash { padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: var(--rp33-accent-soft); color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1.35 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .wgt-note { margin: 0; padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: var(--rp33-fill); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] :is(.wgt-note, .wgt-hint) strong { color: var(--rp33-label); }
+
+    /* ===== 屏：统计 ===== */
+    #phone-panel[data-rp-ios="3"] .wgt-stats { padding: var(--rp33-sp-1) var(--rp33-sp-4); border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] :is(.wgt-stat-row, .wgt-stat) { justify-content: space-between; align-items: center; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-1) 0; border: 0; border-block-end: 0.5px solid var(--rp33-sep); color: var(--rp33-label); font: var(--lt-type-subhead); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .wgt-stat span:last-child { color: var(--rp33-label); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .wgt-stat-warn span:last-child { color: var(--rp36-text-orange); }
+
+    /* ===== 组件：分组卡 / 标签 / 输入 / 代码框 ===== */
+    #phone-panel[data-rp-ios="3"] .wgt-sec { padding: var(--rp33-sp-3) var(--rp33-sp-4) var(--rp33-sp-4); border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .wgt-sec h3 { margin: 0 0 var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .wgt-lbl { margin-block: var(--rp33-sp-2) var(--rp33-sp-1); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] :is(.wgt-inp, .wgt-code, .wgt-num, .wgt-out) { min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] :is(.wgt-code, .wgt-out) { min-block-size: 112px; font: 400 var(--lt-ios-footnote-size) / 1.45 var(--lt-font-ios-mono); }
+    #phone-panel[data-rp-ios="3"] .wgt-num { inline-size: 88px; min-block-size: 36px; padding: 0 var(--rp33-sp-2); font-variant-numeric: tabular-nums; text-align: end; }
+    #phone-panel[data-rp-ios="3"] :is(.wgt-inp, .wgt-code, .wgt-num, .wgt-out)::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] :is(.wgt-inp, .wgt-code, .wgt-num, .wgt-out):focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .wgt-row { flex-wrap: wrap; align-items: center; gap: var(--rp33-sp-2); }
+
+    /* ===== 屏：编辑器 · 示例 / 变量 / 警告 ===== */
+    #phone-panel[data-rp-ios="3"] .wgt-examples { flex-wrap: wrap; gap: var(--rp33-sp-2); margin-block: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .wgt-tag { padding: 1px var(--rp33-sp-2); border-radius: 999px; background: var(--rp33-accent-soft); color: var(--rp36-accent-text); font: 600 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .wgt-vars { gap: 0; }
+    #phone-panel[data-rp-ios="3"] .wgt-var-row { align-items: center; gap: var(--rp33-sp-2); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-1) 0; border-block-start: 0.5px solid var(--rp33-sep); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .wgt-var-name { color: var(--rp33-label); font: 400 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios-mono); }
+    #phone-panel[data-rp-ios="3"] .wgt-var-type { color: var(--rp36-accent-text); font: 600 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] :is(.wgt-var-row .wgt-var-val, .wgt-inst-var .wgt-var-val) { flex: 1 1 auto; min-block-size: 36px; }
+    #phone-panel[data-rp-ios="3"] .wgt-warn { color: var(--rp36-text-orange); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：模板列表 / 实例 ===== */
+    #phone-panel[data-rp-ios="3"] :is(.wgt-list, .wgt-insts) { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(.wgt-card, .wgt-inst) { padding: var(--rp33-sp-3); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .wgt-inst { border: 0; }
+    #phone-panel[data-rp-ios="3"] :is(.wgt-card-head, .wgt-inst-head) { align-items: baseline; gap: var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .wgt-card-name { font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .wgt-card-meta { margin-block-start: 2px; color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .wgt-card-acts { flex-wrap: wrap; gap: var(--rp33-sp-2); margin-block-start: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .wgt-inst-vars { gap: var(--rp33-sp-1); margin-block-start: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .wgt-inst-var { align-items: center; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .wgt-empty { margin: 0; padding: var(--rp33-sp-2) 0; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+
+    /* ===== 组件：按钮 ===== */
+    #phone-panel[data-rp-ios="3"] .wgt-actions { flex-wrap: wrap; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .wgt-btn { min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .wgt-btn-primary { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .wgt-btn-danger { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .wgt-btn-mini { position: relative; min-block-size: 28px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .wgt-btn-mini::after { content: ""; position: absolute; inset: -8px -2px; }
+    #phone-panel[data-rp-ios="3"] .wgt-btn-mini.is-armed { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] :is(.wgt-btn, .wgt-btn-mini):disabled { background: var(--rp33-fill); color: var(--rp33-label-3); opacity: 1; cursor: default; }
+    #phone-panel[data-rp-ios="3"] :is(.wgt-btn, .wgt-btn-mini):not(:disabled):active { filter: brightness(0.92); scale: 0.97; }
+
+    /* ===== 屏：设置 / 提示 ===== */
+    #phone-panel[data-rp-ios="3"] :is(.wgt-field, .wgt-check) { display: flex; align-items: center; justify-content: space-between; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-1) 0; border-block-start: 0.5px solid var(--rp33-sep); color: var(--rp33-label); font: var(--lt-type-body); accent-color: var(--lt-sys-green); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .wgt-hint { margin: var(--rp33-sp-1) 0 0; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+}

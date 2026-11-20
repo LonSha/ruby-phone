@@ -1,0 +1,135 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：健康（health）—— 家族：系统 / 工具 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/health/health-view.js（用 h() / cls() 拼 DOM：页头、页签、周期环卡、信息卡、控制区（滑杆 / 动作格 / 注入盒）、孕期胎儿卡、
+               需求条、子女卡、医疗（病症卡 + 三种徽标 + 新增）、育种卡、起名盒、手术库（列表 + 展开详情）、手环曲线 _bandSection）；
+               其余 22 个文件（bio-*、*-core.js、name-data.js、surgery-library.js 等）是引擎与数据表，没有 DOM（跳过）。
+   屏幕与状态：页头（返回 + 标题）· 页签 .on · 周期环（环色 / 百分比是内联变量 --ring-color / --ring-pct；中心：图标、天数、阶段）+ 阶段徽标（内联色）+ 提醒 ·
+               4 张信息卡 · 控制区（日 / 时滑杆、动作按钮 .active、注入盒：标题、立即注入、提示、开关）· 选择行 · 胎儿卡（顶栏、两列输入）·
+               tag 行（.on）· 小钮 · 需求条 · 子女卡 · 病症卡（严重 / 痊愈 / 慢性徽标、说明）+ 新增 · 育种卡（键值行 + 脚注）·
+               起名盒（控件、结果大字、副标、脚注）· 手术库（选择、列表项 .on、展开详情：阶段 / 并发症 / 注意）· 手环曲线（SVG 折线 + 面积 + 轴 + 说明 / 空）。
+   设计：原生是深紫红渐变 + 粉色光晕。v3.5 = iOS「健康 · 经期跟踪」：跟随系统 inset grouped，强调色系统粉（光晕去掉）；
+         周期环保留（环色是数据），中心改成表面色；三种病症徽标 = 红 / 绿 / 橙浅底同色字；起名结果 title2。
+   修上游漏样式：手环曲线 .hl-band-line / .hl-band-area 在上游没有任何 CSS，SVG 默认黑色填充会画出一整块黑色多边形；这里给出折线描边与面积浅色填充。
+   keep-legacy: .hl-ring-outer —— 周期环的 conic-gradient 用的是内联变量 --ring-color（引擎按周期阶段给的数据色），只去掉彩色光晕
+   规矩：零 !important、零写死颜色、零字符图标；类名 / ID / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 9 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    #phone-panel[data-rp-ios="3"] .hl-root { --rp33-accent: var(--lt-sys-pink); --rp36-accent-text: var(--rp36-text-pink); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-pink) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-pink) 40%, transparent); }
+
+    /* ===== 屏：外壳（页面底 / 导航栏 / 页签） ===== */
+    #phone-panel[data-rp-ios="3"] .hl-root { background: var(--rp33-bg); background-image: none; color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .hl-header { block-size: auto; min-block-size: 52px; padding: var(--rp33-sp-1) var(--rp33-sp-3); border: 0; background: var(--lt-mat3-bar); -webkit-backdrop-filter: var(--lt-mat3-blur); backdrop-filter: var(--lt-mat3-blur); }
+    #phone-panel[data-rp-ios="3"] .hl-back-btn { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); flex: none; padding: 0; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 17px; cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .hl-title { margin: 0; color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .hl-spacer { inline-size: var(--rp3-glass-btn); }
+    #phone-panel[data-rp-ios="3"] .hl-tabs { gap: 0; margin: var(--rp33-sp-2) var(--rp33-margin) 0; padding: 2px; border-radius: 999px; background: var(--rp33-seg-bg); }
+    #phone-panel[data-rp-ios="3"] .hl-tab { flex: 1 1 0; position: relative; min-block-size: var(--rp33-tab-h); padding: 0 var(--rp33-sp-2); border: 0; border-radius: 999px; background: transparent; color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .hl-tab::after { content: ""; position: absolute; inset: -6px 0; }
+    #phone-panel[data-rp-ios="3"] .hl-tab.on { background: var(--rp33-seg-on); box-shadow: var(--rp33-seg-shadow); color: var(--rp33-label); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .hl-body { gap: var(--rp33-sp-4); padding: var(--rp33-sp-3) var(--rp33-margin) var(--rp33-sp-8); }
+
+    /* ===== 屏：周期环卡 ===== */
+    #phone-panel[data-rp-ios="3"] .hl-ring-card { align-items: center; gap: var(--rp33-sp-3); padding: var(--rp33-sp-5) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .hl-ring-outer { inline-size: 168px; block-size: 168px; padding: 12px; box-shadow: none; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .hl-ring-inner { gap: 2px; background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .hl-droplet-icon { font-size: 20px; }
+    #phone-panel[data-rp-ios="3"] .hl-ring-day { color: var(--rp33-label); font: 600 var(--lt-ios-title1-size) / 1.1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .hl-ring-phase { font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .hl-badge-pill { padding: var(--rp33-sp-1) var(--rp33-sp-4); border-radius: 999px; font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .hl-notify { color: var(--rp36-accent-text); font: var(--lt-type-footnote); text-align: center; }
+
+    /* ===== 屏：信息卡（2 列） ===== */
+    #phone-panel[data-rp-ios="3"] .hl-info-cards { gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .hl-card { padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .hl-card-label { gap: var(--rp33-sp-1); color: var(--rp33-label-2); font: 600 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .hl-card-val { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .hl-card-desc { margin-block-start: 2px; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：控制区（滑杆 / 动作格 / 选择行） ===== */
+    #phone-panel[data-rp-ios="3"] .hl-controls-section { gap: var(--rp33-sp-3); padding: var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .hl-section-title { color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .hl-slider-row { gap: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .hl-slider-label { color: var(--rp33-label-2); font: var(--lt-type-footnote); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .hl-slider { min-block-size: 32px; accent-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .hl-btn-grid { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .hl-action-btn { align-items: center; justify-content: center; gap: var(--rp33-sp-1); min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-2); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-fill); color: var(--rp33-label); font: 600 var(--lt-ios-footnote-size) / 1.2 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .hl-action-btn.active { background: var(--rp33-accent-soft); color: var(--rp36-accent-text); box-shadow: inset 0 0 0 1px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] :is(.hl-action-btn, .hl-mini, .hl-tag, .hl-inject-now-btn):active { filter: brightness(0.92); scale: 0.97; }
+    #phone-panel[data-rp-ios="3"] .hl-select-row { gap: var(--rp33-sp-1); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] :is(.hl-select-row select, .hl-med-add select, .hl-name-ctrl select, .hl-name-ctrl input, .hl-surg-ctrl select, .hl-fetus-row input) { min-block-size: 40px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); outline: none; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] :is(.hl-select-row select, .hl-med-add select, .hl-name-ctrl select, .hl-name-ctrl input, .hl-surg-ctrl select, .hl-fetus-row input):focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+
+    /* ===== 组件：注入盒 ===== */
+    #phone-panel[data-rp-ios="3"] .hl-inject-box { padding: var(--rp33-sp-3); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-accent-soft); }
+    #phone-panel[data-rp-ios="3"] .hl-inject-top { align-items: center; justify-content: space-between; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .hl-inject-title { color: var(--rp33-label); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .hl-inject-now-btn { position: relative; align-items: center; gap: var(--rp33-sp-1); min-block-size: 32px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-accent); background-image: none; color: var(--rp33-on-accent); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .hl-inject-now-btn::after { content: ""; position: absolute; inset: -6px -2px; }
+    #phone-panel[data-rp-ios="3"] .hl-inject-hint { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .hl-inject-toggle { align-items: center; gap: var(--rp33-sp-2); min-block-size: 36px; color: var(--rp33-label); font: var(--lt-type-footnote); accent-color: var(--lt-sys-green); }
+
+    /* ===== 组件：tag / 小钮 ===== */
+    #phone-panel[data-rp-ios="3"] .hl-tag-row { flex-wrap: wrap; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .hl-tag { position: relative; min-block-size: var(--rp33-tab-h); padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .hl-tag::after { content: ""; position: absolute; inset: -6px -2px; }
+    #phone-panel[data-rp-ios="3"] .hl-tag.on { background: var(--rp33-accent-soft); color: var(--rp36-accent-text); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .hl-mini { position: relative; min-block-size: 28px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .hl-mini::after { content: ""; position: absolute; inset: -8px -2px; }
+
+    /* ===== 屏：孕期 · 胎儿 / 需求条 / 子女 ===== */
+    #phone-panel[data-rp-ios="3"] :is(.hl-fetus, .hl-child, .hl-med-item, .hl-breed-card, .hl-name-box, .hl-surg-box) { gap: var(--rp33-sp-2); padding: var(--rp33-sp-3); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .hl-fetus-top { align-items: center; justify-content: space-between; color: var(--rp33-label); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .hl-fetus-top span { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .hl-fetus-row { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .hl-fetus-row label { gap: var(--rp33-sp-1); color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .hl-need-top { justify-content: space-between; color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .hl-need-bar { block-size: 4px; margin-block: var(--rp33-sp-1); border-radius: 999px; background: var(--rp33-fill); overflow: clip; }
+    #phone-panel[data-rp-ios="3"] .hl-need-bar span { border-radius: 999px; background: var(--rp33-accent); background-image: none; }
+    #phone-panel[data-rp-ios="3"] .hl-need-text { color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .hl-child-top { align-items: center; justify-content: space-between; color: var(--rp33-label); font: var(--lt-type-subhead); }
+
+    /* ===== 屏：医疗（病症卡 + 三种徽标 + 新增） ===== */
+    #phone-panel[data-rp-ios="3"] .hl-med-top { align-items: center; gap: var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] :is(.hl-med-sev, .hl-med-out, .hl-med-chr) { padding: 2px var(--rp33-sp-2); border-radius: 999px; font: 600 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .hl-med-sev { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .hl-med-out { background: color-mix(in srgb, var(--lt-sys-green) 14%, transparent); color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"] .hl-med-chr { background: color-mix(in srgb, var(--lt-sys-orange) 16%, transparent); color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .hl-med-exp { color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .hl-med-add { flex-wrap: wrap; gap: var(--rp33-sp-2); }
+
+    /* ===== 屏：育种 / 起名 ===== */
+    #phone-panel[data-rp-ios="3"] .hl-breed-hint { color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .hl-breed-row { justify-content: space-between; gap: var(--rp33-sp-3); min-block-size: 32px; align-items: center; padding: var(--rp33-sp-1) 0; color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .hl-breed-row + .hl-breed-row { border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .hl-breed-row .hl-breed-k { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .hl-breed-row .hl-breed-v { color: var(--rp33-label); font-weight: 500; text-align: end; }
+    #phone-panel[data-rp-ios="3"] :is(.hl-breed-foot, .hl-name-foot, .hl-surg-foot) { padding: var(--rp33-sp-1) 0 0; color: var(--rp33-label-3); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .hl-name-ctrl { flex-wrap: wrap; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .hl-name-result { padding: var(--rp33-sp-2) 0; color: var(--rp33-label); font: var(--lt-type-title2); }
+    #phone-panel[data-rp-ios="3"] .hl-name-sub { color: var(--rp33-label-2); font: var(--lt-type-footnote); font-weight: 400; }
+
+    /* ===== 屏：手术库（列表 + 展开详情） ===== */
+    #phone-panel[data-rp-ios="3"] .hl-surg-list { display: grid; gap: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .hl-surg-item { min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-surface); cursor: pointer; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .hl-surg-item.on { background: var(--rp33-accent-soft); }
+    #phone-panel[data-rp-ios="3"] .hl-surg-top { color: var(--rp33-label); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .hl-surg-id { color: var(--rp33-label-3); font: 400 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios-mono); }
+    #phone-panel[data-rp-ios="3"] .hl-surg-detail { margin-block-start: var(--rp33-sp-2); padding-block-start: var(--rp33-sp-2); border: 0; border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .hl-surg-stage { color: var(--rp33-label); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .hl-surg-comp { color: var(--rp36-text-red); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .hl-surg-note { color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：手环曲线（上游漏样式，这里补上） ===== */
+    #phone-panel[data-rp-ios="3"] .hl-band-chart { padding: var(--rp33-sp-2) 0; }
+    #phone-panel[data-rp-ios="3"] .hl-band-svg { display: block; inline-size: 100%; block-size: 96px; }
+    #phone-panel[data-rp-ios="3"] .hl-band-line { fill: none; stroke: var(--rp33-accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+    #phone-panel[data-rp-ios="3"] .hl-band-area { fill: var(--rp33-accent-soft); stroke: none; }
+    #phone-panel[data-rp-ios="3"] .hl-band-axis { display: flex; justify-content: space-between; color: var(--rp33-label-3); font: var(--lt-type-caption1); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] :is(.hl-band-note, .hl-band-empty) { margin: var(--rp33-sp-1) 0 0; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+}

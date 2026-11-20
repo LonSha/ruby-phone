@@ -1,0 +1,114 @@
+/* ============================================================
+   RubyPhone 主题包 · 像素 OS（rp.themes 层，只覆盖 token，不写任何结构样式）
+   复古掌机：16 色盘（与 pixel-skin.css 的 --px-* 同源）、零圆角、硬投影、2px 描边、等宽像素字体；正文仍保持清晰无衬线（--rp-fs-body 不缩小）。
+   注：像素化的结构特效（阶梯切角 .pxcorner、steps() 动画）仍由 pixel-skin.css 提供，迁入 rp.themes 层后去掉其 129 处 !important。
+   启用：手机根节点 data-rp-pack="pixel"（theme-controller.js -> setPack('pixel')）
+   ============================================================ */
+@layer rp.themes {
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="pixel"] {
+    --rp-font: "Courier New", ui-monospace, monospace;
+    --rp-r-xs: 0;
+    --rp-r-sm: 0;
+    --rp-r-md: 0;
+    --rp-r-lg: 0;
+    --rp-r-xl: 0;
+    --rp-r-pill: 0;
+    --rp-icon-radius: 0;
+    --rp-dock-radius: 0;
+    --rp-btn-radius: 0;
+    --rp-card-radius: 0;
+    --rp-sheet-radius: 0;
+    --rp-bubble-radius: 0;
+    --rp-border-w: 2px;
+    --rp-hairline: 2px;
+    --rp-card-border: 2px;
+    --rp-glass-blur: none;
+    --rp-shadow-1: 4px 4px 0 #1a1c2c;
+    --rp-shadow-2: 4px 4px 0 #1a1c2c;
+    --rp-shadow-3: 6px 6px 0 #1a1c2c;
+    --rp-card-shadow: 4px 4px 0 #1a1c2c;
+    --rp-btn-shadow: 3px 3px 0 #1a1c2c;
+    --rp-bubble-shadow: 3px 3px 0 #1a1c2c;
+    --rp-icon-label-shadow: 1px 1px 0 #1a1c2c;
+    --rp-toggle-on: #3fae49;
+    --rp-badge-bg: #d93744;
+    --rp-ease: steps(4, end);
+    --rp-ease-spring: steps(3, end);
+    --rp-dur-med: 160ms;
+}
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="pixel"] {
+    --rp-bg: #ffedd0;
+    --rp-surface-1: #f4f4f4;
+    --rp-surface-2: #ffedd0;
+    --rp-surface-3: #f9e14e;
+    --rp-text-1: #1a1c2c;
+    --rp-text-2: #333c57;
+    --rp-text-3: #5a3d28;
+    --rp-line: #1a1c2c;
+    --rp-line-strong: #1a1c2c;
+    --rp-accent: #27613b;
+    --rp-glass-bg: #ffedd0;
+    --rp-dock-bg: #333c57;
+    --rp-notif-bg: #f4f4f4;
+}
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="pixel"][data-lonsha-theme="dark"],
+[data-lonsha-theme="dark"] :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="pixel"]:not([data-lonsha-theme="light"]) {
+    --rp-bg: #1a1c2c;
+    --rp-surface-1: #333c57;
+    --rp-surface-2: #27613b;
+    --rp-surface-3: #5d7fa6;
+    --rp-text-1: #f4f4f4;
+    --rp-text-2: #ffedd0;
+    --rp-text-3: #8fd3ff;
+    --rp-line: #f4f4f4;
+    --rp-line-strong: #f4f4f4;
+    --rp-accent: #9de64e;
+    --rp-on-accent: #1a1c2c;
+    --app-on-accent: #1a1c2c;
+    --rp-glass-bg: #1a1c2c;
+    --rp-dock-bg: #333c57;
+    --rp-notif-bg: #333c57;
+}
+}
+
+/* ---------- v2 追加：新组件 token（锁屏 / 灵动岛 / 小组件 / 控制中心 / 聊天 / 设置） 零圆角 / 无模糊 / 无尾巴 / 阶梯动效 ---------- */
+@layer rp.themes {
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="pixel"] {
+    --rp-lock-font: "Courier New", ui-monospace, monospace;
+    --rp-lock-time-weight: 700;
+    --rp-lock-time-tracking: 0;
+    --rp-island-expanded-r: 0;
+    --rp-widget-radius: 0;
+    --rp-widget-blur: none;
+    --rp-widget-bg: #f4f4f4;
+    --rp-widget-fg: #1a1c2c;
+    --rp-widget-fg-2: #333c57;
+    --rp-cc-module-radius: 0;
+    --rp-cc-blur: none;
+    --rp-cc-module-bg: #333c57;
+    --rp-group-radius: 0;
+    --rp-row-icon-radius: 0;
+    --rp-avatar-radius: 0;
+    --rp-moments-avatar-radius: 0;
+    --rp-bubble-tail: 0;
+    --rp-bubble-radius-tight: 0;
+    --rp-mat-chrome-blur: none;
+    --rp-mat-regular-blur: none;
+    --rp-mat-thin-blur: none;
+    --rp-spring-snappy: steps(3, end);
+    --rp-spring-smooth: steps(4, end);
+    --rp-spring-bouncy: steps(4, end);
+    --rp-dur-spring: 220ms;
+    --rp-app-open-dur: 260ms;
+    --rp-imsg-me-bg: #27613b;
+    --rp-wallpaper: repeating-linear-gradient(0deg, rgb(26 28 44 / 0.08) 0 2px, transparent 2px 4px), linear-gradient(180deg, #5d7fa6, #333c57);
+}
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="pixel"][data-lonsha-theme="dark"],
+[data-lonsha-theme="dark"] :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="pixel"]:not([data-lonsha-theme="light"]) {
+    --rp-widget-bg: #333c57;
+    --rp-widget-fg: #f4f4f4;
+    --rp-widget-fg-2: #8fd3ff;
+    --rp-imsg-me-bg: #9de64e;
+    --rp-imsg-me-fg: #1a1c2c;
+}
+}

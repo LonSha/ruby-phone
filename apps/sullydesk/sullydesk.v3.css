@@ -1,0 +1,51 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：SullyOS 治理案头（sullydesk）—— 家族：作者案头 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/sullydesk/sullydesk-view.js（唯一视图，一屏）；-app.js / -data.js 是导出审计规则，无 DOM。
+   屏幕与状态：导出审计（贴回 JSON + 三个按钮）· 审计结果（首行是结论，tone = sd2-ok 通过 / sd2-bad 发现密钥；其后命中路径行）·
+               分组档位 chip · 台账（有 / 空）。
+   设计：作者案头 dashboard：结论行做成状态条（绿 / 红 14% 浅底 + 同色字），命中行「路径（等宽）···· 掩码 · 原因」，
+         档位是 caption 胶囊。强调色系统蓝。
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构 / data-* 不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 4 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    #phone-panel[data-rp-ios="3"] :is(.sd2-root, .sd2-wrap) { --rp33-accent: var(--lt-sys-blue); --rp36-accent-text: var(--rp36-text-blue); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-blue) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-blue) 40%, transparent); }
+
+    /* ===== 屏：案头页面底 ===== */
+    #phone-panel[data-rp-ios="3"] .sd2-wrap { min-block-size: 100%; box-sizing: border-box; padding: var(--rp33-sp-3) var(--rp33-margin) var(--rp33-sp-8); background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+
+    /* ===== 组件：分组卡 ===== */
+    #phone-panel[data-rp-ios="3"] .sd2-sec { margin-block-end: var(--rp33-sp-4); padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .sd2-sec h3 { margin: 0 0 var(--rp33-sp-2); font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); }
+
+    /* ===== 屏：导出审计（JSON 输入 + 按钮） ===== */
+    #phone-panel[data-rp-ios="3"] .sd2-input { box-sizing: border-box; min-block-size: 112px; margin-block-end: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: 400 var(--lt-ios-footnote-size) / 1.45 var(--lt-font-ios-mono); outline: none; resize: vertical; }
+    #phone-panel[data-rp-ios="3"] .sd2-input::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .sd2-input:focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .sd2-btn { position: relative; min-block-size: 36px; margin: var(--rp33-sp-1) var(--rp33-sp-2) var(--rp33-sp-1) 0; padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .sd2-btn::after { content: ""; position: absolute; inset: -4px 0; }
+    #phone-panel[data-rp-ios="3"] .sd2-btn[data-act="audit"] { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .sd2-btn[data-act^="clear"] { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .sd2-btn:active { filter: brightness(0.92); scale: 0.97; }
+
+    /* ===== 屏：审计结果 · 结论条 + 命中行 ===== */
+    #phone-panel[data-rp-ios="3"] .sd2-row { position: relative; justify-content: space-between; align-items: center; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) 0; border: 0; color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .sd2-row + .sd2-row::before { content: ""; position: absolute; inset-block-start: 0; inset-inline: 0 calc(var(--rp33-sp-4) * -1); border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .sd2-row > span:first-child { min-inline-size: 0; overflow-wrap: anywhere; font: 400 var(--lt-ios-footnote-size) / 1.35 var(--lt-font-ios-mono); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .sd2-row > span + span { flex: none; max-inline-size: 55%; color: var(--rp33-label-2); font: var(--lt-type-footnote); text-align: end; }
+    #phone-panel[data-rp-ios="3"] :is(.sd2-row.sd2-ok, .sd2-row.sd2-bad) { margin-block-end: var(--rp33-sp-1); padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); font: 600 var(--lt-ios-subhead-size) / 1.35 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .sd2-ok { background: color-mix(in srgb, var(--lt-sys-green) 14%, transparent); color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"] .sd2-bad { background: var(--rp33-danger-soft); color: var(--rp36-text-red); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] :is(.sd2-row.sd2-ok, .sd2-row.sd2-bad) + .sd2-row::before { border-block-start-color: transparent; }
+
+    /* ===== 屏：分组档位 chip ===== */
+    #phone-panel[data-rp-ios="3"] .sd2-chip { margin: 0 var(--rp33-sp-1) var(--rp33-sp-1) 0; padding: 3px var(--rp33-sp-3); border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label); font: 500 var(--lt-ios-caption1-size) / 1.4 var(--lt-font-ios); font-variant-numeric: tabular-nums; }
+
+    /* ===== 状态：空（台账还没有记录） ===== */
+    #phone-panel[data-rp-ios="3"] .sd2-empty { padding: var(--rp33-sp-2) 0; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+}

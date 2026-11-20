@@ -164,7 +164,10 @@ test('v3930 A9. 类前缀族 .axd-* 唯一且已投递进 phone.css（族撞车�
     }
   };
   scanFams('apps');
-  const owners = (fams.get('axd') || []).filter((x) => !x.endsWith('accessdesk/accessdesk.css'));
+  /* 撞车的定义是「**别的 App 目录**里出现本族前缀」，不是「本 App 有多份样式文件」：
+     *   v3 皮肤（accessdesk.v3.css）与本 App 原样式（accessdesk.css）同族是设计本意 ——
+     *   皮肤就是给同一个 App 换外观，前缀必须一样，否则 skinLoader 的类名前缀表也认不出它。 */
+    const owners = (fams.get('axd') || []).filter((x) => !x.startsWith('apps/accessdesk/'));
   assert.deepEqual(owners, [], '.axd-* 族被别的 App 占用了：' + owners.join(', '));
   /* 本模块自己的类名必须在 phone.css 里找得到（机制 A）。 */
   const own = [...new Set([...CSS.matchAll(/\.(axd-[a-z0-9-]+)/g)].map((m) => m[1]))];

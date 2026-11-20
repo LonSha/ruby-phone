@@ -1,0 +1,481 @@
+/* ============================================================
+   LonSha Tokens v2.0 · 双仓共享设计 token 真源
+   ------------------------------------------------------------
+   使用方：lonsha-memory-plugin（--ls-* 为别名）、ruby-phone（--rp-* 为别名）
+   命名：--lt-*（LonSha Tokens）。组件只许引用别名层，不许直接写颜色。
+
+   v1 -> v2：v1 的全部变量名与取值原样保留（向后兼容，v1 组件零改动），本文件末尾追加：
+     ① 强调色调色板  [data-lt-accent="ice|iris|rose|jade|amber|graphite"]
+        用 light-dark() 一次声明浅 / 深两值，挂在任意容器都能随明暗自动切换；
+        不支持 light-dark() 的旧浏览器整体回退为 v1 冰蓝（@supports 门控）。
+     ② 层级 elevation  --lt-elev-0…5（卡片 -> 悬浮 -> 弹层 -> 面板 -> 命令面板）
+     ③ 材质 materials  --lt-mat-*（ultrathin / thin / regular / thick / chrome），
+        背景 + 模糊 + 描边成套给出，组件不再自己拼 rgba + blur。
+     ④ 弹簧动效 springs  --lt-spring-*（CSS linear() 近似阻尼弹簧，不支持时回退 cubic-bezier）
+     ⑤ 动态取色钩子 dynamic color  --lt-dyn-seed -> --lt-dyn-*（Material You 式色调派生）；
+        JS 侧 lonsha-dynamic-color.js 从壁纸取种子色并写入精确色阶，CSS 侧仅在只有种子色时兜底派生。
+   派生 token 一律写在「:root, [data-theme], [data-lonsha-theme]」同一选择器上：
+     自定义属性里的 var() 在声明它的元素上求值，只在 :root 声明会让子树切换明暗时不刷新。
+
+   主题解析顺序（后者胜）：
+     1. :root 默认浅色
+     2. @media (prefers-color-scheme: dark) -> 深色（未被显式锁定为 light 时）
+     3. [data-theme="light|dark"] / [data-lonsha-theme="light|dark"]
+        可挂在 <html> 或任意容器（面板 / 手机根节点）上，只影响其子树
+     4. [data-lonsha-theme-source="st"]：表面色 / 文字色 / 描边改为跟随
+        SillyTavern 当前主题变量（--SmartTheme*），强调色仍保留品牌色
+   本文件只声明自定义属性，不含任何选择器样式，可安全重复加载。
+   ============================================================ */
+
+/* ---------- 与主题无关的刻度（字号 / 间距 / 圆角 / 动效 / 字体） ---------- */
+:root {
+    /* 字体栈：统一中文字体；等宽只给数字和代码 */
+    --lt-font: -apple-system, BlinkMacSystemFont, "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Microsoft YaHei", system-ui, "Segoe UI", Roboto, sans-serif;
+    --lt-font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+    --lt-font-serif: "Songti SC", "Noto Serif SC", "Source Han Serif SC", serif;
+    --lt-font-hand: "Kaiti SC", "STKaiti", "KaiTi", "Kaiti", serif;   /* 只给日记等个性化场景 */
+
+    /* 字号阶梯（参照 iOS Dynamic Type，最小 11px；可被 --lt-font-scale 整体放大） */
+    --lt-font-scale: 1;
+    --lt-fs-caption: calc(11px * var(--lt-font-scale));   /* 角注 / 徽标（下限） */
+    --lt-fs-footnote: calc(13px * var(--lt-font-scale));  /* 脚注 / 说明 */
+    --lt-fs-subhead: calc(15px * var(--lt-font-scale));   /* 副文 / 面板正文 */
+    --lt-fs-body: calc(17px * var(--lt-font-scale));      /* 正文（手机内） */
+    --lt-fs-title3: calc(20px * var(--lt-font-scale));    /* 小标题 */
+    --lt-fs-title1: calc(28px * var(--lt-font-scale));    /* 大标题 */
+    --lt-fs-display: calc(34px * var(--lt-font-scale));   /* 主屏时钟 / 数字大屏 */
+    --lt-lh-tight: 1.25;
+    --lt-lh-normal: 1.5;
+    --lt-lh-relaxed: 1.65;
+    --lt-fw-regular: 400;
+    --lt-fw-medium: 500;
+    --lt-fw-semibold: 600;
+    --lt-fw-bold: 700;
+
+    /* 间距：4px 栅格 */
+    --lt-sp-0: 0;
+    --lt-sp-1: 4px;
+    --lt-sp-2: 8px;
+    --lt-sp-3: 12px;
+    --lt-sp-4: 16px;
+    --lt-sp-5: 20px;
+    --lt-sp-6: 24px;
+    --lt-sp-8: 32px;
+    --lt-sp-10: 40px;
+    --lt-sp-12: 48px;
+
+    /* 圆角 */
+    --lt-r-xs: 4px;
+    --lt-r-sm: 6px;
+    --lt-r-md: 10px;
+    --lt-r-lg: 14px;
+    --lt-r-xl: 20px;
+    --lt-r-pill: 9999px;
+    --lt-border-w: 1px;
+
+    /* 触控 */
+    --lt-hit: 44px;          /* 最小触控尺寸 */
+
+    /* 动效 */
+    --lt-dur-fast: 140ms;
+    --lt-dur-med: 220ms;
+    --lt-dur-slow: 360ms;
+    --lt-ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --lt-ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --lt-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* 毛玻璃（只给导航栏 / Dock / Sheet 用） */
+    --lt-blur: saturate(160%) blur(20px);
+
+    /* 层级 */
+    --lt-z-fab: 10000;
+    --lt-z-overlay: 10002;
+    --lt-z-toast: 10003;
+}
+
+/* 减少动效：只改 token，不需要 !important */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --lt-dur-fast: 0ms;
+        --lt-dur-med: 0ms;
+        --lt-dur-slow: 0ms;
+        --lt-ease-spring: linear;
+    }
+}
+
+/* ---------- 浅色（默认） ---------- */
+:root,
+[data-theme="light"], [data-lonsha-theme="light"] {
+    color-scheme: light;
+    --lt-scheme: light;
+    --lt-accent-contrast: #ffffff;
+    --lt-depth: 0.18;            /* 内阴影 / 暗角强度系数 */
+    --lt-bg: #f5f7fb;
+    --lt-bg-sunken: #eef2f7;
+    --lt-surface-1: #ffffff;
+    --lt-surface-2: #f1f5f9;
+    --lt-surface-3: #e2e8f0;
+    --lt-surface-glass: rgba(255, 255, 255, 0.82);
+    --lt-overlay: rgba(15, 23, 42, 0.40);
+    --lt-text-1: #0f172a;
+    --lt-text-2: #3f4d63;
+    --lt-text-3: #5b6a80;
+    --lt-text-4: #94a3b8;
+    --lt-text-inverse: #ffffff;
+    --lt-line: rgba(15, 23, 42, 0.10);
+    --lt-line-strong: rgba(15, 23, 42, 0.18);
+    --lt-line-subtle: rgba(15, 23, 42, 0.05);
+    --lt-accent: #0369a1;
+    --lt-accent-strong: #0369a1;
+    --lt-accent-hover: #075985;
+    --lt-accent-soft: rgba(3, 105, 161, 0.10);
+    --lt-accent-line: rgba(3, 105, 161, 0.32);
+    --lt-on-accent: #ffffff;
+    --lt-gold: #a15c07;
+    --lt-gold-soft: rgba(180, 83, 9, 0.10);
+    --lt-gold-line: rgba(180, 83, 9, 0.30);
+    --lt-success: #047857;
+    --lt-success-soft: rgba(4, 120, 87, 0.10);
+    --lt-warn: #a15c07;
+    --lt-warn-soft: rgba(180, 83, 9, 0.10);
+    --lt-danger: #b91c1c;
+    --lt-danger-soft: rgba(185, 28, 28, 0.08);
+    --lt-danger-line: rgba(185, 28, 28, 0.30);
+    --lt-info: #0369a1;
+    --lt-info-soft: rgba(3, 105, 161, 0.10);
+    --lt-ink-rgb: 15 23 42;
+    --lt-paper-rgb: 255 255 255;
+    --lt-shadow-1: 0 1px 2px rgba(15, 23, 42, 0.06), 0 2px 8px rgba(15, 23, 42, 0.06);
+    --lt-shadow-2: 0 4px 16px -2px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.06);
+    --lt-shadow-3: 0 20px 48px -12px rgba(15, 23, 42, 0.25), 0 8px 20px -8px rgba(15, 23, 42, 0.12);
+    --lt-shadow-accent: 0 2px 10px rgba(3, 105, 161, 0.18);
+    --lt-inner-rim: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    --lt-glow: radial-gradient(circle at 50% 0%, rgba(3, 105, 161, 0.05) 0%, transparent 70%);
+}
+
+/* ---------- 深色：跟随系统 ---------- */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]):not([data-lonsha-theme="light"]) {
+        color-scheme: dark;
+        --lt-scheme: dark;
+        --lt-accent-contrast: #04121e;
+        --lt-depth: 1;
+        --lt-bg: #0a0f18;
+        --lt-bg-sunken: #06080d;
+        --lt-surface-1: #111827;
+        --lt-surface-2: #1b2436;
+        --lt-surface-3: #27334a;
+        --lt-surface-glass: rgba(10, 15, 24, 0.86);
+        --lt-overlay: rgba(4, 7, 12, 0.72);
+        --lt-text-1: #f1f5f9;
+        --lt-text-2: #a3b1c6;
+        --lt-text-3: #8391a7;
+        --lt-text-4: #475569;
+        --lt-text-inverse: #06080d;
+        --lt-line: rgba(255, 255, 255, 0.08);
+        --lt-line-strong: rgba(255, 255, 255, 0.16);
+        --lt-line-subtle: rgba(255, 255, 255, 0.04);
+        --lt-accent: #38bdf8;
+        --lt-accent-strong: #0369a1;
+        --lt-accent-hover: #7dd3fc;
+        --lt-accent-soft: rgba(56, 189, 248, 0.12);
+        --lt-accent-line: rgba(56, 189, 248, 0.30);
+        --lt-on-accent: #ffffff;
+        --lt-gold: #fbbf24;
+        --lt-gold-soft: rgba(251, 191, 36, 0.10);
+        --lt-gold-line: rgba(251, 191, 36, 0.30);
+        --lt-success: #34d399;
+        --lt-success-soft: rgba(52, 211, 153, 0.10);
+        --lt-warn: #fbbf24;
+        --lt-warn-soft: rgba(251, 191, 36, 0.10);
+        --lt-danger: #f87171;
+        --lt-danger-soft: rgba(248, 113, 113, 0.12);
+        --lt-danger-line: rgba(248, 113, 113, 0.30);
+        --lt-info: #38bdf8;
+        --lt-info-soft: rgba(56, 189, 248, 0.10);
+        --lt-ink-rgb: 241 245 249;
+        --lt-paper-rgb: 10 15 24;
+        --lt-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.35);
+        --lt-shadow-2: 0 4px 20px -2px rgba(0, 0, 0, 0.65), 0 12px 32px -4px rgba(2, 6, 23, 0.55);
+        --lt-shadow-3: 0 20px 50px -10px rgba(0, 0, 0, 0.85), 0 10px 24px -5px rgba(0, 0, 0, 0.65);
+        --lt-shadow-accent: 0 2px 14px rgba(56, 189, 248, 0.28);
+        --lt-inner-rim: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.40);
+        --lt-glow: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.08) 0%, transparent 75%);
+    }
+}
+
+/* ---------- 深色：显式锁定（可挂在任意容器） ---------- */
+[data-theme="dark"], [data-lonsha-theme="dark"] {
+    color-scheme: dark;
+    --lt-scheme: dark;
+    --lt-accent-contrast: #04121e;
+    --lt-depth: 1;
+    --lt-bg: #0a0f18;
+    --lt-bg-sunken: #06080d;
+    --lt-surface-1: #111827;
+    --lt-surface-2: #1b2436;
+    --lt-surface-3: #27334a;
+    --lt-surface-glass: rgba(10, 15, 24, 0.86);
+    --lt-overlay: rgba(4, 7, 12, 0.72);
+    --lt-text-1: #f1f5f9;
+    --lt-text-2: #a3b1c6;
+    --lt-text-3: #8391a7;
+    --lt-text-4: #475569;
+    --lt-text-inverse: #06080d;
+    --lt-line: rgba(255, 255, 255, 0.08);
+    --lt-line-strong: rgba(255, 255, 255, 0.16);
+    --lt-line-subtle: rgba(255, 255, 255, 0.04);
+    --lt-accent: #38bdf8;
+    --lt-accent-strong: #0369a1;
+    --lt-accent-hover: #7dd3fc;
+    --lt-accent-soft: rgba(56, 189, 248, 0.12);
+    --lt-accent-line: rgba(56, 189, 248, 0.30);
+    --lt-on-accent: #ffffff;
+    --lt-gold: #fbbf24;
+    --lt-gold-soft: rgba(251, 191, 36, 0.10);
+    --lt-gold-line: rgba(251, 191, 36, 0.30);
+    --lt-success: #34d399;
+    --lt-success-soft: rgba(52, 211, 153, 0.10);
+    --lt-warn: #fbbf24;
+    --lt-warn-soft: rgba(251, 191, 36, 0.10);
+    --lt-danger: #f87171;
+    --lt-danger-soft: rgba(248, 113, 113, 0.12);
+    --lt-danger-line: rgba(248, 113, 113, 0.30);
+    --lt-info: #38bdf8;
+    --lt-info-soft: rgba(56, 189, 248, 0.10);
+    --lt-ink-rgb: 241 245 249;
+    --lt-paper-rgb: 10 15 24;
+    --lt-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.35);
+    --lt-shadow-2: 0 4px 20px -2px rgba(0, 0, 0, 0.65), 0 12px 32px -4px rgba(2, 6, 23, 0.55);
+    --lt-shadow-3: 0 20px 50px -10px rgba(0, 0, 0, 0.85), 0 10px 24px -5px rgba(0, 0, 0, 0.65);
+    --lt-shadow-accent: 0 2px 14px rgba(56, 189, 248, 0.28);
+    --lt-inner-rim: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.40);
+    --lt-glow: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.08) 0%, transparent 75%);
+}
+
+/* ---------- 焦点环（依赖主题色，放在主题块之后统一派生） ---------- */
+:root,
+[data-theme],
+[data-lonsha-theme] {
+    --lt-focus-color: var(--lt-accent);
+    --lt-focus-ring: 0 0 0 2px var(--lt-bg), 0 0 0 4px var(--lt-focus-color);
+    --lt-focus-outline: 2px solid var(--lt-focus-color);
+    --lt-focus-offset: 2px;
+}
+
+/* ---------- 跟随 SillyTavern 主题（可选） ----------
+   ST 的主题编辑器会在 :root 写入 --SmartThemeBodyColor / --SmartThemeBlurTintColor 等。
+   挂上 data-lonsha-theme-source="st" 后表面 / 文字 / 描边取自 ST，品牌强调色不变。
+   注意：自定义属性不能自引用（--a: var(--x, var(--a)) 会成环失效），所以兜底值写字面量。
+   dashboard-shell.js 的 auto 模式会读取 ST 背景亮度来决定 light / dark。 */
+[data-lonsha-theme-source="st"] {
+    --lt-bg: var(--SmartThemeBlurTintColor, #0a0f18);
+    --lt-surface-1: color-mix(in srgb, var(--SmartThemeBlurTintColor, #111827) 88%, var(--SmartThemeBodyColor, #f1f5f9) 4%);
+    --lt-surface-2: color-mix(in srgb, var(--SmartThemeBlurTintColor, #1b2436) 80%, var(--SmartThemeBodyColor, #f1f5f9) 8%);
+    --lt-surface-3: color-mix(in srgb, var(--SmartThemeBlurTintColor, #27334a) 70%, var(--SmartThemeBodyColor, #f1f5f9) 14%);
+    --lt-text-1: var(--SmartThemeBodyColor, #f1f5f9);
+    --lt-text-2: color-mix(in srgb, var(--SmartThemeBodyColor, #f1f5f9) 78%, transparent);
+    --lt-text-3: color-mix(in srgb, var(--SmartThemeBodyColor, #f1f5f9) 64%, transparent);
+    --lt-line: var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.08));
+}
+
+
+/* ############################################################
+   v2 追加区（以下全部为新增 token；v1 名称一个都没改）
+   ############################################################ */
+
+/* ---------- ④ 动效：弹簧 + 时长（与主题无关） ----------
+   参考：Things 3 / Arc 的「轻、短、带一点回弹」；iOS 18 的 spring(response, damping)。
+   linear() 采样自阻尼弹簧曲线：snappy（无过冲，用于按压 / 切换）、smooth（几乎无过冲，用于面板）、
+   bouncy（约 6% 过冲，用于 App 打开 / 灵动岛展开）。 */
+:root {
+    --lt-dur-instant: 90ms;
+    --lt-dur-spring: 520ms;          /* 弹簧动画的时长（linear() 已含尾部衰减） */
+    --lt-dur-spring-long: 680ms;
+    --lt-spring-snappy: cubic-bezier(0.2, 0.9, 0.25, 1);
+    --lt-spring-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+    --lt-spring-bouncy: cubic-bezier(0.34, 1.4, 0.64, 1);
+    --lt-ease-emphasized: cubic-bezier(0.2, 0, 0, 1);       /* Material 3 强调曲线：Sheet / 抽屉 */
+    --lt-ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);        /* 退场加速 */
+    --lt-stagger: 28ms;              /* 列表逐项入场的错峰步长 */
+    --lt-press-scale: 0.97;          /* 按压缩放 */
+    --lt-hover-lift: -1px;           /* 悬浮上浮 */
+
+    /* 尺寸刻度（新增） */
+    --lt-sp-14: 56px;
+    --lt-sp-16: 64px;
+    --lt-r-2xl: 28px;                /* 小组件 / 大卡片 */
+    --lt-r-3xl: 38px;                /* 灵动岛展开态 / 控制中心模块 */
+    --lt-hairline: 0.5px;
+
+    /* 数字排版 */
+    --lt-num: tabular-nums;
+    --lt-tracking-tight: -0.022em;   /* 大字号收紧字距（Linear / iOS 大标题） */
+    --lt-tracking-caps: 0.06em;      /* 小号全大写标签 */
+}
+@supports (transition-timing-function: linear(0, 1)) {
+    :root {
+        --lt-spring-snappy: linear(0, 0.157 4.5%, 0.438 10.3%, 0.72 17.6%, 0.88 24.2%, 0.958 31.1%, 0.991 39.6%, 1.001 52%, 1);
+        --lt-spring-smooth: linear(0, 0.096 4.5%, 0.33 11%, 0.6 19.2%, 0.8 27.6%, 0.92 36.3%, 0.975 46%, 0.996 58%, 1);
+        --lt-spring-bouncy: linear(0, 0.18 5%, 0.58 13%, 0.92 21%, 1.055 28.5%, 1.065 33%, 1.03 41%, 0.995 52%, 0.998 64%, 1);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --lt-dur-instant: 0ms;
+        --lt-dur-spring: 0ms;
+        --lt-dur-spring-long: 0ms;
+        --lt-spring-snappy: linear;
+        --lt-spring-smooth: linear;
+        --lt-spring-bouncy: linear;
+        --lt-stagger: 0ms;
+        --lt-press-scale: 1;
+        --lt-hover-lift: 0px;
+    }
+}
+
+/* ---------- ②③⑤ 派生 token：随明暗切换（与 v1 焦点环同一选择器） ---------- */
+:root,
+[data-theme],
+[data-lonsha-theme] {
+    /* ② elevation：0 平铺 · 1 卡片 · 2 悬浮卡 · 3 下拉 / 气泡菜单 · 4 Sheet · 5 命令面板 / 模态 */
+    --lt-ring: 0 0 0 var(--lt-border-w) var(--lt-line);
+    --lt-ring-strong: 0 0 0 var(--lt-border-w) var(--lt-line-strong);
+    --lt-elev-0: none;
+    --lt-elev-1: var(--lt-ring), 0 1px 2px rgb(var(--lt-ink-rgb) / calc(0.04 + 0.10 * var(--lt-depth)));
+    --lt-elev-2: var(--lt-ring), var(--lt-shadow-1);
+    --lt-elev-3: var(--lt-ring-strong), var(--lt-shadow-2);
+    --lt-elev-4: var(--lt-ring), var(--lt-shadow-3);
+    --lt-elev-5: var(--lt-ring-strong), var(--lt-shadow-3), 0 32px 80px -24px rgb(0 0 0 / calc(0.18 + 0.30 * var(--lt-depth)));
+
+    /* ③ materials：背景 / 模糊 / 描边成套（参考 iOS 系统材质分级） */
+    --lt-mat-ultrathin-bg: rgb(var(--lt-paper-rgb) / 0.42);
+    --lt-mat-thin-bg: rgb(var(--lt-paper-rgb) / 0.62);
+    --lt-mat-regular-bg: rgb(var(--lt-paper-rgb) / 0.76);
+    --lt-mat-thick-bg: rgb(var(--lt-paper-rgb) / 0.88);
+    --lt-mat-chrome-bg: rgb(var(--lt-paper-rgb) / 0.80);       /* 导航栏 / Tab 栏 */
+    --lt-mat-ultrathin-blur: saturate(180%) blur(12px);
+    --lt-mat-thin-blur: saturate(180%) blur(18px);
+    --lt-mat-regular-blur: saturate(180%) blur(24px);
+    --lt-mat-thick-blur: saturate(160%) blur(32px);
+    --lt-mat-chrome-blur: saturate(180%) blur(20px);
+    --lt-mat-border: rgb(var(--lt-ink-rgb) / 0.08);
+    --lt-mat-highlight: inset 0 0.5px 0 rgb(255 255 255 / calc(0.55 - 0.40 * var(--lt-depth)));
+    --lt-mat-vibrant-text: rgb(var(--lt-ink-rgb) / 0.62);     /* 叠在材质上的次级文字 */
+    /* 深色壁纸上的固定深色材质（灵动岛 / 锁屏通知 / 控制中心模块，不随主题翻转） */
+    --lt-mat-dark-bg: rgb(18 20 26 / 0.58);
+    --lt-mat-dark-border: rgb(255 255 255 / 0.10);
+
+    /* 骨架屏 / 选中态 */
+    --lt-skeleton-base: rgb(var(--lt-ink-rgb) / 0.06);
+    --lt-skeleton-shine: rgb(var(--lt-ink-rgb) / 0.11);
+    --lt-selection: color-mix(in srgb, var(--lt-accent) 22%, transparent);
+    --lt-hover: rgb(var(--lt-ink-rgb) / 0.045);
+    --lt-pressed: rgb(var(--lt-ink-rgb) / 0.08);
+
+    /* 数据可视化分类色（关系图 / 时间线 / 健康环）：浅深两套都对底色 ≥ 3:1 */
+    --lt-viz-1: var(--lt-accent);
+    --lt-viz-2: var(--lt-gold);
+    --lt-viz-3: var(--lt-success);
+    --lt-viz-4: var(--lt-danger);
+    --lt-viz-5: color-mix(in srgb, var(--lt-accent) 45%, #8b5cf6);
+    --lt-viz-6: color-mix(in srgb, var(--lt-text-3) 80%, transparent);
+
+    /* ⑤ 动态取色：默认种子 = 品牌强调色；JS 会写入 --lt-dyn-seed 或整套 --lt-dyn-{l,d}-* */
+    --lt-dyn-seed: var(--lt-accent);
+}
+
+/* ---------- ⑤ 动态取色 CSS 兜底派生（只有种子色、没有 JS 精确色阶时） ----------
+   使用 OKLCH 相对颜色语法按 Material You 的色调（tone）思路派生；
+   浏览器不支持时什么也不做 —— 组件 var(--lt-dyn-*, var(--lt-accent)) 自动回退到品牌色。 */
+@supports (color: oklch(from red l c h)) {
+    :root,
+    [data-theme],
+    [data-lonsha-theme] {
+        --lt-dyn-l-primary: oklch(from var(--lt-dyn-seed) 0.50 min(c, 0.17) h);
+        --lt-dyn-l-on-primary: #ffffff;
+        --lt-dyn-l-container: oklch(from var(--lt-dyn-seed) 0.92 min(c, 0.06) h);
+        --lt-dyn-l-on-container: oklch(from var(--lt-dyn-seed) 0.28 min(c, 0.09) h);
+        --lt-dyn-l-surface: oklch(from var(--lt-dyn-seed) 0.975 0.012 h);
+        --lt-dyn-l-surface-2: oklch(from var(--lt-dyn-seed) 0.94 0.02 h);
+        --lt-dyn-l-surface-3: oklch(from var(--lt-dyn-seed) 0.90 0.026 h);
+        --lt-dyn-l-outline: oklch(from var(--lt-dyn-seed) 0.62 0.03 h);
+        --lt-dyn-d-primary: oklch(from var(--lt-dyn-seed) 0.80 min(c, 0.13) h);
+        --lt-dyn-d-on-primary: oklch(from var(--lt-dyn-seed) 0.25 min(c, 0.08) h);
+        --lt-dyn-d-container: oklch(from var(--lt-dyn-seed) 0.33 min(c, 0.07) h);
+        --lt-dyn-d-on-container: oklch(from var(--lt-dyn-seed) 0.90 min(c, 0.05) h);
+        --lt-dyn-d-surface: oklch(from var(--lt-dyn-seed) 0.17 0.012 h);
+        --lt-dyn-d-surface-2: oklch(from var(--lt-dyn-seed) 0.22 0.018 h);
+        --lt-dyn-d-surface-3: oklch(from var(--lt-dyn-seed) 0.27 0.022 h);
+        --lt-dyn-d-outline: oklch(from var(--lt-dyn-seed) 0.55 0.03 h);
+    }
+}
+
+/* ---------- ① 强调色调色板 ----------
+   light-dark(浅, 深) 在「使用处」按 color-scheme 求值，所以调色板挂在 <html> 上、
+   手机根节点自己切 data-lonsha-theme="dark" 时也能拿到正确的深色值。
+   选择器特异性刻意分三档：
+     [data-lt-accent=x]                         0,1,0  无主题属性的元素（如色样按钮）
+     [data-lt-accent=x] [data-lonsha-theme]     0,2,0  祖先挂调色板、子容器挂主题（压过 v1 主题块 0,1,0）
+     [data-lt-accent=x][data-lt-accent][data-lonsha-theme]  0,3,0  元素自己同时挂两者：自己的调色板赢过祖先的
+   对比度：浅色值对 #fff ≥ 4.5:1；深色值对 #111827 ≥ 4.5:1；on-accent 对 accent ≥ 4.5:1。 */
+@supports (color: light-dark(#000, #fff)) {
+    [data-lt-accent="ice"],
+    [data-lt-accent="ice"] [data-theme], [data-lt-accent="ice"] [data-lonsha-theme],
+    [data-lt-accent="ice"][data-lt-accent][data-theme], [data-lt-accent="ice"][data-lt-accent][data-lonsha-theme] {
+        --lt-accent: light-dark(#0369a1, #38bdf8);
+        --lt-accent-hover: light-dark(#075985, #7dd3fc);
+        --lt-on-accent: light-dark(#ffffff, #04121e);
+    }
+    [data-lt-accent="iris"],
+    [data-lt-accent="iris"] [data-theme], [data-lt-accent="iris"] [data-lonsha-theme],
+    [data-lt-accent="iris"][data-lt-accent][data-theme], [data-lt-accent="iris"][data-lt-accent][data-lonsha-theme] {
+        --lt-accent: light-dark(#5145cd, #a5b4fc);
+        --lt-accent-hover: light-dark(#4338ca, #c7d2fe);
+        --lt-on-accent: light-dark(#ffffff, #12104a);
+    }
+    [data-lt-accent="rose"],
+    [data-lt-accent="rose"] [data-theme], [data-lt-accent="rose"] [data-lonsha-theme],
+    [data-lt-accent="rose"][data-lt-accent][data-theme], [data-lt-accent="rose"][data-lt-accent][data-lonsha-theme] {
+        --lt-accent: light-dark(#be185d, #f9a8d4);
+        --lt-accent-hover: light-dark(#9d174d, #fbcfe8);
+        --lt-on-accent: light-dark(#ffffff, #3b0820);
+    }
+    [data-lt-accent="jade"],
+    [data-lt-accent="jade"] [data-theme], [data-lt-accent="jade"] [data-lonsha-theme],
+    [data-lt-accent="jade"][data-lt-accent][data-theme], [data-lt-accent="jade"][data-lt-accent][data-lonsha-theme] {
+        --lt-accent: light-dark(#047857, #34d399);
+        --lt-accent-hover: light-dark(#065f46, #6ee7b7);
+        --lt-on-accent: light-dark(#ffffff, #022c1f);
+    }
+    [data-lt-accent="amber"],
+    [data-lt-accent="amber"] [data-theme], [data-lt-accent="amber"] [data-lonsha-theme],
+    [data-lt-accent="amber"][data-lt-accent][data-theme], [data-lt-accent="amber"][data-lt-accent][data-lonsha-theme] {
+        --lt-accent: light-dark(#a15c07, #fbbf24);
+        --lt-accent-hover: light-dark(#854d0e, #fcd34d);
+        --lt-on-accent: light-dark(#ffffff, #2b1700);
+    }
+    [data-lt-accent="graphite"],
+    [data-lt-accent="graphite"] [data-theme], [data-lt-accent="graphite"] [data-lonsha-theme],
+    [data-lt-accent="graphite"][data-lt-accent][data-theme], [data-lt-accent="graphite"][data-lt-accent][data-lonsha-theme] {
+        --lt-accent: light-dark(#334155, #cbd5e1);
+        --lt-accent-hover: light-dark(#1e293b, #e2e8f0);
+        --lt-on-accent: light-dark(#ffffff, #0f172a);
+    }
+    /* 派生值跟着调色板重新声明（同一元素上求值） */
+    [data-lt-accent], [data-lt-accent] [data-theme], [data-lt-accent] [data-lonsha-theme],
+    [data-lt-accent][data-lt-accent][data-theme], [data-lt-accent][data-lt-accent][data-lonsha-theme] {
+        --lt-accent-strong: var(--lt-accent);
+        --lt-accent-soft: color-mix(in srgb, var(--lt-accent) 12%, transparent);
+        --lt-accent-line: color-mix(in srgb, var(--lt-accent) 32%, transparent);
+        --lt-info: var(--lt-accent);
+        --lt-info-soft: var(--lt-accent-soft);
+        --lt-shadow-accent: 0 2px 12px color-mix(in srgb, var(--lt-accent) 24%, transparent);
+        --lt-focus-color: var(--lt-accent);
+        --lt-focus-ring: 0 0 0 2px var(--lt-bg), 0 0 0 4px var(--lt-accent);
+        --lt-focus-outline: 2px solid var(--lt-accent);
+        --lt-selection: color-mix(in srgb, var(--lt-accent) 22%, transparent);
+        --lt-viz-1: var(--lt-accent);
+        --lt-dyn-seed: var(--lt-accent);
+    }
+}

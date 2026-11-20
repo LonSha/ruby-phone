@@ -1,0 +1,79 @@
+/* ============================================================
+   RubyPhone · 基础组件（rp.base + rp.reset 层）
+   ------------------------------------------------------------
+   只放「所有 App 共用、且与主题无关」的地基：
+     1. 手机内部的重置（行高、字体继承、按钮默认外观、图片拖拽）
+     2. 焦点环与最小点击高度（可访问性，不靠各 App 自己记得写）
+     3. 滚动与安全区（-webkit-overflow-scrolling、overscroll 行为）
+   具体组件的皮（卡片 / 分段控件 / Tab 栏 / 玻璃）在 phone-components-v2 / v3。
+   ============================================================ */
+@layer rp.reset {
+    :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root) {
+        -webkit-text-size-adjust: 100%;
+        -webkit-tap-highlight-color: transparent;
+        font-size: var(--rp-fs-body, 17px);
+        line-height: var(--rp-lh-normal, 1.35);
+    }
+
+    :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root) img {
+        -webkit-user-drag: none;
+        max-width: 100%;
+    }
+
+    :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root) button {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: 0;
+        margin: 0;
+        padding: 0;
+        cursor: pointer;
+    }
+}
+
+@layer rp.base {
+    /* 焦点可见：键盘 / 无障碍操作台用户必须能看见焦点在哪 */
+    :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root)
+    :is(button, [role="button"], a, input, select, textarea, summary):focus-visible {
+        outline: 2px solid var(--rp-accent, #007aff);
+        outline-offset: 2px;
+        border-radius: 6px;
+    }
+
+    /* 可点区域的最小高度：只在 v3 外观下生效，避免改变旧外观的行高 */
+    :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root)[data-rp-ios="3"]
+    :is(button, [role="button"], a[href]) {
+        min-height: 44px;
+    }
+
+    /* 小胶囊 / 文字按钮不占用 44pt 的布局高度，用伪元素把点击区扩出来 */
+    :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root)[data-rp-ios="3"]
+    :is(.rp3-chip, .rp3-icon-btn, [data-rp-hit="soft"]) {
+        position: relative;
+        min-height: 0;
+    }
+
+    :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root)[data-rp-ios="3"]
+    :is(.rp3-chip, .rp3-icon-btn, [data-rp-hit="soft"])::after {
+        content: "";
+        position: absolute;
+        inset: 50% 50% 50% 50%;
+        width: 44px;
+        height: 44px;
+        transform: translate(-50%, -50%);
+    }
+
+    /* 滚动：手机内部的滚动手感与边缘不回弹到宿主 */
+    :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root) {
+        overscroll-behavior: contain;
+    }
+
+    /* 减少动效：系统开关优先于任何自定义动效 */
+    @media (prefers-reduced-motion: reduce) {
+        :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root) * {
+            animation-duration: 0.001ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.001ms !important;
+        }
+    }
+}

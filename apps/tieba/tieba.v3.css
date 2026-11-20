@@ -1,0 +1,93 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：贴吧（tieba）—— 家族：社交信息流 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/tieba/tieba-view.js（render 外壳 / 吧选择条 / _renderPosts / _openDetail 楼层详情 / 发帖弹层 / 空态）；tieba-app.js、tieba-data.js 无 DOM。
+   屏幕与状态：导航栏（返回 · 百度贴吧 · 发帖胶囊）· 吧选择横滑 chip（.active）· 帖子卡流（吧名、标题、摘要两行、作者头像 / 时间、回复数 / 点赞 .liked）· 空态 ·
+               帖子详情整屏（返回 · 吧名 · 点赞胶囊 .liked；1 楼：标题、作者 + 楼主标、正文；全部回复：楼层行；底部回复输入 + 回复）·
+               发帖 Sheet（关闭 · 发布新帖 · 发布；选吧 select、标题、正文）。详情 / 发帖的显隐是 JS 写的 style="display"，皮肤不碰。
+   设计：原生深蓝灰。v3.5 跟随系统浅深色，品牌蓝只给发帖 / 发布 / 回复按钮、选中吧 chip、点赞态、楼主标；
+         卡片 16 圆角；吧选择是 5 个以上的横滑胶囊；返回键 = 44pt 玻璃圆钮；回复楼层是卡片里的 surface-2 块，层级靠表面亮度而不是描边。
+   规矩：零 !important、零写死颜色、零字符图标；类名 / ID / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 4 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    #phone-panel[data-rp-ios="3"] .tb-root { --rp33-accent: var(--rp33-brand-tieba); --rp36-accent-text: var(--rp36-text-brand-tieba); --rp33-accent-soft: color-mix(in srgb, var(--rp33-brand-tieba) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--rp33-brand-tieba) 40%, transparent); }
+
+    /* ===== 屏：帖子列表 · 页面底 + 导航栏 ===== */
+    #phone-panel[data-rp-ios="3"] .tb-root { background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] :is(.tb-header, .tb-detail-header) { block-size: auto; min-block-size: 52px; gap: var(--rp33-sp-2); padding: var(--rp33-sp-1) var(--rp33-sp-3); border: 0; background: var(--lt-mat3-bar); -webkit-backdrop-filter: var(--lt-mat3-blur); backdrop-filter: var(--lt-mat3-blur); }
+    #phone-panel[data-rp-ios="3"] :is(.tb-back-btn, .tb-detail-back, .tb-compose-close) { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); flex: none; padding: 0; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 17px; cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] :is(.tb-back-btn, .tb-detail-back, .tb-compose-close):active { scale: 0.94; }
+    #phone-panel[data-rp-ios="3"] .tb-header-title { color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .tb-post-trigger { gap: var(--rp33-sp-1); align-items: center; min-block-size: 36px; padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; position: relative; }
+    #phone-panel[data-rp-ios="3"] .tb-post-trigger::after { content: ""; position: absolute; inset: -4px 0; }
+
+    /* ===== 组件：吧选择（横滑胶囊 chip） ===== */
+    #phone-panel[data-rp-ios="3"] .tb-bar-selector { gap: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-margin); border: 0; background: transparent; }
+    #phone-panel[data-rp-ios="3"] .tb-bar-chip { flex: none; min-block-size: var(--rp33-tab-h); padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-surface); box-shadow: var(--rp33-rim); color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; position: relative; }
+    #phone-panel[data-rp-ios="3"] .tb-bar-chip::after { content: ""; position: absolute; inset: -6px -2px; }
+    #phone-panel[data-rp-ios="3"] .tb-bar-chip.active { background: var(--rp33-accent); box-shadow: none; color: var(--rp33-on-accent); font-weight: 600; }
+
+    /* ===== 屏：帖子卡流 ===== */
+    #phone-panel[data-rp-ios="3"] .tb-body { padding: var(--rp33-sp-1) var(--rp33-margin) var(--rp33-sp-8); }
+    #phone-panel[data-rp-ios="3"] .tb-posts-list { gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .tb-post-card { padding: var(--rp33-sp-4); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .tb-post-card:hover { background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .tb-post-card:active { scale: 0.99; }
+    #phone-panel[data-rp-ios="3"] .tb-post-bar-tag { margin-block-end: var(--rp33-sp-1); color: var(--rp36-accent-text); font: 600 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .tb-post-title { margin: 0 0 var(--rp33-sp-1); color: var(--rp33-label); font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); }
+    #phone-panel[data-rp-ios="3"] .tb-post-excerpt { margin: 0 0 var(--rp33-sp-3); color: var(--rp33-label-2); font: var(--lt-type-subhead); line-height: 1.45; }
+    #phone-panel[data-rp-ios="3"] .tb-post-meta-row { align-items: center; color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .tb-post-author-group { gap: var(--rp33-sp-2); align-items: center; }
+    #phone-panel[data-rp-ios="3"] .tb-post-avatar { inline-size: 20px; block-size: 20px; border-radius: 999px; box-shadow: 0 0 0 0.5px var(--rp33-avatar-ring); }
+    #phone-panel[data-rp-ios="3"] .tb-post-author { color: var(--rp33-label); font-weight: 500; }
+    #phone-panel[data-rp-ios="3"] .tb-post-time { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .tb-post-stats { gap: var(--rp33-sp-3); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .tb-post-stat-item.liked { color: var(--rp36-accent-text); }
+
+    /* ===== 状态：空（这个吧空空如也） ===== */
+    #phone-panel[data-rp-ios="3"] .tb-empty { padding: var(--rp33-sp-8) var(--rp33-sp-6); color: var(--rp33-label-2); font: var(--lt-type-subhead); text-align: center; }
+
+    /* ===== 屏：帖子详情（整屏） ===== */
+    #phone-panel[data-rp-ios="3"] .tb-detail-modal { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .tb-detail-barname { flex: 1 1 auto; color: var(--rp33-label); font: var(--lt-type-headline); text-align: center; }
+    #phone-panel[data-rp-ios="3"] .tb-detail-like-btn { min-block-size: 36px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label-2); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); font-variant-numeric: tabular-nums; cursor: pointer; position: relative; }
+    #phone-panel[data-rp-ios="3"] .tb-detail-like-btn::after { content: ""; position: absolute; inset: -4px 0; }
+    #phone-panel[data-rp-ios="3"] .tb-detail-like-btn.liked { background: var(--rp33-accent-soft); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .tb-detail-scroll { padding: var(--rp33-sp-3) var(--rp33-margin) var(--rp33-sp-6); }
+    #phone-panel[data-rp-ios="3"] .tb-floor-main { margin-block-end: var(--rp33-sp-4); padding: var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .tb-floor-title { margin: 0 0 var(--rp33-sp-3); color: var(--rp33-label); font: var(--lt-type-title3); letter-spacing: var(--lt-ios-title3-track); }
+    #phone-panel[data-rp-ios="3"] .tb-floor-author-bar { gap: var(--rp33-sp-3); align-items: center; margin-block-end: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .tb-floor-author-bar img { inline-size: 36px; block-size: 36px; border-radius: 999px; box-shadow: 0 0 0 0.5px var(--rp33-avatar-ring); }
+    #phone-panel[data-rp-ios="3"] .tb-floor-author-bar .author { color: var(--rp33-label); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .tb-floor-author-bar .time { color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .lz-tag { margin-inline-start: var(--rp33-sp-1); padding: 2px var(--rp33-sp-2); border-radius: 999px; background: var(--rp33-accent-soft); color: var(--rp36-accent-text); font: 600 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .tb-floor-content { color: var(--rp33-label); font: var(--lt-type-body); line-height: 1.55; }
+    #phone-panel[data-rp-ios="3"] .tb-replies-count { margin: 0 var(--rp33-sp-1) var(--rp33-sp-2); color: var(--rp33-label-2); font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .tb-reply-row { margin-block-end: var(--rp33-sp-2); padding: var(--rp33-sp-3) var(--rp33-sp-4); border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .tb-reply-head { margin-block-end: var(--rp33-sp-1); color: var(--rp33-label-2); font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .r-floor { color: var(--rp33-label-3); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .tb-reply-row .r-text { color: var(--rp33-label); font: var(--lt-type-subhead); line-height: 1.45; }
+    #phone-panel[data-rp-ios="3"] .tb-reply-row .r-time { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label-3); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .tb-detail-footer { gap: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3) var(--rp33-sp-3); border-block-start: 0.5px solid var(--rp33-sep); background: var(--lt-mat3-bar); -webkit-backdrop-filter: var(--lt-mat3-blur); backdrop-filter: var(--lt-mat3-blur); }
+    #phone-panel[data-rp-ios="3"] .tb-reply-input { min-block-size: 40px; padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; }
+    #phone-panel[data-rp-ios="3"] :is(.tb-reply-send, .tb-compose-submit) { min-block-size: 40px; padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; position: relative; }
+    #phone-panel[data-rp-ios="3"] :is(.tb-reply-send, .tb-compose-submit)::after { content: ""; position: absolute; inset: -2px 0; }
+    #phone-panel[data-rp-ios="3"] :is(.tb-reply-send, .tb-compose-submit, .tb-post-trigger):active { filter: brightness(0.92); scale: 0.97; }
+
+    /* ===== 屏：发帖 Sheet ===== */
+    #phone-panel[data-rp-ios="3"] .tb-compose-overlay { background: var(--rp33-scrim); }
+    #phone-panel[data-rp-ios="3"] .tb-compose-card { border: 0; border-start-start-radius: var(--rp33-sheet-radius); border-start-end-radius: var(--rp33-sheet-radius); background: var(--rp33-sheet-bg); box-shadow: var(--rp33-float-shadow); color: var(--rp33-label); overflow: clip; }
+    #phone-panel[data-rp-ios="3"] .tb-compose-head { align-items: center; gap: var(--rp33-sp-3); min-block-size: 60px; padding: var(--rp33-sp-2) var(--rp33-sp-4); border: 0; }
+    #phone-panel[data-rp-ios="3"] .tb-compose-head h3 { flex: 1 1 auto; margin: 0; color: var(--rp33-label); font: var(--lt-type-headline); text-align: center; }
+    #phone-panel[data-rp-ios="3"] .tb-compose-body { gap: var(--rp33-sp-3); padding: var(--rp33-sp-2) var(--rp33-sp-4) var(--rp33-sp-6); }
+    #phone-panel[data-rp-ios="3"] :is(.tb-compose-bar-select, .tb-compose-title, .tb-compose-content) { min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .tb-compose-title { font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .tb-compose-content { min-block-size: 180px; line-height: 1.5; }
+    #phone-panel[data-rp-ios="3"] :is(.tb-compose-title, .tb-compose-content, .tb-reply-input)::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] :is(.tb-compose-bar-select, .tb-compose-title, .tb-compose-content, .tb-reply-input):focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+}

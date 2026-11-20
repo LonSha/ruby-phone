@@ -1,0 +1,147 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：召回治理台（recall）—— 家族：角色扮演专属（作者案头式）· 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/recall/recall-view.js（_buildHTML / _channelsPanel / _fusionPanel / _ledgerPanel / _policyPanel / _narratePanel）；其余文件无 DOM。
+   屏幕与状态：页头 · 状态条（.rcl-face-ok / -warn）· 回执 · 分段页签（.is-on）· 提示 ·
+               通道（卡 .rcl-ch-ok / -warn / -mute：名称 / 状态徽标 .rcl-st-ready / -absent / -off / -stale / -degraded / -failed / 数量 / 原因 / 错误 / 按钮）·
+               快照（标签 + 文本框 + 按钮）· 融合（按钮、结果卡：每通道 .rcl-per / .is-skip、命中行（名次 / id / 分数）/ 无命中、结论 .rcl-vd-ok / -warn）·
+               台账（记录 .rcl-rc-ok / -warn：时间 / 入口 / 面 / 正文 / 标记 / 按钮；空）· 策略（行：键 / 值 / 说明 / 警告 / 输入 / 按钮；房间胶囊 .is-on；分类）·
+               叙述（输入条、空闲 / 结果 .rcl-nar-ok / -empty / -err、缺口胶囊、事件卡：时间 / 条数 / 消息胶囊 / 结论）。
+   设计：原生就是浅色「治理面板」，配色接近 iOS；v3.5 把 13 个 --rcl-* 调色变量逐个指到语义 token（强调色系统青），
+         六种通道状态徽标用系统色 14% 浅底（就绪 = 绿、缺席 = 灰、关闭 = 蓝、过期 = 橙、降级 = 紫、失败 = 红），写死的 rgba / #5d6878 等逐条换掉。
+   audit-allow: rcl-ch-ok rcl-ch-warn rcl-ch-mute rcl-face-ok rcl-face-warn rcl-rc-ok rcl-rc-warn rcl-vd-ok rcl-vd-warn rcl-st-ready rcl-st-absent rcl-st-off rcl-st-stale rcl-st-degraded rcl-st-failed —— 前缀 + 状态拼出来的
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 11 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    /* ===== 作用域：App 自己的调色变量 -> 语义 token ===== */
+    #phone-panel[data-rp-ios="3"] .rcl-root {
+    /* 渲染自查（v3.5）：白字在本强调色上只有 2.54:1（浅）/ 1.72:1（深），不到 4.5:1；填充按钮 / 选中胶囊的文字改用带一点强调色相的近黑墨（7.31:1 / 10.38:1）。 */
+        --rp33-accent: var(--lt-sys-cyan); --rp36-accent-text: var(--rp36-text-cyan); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-cyan) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-cyan) 40%, transparent); --rp33-on-accent: color-mix(in srgb, var(--lt-sys-black) 88%, var(--rp33-accent));
+        --rcl-bg: var(--rp33-bg); --rcl-panel: var(--rp33-surface); --rcl-panel-2: var(--rp33-surface-2); --rcl-line: var(--rp33-sep);
+        --rcl-ink: var(--rp33-label); --rcl-ink-2: var(--rp33-label-2); --rcl-ink-3: var(--rp33-label-3);
+        --rcl-accent: var(--rp33-accent); --rp36-t-rcl-accent: var(--rp36-accent-text); --rcl-accent-2: var(--rp33-accent); --rp36-t-rcl-accent-2: var(--rp36-accent-text);
+        --rcl-ok: var(--lt-sys-green); --rp36-t-rcl-ok: var(--rp36-text-green); --rcl-mute: var(--rp33-label-2); --rcl-warn: var(--lt-sys-orange); --rp36-t-rcl-warn: var(--rp36-text-orange); --rcl-err: var(--lt-sys-red); --rp36-t-rcl-err: var(--rp36-text-red);
+    }
+
+    /* ===== 屏：外壳（页面底 / 页头 / 状态条 / 回执 / 页签 / 提示） ===== */
+    #phone-panel[data-rp-ios="3"] .rcl-root { padding: var(--rp33-sp-2) var(--rp33-margin) var(--rp33-sp-8); background: var(--rcl-bg); color: var(--rcl-ink); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .rcl-header { align-items: baseline; gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-3); padding: var(--rp33-sp-2) var(--rp33-sp-1) 0; }
+    #phone-panel[data-rp-ios="3"] .rcl-header h2 { margin: 0; font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); color: var(--rcl-ink); }
+    #phone-panel[data-rp-ios="3"] .rcl-header-sub { color: var(--rcl-ink-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .rcl-face { gap: 2px; margin-block-end: var(--rp33-sp-3); padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rcl-panel); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .rcl-face-ok { background: color-mix(in srgb, var(--lt-sys-green) 10%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"] .rcl-face-warn { background: color-mix(in srgb, var(--lt-sys-orange) 10%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"] .rcl-face-icon { font-size: 17px; }
+    #phone-panel[data-rp-ios="3"] .rcl-face-label { color: var(--rcl-ink); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .rcl-face-sub { color: var(--rcl-ink-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .rcl-flash { margin-block-end: var(--rp33-sp-3); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-accent-soft); color: var(--rcl-ink); font: 500 var(--lt-ios-footnote-size) / 1.35 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .rcl-tabs { gap: 0; margin-block-end: var(--rp33-sp-3); padding: 2px; border-radius: 999px; background: var(--rp33-seg-bg); }
+    #phone-panel[data-rp-ios="3"] .rcl-tab { flex: 1 1 0; position: relative; min-block-size: var(--rp33-tab-h); padding: 0 var(--rp33-sp-1); border: 0; border-radius: 999px; background: transparent; color: var(--rcl-ink); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .rcl-tab::after { content: ""; position: absolute; inset: -6px 0; }
+    #phone-panel[data-rp-ios="3"] .rcl-tab.is-on { background: var(--rp33-seg-on); box-shadow: var(--rp33-seg-shadow); color: var(--rcl-ink); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .rcl-panel { gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .rcl-hint { margin: 0; padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: var(--rp33-fill); color: var(--rcl-ink-2); font: var(--lt-type-footnote); }
+
+    /* ===== 组件：卡片基底 + 小按钮 ===== */
+    #phone-panel[data-rp-ios="3"] :is(.rcl-ch, .rcl-snap, .rcl-fuse, .rcl-verdict, .rcl-rec, .rcl-row, .rcl-nar-ep) { padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rcl-panel); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] :is(.rcl-ch-btns button, .rcl-snap button, .rcl-rec button, .rcl-row button) { position: relative; min-block-size: 28px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] :is(.rcl-ch-btns button, .rcl-snap button, .rcl-rec button, .rcl-row button)::after { content: ""; position: absolute; inset: -8px -2px; }
+    #phone-panel[data-rp-ios="3"] .rcl-ch-btns button:hover { color: var(--rp36-accent-text); filter: brightness(0.97); }
+    #phone-panel[data-rp-ios="3"] :is(.rcl-fuse-btns button, .rcl-led-btns button) { min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] :is(.rcl-fuse-btns, .rcl-led-btns, .rcl-ch-btns) { flex-wrap: wrap; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(.rcl-ch-btns button, .rcl-snap button, .rcl-rec button, .rcl-row button, .rcl-fuse-btns button, .rcl-led-btns button, .rcl-rooms button, .rcl-nar-bar button, .rcl-nar-msg, .rcl-tab):active { filter: brightness(0.92); scale: 0.97; }
+
+    /* ===== 屏：通道（状态徽标六色） ===== */
+    #phone-panel[data-rp-ios="3"] .rcl-ch-ok { border: 0; }
+    #phone-panel[data-rp-ios="3"] .rcl-ch-warn { border: 0; background: color-mix(in srgb, var(--lt-sys-orange) 8%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"] .rcl-ch-mute { border: 0; opacity: 0.75; }
+    #phone-panel[data-rp-ios="3"] .rcl-ch-top { align-items: center; gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .rcl-ch-name { color: var(--rcl-ink); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .rcl-ch-state { padding: 2px var(--rp33-sp-2); border-radius: 999px; background: var(--rp33-fill); color: var(--rcl-ink-2); font: 600 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .rcl-st-ready { background: color-mix(in srgb, var(--lt-sys-green) 14%, transparent); color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"] .rcl-st-absent { background: var(--rp33-fill); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .rcl-st-off { background: color-mix(in srgb, var(--lt-sys-blue) 14%, transparent); color: var(--rp36-text-blue); }
+    #phone-panel[data-rp-ios="3"] .rcl-st-stale { background: color-mix(in srgb, var(--lt-sys-orange) 16%, transparent); color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .rcl-st-degraded { background: color-mix(in srgb, var(--lt-sys-purple) 14%, transparent); color: var(--rp36-text-purple); }
+    #phone-panel[data-rp-ios="3"] .rcl-st-failed { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .rcl-ch-count { margin-inline-start: auto; color: var(--rcl-ink-3); font: var(--lt-type-caption1); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .rcl-ch-why { color: var(--rcl-ink-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .rcl-ch-err { margin-block: var(--rp33-sp-1); padding: var(--rp33-sp-1) var(--rp33-sp-2); border-radius: var(--rp33-sp-2); background: var(--rp33-danger-soft); color: var(--rp36-text-red); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：快照 ===== */
+    #phone-panel[data-rp-ios="3"] .rcl-snaps { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .rcl-snap { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .rcl-snap label { color: var(--rcl-ink); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .rcl-snap textarea { min-block-size: 88px; padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rcl-ink); caret-color: var(--rp33-accent); font: 400 var(--lt-ios-footnote-size) / 1.5 var(--lt-font-ios-mono); outline: none; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .rcl-snap textarea:focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+
+    /* ===== 屏：融合（每通道 / 命中 / 结论） ===== */
+    #phone-panel[data-rp-ios="3"] .rcl-fuse { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .rcl-fuse-head { color: var(--rcl-ink); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .rcl-fuse-per { flex-wrap: wrap; gap: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .rcl-per { padding: 2px var(--rp33-sp-2); border-radius: 999px; background: var(--rp33-accent-soft); color: var(--rcl-ink); font: 500 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .rcl-per.is-skip { background: var(--rp33-fill); color: var(--rcl-ink-3); }
+    #phone-panel[data-rp-ios="3"] .rcl-fuse-hits { gap: 2px; border-radius: var(--rp33-field-radius); overflow: clip; }
+    #phone-panel[data-rp-ios="3"] .rcl-hit { align-items: center; gap: var(--rp33-sp-2); min-block-size: 32px; padding: var(--rp33-sp-1) var(--rp33-sp-3); border-radius: 0; background: var(--rcl-panel-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .rcl-hit-rank { color: var(--rcl-ink-3); font: 600 var(--lt-ios-caption1-size) / 1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .rcl-hit-id { flex: 1 1 auto; color: var(--rcl-ink); font: 400 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios-mono); }
+    #phone-panel[data-rp-ios="3"] .rcl-hit-score { color: var(--rp36-accent-text); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] :is(.rcl-hit-none, .rcl-led-none) { padding: var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: var(--rcl-panel-2); color: var(--rcl-ink-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .rcl-verdict { align-items: baseline; flex-wrap: wrap; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .rcl-vd-ok { border: 0; background: color-mix(in srgb, var(--lt-sys-green) 10%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"] .rcl-vd-warn { border: 0; background: color-mix(in srgb, var(--lt-sys-orange) 10%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"] .rcl-vd-main { color: var(--rcl-ink); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .rcl-vd-why { color: var(--rcl-ink-2); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：台账 ===== */
+    #phone-panel[data-rp-ios="3"] .rcl-led { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .rcl-rec { gap: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .rcl-rc-ok { border: 0; }
+    #phone-panel[data-rp-ios="3"] .rcl-rc-warn { border: 0; background: color-mix(in srgb, var(--lt-sys-orange) 8%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"] .rcl-rec-top { align-items: baseline; flex-wrap: wrap; gap: var(--rp33-sp-2); color: var(--rcl-ink-3); font: var(--lt-type-caption1); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] :is(.rcl-rec-entry, .rcl-rec-face) { color: var(--rcl-ink-2); }
+    #phone-panel[data-rp-ios="3"] .rcl-rec-body { color: var(--rcl-ink); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .rcl-rec-flags { color: var(--rp36-text-orange); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：策略（行 / 输入 / 房间 / 分类） ===== */
+    #phone-panel[data-rp-ios="3"] .rcl-row { align-items: center; flex-wrap: wrap; gap: var(--rp33-sp-2); min-block-size: var(--rp33-hit); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .rcl-row-k { color: var(--rcl-ink); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .rcl-row-v { color: var(--rcl-ink-2); font: var(--lt-type-subhead); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .rcl-row-sub { flex: 1 1 100%; color: var(--rcl-ink-3); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .rcl-row-warn { padding: var(--rp33-sp-1) var(--rp33-sp-2); border-radius: var(--rp33-sp-2); background: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); color: var(--rcl-ink); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] :is(.rcl-row input[type="number"], .rcl-row input[type="text"], .rcl-nar-bar input[type="text"]) { min-block-size: 36px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rcl-ink); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; }
+    #phone-panel[data-rp-ios="3"] .rcl-rooms { flex-wrap: wrap; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .rcl-rooms button { position: relative; min-block-size: var(--rp33-tab-h); padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rcl-panel); box-shadow: var(--rp33-rim); color: var(--rcl-ink); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .rcl-rooms button::after { content: ""; position: absolute; inset: -6px -2px; }
+    #phone-panel[data-rp-ios="3"] .rcl-rooms button.is-on { background: var(--rp33-accent); box-shadow: none; color: var(--rp33-on-accent); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .rcl-cats { flex-wrap: wrap; align-items: baseline; gap: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: var(--rcl-panel-2); }
+    #phone-panel[data-rp-ios="3"] .rcl-cats-k { color: var(--rcl-ink); font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .rcl-cats-v { color: var(--rcl-ink-2); font: var(--lt-type-caption1); }
+
+    /* ===== 屏：叙述（输入条 / 结果 / 缺口 / 事件卡） ===== */
+    #phone-panel[data-rp-ios="3"] .rcl-nar-bar { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-bar input[type="text"] { flex: 1 1 auto; min-block-size: var(--rp33-hit); }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-bar button { min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-idle { padding: var(--rp33-sp-4) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: var(--rcl-panel-2); color: var(--rcl-ink-2); font: var(--lt-type-footnote); text-align: center; }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-face { padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-ok { background: color-mix(in srgb, var(--lt-sys-green) 12%, transparent); color: var(--rcl-ink); }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-empty { background: var(--rcl-panel-2); color: var(--rcl-ink-2); }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-err { background: var(--rp33-danger-soft); color: var(--rp36-text-red); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-gaps { flex-wrap: wrap; gap: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-gap { padding: 2px var(--rp33-sp-2); border-radius: 999px; background: var(--rp33-fill); color: var(--rcl-ink-2); font: 500 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-list { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-ep { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-ep-head { align-items: baseline; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-ep-at { color: var(--rcl-ink); font: var(--lt-type-subhead); font-weight: 600; font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-ep-n { color: var(--rcl-ink-3); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-msgs { flex-wrap: wrap; gap: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-msg { position: relative; min-block-size: 24px; padding: 0 var(--rp33-sp-2); border: 0; border-radius: 999px; background: var(--rp33-accent-soft); color: var(--rcl-ink); font: 500 var(--lt-ios-caption1-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-msg::after { content: ""; position: absolute; inset: -10px -2px; }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-concl { padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rcl-panel-2); color: var(--rcl-ink); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .rcl-nar-concl-empty { color: var(--rcl-ink-3); }
+}

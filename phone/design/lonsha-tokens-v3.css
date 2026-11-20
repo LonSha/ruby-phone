@@ -1,0 +1,255 @@
+/* ============================================================
+   LonSha Tokens v3 · iOS 拟真度追加层（只声明自定义属性，可安全重复加载）
+   ------------------------------------------------------------
+   加载顺序：lonsha-tokens.css（v2，名称与取值一个不改）之后。
+   v3 只新增 4 组 token，全部是新名字，不加载也不影响 v1 / v2：
+     1. 字体与 iOS 文字样式  --lt-font-ios / --lt-ios-<style>-{size,line,weight,track}
+     2. iOS 系统色           --lt-sys-*（浅色 / 纯黑深色两套，取值与 iOS 公开的语义色一致）
+     3. 系统材质             --lt-mat3-*（saturate(180%) blur(20px) 一族）
+     4. 发丝线               --lt-hairline（按屏幕像素密度取 1 / 0.5 / 0.33px）
+     6. 记忆面板 v3 表面色  --ls3-*（克制：一个强调色 + 中性灰 + 发丝线；活动环三色单列）
+     5. 液态玻璃（iOS 26 设计语言的原创近似）--lt-glass-*：半透明填充 + 背景模糊 / 饱和 + 1px 镜面内高光 + 顶部高光渐变 + 柔和投影
+   明暗选择器与 v2 相同：:root 默认浅色；prefers-color-scheme 跟随系统；
+   [data-theme] / [data-lonsha-theme] 可挂在任意容器上只影响其子树。
+   ============================================================ */
+
+:root {
+    /* ---------- 1. 字体 ---------- */
+    --lt-font-ios: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+    --lt-font-ios-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+    --lt-font-ios-rounded: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    --lt-font-ios-mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+    /* iOS 文字样式（默认「大」号）：字号 / 行高 / 字重 / 字距
+       说明：Apple 设备上的 WebKit 对系统字体自带按字号的字距表（trak），这里的 track 值是给其他平台的补偿，
+       在 Apple 设备上叠加后会略紧；需要时把对应 --lt-ios-*-track 改成 0 即可。 */
+    --lt-ios-largetitle-size: 34px;  --lt-ios-largetitle-line: 41px;  --lt-ios-largetitle-weight: 700; --lt-ios-largetitle-track: -0.4px;
+    --lt-ios-title1-size: 28px;      --lt-ios-title1-line: 34px;      --lt-ios-title1-weight: 700;     --lt-ios-title1-track: 0.36px;
+    --lt-ios-title2-size: 22px;      --lt-ios-title2-line: 28px;      --lt-ios-title2-weight: 700;     --lt-ios-title2-track: -0.26px;
+    --lt-ios-title3-size: 20px;      --lt-ios-title3-line: 25px;      --lt-ios-title3-weight: 600;     --lt-ios-title3-track: -0.45px;
+    --lt-ios-headline-size: 17px;    --lt-ios-headline-line: 22px;    --lt-ios-headline-weight: 600;   --lt-ios-headline-track: -0.43px;
+    --lt-ios-body-size: 17px;        --lt-ios-body-line: 22px;        --lt-ios-body-weight: 400;       --lt-ios-body-track: -0.43px;
+    --lt-ios-callout-size: 16px;     --lt-ios-callout-line: 21px;     --lt-ios-callout-weight: 400;    --lt-ios-callout-track: -0.31px;
+    --lt-ios-subhead-size: 15px;     --lt-ios-subhead-line: 20px;     --lt-ios-subhead-weight: 400;    --lt-ios-subhead-track: -0.23px;
+    --lt-ios-footnote-size: 13px;    --lt-ios-footnote-line: 18px;    --lt-ios-footnote-weight: 400;   --lt-ios-footnote-track: -0.08px;
+    --lt-ios-caption1-size: 12px;    --lt-ios-caption1-line: 16px;    --lt-ios-caption1-weight: 400;   --lt-ios-caption1-track: 0px;
+    --lt-ios-caption2-size: 11px;    --lt-ios-caption2-line: 13px;    --lt-ios-caption2-weight: 400;   --lt-ios-caption2-track: 0.06px;
+    /* Tab 栏标签是 iOS 唯一低于 11pt 的系统文字（10pt medium），单列为 token，组件里不写字面量 */
+    --lt-ios-tablabel-size: 10px;    --lt-ios-tablabel-line: 12px;    --lt-ios-tablabel-weight: 500;   --lt-ios-tablabel-track: 0.1px;
+
+    /* font 简写（字体族 + 字重 + 字号 / 行高），组件里一行写完 */
+    --lt-type-largetitle: var(--lt-ios-largetitle-weight) var(--lt-ios-largetitle-size) / var(--lt-ios-largetitle-line) var(--lt-font-ios-display);
+    --lt-type-title1: var(--lt-ios-title1-weight) var(--lt-ios-title1-size) / var(--lt-ios-title1-line) var(--lt-font-ios-display);
+    --lt-type-title2: var(--lt-ios-title2-weight) var(--lt-ios-title2-size) / var(--lt-ios-title2-line) var(--lt-font-ios-display);
+    --lt-type-title3: var(--lt-ios-title3-weight) var(--lt-ios-title3-size) / var(--lt-ios-title3-line) var(--lt-font-ios-display);
+    --lt-type-headline: var(--lt-ios-headline-weight) var(--lt-ios-headline-size) / var(--lt-ios-headline-line) var(--lt-font-ios);
+    --lt-type-body: var(--lt-ios-body-weight) var(--lt-ios-body-size) / var(--lt-ios-body-line) var(--lt-font-ios);
+    --lt-type-callout: var(--lt-ios-callout-weight) var(--lt-ios-callout-size) / var(--lt-ios-callout-line) var(--lt-font-ios);
+    --lt-type-subhead: var(--lt-ios-subhead-weight) var(--lt-ios-subhead-size) / var(--lt-ios-subhead-line) var(--lt-font-ios);
+    --lt-type-footnote: var(--lt-ios-footnote-weight) var(--lt-ios-footnote-size) / var(--lt-ios-footnote-line) var(--lt-font-ios);
+    --lt-type-caption1: var(--lt-ios-caption1-weight) var(--lt-ios-caption1-size) / var(--lt-ios-caption1-line) var(--lt-font-ios);
+    --lt-type-caption2: var(--lt-ios-caption2-weight) var(--lt-ios-caption2-size) / var(--lt-ios-caption2-line) var(--lt-font-ios);
+    --lt-type-tablabel: var(--lt-ios-tablabel-weight) var(--lt-ios-tablabel-size) / var(--lt-ios-tablabel-line) var(--lt-font-ios);
+
+    /* ---------- 2. 与明暗无关的系统强调色（浅色值；深色值见下方深色块） ---------- */
+    --lt-sys-blue: #007aff;   --lt-sys-green: #34c759;  --lt-sys-indigo: #5856d6; --lt-sys-orange: #ff9500;
+    --lt-sys-pink: #ff2d55;   --lt-sys-purple: #af52de; --lt-sys-red: #ff3b30;    --lt-sys-teal: #30b0c7;
+    --lt-sys-yellow: #ffcc00; --lt-sys-mint: #00c7be;   --lt-sys-cyan: #32ade6;   --lt-sys-brown: #a2845e;
+    --lt-sys-gray: #8e8e93;   --lt-sys-gray2: #aeaeb2;  --lt-sys-gray3: #c7c7cc;  --lt-sys-gray4: #d1d1d6;
+    --lt-sys-gray5: #e5e5ea;  --lt-sys-gray6: #f2f2f7;
+    --lt-sys-white: #ffffff;  --lt-sys-black: #000000;
+
+    /* ---------- 4. 发丝线 ---------- */
+    --lt-hairline: 1px;
+
+    /* ---------- 动效：iOS 系统曲线 ---------- */
+    --lt-ios-ease: cubic-bezier(0.32, 0.72, 0, 1);          /* sheet / push / 缩放（UIKit 默认弹簧的临界阻尼近似） */
+    --lt-ios-ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --lt-ios-spring: cubic-bezier(0.32, 0.72, 0, 1);
+    --lt-ios-spring-bouncy: cubic-bezier(0.34, 1.36, 0.64, 1);
+    --lt-ios-dur: 480ms;
+    --lt-ios-dur-fast: 220ms;
+}
+@supports (transition-timing-function: linear(0, 1)) {
+    :root {
+        /* 阻尼比约 0.82 的弹簧采样（过冲约 2%），比 cubic-bezier 更像 UIKit 的 spring */
+        --lt-ios-spring: linear(0, 0.0105, 0.0405 2.1%, 0.0916 3.3%, 0.1617, 0.2433 6.2%, 0.4291 9.5%, 0.6137 13.3%, 0.7591 17.4%,
+            0.8613 21.6%, 0.9269 25.9%, 0.9675 30.4%, 0.9906 35.2%, 1.0018 40.5%, 1.0051 47.2%, 1.0034 56%, 1.0007 70%, 1);
+        --lt-ios-spring-bouncy: linear(0, 0.0185, 0.0718 2.9%, 0.1599 4.7%, 0.4366 9.7%, 0.6988 14.8%, 0.8806 19.9%, 0.9862 24.8%,
+            1.0333 29.4%, 1.0478 33.6%, 1.0441 38.3%, 1.0261 44.4%, 1.0059 52.5%, 0.9975 61.3%, 0.9978 77%, 1);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    :root { --lt-ios-dur: 0ms; --lt-ios-dur-fast: 0ms; --lt-ios-spring: linear; --lt-ios-spring-bouncy: linear; }
+}
+@media (min-resolution: 2dppx) { :root { --lt-hairline: 0.5px; } }
+@media (min-resolution: 3dppx) { :root { --lt-hairline: 0.33px; } }
+
+/* ---------- 浅色语义色（iOS systemBackground 一族） ---------- */
+:root, [data-theme="light"], [data-lonsha-theme="light"] {
+    --lt-sys-blue: #007aff;   --lt-sys-green: #34c759;  --lt-sys-indigo: #5856d6; --lt-sys-orange: #ff9500;
+    --lt-sys-pink: #ff2d55;   --lt-sys-purple: #af52de; --lt-sys-red: #ff3b30;    --lt-sys-teal: #30b0c7;
+    --lt-sys-yellow: #ffcc00; --lt-sys-mint: #00c7be;   --lt-sys-cyan: #32ade6;   --lt-sys-brown: #a2845e;
+    --lt-sys-gray2: #aeaeb2;  --lt-sys-gray3: #c7c7cc;  --lt-sys-gray4: #d1d1d6;  --lt-sys-gray5: #e5e5ea; --lt-sys-gray6: #f2f2f7;
+    --lt-sys-bg: #ffffff;                       /* systemBackground */
+    --lt-sys-bg-2: #f2f2f7;                     /* secondarySystemBackground */
+    --lt-sys-bg-3: #ffffff;                     /* tertiarySystemBackground */
+    --lt-sys-grouped-bg: #f2f2f7;               /* systemGroupedBackground */
+    --lt-sys-grouped-bg-2: #ffffff;             /* secondarySystemGroupedBackground */
+    --lt-sys-grouped-bg-3: #f2f2f7;             /* tertiarySystemGroupedBackground */
+    --lt-sys-label: #000000;
+    --lt-sys-label-2: rgba(60, 60, 67, 0.6);    /* secondaryLabel */
+    --lt-sys-label-3: rgba(60, 60, 67, 0.3);    /* tertiaryLabel */
+    --lt-sys-label-4: rgba(60, 60, 67, 0.18);   /* quaternaryLabel */
+    --lt-sys-separator: rgba(60, 60, 67, 0.29);
+    --lt-sys-separator-opaque: #c6c6c8;
+    --lt-sys-fill: rgba(120, 120, 128, 0.2);
+    --lt-sys-fill-2: rgba(120, 120, 128, 0.16);
+    --lt-sys-fill-3: rgba(118, 118, 128, 0.12);
+    --lt-sys-fill-4: rgba(116, 116, 128, 0.08);
+    --lt-sys-link: #007aff;
+    --lt-sys-tint: var(--lt-sys-blue);
+    --lt-sys-on-tint: #ffffff;
+    --lt-sys-highlight: rgba(0, 0, 0, 0.08);    /* 行按下 */
+    --lt-sys-shadow-rgb: 0 0 0;
+
+    /* ---------- 3. 材质 ---------- */
+    --lt-mat3-blur: saturate(180%) blur(20px);
+    --lt-mat3-blur-thick: saturate(180%) blur(30px);
+    --lt-mat3-bar: rgba(249, 249, 249, 0.82);            /* 导航栏 / Tab 栏 */
+    --lt-mat3-ultrathin: rgba(255, 255, 255, 0.32);
+    --lt-mat3-thin: rgba(255, 255, 255, 0.52);
+    --lt-mat3-regular: rgba(255, 255, 255, 0.7);
+    --lt-mat3-thick: rgba(255, 255, 255, 0.86);
+    --lt-mat3-rim: inset 0 0 0 0.5px rgba(255, 255, 255, 0.45);
+    --lt-mat3-on: #000000;
+    --lt-mat3-on-2: rgba(60, 60, 67, 0.6);
+
+    /* ---------- 5. 液态玻璃 ---------- */
+    --lt-glass-fill: linear-gradient(180deg, rgb(255 255 255 / 0.34) 0%, rgb(255 255 255 / 0.16) 100%);
+    --lt-glass-fill-strong: linear-gradient(180deg, rgb(255 255 255 / 0.78) 0%, rgb(250 250 252 / 0.64) 100%);
+    --lt-glass-fill-clear: linear-gradient(180deg, rgb(255 255 255 / 0.14) 0%, rgb(255 255 255 / 0.05) 100%);
+    --lt-glass-blur: blur(14px) saturate(190%) brightness(1.04);
+    --lt-glass-blur-strong: blur(22px) saturate(200%);
+    --lt-glass-rim: inset 0 1px 0.5px rgb(255 255 255 / 0.8), inset 0 -0.5px 0.5px rgb(255 255 255 / 0.32), inset 0 0 0 0.5px rgb(255 255 255 / 0.42);
+    --lt-glass-rim-on-light: inset 0 1px 0.5px rgb(255 255 255 / 0.95), inset 0 0 0 0.5px rgb(0 0 0 / 0.07);
+    --lt-glass-shadow: 0 12px 32px -10px rgb(0 0 0 / 0.2), 0 1px 3px rgb(0 0 0 / 0.07);
+    --lt-glass-specular: radial-gradient(130% 70% at 28% 0%, rgb(255 255 255 / 0.55) 0%, rgb(255 255 255 / 0) 56%);
+    --lt-glass-pill: rgb(0 0 0 / 0.07);
+    --lt-glass-on: #000000;
+    --lt-glass-edge-fade: linear-gradient(180deg, rgb(255 255 255 / 0.9) 0%, rgb(255 255 255 / 0) 100%);
+
+    /* ---------- 6. 记忆面板 v3 ---------- */
+    --ls3-bg: #f7f7f8; --ls3-surface: #ffffff; --ls3-surface-2: #f1f1f3; --ls3-sunken: #ececef;
+    --ls3-hover: rgb(0 0 0 / 0.035); --ls3-press: rgb(0 0 0 / 0.06);
+    --ls3-line: rgb(0 0 0 / 0.075); --ls3-line-strong: rgb(0 0 0 / 0.13);
+    --ls3-text: #16161a; --ls3-text-2: #5c5c66; --ls3-text-3: #8d8d96; --ls3-text-4: #b4b4bc;
+    --ls3-accent-fallback: #2f6bff;
+    --ls3-card-shadow: 0 0 0 var(--lt-hairline-px, 1px) rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04), 0 2px 8px -2px rgb(0 0 0 / 0.04);
+    --ls3-card-shadow-hover: 0 0 0 1px rgb(0 0 0 / 0.08), 0 4px 16px -4px rgb(0 0 0 / 0.1);
+    --ls3-float-shadow: 0 0 0 1px rgb(0 0 0 / 0.06), 0 24px 64px -12px rgb(0 0 0 / 0.28), 0 8px 24px -8px rgb(0 0 0 / 0.12);
+    --ls3-glass: rgb(255 255 255 / 0.72); --ls3-glass-rim: inset 0 1px 0 rgb(255 255 255 / 0.9), inset 0 0 0 0.5px rgb(0 0 0 / 0.06);
+    --ls3-scrim: rgb(20 20 24 / 0.18);
+    --ls3-ring-health-a: #2fd36a; --ls3-ring-health-b: #92f0b0;
+    --ls3-ring-coverage-a: #1f7aff; --ls3-ring-coverage-b: #6cc8ff;
+    --ls3-ring-clarity-a: #6a5cff; --ls3-ring-clarity-b: #b6a9ff;
+    --ls3-ring-track: 0.14;
+    --ls3-kind-event: #2f6bff; --ls3-kind-person: #1fa463; --ls3-kind-promise: #c98a00; --ls3-kind-conflict: #e5484d; --ls3-kind-fact: #6e6e78; --ls3-kind-timeline: #6a5cff;
+    --ls3-star: #f5a524;
+    --ls3-on-accent: #ffffff;
+    --ls3-ctl-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+    --ls3-icon-gloss: inset 0 1px 0 rgb(255 255 255 / 0.35);
+    --ls3-graph-dot: rgb(0 0 0 / 0.06);
+}
+
+/* ---------- 深色：纯黑（OLED）语义色 ---------- */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]):not([data-lonsha-theme="light"]) {
+        --lt-sys-blue: #0a84ff;  --lt-sys-green: #30d158; --lt-sys-indigo: #5e5ce6; --lt-sys-orange: #ff9f0a;
+        --lt-sys-pink: #ff375f;  --lt-sys-purple: #bf5af2; --lt-sys-red: #ff453a;   --lt-sys-teal: #40c8e0;
+        --lt-sys-yellow: #ffd60a; --lt-sys-mint: #63e6e2; --lt-sys-cyan: #64d2ff;   --lt-sys-brown: #ac8e68;
+        --lt-sys-gray2: #636366; --lt-sys-gray3: #48484a;  --lt-sys-gray4: #3a3a3c;  --lt-sys-gray5: #2c2c2e; --lt-sys-gray6: #1c1c1e;
+        --lt-sys-bg: #000000; --lt-sys-bg-2: #1c1c1e; --lt-sys-bg-3: #2c2c2e;
+        --lt-sys-grouped-bg: #000000; --lt-sys-grouped-bg-2: #1c1c1e; --lt-sys-grouped-bg-3: #2c2c2e;
+        --lt-sys-label: #ffffff; --lt-sys-label-2: rgba(235, 235, 245, 0.6); --lt-sys-label-3: rgba(235, 235, 245, 0.3); --lt-sys-label-4: rgba(235, 235, 245, 0.16);
+        --lt-sys-separator: rgba(84, 84, 88, 0.65); --lt-sys-separator-opaque: #38383a;
+        --lt-sys-fill: rgba(120, 120, 128, 0.36); --lt-sys-fill-2: rgba(120, 120, 128, 0.32); --lt-sys-fill-3: rgba(118, 118, 128, 0.24); --lt-sys-fill-4: rgba(118, 118, 128, 0.18);
+        --lt-sys-link: #0a84ff; --lt-sys-tint: var(--lt-sys-blue); --lt-sys-highlight: rgba(255, 255, 255, 0.1);
+        --lt-mat3-bar: rgba(22, 22, 23, 0.8); --lt-mat3-ultrathin: rgba(30, 30, 32, 0.32); --lt-mat3-thin: rgba(37, 37, 40, 0.5);
+        --lt-mat3-regular: rgba(37, 37, 40, 0.7); --lt-mat3-thick: rgba(30, 30, 32, 0.88); --lt-mat3-rim: inset 0 0 0 0.5px rgba(255, 255, 255, 0.12);
+        --lt-mat3-on: #ffffff; --lt-mat3-on-2: rgba(235, 235, 245, 0.6);
+
+        --lt-glass-fill: linear-gradient(180deg, rgb(72 72 78 / 0.42) 0%, rgb(36 36 40 / 0.3) 100%);
+        --lt-glass-fill-strong: linear-gradient(180deg, rgb(52 52 56 / 0.82) 0%, rgb(30 30 33 / 0.74) 100%);
+        --lt-glass-fill-clear: linear-gradient(180deg, rgb(255 255 255 / 0.1) 0%, rgb(255 255 255 / 0.03) 100%);
+        --lt-glass-rim: inset 0 1px 0.5px rgb(255 255 255 / 0.3), inset 0 -0.5px 0.5px rgb(255 255 255 / 0.1), inset 0 0 0 0.5px rgb(255 255 255 / 0.16);
+        --lt-glass-rim-on-light: inset 0 1px 0.5px rgb(255 255 255 / 0.22), inset 0 0 0 0.5px rgb(255 255 255 / 0.1);
+        --lt-glass-shadow: 0 12px 32px -10px rgb(0 0 0 / 0.55), 0 1px 3px rgb(0 0 0 / 0.3);
+        --lt-glass-specular: radial-gradient(130% 70% at 28% 0%, rgb(255 255 255 / 0.18) 0%, rgb(255 255 255 / 0) 56%);
+        --lt-glass-pill: rgb(255 255 255 / 0.14);
+        --lt-glass-on: #ffffff;
+        --lt-glass-edge-fade: linear-gradient(180deg, rgb(0 0 0 / 0.85) 0%, rgb(0 0 0 / 0) 100%);
+
+        --ls3-bg: #0b0b0d; --ls3-surface: #151518; --ls3-surface-2: #1d1d21; --ls3-sunken: #09090b;
+        --ls3-hover: rgb(255 255 255 / 0.045); --ls3-press: rgb(255 255 255 / 0.07);
+        --ls3-line: rgb(255 255 255 / 0.075); --ls3-line-strong: rgb(255 255 255 / 0.13);
+        --ls3-text: #ededf0; --ls3-text-2: #a3a3ad; --ls3-text-3: #6f6f79; --ls3-text-4: #4a4a52;
+        --ls3-accent-fallback: #5b8cff;
+        --ls3-card-shadow: 0 0 0 1px rgb(255 255 255 / 0.06), inset 0 1px 0 rgb(255 255 255 / 0.035);
+        --ls3-card-shadow-hover: 0 0 0 1px rgb(255 255 255 / 0.1), inset 0 1px 0 rgb(255 255 255 / 0.05);
+        --ls3-float-shadow: 0 0 0 1px rgb(255 255 255 / 0.09), 0 24px 64px -12px rgb(0 0 0 / 0.7);
+        --ls3-glass: rgb(26 26 30 / 0.72); --ls3-glass-rim: inset 0 1px 0 rgb(255 255 255 / 0.08), inset 0 0 0 0.5px rgb(255 255 255 / 0.08);
+        --ls3-scrim: rgb(0 0 0 / 0.45);
+        --ls3-ring-health-a: #30d158; --ls3-ring-health-b: #8ff5ad;
+        --ls3-ring-coverage-a: #2c8cff; --ls3-ring-coverage-b: #7fd4ff;
+        --ls3-ring-clarity-a: #7d70ff; --ls3-ring-clarity-b: #c3b9ff;
+        --ls3-ring-track: 0.2;
+        --ls3-kind-event: #6b95ff; --ls3-kind-person: #3fcf8a; --ls3-kind-promise: #f0b429; --ls3-kind-conflict: #ff6b6f; --ls3-kind-fact: #9a9aa4; --ls3-kind-timeline: #9a90ff;
+        --ls3-graph-dot: rgb(255 255 255 / 0.06);
+        --ls3-ctl-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    }
+}
+[data-theme="dark"], [data-lonsha-theme="dark"] {
+    --lt-sys-blue: #0a84ff;  --lt-sys-green: #30d158; --lt-sys-indigo: #5e5ce6; --lt-sys-orange: #ff9f0a;
+    --lt-sys-pink: #ff375f;  --lt-sys-purple: #bf5af2; --lt-sys-red: #ff453a;   --lt-sys-teal: #40c8e0;
+    --lt-sys-yellow: #ffd60a; --lt-sys-mint: #63e6e2; --lt-sys-cyan: #64d2ff;   --lt-sys-brown: #ac8e68;
+    --lt-sys-gray2: #636366; --lt-sys-gray3: #48484a;  --lt-sys-gray4: #3a3a3c;  --lt-sys-gray5: #2c2c2e; --lt-sys-gray6: #1c1c1e;
+    --lt-sys-bg: #000000; --lt-sys-bg-2: #1c1c1e; --lt-sys-bg-3: #2c2c2e;
+    --lt-sys-grouped-bg: #000000; --lt-sys-grouped-bg-2: #1c1c1e; --lt-sys-grouped-bg-3: #2c2c2e;
+    --lt-sys-label: #ffffff; --lt-sys-label-2: rgba(235, 235, 245, 0.6); --lt-sys-label-3: rgba(235, 235, 245, 0.3); --lt-sys-label-4: rgba(235, 235, 245, 0.16);
+    --lt-sys-separator: rgba(84, 84, 88, 0.65); --lt-sys-separator-opaque: #38383a;
+    --lt-sys-fill: rgba(120, 120, 128, 0.36); --lt-sys-fill-2: rgba(120, 120, 128, 0.32); --lt-sys-fill-3: rgba(118, 118, 128, 0.24); --lt-sys-fill-4: rgba(118, 118, 128, 0.18);
+    --lt-sys-link: #0a84ff; --lt-sys-tint: var(--lt-sys-blue); --lt-sys-highlight: rgba(255, 255, 255, 0.1);
+    --lt-mat3-bar: rgba(22, 22, 23, 0.8); --lt-mat3-ultrathin: rgba(30, 30, 32, 0.32); --lt-mat3-thin: rgba(37, 37, 40, 0.5);
+    --lt-mat3-regular: rgba(37, 37, 40, 0.7); --lt-mat3-thick: rgba(30, 30, 32, 0.88); --lt-mat3-rim: inset 0 0 0 0.5px rgba(255, 255, 255, 0.12);
+    --lt-mat3-on: #ffffff; --lt-mat3-on-2: rgba(235, 235, 245, 0.6);
+
+        --lt-glass-fill: linear-gradient(180deg, rgb(72 72 78 / 0.42) 0%, rgb(36 36 40 / 0.3) 100%);
+        --lt-glass-fill-strong: linear-gradient(180deg, rgb(52 52 56 / 0.82) 0%, rgb(30 30 33 / 0.74) 100%);
+        --lt-glass-fill-clear: linear-gradient(180deg, rgb(255 255 255 / 0.1) 0%, rgb(255 255 255 / 0.03) 100%);
+        --lt-glass-rim: inset 0 1px 0.5px rgb(255 255 255 / 0.3), inset 0 -0.5px 0.5px rgb(255 255 255 / 0.1), inset 0 0 0 0.5px rgb(255 255 255 / 0.16);
+        --lt-glass-rim-on-light: inset 0 1px 0.5px rgb(255 255 255 / 0.22), inset 0 0 0 0.5px rgb(255 255 255 / 0.1);
+        --lt-glass-shadow: 0 12px 32px -10px rgb(0 0 0 / 0.55), 0 1px 3px rgb(0 0 0 / 0.3);
+        --lt-glass-specular: radial-gradient(130% 70% at 28% 0%, rgb(255 255 255 / 0.18) 0%, rgb(255 255 255 / 0) 56%);
+        --lt-glass-pill: rgb(255 255 255 / 0.14);
+        --lt-glass-on: #ffffff;
+        --lt-glass-edge-fade: linear-gradient(180deg, rgb(0 0 0 / 0.85) 0%, rgb(0 0 0 / 0) 100%);
+
+        --ls3-bg: #0b0b0d; --ls3-surface: #151518; --ls3-surface-2: #1d1d21; --ls3-sunken: #09090b;
+        --ls3-hover: rgb(255 255 255 / 0.045); --ls3-press: rgb(255 255 255 / 0.07);
+        --ls3-line: rgb(255 255 255 / 0.075); --ls3-line-strong: rgb(255 255 255 / 0.13);
+        --ls3-text: #ededf0; --ls3-text-2: #a3a3ad; --ls3-text-3: #6f6f79; --ls3-text-4: #4a4a52;
+        --ls3-accent-fallback: #5b8cff;
+        --ls3-card-shadow: 0 0 0 1px rgb(255 255 255 / 0.06), inset 0 1px 0 rgb(255 255 255 / 0.035);
+        --ls3-card-shadow-hover: 0 0 0 1px rgb(255 255 255 / 0.1), inset 0 1px 0 rgb(255 255 255 / 0.05);
+        --ls3-float-shadow: 0 0 0 1px rgb(255 255 255 / 0.09), 0 24px 64px -12px rgb(0 0 0 / 0.7);
+        --ls3-glass: rgb(26 26 30 / 0.72); --ls3-glass-rim: inset 0 1px 0 rgb(255 255 255 / 0.08), inset 0 0 0 0.5px rgb(255 255 255 / 0.08);
+        --ls3-scrim: rgb(0 0 0 / 0.45);
+        --ls3-ring-health-a: #30d158; --ls3-ring-health-b: #8ff5ad;
+        --ls3-ring-coverage-a: #2c8cff; --ls3-ring-coverage-b: #7fd4ff;
+        --ls3-ring-clarity-a: #7d70ff; --ls3-ring-clarity-b: #c3b9ff;
+        --ls3-ring-track: 0.2;
+        --ls3-kind-event: #6b95ff; --ls3-kind-person: #3fcf8a; --ls3-kind-promise: #f0b429; --ls3-kind-conflict: #ff6b6f; --ls3-kind-fact: #9a9aa4; --ls3-kind-timeline: #9a90ff;
+        --ls3-graph-dot: rgb(255 255 255 / 0.06);
+        --ls3-ctl-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+}

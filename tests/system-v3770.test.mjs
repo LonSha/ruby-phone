@@ -233,7 +233,13 @@ function allCssUnder(root) {
             else if (nm.slice(-4) === '.css') out.push(path.relative(root, abs));
         }
     })(root, 0);
-    return out.sort();
+    /* 与探针同一条口径：跳过带「自动生成，请勿手改」头的生成产物镜像（同一套规则不数两遍）。 */
+    const kept = out.filter((rel) => {
+        let head = '';
+        try { head = fs.readFileSync(path.join(root, rel), 'utf8').slice(0, 200); } catch (_e) { return true; }
+        return head.indexOf('自动生成，请勿手改') < 0;
+    });
+    return kept.sort();
 }
 function mirror(dirOverride) {
     if (dirOverride) return buildMirrorInto(dirOverride);
@@ -482,7 +488,8 @@ test('v3770 D6. 两处「全仓 CSS 枚举」口径一致（探针内联那份 v
     /* 同一件事写两遍，就必须有一处判据看守它们不分叉 —— 否则任一边改了深度上限
      *   或后缀判定，另一边的取数面会静默缩水（本仓治过的形态）。 */
     const marks = ['if (depth > 6) return;', "nm.slice(-4) === '.css'",
-        "if (nm === 'node_modules' || nm === '.git') continue;"];
+        "if (nm === 'node_modules' || nm === '.git') continue;",
+        "head.indexOf('自动生成，请勿手改')"];
     for (const mk of marks) {
         assert.ok(PROBE_SRC.includes(mk), '探针内联枚举缺口径片段：' + mk);
         assert.ok(read(SELF_REL).includes(mk), '镜像面枚举缺口径片段：' + mk);

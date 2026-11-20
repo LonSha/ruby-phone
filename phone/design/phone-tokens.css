@@ -1,0 +1,52 @@
+/* ============================================================
+   RubyPhone · 基础 token（rp.tokens 层）
+   ------------------------------------------------------------
+   这一层只声明「原语」：字号 / 时长 / 缓动 / 静态黑白 / 机身尺寸 / 中性填充。
+   语义色（系统色、品牌色、玻璃）在 phone-tokens-v2 / v3 / v3.3 / v3.4 / v3.6 里，
+   这里不重复声明，避免两处漂移。
+
+   为什么要单独一份：v3 组件里的 --rp-fs-* / --rp-dur-* / --rp-static-* 由设计系统
+   入口（design/rp-entry.css）统一供给；缺了它们，组件会退化到继承值（字号乱、动画时长 0）。
+   ============================================================ */
+@layer rp.tokens {
+    :root {
+        /* 文字样式（与 iOS 文字样式表对齐；最小 11px 是 Tab 栏标签的下限） */
+        --rp-fs-caption: 11px;
+        --rp-fs-footnote: 13px;
+        --rp-fs-subhead: 15px;
+        --rp-fs-body: 17px;
+        --rp-fs-title3: 20px;
+        --rp-fs-title2: 22px;
+        --rp-fs-title1: 28px;
+        --rp-fs-largetitle: 34px;
+        --rp-lh-tight: 1.2;
+        --rp-lh-normal: 1.35;
+
+        /* 动效：iOS 曲线 + 两档时长。系统「减少动效」时由组件层置 0 */
+        --rp-dur-fast: 160ms;
+        --rp-dur-slow: 320ms;
+        --rp-ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+
+        /* 与主题无关的绝对色（只用于遮罩、镂空、反白，不参与主题切换） */
+        --rp-static-white: #ffffff;
+        --rp-static-black: #000000;
+
+        /* 机身尺寸原语；运行时由缩放引擎写 --rp-zoom-* */
+        --rp-screen-radius: 62px;
+        --rp-statusbar-h: 62px;
+        --rp-safe-top: 68px;
+
+        /* 中性填充（分组底、胶囊、滑块轨道） */
+        --rp-fill: rgba(120, 120, 128, 0.12);
+        --rp-fill-strong: rgba(120, 120, 128, 0.2);
+        --rp-text-4: rgba(60, 60, 67, 0.28);
+        --lt-hairline-px: 0.5px;
+    }
+
+    /* 深色下中性填充要更亮一档，否则在纯黑卡面上看不见 */
+    :root[data-lonsha-theme="dark"] {
+        --rp-fill: rgba(120, 120, 128, 0.24);
+        --rp-fill-strong: rgba(120, 120, 128, 0.36);
+        --rp-text-4: rgba(235, 235, 245, 0.3);
+    }
+}

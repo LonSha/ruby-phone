@@ -1,0 +1,256 @@
+/* ============================================================
+   RubyPhone v3.3 · App 皮肤：通话（phone）—— 家族：通讯
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   三个子层（右边赢左边，与特异性无关）：
+     rp.skins.remap   旧规则重映射：写死颜色 -> 语义 token（浅 / 深自动），字号吸附 iOS 阶梯（最小 11pt），
+                      间距吸附 4pt 栅格（8pt 栅格 + 半步），圆角吸附阶梯，霓虹投影 / 文字阴影去掉
+     rp.skins.roles   结构角色 -> v3 组件（导航栏 / 玻璃圆钮 / 分段 / 分组列表 / 卡片 / Sheet / 表单 / 按钮 / 徽标）
+     rp.skins.curated 手工精修（只有重点 App 有）
+   规矩：零 !important、零写死颜色、零字符图标；不改元素 ID / 类名 / 结构，不碰 display / position 以外的状态切换。
+   生成：v3.3 皮肤生成器（输入与角色表见 tools/app-skins-v33.manifest.json；角色 106 个类 / 32 种角色，重映射 169 / 231 条旧规则，
+         伪元素字符图标 0 处，扩大点击区 24 个类）。原生配色：light。
+   ============================================================ 
+ * v3.6：小字强调色 16 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.curated;
+@layer rp.skins.roles {
+    /* 作用域：强调色（sys:green）*/
+    #phone-panel[data-rp-ios="3"] :where(.phone-call-active-avatar, .phone-call-active-header, .phone-call-active-label, .phone-call-active-name) { --rp33-accent: var(--lt-sys-green); --rp36-accent-text: var(--rp36-text-green); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-green) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-green) 40%, transparent); --rp33-bg: var(--rp33-bg-plain); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-active-header, .phone-call-hub-header, .phone-call-main-header, .phone-call-settings-header, .phone-call-transcript-header, .phone-prompt-fold-header, .phone-sms-new-header, .phone-sms-thread-header) { background-color: var(--rp33-bg); background-image: none; border: 0; box-shadow: none; color: var(--rp33-label); min-block-size: var(--rp3-nav-h); padding-inline: var(--rp33-sp-2); gap: var(--rp33-sp-2); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-main-title, .phone-sms-new-title, .phone-sms-thread-name) { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-hub-action, .phone-call-settings-btn, .phone-sms-new-close, .phone-sms-popup-close, .phone-sms-thread-action) { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); min-inline-size: var(--rp3-glass-btn); flex: none; padding: 0; justify-content: center; align-items: center; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 19px; line-height: 1; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-hub-action, .phone-call-settings-btn, .phone-sms-new-close, .phone-sms-popup-close, .phone-sms-thread-action):active { scale: 0.94; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-sms-compose, .phone-sms-composer-action, .phone-sms-new-recipient-toggle, .phone-sms-popup-next, .phone-sms-popup-page-button, .phone-sms-popup-prev, .phone-sms-send) { border: 0; box-shadow: none; color: var(--rp33-label-2); text-shadow: none; -webkit-tap-highlight-color: transparent; }
+    #phone-panel[data-rp-ios="3"] .phone-call-mode-tab { min-block-size: var(--rp33-tab-h); padding-inline: var(--rp33-sp-3); border: 0; border-radius: 999px; background: transparent; box-shadow: none; color: var(--rp33-label-2); font-family: var(--lt-font-ios); font-size: var(--lt-ios-subhead-size); font-weight: 600; letter-spacing: var(--lt-ios-subhead-track); text-shadow: none; justify-content: center; align-items: center; text-align: center; }
+    #phone-panel[data-rp-ios="3"] .phone-call-mode-tab:is(.active, .is-active, .on, .selected, .is-selected, .current, .is-current, .checked, [aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) { background-color: var(--rp33-seg-on); color: var(--rp33-label); box-shadow: var(--rp33-seg-shadow); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-contact-list, .phone-call-history-list, .phone-sms-conversation-list, .phone-sms-conversation-menu, .phone-sms-new-recipient-options) { margin-inline: var(--rp33-margin); border: 0; border-radius: var(--rp3-row-radius); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-shadow-1); overflow: clip; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-sms-new-recipient-row, .phone-sms-popup-sender-row) { min-block-size: var(--rp3-row-h-min); padding-inline: var(--rp33-sp-4); border: 0; border-block-end: var(--lt-hairline) solid var(--rp33-sep); border-radius: 0; background-color: var(--rp33-surface); background-image: none; box-shadow: none; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-sms-new-recipient-row, .phone-sms-popup-sender-row):last-child { border-block-end: 0; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-sms-new-recipient-row, .phone-sms-popup-sender-row):active { background-color: var(--rp33-highlight); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-contact-item, .phone-call-history-item, .phone-call-settings-row, .phone-sms-bubble-row) { min-block-size: var(--rp3-row-h-min); border: 0; border-radius: var(--rp33-row-radius-single); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-shadow-1); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-sms-new-sheet { border: 0; border-radius: var(--rp33-card-radius); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-card-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-sms-bubble { border-radius: var(--rp3-bubble-radius); border: 0; box-shadow: none; font-family: var(--lt-font-ios); font-size: var(--lt-ios-body-size); line-height: 1.32; letter-spacing: var(--lt-ios-body-track); }
+    #phone-panel[data-rp-ios="3"] .phone-call-settings-section-title { font: var(--lt-type-footnote); font-weight: 600; letter-spacing: var(--lt-ios-footnote-track); color: var(--rp33-label-2); padding-inline: var(--rp33-sp-4); text-transform: none; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-sms-popup-card, .phone-sms-popup-dialog) { border: 0; border-radius: var(--rp33-dialog-radius); background-color: var(--rp33-sheet-bg); background-image: none; box-shadow: var(--rp33-float-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-sms-popup-header { border: 0; background: transparent; box-shadow: none; min-block-size: 52px; padding-inline: var(--rp33-sp-4); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-sms-new-overlay { background: var(--rp33-scrim); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-contact-input, .phone-call-input, .phone-call-prompt-textarea, .phone-sms-composer-input, .phone-sms-new-message, .phone-sms-new-recipient, .phone-sms-search) { border: 0; border-radius: var(--rp33-field-radius); background-color: var(--rp33-field-bg); background-image: none; box-shadow: none; color: var(--rp33-label); caret-color: var(--rp33-accent); font-family: var(--lt-font-ios); font-size: var(--lt-ios-body-size); line-height: var(--lt-ios-body-line); min-block-size: var(--rp33-hit); padding: 10px var(--rp33-sp-3); outline: none; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-contact-input, .phone-call-input, .phone-call-prompt-textarea, .phone-sms-composer-input, .phone-sms-new-message, .phone-sms-new-recipient, .phone-sms-search)::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-contact-input, .phone-call-input, .phone-call-prompt-textarea, .phone-sms-composer-input, .phone-sms-new-message, .phone-sms-new-recipient, .phone-sms-search):focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-btn-accept, .phone-call-prompt-btn-save, .phone-call-send-btn, .phone-sms-new-send) { border: 0; border-radius: 999px; background-color: var(--rp33-accent); background-image: none; box-shadow: none; color: var(--rp33-on-accent); font-family: var(--lt-font-ios); font-weight: 600; letter-spacing: -0.2px; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-btn-accept, .phone-call-prompt-btn-save, .phone-call-send-btn, .phone-sms-new-send):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-btn-accept, .phone-call-prompt-btn-save, .phone-call-send-btn, .phone-sms-new-send):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-btn, .phone-call-contact-add-btn, .phone-call-hangup-btn, .phone-call-prompt-btn, .phone-call-regen-btn) { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; box-shadow: none; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-sms-conversation, .phone-sms-new-recipient-option) { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; box-shadow: none; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-btn, .phone-call-contact-add-btn, .phone-call-hangup-btn, .phone-call-prompt-btn, .phone-call-regen-btn, .phone-sms-conversation, .phone-sms-new-recipient-option):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-btn, .phone-call-contact-add-btn, .phone-call-hangup-btn, .phone-call-prompt-btn, .phone-call-regen-btn, .phone-sms-conversation, .phone-sms-new-recipient-option):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] .phone-call-prompt-btn-reset { border: 0; border-radius: 999px; background-color: var(--rp33-fill); background-image: none; box-shadow: none; color: var(--rp33-label); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .phone-call-prompt-btn-reset:active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] .phone-call-prompt-btn-reset:disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-btn-reject, .phone-call-delete-btn, .phone-call-msg-delete-btn, .phone-sms-message-delete) { border: 0; border-radius: 999px; background-color: var(--rp33-danger-soft); background-image: none; box-shadow: none; color: var(--rp36-text-red); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-btn-reject, .phone-call-delete-btn, .phone-call-msg-delete-btn, .phone-sms-message-delete):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-btn-reject, .phone-call-delete-btn, .phone-call-msg-delete-btn, .phone-sms-message-delete):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-active-avatar, .phone-call-contact-avatar, .phone-call-incoming-avatar, .phone-sms-popup-avatar) { border-radius: 50%; box-shadow: 0 0 0 var(--lt-hairline) var(--rp33-avatar-ring); object-fit: cover; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-status-dot, .phone-dot-) { background-color: var(--rp33-badge-bg); background-image: none; color: var(--rp33-badge-fg); border: 0; border-radius: 999px; box-shadow: none; font-family: var(--lt-font-ios-rounded); font-weight: 600; font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-settings-title, .phone-call-transcript-title, .phone-prompt-fold-title, .phone-sms-empty-title) { color: var(--rp33-label); font-weight: 600; letter-spacing: -0.2px; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-active-name, .phone-call-contact-name, .phone-call-history-name, .phone-call-incoming-name, .phone-call-message-user, .phone-sms-conversation-name) { color: var(--rp33-label); font-weight: 600; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-history-meta, .phone-call-incoming-reason, .phone-call-incoming-status, .phone-call-settings-desc, .phone-call-settings-hint, .phone-call-transcript-info, .phone-prompt-fold-desc, .phone-sms-bubble-time, .phone-sms-conversation-time, .phone-sms-popup-time) { color: var(--rp33-label-2); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-active-label, .phone-call-settings-label) { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-empty, .phone-sms-empty, .phone-sms-empty-icon, .phone-sms-thread-empty) { color: var(--rp33-label-2); font-family: var(--lt-font-ios); text-align: center; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .phone-sms-message-menu { border: 0; border-radius: 20px; background: var(--lt-glass-fill-strong); box-shadow: var(--lt-glass-rim), var(--rp33-float-shadow); -webkit-backdrop-filter: var(--lt-glass-blur-strong); backdrop-filter: var(--lt-glass-blur-strong); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-sms-date-divider { background-color: var(--rp33-sep); border-color: var(--rp33-sep); }
+    /* 点击区不小于 44pt：视觉尺寸不变，用透明伪元素扩大命中区 */
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-btn, .phone-call-btn-accept, .phone-call-btn-reject, .phone-call-contact-add-btn, .phone-call-hangup-btn, .phone-call-mode-tab, .phone-call-prompt-btn, .phone-call-prompt-btn-reset, .phone-call-prompt-btn-save, .phone-call-regen-btn, .phone-call-send-btn, .phone-sms-composer-action, .phone-sms-conversation, .phone-sms-message-delete, .phone-sms-new-recipient-option, .phone-sms-new-send, .phone-sms-popup-next, .phone-sms-popup-page-button, .phone-sms-popup-prev, .phone-sms-send) { position: relative; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-btn, .phone-call-btn-accept, .phone-call-btn-reject, .phone-call-contact-add-btn, .phone-call-delete-btn, .phone-call-hangup-btn, .phone-call-mode-tab, .phone-call-msg-delete-btn, .phone-call-prompt-btn, .phone-call-prompt-btn-reset, .phone-call-prompt-btn-save, .phone-call-regen-btn, .phone-call-send-btn, .phone-sms-compose, .phone-sms-composer-action, .phone-sms-conversation, .phone-sms-message-delete, .phone-sms-new-recipient-option, .phone-sms-new-recipient-toggle, .phone-sms-new-send, .phone-sms-popup-next, .phone-sms-popup-page-button, .phone-sms-popup-prev, .phone-sms-send)::after { content: ""; position: absolute; inset: min(0px, calc((100% - var(--rp33-hit)) / 2)); }
+}
+@layer rp.skins.remap {
+    #phone-panel[data-rp-ios="3"] .phone-screen .phone-call-toggle-slider { background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] .phone-screen .phone-call-toggle input:checked + .phone-call-toggle-slider { background: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .phone-call-active { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-incoming { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-incoming-name { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-incoming-status { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-send-btn { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .phone-call-regen-btn { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-hangup-btn { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .phone-call-active-name { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-active-timer { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-active-label { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-typing { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-active .phone-call-message-ai, #phone-panel[data-rp-ios="3"] .phone-call-active .phone-call-message-user { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-input { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-input::placeholder { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-incoming { background: var(--rp33-scrim); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .phone-call-incoming-avatar { background: linear-gradient(135deg, var(--lt-sys-blue) 0%, var(--lt-sys-purple) 100%); }
+    #phone-panel[data-rp-ios="3"] .phone-call-incoming-name { font-size: var(--lt-ios-title2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-incoming-status { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-incoming-reason { margin: 16px auto 0; padding: 8px 16px; font-size: var(--lt-ios-footnote-size); color: var(--rp33-label); background: transparent; }
+    #phone-panel[data-rp-ios="3"] .phone-call-btn { font-size: var(--lt-ios-title1-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-btn-reject { background: var(--lt-sys-red); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .phone-call-btn-accept { background: var(--rp33-accent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .phone-call-active { background: linear-gradient(180deg, var(--lt-sys-indigo) 0%, var(--lt-sys-blue) 50%, var(--lt-sys-cyan) 100%); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .phone-call-active-name { font-size: var(--lt-ios-callout-size); color: var(--rp33-label); gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .phone-call-active-timer { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-dot-green { background: var(--rp33-accent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .phone-dot-yellow { background: var(--lt-sys-yellow); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .phone-dot-red { background: var(--lt-sys-red); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .phone-call-active-avatar { background: linear-gradient(135deg, var(--lt-sys-blue) 0%, var(--lt-sys-purple) 100%); font-size: var(--lt-ios-title2-size); }
+    #phone-panel[data-rp-ios="3"] .phone-call-active-label { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-message-user { background: var(--rp33-accent); color: var(--rp33-on-accent); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .phone-call-message-ai { background: transparent; font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .phone-call-message-ai.voice-playing { border: 1px solid color-mix(in srgb, var(--lt-sys-blue) 60%, transparent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .phone-call-typing { color: var(--rp33-label); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .phone-call-bottom { background: var(--rp33-scrim); }
+    #phone-panel[data-rp-ios="3"] .phone-call-input { padding: 8px 16px; border: var(--lt-hairline) solid var(--rp33-sep); background: transparent; color: var(--rp33-label); font-size: var(--lt-ios-footnote-size); caret-color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-input::placeholder { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-send-btn, #phone-panel[data-rp-ios="3"] .phone-call-regen-btn, #phone-panel[data-rp-ios="3"] .phone-call-hangup-btn { font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"] .phone-call-send-btn { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .phone-call-regen-btn { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-regen-btn:active { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-hangup-btn { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .phone-call-main-header { background: var(--rp33-surface-2); border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .phone-call-main-title { font-size: var(--lt-ios-body-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-settings-btn { font-size: var(--lt-ios-body-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-call-hub-header { padding: 40px 16px 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-call-hub-action { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-call-hub-action:active { background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-call-mode-switch { gap: 8px; padding: 8px 16px 12px; background: var(--rp33-surface-2); border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-call-mode-tab { color: var(--rp33-label-2); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-call-mode-tab.is-active { background: var(--rp33-surface); color: var(--lt-sys-gray); box-shadow: 0 2px 10px var(--rp33-sep), inset 0 0 0 1px var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .phone-call-wallpaper-shell .phone-call-main-header, #phone-panel[data-rp-ios="3"] .phone-call-wallpaper-shell .phone-call-settings-header { background: linear-gradient(160deg, var(--rp33-surface) 0%, var(--rp33-surface) 58%, var(--rp33-surface) 100%),
+        linear-gradient(120deg, color-mix(in srgb, var(--lt-sys-cyan) 34%, transparent) 0%, color-mix(in srgb, var(--lt-sys-orange) 26%, transparent) 52%, color-mix(in srgb, var(--lt-sys-cyan) 30%, transparent) 100%); border-bottom: var(--lt-hairline) solid var(--rp33-sep); box-shadow: inset 0 -1px 0 var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-call-wallpaper-shell .phone-call-mode-switch { background: var(--rp33-fill-2); border-bottom-color: var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .phone-call-wallpaper-shell .phone-call-history-item, #phone-panel[data-rp-ios="3"] .phone-call-wallpaper-shell .phone-call-contact-item { background: var(--rp33-fill-2); border-bottom-color: var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .phone-call-wallpaper-shell .phone-call-history-clickable:active, #phone-panel[data-rp-ios="3"] .phone-call-wallpaper-shell .phone-call-contact-item:active { background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .phone-call-wallpaper-shell .phone-call-contact-add { background: var(--rp33-fill-2); border-bottom-color: var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .phone-call-wallpaper-shell .phone-prompt-fold, #phone-panel[data-rp-ios="3"] .phone-call-wallpaper-shell .phone-call-settings-row { background: var(--rp33-fill-2); border: var(--lt-hairline) solid var(--rp33-sep); box-shadow: inset 0 1px 0 var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .phone-call-wallpaper-shell .phone-call-prompt-textarea { background: var(--rp33-surface); border-color: var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .phone-call-wallpaper-shell .phone-call-empty { color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-search-wrap { gap: 8px; margin: 12px 16px 8px; padding: 0 12px; border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); box-shadow: var(--rp33-shadow-2); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-search-wrap > i { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-search { color: var(--rp33-label); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-search::placeholder { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-conversation-list { padding: 2px 12px 84px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-conversation { padding: 8px 12px; border-bottom: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-fill-2); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-conversation:active { background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-conversation-name { color: var(--rp33-label); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-conversation-time { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-conversation-preview { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-conversation-chevron { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-compose { color: var(--rp33-label); font-size: var(--lt-ios-title2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-empty { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-empty-icon { border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-fill-2); font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-empty-title { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-thread-header { padding: 8px 12px; border-bottom: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-thread-action, #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-composer-action, #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-send { color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-thread-name-line { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-thread-name { color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-thread-messages { padding: 16px 12px 20px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-date-divider { margin: 8px 0 4px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-date-divider span { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-bubble { padding: 8px 12px; border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); color: var(--rp33-label); font-size: var(--lt-ios-caption1-size); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-bubble-row.is-outgoing .phone-sms-bubble { background: color-mix(in srgb, var(--lt-sys-cyan) 12%, var(--rp33-surface)); border-color: var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-bubble-time { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-message-menu { border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-message-delete { gap: 8px; padding: 0 12px; color: var(--rp36-text-red); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-message-delete:active { background: color-mix(in srgb, var(--lt-sys-red) 8%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-typing { border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-typing > span { background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-composer { gap: 8px; padding: 8px 12px 12px; border-top: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-composer-action { border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-composer-input { padding: 0 12px; border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-send { background: var(--lt-sys-blue); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-dialog { border: 1px solid var(--lt-sys-cyan); background: color-mix(in srgb, var(--lt-sys-cyan) 12%, var(--rp33-surface)); box-shadow: none; color: var(--rp36-text-cyan); }
+    #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-header { gap: 12px; padding: 12px 12px; border-bottom: 1px solid color-mix(in srgb, var(--lt-sys-cyan) 56%, transparent); background: color-mix(in srgb, var(--lt-sys-cyan) 12%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-header-icon { background: var(--lt-sys-cyan); color: var(--rp33-on-accent); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-header h2 { color: var(--rp36-text-cyan); font-size: var(--lt-ios-title3-size); }
+    #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-close, #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-page-button { border: 1px solid color-mix(in srgb, var(--lt-sys-cyan) 40%, transparent); background: var(--rp33-surface); color: var(--rp36-text-cyan); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-close:focus-visible, #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-page-button:focus-visible { outline: 2px solid color-mix(in srgb, var(--lt-sys-cyan) 52%, transparent); }
+    #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-card { padding: 16px; border: 1px solid var(--lt-sys-cyan); border-radius: 8px; background: var(--rp33-surface); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-sender-row { gap: 12px; padding-bottom: 12px; border-bottom: 1px solid color-mix(in srgb, var(--lt-sys-cyan) 50%, transparent); }
+    #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-avatar { border: 1px solid color-mix(in srgb, var(--lt-sys-cyan) 46%, transparent); background: color-mix(in srgb, var(--lt-sys-cyan) 12%, var(--rp33-surface)); color: var(--rp36-text-cyan); font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-sender { color: var(--rp36-text-cyan); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-time { color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-body { padding: 12px 16px; border-left: 3px solid var(--lt-sys-cyan); background: color-mix(in srgb, var(--lt-sys-cyan) 12%, var(--rp33-surface)); color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-pagination { gap: 20px; }
+    #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-page-button { background: color-mix(in srgb, var(--lt-sys-cyan) 12%, var(--rp33-surface)); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] #phone-sms-popup-root .phone-sms-popup-page-count { color: var(--rp33-label-2); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-overlay { background: color-mix(in srgb, var(--lt-sys-cyan) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-sheet { gap: 12px; padding: 12px 12px 16px; border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-bg); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-title { color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-close { color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-recipient-row { padding: 0 12px; border: var(--lt-hairline) solid var(--rp33-sep); background: color-mix(in srgb, var(--lt-sys-cyan) 12%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-recipient-row > span { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-recipient { padding: 0 32px 0 0; color: var(--rp33-label); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-recipient-toggle { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-recipient-options { border: var(--lt-hairline) solid var(--rp33-sep); background: color-mix(in srgb, var(--lt-sys-blue) 12%, var(--rp33-surface)); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-recipient-option { padding: 8px 8px; color: var(--rp33-label); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-recipient-option:hover, #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-recipient-option.is-active { background: color-mix(in srgb, var(--lt-sys-blue) 12%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-message { padding: 12px; border: var(--lt-hairline) solid var(--rp33-sep); background: color-mix(in srgb, var(--lt-sys-cyan) 12%, var(--rp33-surface)); color: var(--rp33-label); font-family: var(--lt-font-ios); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-recipient::placeholder, #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-message::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-send { gap: 8px; background: var(--lt-sys-blue); color: var(--rp33-on-accent); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-sms-new-send:disabled { background: var(--rp33-fill); color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .phone-call-contact-add { padding: 12px 12px; background: var(--rp33-surface-2); border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .phone-call-contact-input { border: var(--lt-hairline) solid var(--rp33-sep); padding: 0 12px; background: var(--rp33-surface); color: var(--rp33-label); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .phone-call-contact-add-btn { background: var(--rp33-accent); color: var(--rp33-on-accent); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .phone-call-contact-item { gap: 12px; padding: 12px 12px; border-bottom: var(--lt-hairline) solid var(--rp33-sep); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-contact-check span { border: 2px solid var(--rp33-sep); background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .phone-call-contact-check input:checked + span { border-color: var(--rp33-accent); background: var(--rp33-accent); box-shadow: inset 0 0 0 4px var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .phone-call-contact-avatar { background: linear-gradient(135deg, var(--lt-sys-blue) 0%, var(--lt-sys-purple) 100%); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .phone-call-contact-name { font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .phone-call-contact-dial { background: color-mix(in srgb, var(--rp33-accent) 14%, transparent); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .phone-call-history-item { border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .phone-call-history-icon { font-size: var(--lt-ios-title3-size); }
+    #phone-panel[data-rp-ios="3"] .phone-call-history-name { font-size: var(--lt-ios-subhead-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-missed .phone-call-history-name { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .phone-call-history-meta { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .phone-call-history-duration { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .phone-call-empty { color: var(--rp33-label-2); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .phone-call-settings-header { background: var(--rp33-surface-2); border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .phone-call-settings-back { font-size: var(--lt-ios-body-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-settings-title { font-size: var(--lt-ios-body-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-settings-section-title { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .phone-call-settings-row { background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .phone-call-settings-label { font-size: var(--lt-ios-subhead-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .phone-call-settings .phone-call-settings-desc { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .phone-call-toggle-slider { background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] .phone-call-toggle-slider::before { background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .phone-call-toggle input:checked + .phone-call-toggle-slider { background: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .phone-call-prompt-textarea { padding: 12px; border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); color: var(--rp33-label); font-size: var(--lt-ios-footnote-size); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .phone-call-prompt-btn { font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .phone-call-prompt-btn-save { background: var(--lt-sys-cyan); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .phone-call-prompt-btn-reset { background: var(--rp33-surface-2); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .phone-call-transcript { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .phone-call-transcript-header { background: var(--rp33-surface-2); border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .phone-call-transcript-back { font-size: var(--lt-ios-body-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-transcript-title { font-size: var(--lt-ios-body-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-transcript-duration { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .phone-call-transcript-info { background: var(--rp33-surface-2); border-top: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .phone-call-transcript-info-text { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .phone-call-transcript .phone-call-message-ai { background: var(--rp33-fill-2); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-transcript .phone-call-message-user { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-delete-btn { background: var(--lt-sys-red); color: var(--rp33-on-accent); padding: 8px 16px; font-size: var(--lt-ios-footnote-size); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .phone-call-msg-delete-btn { background: var(--lt-sys-red); color: var(--rp33-on-accent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .phone-call-msg-delete-btn i { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"]-content #phone-call-input, #phone-panel[data-rp-ios="3"]-content .phone-call-input { background: transparent; background-color: transparent; color: var(--rp33-label); -webkit-text-fill-color: var(--rp33-label); caret-color: var(--rp33-label); border: var(--lt-hairline) solid var(--rp33-sep); box-shadow: inset 0 0 0 1000px var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"]-content #phone-call-input::placeholder, #phone-panel[data-rp-ios="3"]-content .phone-call-input::placeholder { color: var(--rp33-label); -webkit-text-fill-color: var(--rp33-label); }
+}
+@layer rp.skins.curated {
+    /* ---- 通话 / 短信：iOS 电话的大圆形按键（接听绿 / 挂断红），短信用 iMessage 气泡 token ---- */
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-main-header, .phone-call-hub-header, .phone-call-settings-header, .phone-call-transcript-header) { background: var(--lt-sys-bg); border: 0; box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .phone-call-main-title { font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-history-item, .phone-call-contact-item, .phone-sms-conversation) { min-block-size: 60px; border: 0; border-block-end: var(--lt-hairline) solid var(--lt-sys-separator); background: transparent; }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-history-name, .phone-call-contact-name) { font: var(--lt-type-body); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] .phone-call-history-meta { font: var(--lt-type-footnote); color: var(--lt-sys-label-2); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-btn-accept, .phone-call-btn-reject, .phone-call-hangup-btn) { inline-size: 76px; block-size: 76px; border: 0; border-radius: 50%; color: var(--rp33-on-accent); font-size: 30px; box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .phone-call-btn-accept { background: var(--lt-sys-green); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-btn-reject, .phone-call-hangup-btn) { background: var(--lt-sys-red); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-active-name, .phone-call-incoming-name) { font: 400 var(--lt-ios-largetitle-size) / var(--lt-ios-largetitle-line) var(--lt-font-ios-display); color: var(--rp3-on-wall); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-call-incoming-status, .phone-call-active-label, .phone-call-incoming-reason) { font: var(--lt-type-callout); color: var(--rp3-on-wall-2); }
+    #phone-panel[data-rp-ios="3"] .phone-sms-bubble { padding: 7px var(--rp33-sp-3) var(--rp33-sp-2); border: 0; border-radius: var(--rp3-bubble-radius); background: var(--rp3-imsg-them); color: var(--rp3-imsg-them-fg); font: 400 var(--lt-ios-body-size) / 1.3 var(--lt-font-ios); box-shadow: none; max-inline-size: var(--rp3-bubble-max); }
+    #phone-panel[data-rp-ios="3"] :is(.phone-sms-bubble-row.is-outgoing, .is-outgoing) .phone-sms-bubble { background: var(--rp3-imsg-me); color: var(--rp3-imsg-me-fg); }
+    #phone-panel[data-rp-ios="3"] .phone-sms-bubble-time { font: var(--lt-type-caption2); color: var(--lt-sys-label-2); }
+    #phone-panel[data-rp-ios="3"] .phone-sms-composer-input { min-block-size: 36px; padding: 7px var(--rp33-sp-3); border: var(--lt-hairline) solid var(--lt-sys-separator); border-radius: 999px; background: var(--lt-sys-bg); color: var(--lt-sys-label); font: var(--lt-type-body); }
+    #phone-panel[data-rp-ios="3"] .phone-call-send-btn, #phone-panel[data-rp-ios="3"] .phone-sms-composer-action { color: var(--rp36-text-blue); }
+}

@@ -1,0 +1,592 @@
+/* ============================================================
+   RubyPhone v3.4 · App 皮肤：万象（wangxiang）—— 家族：角色扮演专属
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   三个子层（右边赢左边，与特异性无关）：
+     rp.skins.remap   旧规则重映射：写死颜色 -> 语义 token（浅 / 深自动），字号吸附 iOS 阶梯（最小 11pt），
+                      间距吸附 4pt 栅格（8pt 栅格 + 半步），圆角吸附阶梯，霓虹投影 / 文字阴影去掉
+     rp.skins.roles   结构角色 -> v3 组件（导航栏 / 玻璃圆钮 / 分段 / 分组列表 / 卡片 / Sheet / 表单 / 按钮 / 徽标）
+     rp.skins.curated 手工精修（只有重点 App 有）
+   规矩：零 !important、零写死颜色、零字符图标；不改元素 ID / 类名 / 结构，不碰 display / position 以外的状态切换。
+   生成：v3.3 皮肤生成器（输入与角色表见 tools/app-skins-v33.manifest.json；角色 102 个类 / 28 种角色，重映射 356 / 461 条旧规则，
+         伪元素字符图标 0 处，扩大点击区 7 个类）。原生配色：dark。
+   v3.4：done-partial -> done。层序多一个子层 rp.skins.inline（运行时逐站点内联映射写出的 data-rp34 令牌，样式在
+         phone/design/app-skins-inline-v3.4.css）；本文件末尾「v3.4 逐屏精修」一段是读完该 App 全部视图模板后手工写的，
+         所选类名全部在源码里核对过（verification/selector-audit.tsv）。改动说明见 README 第三节。
+   ============================================================ 
+ * v3.6：小字强调色 163 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 13 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.roles {
+    /* 作用域：强调色（sys:blue）*/
+    #phone-panel[data-rp-ios="3"] :where([class^="wangxiang-"], [class*=" wangxiang-"]) { --rp33-accent: var(--lt-sys-blue); --rp36-accent-text: var(--rp36-text-blue); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-blue) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-blue) 40%, transparent); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-app { background-color: var(--rp33-bg); background-image: none; color: var(--rp33-label); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-inventory-header, .wangxiang-market-toolbar, .wangxiang-primary-nav, .wangxiang-settings-header, .wangxiang-task-detail-header, .wangxiang-task-header) { background-color: var(--rp33-bg); background-image: none; border: 0; box-shadow: none; color: var(--rp33-label); min-block-size: var(--rp3-nav-h); padding-inline: var(--rp33-sp-2); gap: var(--rp33-sp-2); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-primary-nav-label, .wangxiang-task-title) { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-market-settings-open, .wangxiang-settings-back, .wangxiang-task-detail-back, .wangxiang-task-settings-open) { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); min-inline-size: var(--rp3-glass-btn); flex: none; padding: 0; justify-content: center; align-items: center; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 19px; line-height: 1; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-market-settings-open, .wangxiang-settings-back, .wangxiang-task-detail-back, .wangxiang-task-settings-open):active { scale: 0.94; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-inventory-list, .wangxiang-managed-group-list, .wangxiang-market-product-list, .wangxiang-order-address-list, .wangxiang-order-list, .wangxiang-task-list, .wangxiang-worldbook-list) { margin-inline: var(--rp33-margin); border: 0; border-radius: var(--rp3-row-radius); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-shadow-1); overflow: clip; }
+    #phone-panel[data-rp-ios="3"] .wangxiang-task-heading-row { min-block-size: var(--rp3-row-h-min); padding-inline: var(--rp33-sp-4); border: 0; border-block-end: var(--lt-hairline) solid var(--rp33-sep); border-radius: 0; background-color: var(--rp33-surface); background-image: none; box-shadow: none; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-task-heading-row:last-child { border-block-end: 0; }
+    #phone-panel[data-rp-ios="3"] .wangxiang-task-heading-row:active { background-color: var(--rp33-highlight); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-inventory-item, .wangxiang-worldbook-item) { min-block-size: var(--rp3-row-h-min); border: 0; border-radius: var(--rp33-row-radius-single); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-shadow-1); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-content-panel, .wangxiang-inventory-panel, .wangxiang-managed-task-card, .wangxiang-market-panel, .wangxiang-market-product-card, .wangxiang-market-settings-panel, .wangxiang-my-tasks-panel, .wangxiang-order-card, .wangxiang-orders-panel, .wangxiang-task-card, .wangxiang-task-detail-panel, .wangxiang-task-panel, .wangxiang-task-settings-panel) { border: 0; border-radius: var(--rp33-card-radius); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-card-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-form-dialog, .wangxiang-info-dialog, .wangxiang-payment-dialog, .wangxiang-purchase-dialog) { border: 0; border-radius: var(--rp33-dialog-radius); background-color: var(--rp33-sheet-bg); background-image: none; box-shadow: var(--rp33-float-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-progress-popup-head { border: 0; background: transparent; box-shadow: none; min-block-size: 52px; padding-inline: var(--rp33-sp-4); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-payment-order-name, .wangxiang-purchase-product-name) { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-form-overlay, .wangxiang-info-overlay, .wangxiang-purchase-overlay) { background: var(--rp33-scrim); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-market-category-editor, .wangxiang-prompt-textarea) { border: 0; border-radius: var(--rp33-field-radius); background-color: var(--rp33-field-bg); background-image: none; box-shadow: none; color: var(--rp33-label); caret-color: var(--rp33-accent); font-family: var(--lt-font-ios); font-size: var(--lt-ios-body-size); line-height: var(--lt-ios-body-line); min-block-size: var(--rp33-hit); padding: 10px var(--rp33-sp-3); outline: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-market-category-editor, .wangxiang-prompt-textarea)::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-market-category-editor, .wangxiang-prompt-textarea):focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-settings-toggle-input { accent-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-market-categories-save, .wangxiang-market-product-buy, .wangxiang-primary-nav-item, .wangxiang-progress-popup-confirm) { border: 0; border-radius: 999px; background-color: var(--rp33-accent); background-image: none; box-shadow: none; color: var(--rp33-on-accent); font-family: var(--lt-font-ios); font-weight: 600; letter-spacing: -0.2px; text-shadow: none; min-block-size: var(--rp33-btn-h); font-size: var(--lt-ios-headline-size); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-market-categories-save, .wangxiang-market-product-buy, .wangxiang-primary-nav-item, .wangxiang-progress-popup-confirm):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-market-categories-save, .wangxiang-market-product-buy, .wangxiang-primary-nav-item, .wangxiang-progress-popup-confirm):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-market-product-description, .wangxiang-task-action) { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; box-shadow: none; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-market-product-description, .wangxiang-task-action):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-market-product-description, .wangxiang-task-action):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] .wangxiang-market-product-tags { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; color: var(--rp36-accent-text); box-shadow: none; font-family: var(--lt-font-ios); font-size: var(--lt-ios-caption1-size); line-height: var(--lt-ios-caption1-line); font-weight: 600; padding: 2px var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-info-meta, .wangxiang-task-card-description, .wangxiang-task-detail-description, .wangxiang-task-detail-status, .wangxiang-task-subtitle) { color: var(--rp33-label-2); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .wangxiang-task-reward-label { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-payment-amount, .wangxiang-purchase-price) { font-family: var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-inventory-empty, .wangxiang-my-tasks-empty, .wangxiang-task-empty) { color: var(--rp33-label-2); font-family: var(--lt-font-ios); text-align: center; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .wangxiang-title-image { border-radius: var(--rp33-media-radius); object-fit: cover; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-info-progress, .wangxiang-info-progress-track, .wangxiang-managed-progress, .wangxiang-progress-popup-item, .wangxiang-progress-popup-list) { border: 0; border-radius: 999px; background-color: var(--rp33-fill); background-image: none; box-shadow: none; }
+    /* 点击区不小于 44pt：视觉尺寸不变，用透明伪元素扩大命中区 */
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-market-categories-save, .wangxiang-market-product-buy, .wangxiang-market-product-description, .wangxiang-market-product-tags, .wangxiang-progress-popup-confirm, .wangxiang-task-action) { position: relative; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-market-categories-save, .wangxiang-market-product-buy, .wangxiang-market-product-description, .wangxiang-market-product-tags, .wangxiang-primary-nav-item, .wangxiang-progress-popup-confirm, .wangxiang-task-action)::after { content: ""; position: absolute; inset: min(0px, calc((100% - var(--rp33-hit)) / 2)); }
+}
+@layer rp.skins.remap {
+    #phone-panel[data-rp-ios="3"] .phone-image-viewer-video-progress.is-success { border-color: color-mix(in srgb, var(--lt-sys-mint) 45%, transparent); }
+    #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root { padding: 20px; background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root .wangxiang-progress-popup { padding: 24px; border: 1px solid var(--rp33-accent); background-color: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); box-shadow: none; color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root .wangxiang-progress-popup-head { padding-bottom: 16px; border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 32%, transparent); }
+    #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root .wangxiang-progress-popup-head > span { border: 1px solid var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp36-accent-text); font-size: var(--lt-ios-title3-size); }
+    #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root .wangxiang-progress-popup-head strong { color: var(--rp36-accent-text); font-size: var(--lt-ios-title3-size); }
+    #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root .wangxiang-progress-popup-head small { color: var(--rp36-accent-text); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root .wangxiang-progress-popup-list { gap: 12px; }
+    #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root .wangxiang-progress-popup-item { padding: 12px 12px; border-left: 3px solid var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root .wangxiang-progress-popup-item > span { color: var(--rp36-accent-text); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root .wangxiang-progress-popup-item > strong { color: var(--rp36-accent-text); font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root .wangxiang-progress-popup-item > div { margin-top: 8px; color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root .wangxiang-progress-popup-item b, #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root .wangxiang-progress-popup-item em { font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root .wangxiang-progress-popup-confirm { gap: 8px; padding: 8px 16px; border: 1px solid var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp36-accent-text); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root .wangxiang-progress-popup-confirm:hover, #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root .wangxiang-progress-popup-confirm:focus-visible { background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); outline: 2px solid color-mix(in srgb, var(--rp33-accent) 42%, transparent); }
+    @media (max-width: 520px) {
+    #phone-panel[data-rp-ios="3"] #wangxiang-progress-popup-root .wangxiang-progress-popup { padding: 20px; }
+    }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-app { background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-primary-nav-item { gap: 8px; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-primary-nav-item + .wangxiang-primary-nav-item::before { background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--rp33-accent) 20%, transparent), transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-primary-nav-icon { border: 1px solid color-mix(in srgb, var(--rp33-accent) 34%, transparent); background: color-mix(in srgb, var(--rp33-accent) 40%, transparent); color: var(--rp33-accent); box-shadow: inset 0 0 9px color-mix(in srgb, var(--rp33-accent) 18%, transparent),
+        0 0 8px color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-primary-nav-icon i { font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-primary-nav-label { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-primary-nav-item.is-active .wangxiang-primary-nav-icon { border-color: var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp33-accent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-primary-nav-item.is-active .wangxiang-primary-nav-label { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-content-panel { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-header { padding: 0 4px 12px; border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 24%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-title-group { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-title { padding-left: 12px; color: var(--rp36-accent-text); font-size: var(--lt-ios-body-size); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-title::before { background: var(--rp33-accent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-settings-open, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-back { border: 1px solid color-mix(in srgb, var(--rp33-accent) 48%, transparent); background: color-mix(in srgb, var(--rp33-accent) 40%, transparent); box-shadow: inset 0 0 10px color-mix(in srgb, var(--rp33-accent) 18%, transparent); color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-settings-open:active, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-back:active { background: color-mix(in srgb, var(--rp33-accent) 40%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-header { gap: 8px; border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 24%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-header h1 { color: var(--rp36-accent-text); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-header p { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-scroll { gap: 12px; padding: 0 1px 16px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-section { padding: 12px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 36%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); box-shadow: inset 0 0 18px color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-section-heading { gap: 12px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-section-heading h2 { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-section-heading p, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-message { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-message.is-error { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-toggle span { border: 1px solid var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-toggle span::after { background: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-toggle input:checked + span { border-color: var(--rp33-accent); background: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-toggle input:checked + span::after { background: color-mix(in srgb, var(--rp33-accent) 12%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-toggle input:focus-visible + span { outline: 1px solid var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-worldbook-fold { margin-top: 8px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 24%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-worldbook-fold .phone-prompt-fold-header { padding: 8px 12px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-worldbook-fold .phone-prompt-fold-header:focus-visible { outline: 1px solid var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-app .wangxiang-worldbook-fold .phone-prompt-fold-title { color: var(--rp36-accent-text); -webkit-text-fill-color: var(--rp33-accent); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-app .wangxiang-worldbook-fold .phone-prompt-fold-desc { color: var(--rp36-accent-text); -webkit-text-fill-color: var(--rp33-accent); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-app .wangxiang-worldbook-fold .phone-prompt-fold-arrow { color: var(--rp36-accent-text); -webkit-text-fill-color: var(--rp33-accent); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-worldbook-fold .phone-prompt-fold-content { padding: 0 12px 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-worldbook-list { border-top: 1px solid color-mix(in srgb, var(--rp33-accent) 20%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-source-row { border-bottom-color: color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-source-row.is-selected { border-left-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-source-name { color: var(--rp36-accent-text); -webkit-text-fill-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-source-meta, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-status { color: var(--rp36-accent-text); -webkit-text-fill-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-status.is-error { color: var(--rp36-text-red); -webkit-text-fill-color: var(--lt-sys-red); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-app .wangxiang-worldbook-list .phone-worldbook-entry-trigger { border-color: color-mix(in srgb, var(--rp33-accent) 28%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp36-accent-text); -webkit-text-fill-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-worldbook-item { border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-worldbook-item input { accent-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-worldbook-item strong { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-worldbook-item small { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-prompt-section .phone-prompt-preset-tools { gap: 4px; margin: 8px 0 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-prompt-section .phone-prompt-preset-select { padding: 0 8px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 46%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-prompt-section .phone-prompt-preset-tools > div { gap: 4px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-prompt-section .phone-prompt-preset-tools button { border: 1px solid color-mix(in srgb, var(--rp33-accent) 46%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-prompt-section .phone-prompt-preset-delete { border-color: color-mix(in srgb, var(--lt-sys-red) 40%, transparent); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-prompt-textarea { padding: 8px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 46%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); box-shadow: inset 0 0 14px color-mix(in srgb, var(--rp33-accent) 18%, transparent); color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-prompt-textarea:focus { border-color: var(--rp33-accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--rp33-accent) 18%, transparent), inset 0 0 14px color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-subtitle { margin: 4px 0 0; color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-content-scroll { gap: 8px; padding: 8px 2px 20px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-pull-indicator { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-pull-inner { gap: 8px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-pull-inner i { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-pull-indicator.is-ready { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-pull-indicator.is-loading { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-pull-indicator.is-success { color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-pull-indicator.is-error { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-list { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-empty { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-empty i { color: var(--rp33-accent); font-size: var(--lt-ios-title2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-empty strong { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-my-tasks-empty { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-my-tasks-empty i { color: var(--rp33-accent); font-size: var(--lt-ios-title2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-my-tasks-empty strong { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-card { gap: 12px; padding: 12px 8px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 57%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-card::before { box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-card-icon i { font-size: var(--lt-ios-title3-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-card-title { gap: 4px; color: var(--rp36-accent-text); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-level { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-card-description { margin: 4px 0 8px; color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-card-meta { gap: 8px; color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-card-meta i { color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-reward-label { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-reward { margin: 8px 0 8px; font-size: var(--lt-ios-title3-size); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-reward span { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-action { box-shadow: var(--rp33-shadow-2); color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-action.is-active { color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-my-tasks-scroll { gap: 12px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-group-header { padding: 0 4px; border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 28%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-group-header h2 { color: var(--rp36-accent-text); font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-group-header h2 span, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-group-header p { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-group-list { gap: 8px; padding-top: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-card { gap: 8px; padding: 8px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 50%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-icon i { font-size: var(--lt-ios-title3-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-main h3 { color: var(--rp36-accent-text); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-main > p { margin: 4px 0; color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-progress { gap: 4px; margin: 8px 0; color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-progress > div { background: color-mix(in srgb, var(--rp33-accent) 25%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-progress > div i { box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-progress strong { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-category-editor { gap: 8px; margin-top: 12px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-category-editor label > span { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-category-editor input { border: 1px solid color-mix(in srgb, var(--rp33-accent) 46%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-category-editor .is-locked input { border-color: color-mix(in srgb, var(--rp33-accent) 30%, transparent); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-categories-save { gap: 8px; margin: 12px 0 0; border: 1px solid color-mix(in srgb, var(--rp33-accent) 56%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-meta { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-side > span { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-side > strong { margin: 8px 0 8px; font-size: var(--lt-ios-title3-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-side small { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-side button { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-side button:disabled { border-color: color-mix(in srgb, var(--rp33-accent) 35%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, transparent); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-panel { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-toolbar { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-search { gap: 8px; padding: 0 12px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 42%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-app .wangxiang-market-search > input[type="search"] { color: var(--rp36-accent-text); -webkit-text-fill-color: var(--rp33-accent); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-app .wangxiang-market-search > input[type="search"]::placeholder { color: var(--rp36-accent-text); -webkit-text-fill-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-settings-open { gap: 4px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 48%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-settings-open:active { background: color-mix(in srgb, var(--rp33-accent) 40%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-categories { border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 30%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-categories button { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-categories button.is-active { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-categories button.is-active::after { background: var(--rp33-accent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-pull-indicator { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-pull-inner { gap: 8px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-pull-inner i { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-pull-indicator.is-ready { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-pull-indicator.is-loading { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-pull-indicator.is-success { color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-pull-indicator.is-error { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-list { gap: 8px; padding-top: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-card { padding: 12px; background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); box-shadow: inset 0 0 18px color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-icon { font-size: var(--lt-ios-title1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-heading { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-tags small { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-main h2 { margin: 8px 0 4px; color: var(--rp36-accent-text); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-description { color: var(--rp36-accent-text); -webkit-text-fill-color: var(--rp33-accent); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-meta { gap: 4px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-meta strong { font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-meta strong small { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-meta > span { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-buy { gap: 8px; margin: 8px 0 0; box-shadow: var(--rp33-shadow-2); color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-buy:disabled { border-color: color-mix(in srgb, var(--rp33-accent) 35%, transparent); background: color-mix(in srgb, var(--rp33-accent) 15%, transparent); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-account { padding: 12px 2px 12px; border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 28%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-account-user span { gap: 4px; color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-account-user strong { color: var(--rp36-accent-text); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-balance-grid { gap: 8px; margin-top: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-balance-grid > div { padding: 8px 8px; border-left: 2px solid var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 40%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-balance-grid span { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-balance-grid strong { color: var(--rp36-accent-text); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-addresses { border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 20%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-addresses h2 { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-addresses > header p { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-addresses > header button { border: 1px solid color-mix(in srgb, var(--rp33-accent) 52%, transparent); background: color-mix(in srgb, var(--rp33-accent) 40%, transparent); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-address-list { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-address-list article { gap: 4px; padding: 8px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 30%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-address-list article.is-default { border-color: color-mix(in srgb, var(--rp33-accent) 57%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-address-main { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-address-main span { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-address-main span small { margin-left: 4px; border: 1px solid var(--rp33-accent); color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-address-main strong { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-address-main p { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen [data-wangxiang-address-remove] { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-card { padding: 12px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 50%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); box-shadow: inset 0 0 18px color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-card > header { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-card > header strong { color: var(--rp36-text-orange); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-card.is-shipping > header strong { color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-card.is-delivered { border-color: color-mix(in srgb, var(--lt-sys-green) 52%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-card.is-delivered > header strong { color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-card.is-delivered .wangxiang-order-icon { border-color: color-mix(in srgb, var(--lt-sys-green) 45%, transparent); background: color-mix(in srgb, var(--lt-sys-green) 20%, transparent); color: var(--lt-sys-green); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-body { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-icon { border: 1px solid color-mix(in srgb, var(--rp33-accent) 40%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, transparent); color: var(--rp33-accent); font-size: var(--lt-ios-title3-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-main h2 { margin: 0 0 4px; color: var(--rp36-accent-text); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-main p, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-main small { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-card > footer { margin-top: 8px; border-top: 1px solid color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-card > footer > div span { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-card > footer > div strong { color: var(--rp36-accent-text); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-card > footer button { gap: 4px; padding: 0 12px; border: 1px solid var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 34%, transparent); color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-card > footer button:disabled { border-color: color-mix(in srgb, var(--lt-sys-green) 42%, transparent); background: color-mix(in srgb, var(--lt-sys-green) 18%, transparent); color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-order-card.is-delivered > footer button:disabled { border-color: color-mix(in srgb, var(--lt-sys-green) 50%, transparent); background: color-mix(in srgb, var(--lt-sys-green) 22%, transparent); color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-header { gap: 12px; padding: 4px 2px 12px; border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 28%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-header span { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-header h2 { color: var(--rp36-accent-text); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-header > strong { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-list { padding-top: 12px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-item { gap: 8px; padding: 12px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 42%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); box-shadow: inset 0 0 18px color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-item.is-task { border-color: color-mix(in srgb, var(--lt-sys-green) 48%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-item-icon { border: 1px solid color-mix(in srgb, var(--rp33-accent) 40%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, transparent); color: var(--rp33-accent); font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-item.is-task .wangxiang-inventory-item-icon { border-color: color-mix(in srgb, var(--lt-sys-green) 42%, transparent); background: color-mix(in srgb, var(--lt-sys-green) 18%, transparent); color: var(--lt-sys-green); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-item-main h3 { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-item-main > div > strong { color: var(--rp36-text-orange); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-item-main p { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-item-main footer { gap: 8px; margin-top: 8px; color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-item-main footer span { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-empty { gap: 8px; color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-empty i { color: var(--rp33-accent); font-size: var(--lt-ios-title1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-inventory-empty strong { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-purchase-overlay { background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-purchase-dialog { padding: 16px; border: 1px solid var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); box-shadow: none; color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-purchase-dialog > header { gap: 12px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-purchase-dialog h2 { font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-purchase-product-name { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-purchase-dialog > header > button { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-purchase-price { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-purchase-stepper { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-purchase-stepper button, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-purchase-stepper input { border: 1px solid color-mix(in srgb, var(--rp33-accent) 50%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp36-accent-text); -webkit-text-fill-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-purchase-stepper input { font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-purchase-dialog > footer { margin-top: 16px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-purchase-dialog > footer button { gap: 4px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 50%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-purchase-dialog > footer button.is-primary { border-color: var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 40%, transparent); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-form-overlay { padding: 16px; background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-form-dialog { border: 1px solid var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); box-shadow: none; color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-form-dialog > header { gap: 12px; padding: 12px; border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 20%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-form-dialog > header h2 { color: var(--rp36-accent-text); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-form-dialog > header p { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-form-dialog > header button { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-form-dialog-body { gap: 12px; padding: 12px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-form-dialog-body > label span { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-form-dialog-body input[type="text"], #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-form-dialog-body textarea { border: 1px solid color-mix(in srgb, var(--rp33-accent) 48%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp36-accent-text); -webkit-text-fill-color: var(--rp33-accent); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-form-dialog > footer { padding: 12px 12px 12px; border-top: 1px solid color-mix(in srgb, var(--rp33-accent) 20%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-form-dialog > footer button { border: 1px solid color-mix(in srgb, var(--rp33-accent) 50%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-form-dialog > footer button.is-primary { border-color: var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 40%, transparent); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-payment-amount { color: var(--rp36-accent-text); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-payment-methods, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-payment-addresses { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-payment-methods legend, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-payment-addresses legend { margin-bottom: 4px; color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-payment-methods label, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-payment-addresses label { gap: 8px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 34%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-payment-methods input, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-payment-addresses input { accent-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-payment-methods strong, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-payment-addresses strong { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-payment-methods small, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-payment-addresses small { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-payment-addresses > div { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-payment-no-address { padding: 12px; color: var(--rp36-text-orange); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-detail-clickable:focus-visible, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-description:focus-visible { outline: 1px solid var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-info-overlay { background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-info-dialog { border: 1px solid var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); box-shadow: none; color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-info-dialog > header { gap: 12px; padding: 16px 16px 12px; border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 20%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-info-eyebrow { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-info-dialog h2 { color: var(--rp36-accent-text); font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-info-dialog > header button { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-info-dialog-body { padding: 16px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-info-text { color: var(--rp36-accent-text); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-info-progress { border-top: 1px solid color-mix(in srgb, var(--rp33-accent) 20%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-info-progress-meta { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-info-progress-meta strong { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-info-progress-track { background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-info-progress-track i { background: var(--rp33-accent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-info-meta { margin-top: 16px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--rp33-accent) 20%, transparent); color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-panel { background-color: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-panel::before { background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-header { padding: 20px 16px 8px; border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 25%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-back { border: 1px solid color-mix(in srgb, var(--rp33-accent) 48%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); box-shadow: inset 0 0 11px color-mix(in srgb, var(--rp33-accent) 18%, transparent); color: var(--rp36-accent-text); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-scroll.wangxiang-content-scroll { padding: 8px 12px 16px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-content { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-hero { padding: 8px 12px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-title-row { gap: 8px; padding: 8px 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-title-row h1 { color: var(--rp36-accent-text); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-title-row h1 span { margin-right: 4px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-status { padding: 0 8px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-publisher { padding: 16px 20px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-publisher-icon { font-size: var(--lt-ios-title3-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-publisher span, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-publisher p { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-publisher h2 { color: var(--rp36-accent-text); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-publisher strong { color: var(--rp36-text-green); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-publisher button { border: 1px solid color-mix(in srgb, var(--rp33-accent) 57%, transparent); background: color-mix(in srgb, var(--rp33-accent) 40%, transparent); color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-section { padding: 16px 20px 16px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-section > h2 { gap: 4px; margin: 0 0 8px; color: var(--rp36-accent-text); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-section > h2 span { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-description { color: var(--rp33-label-2); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-objectives { gap: 12px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-objective { gap: 8px; color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-objective > i { color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-objective > div { background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-objective > div i { box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-objective > strong { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-objective.is-completed > strong { color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-rewards { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-rewards > div { gap: 8px; padding: 8px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 32%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-rewards i { font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-rewards span { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-rewards strong { color: var(--rp36-accent-text); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-info > span { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-info i { color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-info strong { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-discussion article { gap: 8px; border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-discussion article > div { border: 1px solid color-mix(in srgb, var(--rp33-accent) 40%, transparent); background: color-mix(in srgb, var(--rp33-accent) 40%, transparent); color: var(--rp36-accent-text); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-discussion article p { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-discussion article p > strong { margin-right: 8px; color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-discussion article p small { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-discussion article p > span { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-no-comments { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-actions { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-actions button { gap: 8px; border: 1px solid var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); box-shadow: none; color: var(--rp36-accent-text); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-detail-actions button.is-danger { border-color: var(--lt-sys-red); background: var(--lt-sys-red); color: var(--rp36-text-red); }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-primary-nav-icon i { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-primary-nav-label { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-header { padding: 0 2px 8px; }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-title { font-size: var(--lt-ios-subhead-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-title-group { gap: 4px; }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-settings-open, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-back { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-header { gap: 8px; padding-bottom: 8px; }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-settings-header h1 { font-size: var(--lt-ios-footnote-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-prompt-textarea { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-subtitle { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-content-scroll { gap: 8px; padding: 8px 1px 12px; }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-list { gap: 8px; }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-card { gap: 8px; padding: 8px 8px; }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-card-icon i { font-size: var(--lt-ios-subhead-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-card-title { font-size: var(--lt-ios-footnote-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-card-description { margin: 4px 0 4px; font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-card-meta { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-reward-label { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-reward { margin: 4px 0 8px; font-size: var(--lt-ios-body-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-reward span { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-task-action { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-my-tasks-scroll { gap: 12px; }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-group-header h2 { font-size: var(--lt-ios-footnote-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-group-header h2 span, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-group-header p { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-group-list { gap: 8px; padding-top: 8px; }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-card { gap: 8px; padding: 8px 8px; }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-icon i { font-size: var(--lt-ios-subhead-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-main h3 { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-main > p { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-progress { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-meta { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-side > strong { margin: 4px 0 8px; font-size: var(--lt-ios-footnote-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-managed-task-side button { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-panel { gap: 4px; }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-toolbar { gap: 4px; }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-search { gap: 4px; padding: 0 8px; }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-search input, #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-settings-open { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-categories button { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-category-editor { gap: 8px; }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-category-editor input { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-list { gap: 8px; padding-top: 8px; }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-icon { font-size: var(--lt-ios-title1-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-main h2 { font-size: var(--lt-ios-footnote-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-meta strong { font-size: var(--lt-ios-subhead-size); }
+    }
+    @media (max-width: 500px), (hover: none) and (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-market-product-buy { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (hover: hover) and (pointer: fine) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-primary-nav-item:hover { background: color-mix(in srgb, var(--rp33-accent) 10%, transparent); color: var(--rp36-accent-text); }
+    }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-primary-nav-item:active { background: color-mix(in srgb, var(--rp33-accent) 16%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wangxiang-primary-nav-item:focus-visible { outline: 1px solid var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-body-panel-wangxiang .phone-statusbar .time, #phone-panel[data-rp-ios="3"]-content .phone-body-panel-wangxiang .statusbar-left .time { color: var(--rp36-accent-text); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-body-panel-wangxiang .phone-wifi-signal, #phone-panel[data-rp-ios="3"]-content .phone-body-panel-wangxiang .phone-wifi-signal .fa-wifi { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-body-panel-wangxiang .battery-head { background: color-mix(in srgb, var(--rp33-accent) 12%, var(--rp33-surface)); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-body-panel-wangxiang .battery-body { border-color: var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 28%, transparent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-body-panel-wangxiang .battery-text { color: var(--rp36-accent-text); text-shadow: none; }
+}
+@layer rp.skins.curated {
+    /* ===================== v3.4 逐屏精修 ===================== */
+    /* ---- 万象 v3.4：插画（背景 / 标题图）是这个 App 的世界观，保留；版面绝对定位（百分比）不动。
+            插画之上的一切改成固定深色语境的 Liquid Glass：深色玻璃面板 + 0.5pt 青色内缘 + 白字，强调色青色，
+            圆角从 4 / 6px 统一到 10 / 16 / 22 的阶梯，字号最小 11（旧版大量 8~10px）。浅色系统下也保持深色（底是深色插画）。---- */
+    #phone-panel[data-rp-ios="3"] .wangxiang-app { color-scheme: dark; background: var(--rp34-wanx-bg); color: var(--rp34-wanx-fg); font-family: var(--lt-font-ios); --rp33-accent: var(--rp34-wanx-accent); --rp36-accent-text: var(--rp36-text-wanx); }
+
+    /* 一级导航：5 格玻璃胶囊条，选中格 = 更亮的玻璃 + 青色图标块 */
+    #phone-panel[data-rp-ios="3"] .wangxiang-primary-nav { padding: var(--rp33-sp-1); gap: 2px; border: 0; border-radius: var(--rp33-card-radius); background: var(--rp34-wanx-glass); box-shadow: var(--rp34-wanx-rim); -webkit-backdrop-filter: var(--rp34-media-glass-blur); backdrop-filter: var(--rp34-media-glass-blur); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-primary-nav-item { gap: 6px; border: 0; border-radius: 16px; background: transparent; color: var(--rp34-wanx-fg-2); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-primary-nav-item + .wangxiang-primary-nav-item::before { content: none; }
+    #phone-panel[data-rp-ios="3"] .wangxiang-primary-nav-item.is-active { background: var(--rp34-wanx-glass-2); box-shadow: var(--rp34-wanx-rim); color: var(--rp34-wanx-fg); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-primary-nav-icon { inline-size: 36px; block-size: 36px; flex-basis: 36px; border: 0; border-radius: 10px; background: var(--rp34-wanx-accent-soft); color: var(--rp34-wanx-accent); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-primary-nav-icon i { font-size: 16px; }
+    #phone-panel[data-rp-ios="3"] .wangxiang-primary-nav-label { font: 500 var(--lt-ios-caption2-size) / 1.2 var(--lt-font-ios); color: inherit; }
+    #phone-panel[data-rp-ios="3"] .wangxiang-primary-nav-item.is-active .wangxiang-primary-nav-label { font-weight: 600; }
+
+    /* 内容面板：一整块深色玻璃，内部滚动 */
+    #phone-panel[data-rp-ios="3"] .wangxiang-content-panel { padding: var(--rp33-sp-3); border-radius: var(--rp33-card-radius); background: var(--rp34-wanx-glass); box-shadow: var(--rp34-wanx-rim); -webkit-backdrop-filter: var(--rp34-media-glass-blur); backdrop-filter: var(--rp34-media-glass-blur); color: var(--rp34-wanx-fg); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-header, .wangxiang-task-detail-header, .wangxiang-settings-header, .wangxiang-inventory-header, .wangxiang-managed-group-header) { padding: 0 var(--rp33-sp-1) var(--rp33-sp-3); gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-title, .wangxiang-task-panel-title, .wangxiang-task-settings-title, .wangxiang-market-settings-title, .wangxiang-info-title, .wangxiang-payment-title, .wangxiang-purchase-title, .wangxiang-progress-popup-title, .wangxiang-address-title) { font: var(--lt-type-title3); letter-spacing: var(--lt-ios-title3-track); color: var(--rp34-wanx-fg); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .wangxiang-task-title::before { inline-size: 3px; border-radius: 999px; background: var(--rp34-wanx-accent); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-subtitle, .wangxiang-settings-message, .wangxiang-info-meta, .wangxiang-info-progress-meta) { font: var(--lt-type-footnote); color: var(--rp34-wanx-fg-2); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-settings-open, .wangxiang-market-settings-open, .wangxiang-settings-back, .wangxiang-task-detail-back) { inline-size: 36px; block-size: 36px; min-inline-size: 36px; padding: 0; border: 0; border-radius: 999px; background: var(--rp34-wanx-glass-2); box-shadow: var(--rp34-wanx-rim); color: var(--rp34-wanx-fg); position: relative; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-settings-open, .wangxiang-market-settings-open, .wangxiang-settings-back, .wangxiang-task-detail-back)::after { content: ""; position: absolute; inset: -4px; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-list, .wangxiang-market-product-list, .wangxiang-order-list, .wangxiang-inventory-list, .wangxiang-managed-group-list) { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-pull-indicator, .wangxiang-market-pull-indicator) { color: var(--rp34-wanx-fg-3); font-size: var(--lt-ios-caption1-size); }
+
+    /* 任务卡 / 商品卡 / 订单卡 / 背包格 / 托管卡：同一张玻璃卡（16 圆角、顶部 1pt 任务色线保留） */
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-card, .wangxiang-market-product-card, .wangxiang-order-card, .wangxiang-inventory-item, .wangxiang-managed-task-card, .wangxiang-task-detail-hero, .wangxiang-task-detail-section, .wangxiang-order-account, .wangxiang-order-addresses, .wangxiang-settings-section) { border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp34-wanx-glass-2); background-image: none; box-shadow: var(--rp34-wanx-rim); color: var(--rp34-wanx-fg); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-card, .wangxiang-market-product-card) { min-block-size: 112px; padding: var(--rp33-sp-3); gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-card-icon, .wangxiang-market-product-icon, .wangxiang-order-icon, .wangxiang-inventory-item-icon, .wangxiang-managed-task-icon, .wangxiang-task-detail-publisher-icon) { inline-size: 48px; block-size: 48px; border: 0; border-radius: 12px; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-card-title, .wangxiang-market-product-heading, .wangxiang-purchase-product-name, .wangxiang-payment-order-name) { font: 600 var(--lt-ios-subhead-size) / 1.3 var(--lt-font-ios); color: var(--rp34-wanx-fg); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-card-description, .wangxiang-market-product-description, .wangxiang-task-detail-description, .wangxiang-info-text) { font: var(--lt-type-footnote); line-height: 1.45; color: var(--rp34-wanx-fg-2); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-card-meta, .wangxiang-market-product-meta, .wangxiang-managed-task-meta) { gap: var(--rp33-sp-2); font: 500 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); color: var(--rp36-text-wanx); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-task-card-meta i { color: var(--rp34-wanx-fg-3); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-task-reward-label { font: 500 var(--lt-ios-caption2-size) / 1.2 var(--lt-font-ios); color: var(--rp34-wanx-fg-2); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-reward, .wangxiang-purchase-price, .wangxiang-payment-amount) { font: 700 var(--lt-ios-title2-size) / 1.1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .wangxiang-task-reward span { font-size: var(--lt-ios-caption2-size); font-weight: 500; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-action, .wangxiang-market-product-buy, .wangxiang-progress-popup-confirm, .wangxiang-market-categories-save) { min-block-size: 32px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp34-wanx-accent); color: var(--rp34-wanx-on-accent); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); box-shadow: none; text-shadow: none; position: relative; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-action, .wangxiang-market-product-buy)::after { content: ""; position: absolute; inset: -6px -2px; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-action, .wangxiang-market-product-buy):disabled { background: var(--rp34-media-fill); color: var(--rp34-wanx-fg-3); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-market-product-tags { gap: var(--rp33-sp-1); }
+
+    /* 集市工具条：搜索胶囊 + 分类 chip 横滑 */
+    #phone-panel[data-rp-ios="3"] .wangxiang-market-toolbar { gap: var(--rp33-sp-2); padding-block-end: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-market-search { min-block-size: 36px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp34-wanx-glass-2); box-shadow: var(--rp34-wanx-rim); color: var(--rp34-wanx-fg); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-market-search::placeholder { color: var(--rp34-wanx-fg-3); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-market-categories { gap: var(--rp33-sp-2); padding-block: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-market-categories > * { min-block-size: 30px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp34-wanx-glass-2); color: var(--rp34-wanx-fg-2); font: 500 var(--lt-ios-footnote-size) / 30px var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-market-categories > :is(.is-active, .active) { background: var(--rp34-wanx-accent); color: var(--rp34-wanx-on-accent); }
+
+    /* 详情：目标行、奖励、讨论 */
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-detail-section, .wangxiang-task-detail-hero) { padding: var(--rp33-sp-3) var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-task-detail-status { padding: 2px var(--rp33-sp-2); border-radius: 999px; background: var(--rp34-wanx-accent-soft); color: var(--rp36-text-wanx); font: 600 var(--lt-ios-caption2-size) / 1.4 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-task-detail-objective { min-block-size: var(--rp3-row-h-min); gap: var(--rp33-sp-2); border-bottom: 0.5px solid var(--rp34-wanx-line); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-task-detail-objective:last-child { border-bottom: 0; }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-detail-publisher, .wangxiang-task-detail-no-comments) { font: var(--lt-type-footnote); color: var(--rp34-wanx-fg-2); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-task-detail-actions { gap: var(--rp33-sp-2); }
+
+    /* 进度条：4pt 胶囊轨道 */
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-info-progress-track, .wangxiang-managed-progress) { block-size: 4px; border: 0; border-radius: 999px; background: var(--rp34-wanx-line); overflow: clip; }
+
+    /* 对话框（购买 / 支付 / 地址 / 信息 / 进度 / 投递）：居中 30 圆角深色玻璃，主按钮胶囊 */
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-purchase-overlay, .wangxiang-info-overlay, .wangxiang-form-overlay, .wangxiang-progress-popup-root) { background: var(--rp33-scrim); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-purchase-dialog, .wangxiang-info-dialog, .wangxiang-form-dialog, .wangxiang-payment-dialog, .wangxiang-progress-popup, .wangxiang-delivery-popup) { border: 0; border-radius: var(--rp33-dialog-radius); background: var(--rp34-wanx-glass-2); box-shadow: var(--rp34-wanx-rim), var(--rp33-float-shadow); -webkit-backdrop-filter: var(--rp34-media-glass-blur); backdrop-filter: var(--rp34-media-glass-blur); color: var(--rp34-wanx-fg); padding: var(--rp33-sp-5); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-info-eyebrow { font: 600 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios); letter-spacing: 0.06em; color: var(--rp36-text-wanx); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-payment-method, .wangxiang-payment-address, .wangxiang-progress-popup-item) { min-block-size: var(--rp3-row-h-min); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: 12px; background: var(--rp34-media-fill); color: var(--rp34-wanx-fg); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-purchase-stepper { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-purchase-stepper > :is(button) { min-inline-size: 36px; min-block-size: 36px; border: 0; border-radius: 999px; background: var(--rp34-media-fill); color: var(--rp34-wanx-fg); }
+
+    /* 设置：深色玻璃分组 + 输入 */
+    #phone-panel[data-rp-ios="3"] .wangxiang-settings-section { padding: var(--rp33-sp-3) var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .wangxiang-settings-section-heading { font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); color: var(--rp34-wanx-fg-2); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-prompt-textarea, .wangxiang-market-prompt, .wangxiang-task-prompt, .wangxiang-market-category-editor) { border: 0; border-radius: var(--rp33-field-radius); background: var(--rp34-media-fill); color: var(--rp34-wanx-fg); font: var(--lt-type-subhead); caret-color: var(--rp34-wanx-accent); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-empty, .wangxiang-my-tasks-empty, .wangxiang-inventory-empty, .wangxiang-loading) { padding: var(--rp33-sp-6) var(--rp33-sp-4); font: var(--lt-type-subhead); color: var(--rp34-wanx-fg-2); text-align: center; }
+
+    /* 深色岛：插画之上的全部 v3.3 角色（面板 = card、滚动区 = body ...）就地改指向万象自己的深色玻璃组 */
+    #phone-panel[data-rp-ios="3"] .wangxiang-app { --rp33-label: var(--rp34-wanx-fg); --rp33-label-2: var(--rp34-wanx-fg-2); --rp33-label-3: var(--rp34-wanx-fg-3); --rp33-surface: var(--rp34-wanx-glass-2); --rp33-surface-2: var(--rp34-media-fill); --rp33-bg: transparent; --rp33-bg-plain: transparent; --rp33-fill: var(--rp34-media-fill); --rp33-fill-2: var(--rp34-media-fill); --rp33-field-bg: var(--rp34-media-fill); --rp33-sep: var(--rp34-wanx-line); --rp33-seg-bg: var(--rp34-media-fill); --rp33-seg-on: var(--rp34-wanx-glass-2); --rp33-glassbtn-bg: var(--rp34-wanx-glass-2); --rp33-glassbtn-rim: var(--rp34-wanx-rim); --rp33-sheet-bg: var(--rp34-wanx-glass-2); --rp33-card-shadow: var(--rp34-wanx-rim); --rp33-shadow-1: none; --rp33-accent-soft: var(--rp34-wanx-accent-soft); --rp33-on-accent: var(--rp34-wanx-on-accent); --lt-sys-label: var(--rp34-wanx-fg); --lt-sys-label-2: var(--rp34-wanx-fg-2); --lt-sys-label-3: var(--rp34-wanx-fg-3); --lt-sys-separator: var(--rp34-wanx-line); }
+    #phone-panel[data-rp-ios="3"] :is(.wangxiang-task-panel, .wangxiang-market-panel, .wangxiang-orders-panel, .wangxiang-inventory-panel, .wangxiang-my-tasks-panel, .wangxiang-task-detail-panel, .wangxiang-task-settings-panel, .wangxiang-market-settings-panel) { background: transparent; box-shadow: none; border: 0; }
+}

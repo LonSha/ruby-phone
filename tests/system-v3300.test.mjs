@@ -668,7 +668,14 @@ test('H4 前缀全仓唯一：.lov- 只出现在本 App 目录与 phone.css', ()
     const users = files.filter((f) => fs.readFileSync(f, 'utf8').includes(CSS_PFX));
     assert.ok(users.length > 0, CSS_PFX + ' 必须在仓里被用到');
     for (const f of users) {
-        assert.ok(f.includes('/apps/' + APP_ID + '/') || f.endsWith('phone.css'),
+        /* 两个豁免面，都是「表」而不是「样式主人」：
+         *   ① phone/ui/rp-glyph-sites-v3.6.js —— 字符图标站点表，按设计要写 App 的类选择器（查 DOM 换 SVG，不定义规则）；
+         *   ② tools/app-skins-v33.manifest.json —— 皮肤投递登记表，逐 App 列出本 App 自己的前缀（它是「主人名单」本身）。
+         * 其余任何 js/css/mjs/json/html 仍只准落在本 App 目录与 phone.css 上。 */
+        const norm = f.replace(/\\/g, '/');
+        const isTable = norm.endsWith('phone/ui/rp-glyph-sites-v3.6.js')
+            || norm.endsWith('tools/app-skins-v33.manifest.json');
+        assert.ok(f.includes('/apps/' + APP_ID + '/') || f.endsWith('phone.css') || isTable,
             CSS_PFX + ' 只应出现在 apps/' + APP_ID + '/ 与 phone.css，实测还有：' + f.replace(ROOT, ''));
     }
 });

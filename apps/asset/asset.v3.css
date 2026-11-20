@@ -1,0 +1,72 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：资产（asset）—— 家族：财务 / 购物 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/asset/asset-view.js（_draw / _reasonCard / _onboardCard / _actorsCard / _entryCard / _settleCard / _settingsCard）；
+               asset-app.js、asset-data.js 与 engine/ 下 13 个引擎文件（核心 / 持仓 / 账本 / 市场 / 结算 / 条款 …，共 560 KB）没有 DOM（跳过）。
+   屏幕与状态：导航（返回 / 刷新圆钮）· 原因卡（.as-reason-<tone>）· 入门卡（分类勾选 chip）· 角色卡（名称 + 说明行）· 录入卡（输入 + 主按钮）·
+               结算卡 · 设置（文字开关 .on、年代 select）· 空态。
+   设计：iOS 分组卡；跟随系统，强调色系统薄荷绿（与原版的翡翠绿同一色相）。主按钮是整宽 50pt 胶囊；分类 chip 是可勾选的胶囊（label 包 checkbox）。
+   audit-allow: as-reason-ok as-reason-warn as-reason-off —— 'as-reason-' + tone 拼出来的
+   规矩：零 !important、零写死颜色、零字符图标；类名 / ID / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 1 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    /* 渲染自查（v3.5）：白字在本强调色上只有 2.12:1（浅）/ 1.51:1（深），不到 4.5:1；填充按钮 / 选中胶囊的文字改用带一点强调色相的近黑墨（8.68:1 / 11.68:1）。 */
+    #phone-panel[data-rp-ios="3"] .as-root { --rp33-accent: var(--lt-sys-mint); --rp36-accent-text: var(--rp36-text-mint); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-mint) 16%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-mint) 45%, transparent); --rp33-on-accent: color-mix(in srgb, var(--lt-sys-black) 88%, var(--rp33-accent)); }
+
+    /* ===== 屏：外壳（页面底 / 导航栏） ===== */
+    #phone-panel[data-rp-ios="3"] .as-root { background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .as-header { align-items: center; gap: var(--rp33-sp-3); min-block-size: var(--rp3-nav-h); padding: var(--rp33-sp-2) var(--rp33-margin); }
+    #phone-panel[data-rp-ios="3"] .as-header h2 { margin: 0; flex: 1 1 auto; font: var(--lt-type-title2); letter-spacing: var(--lt-ios-title2-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .as-nav { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); flex: none; padding: 0; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 17px; cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .as-nav:active { scale: 0.94; }
+    #phone-panel[data-rp-ios="3"] .as-body { gap: var(--rp33-sp-4); padding: 0 var(--rp33-margin) var(--rp33-sp-8); }
+
+    /* ===== 组件：分组卡 / 卡标题 ===== */
+    #phone-panel[data-rp-ios="3"] .as-card { padding: var(--rp33-sp-3) var(--rp33-sp-4) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .as-card-title { align-items: baseline; gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .as-count { color: var(--rp33-label-2); font: var(--lt-type-footnote); font-weight: 400; font-variant-numeric: tabular-nums; }
+
+    /* ===== 屏：原因卡 ===== */
+    #phone-panel[data-rp-ios="3"] .as-reason { border: 0; background: var(--rp33-accent-soft); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .as-reason-ok { border: 0; background: var(--rp33-accent-soft); }
+    #phone-panel[data-rp-ios="3"] .as-reason-warn { border: 0; background: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); }
+    #phone-panel[data-rp-ios="3"] .as-reason-off { border: 0; background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] .as-reason-head { color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .as-reason-hint { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：入门（分类勾选 chip） ===== */
+    #phone-panel[data-rp-ios="3"] .as-chips { flex-wrap: wrap; gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .as-chip { align-items: center; gap: var(--rp33-sp-1); min-block-size: var(--rp33-tab-h); padding: 0 var(--rp33-sp-3); border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); accent-color: var(--rp33-accent); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .as-chip input { accent-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .as-chip:has(input:checked) { background: var(--rp33-accent-soft); color: var(--rp33-label); }
+
+    /* ===== 屏：角色 ===== */
+    #phone-panel[data-rp-ios="3"] .as-actor { padding: var(--rp33-sp-2) 0; border: 0; border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .as-actor:first-of-type { border-block-start: 0; }
+    #phone-panel[data-rp-ios="3"] .as-actor-name { color: var(--rp33-label); font: var(--lt-type-body); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .as-actor-text { margin-block-start: 2px; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：录入 / 结算（输入 + 主按钮） ===== */
+    #phone-panel[data-rp-ios="3"] .as-input { min-block-size: var(--rp33-hit); margin-block-end: var(--rp33-sp-2); padding: 0 var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .as-input::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .as-input:focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .as-btn { min-block-size: var(--rp33-btn-h); border: 0; border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); font: 600 var(--lt-ios-body-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] :is(.as-btn, .as-switch):active { filter: brightness(0.92); scale: 0.98; }
+
+    /* ===== 屏：设置（文字开关 / 年代） ===== */
+    #phone-panel[data-rp-ios="3"] .as-row { align-items: center; justify-content: space-between; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-1) 0; border-block-start: 0.5px solid var(--rp33-sep); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .as-card-title + .as-row { border-block-start: 0; }
+    #phone-panel[data-rp-ios="3"] .as-label { color: var(--rp33-label); font: var(--lt-type-body); }
+    #phone-panel[data-rp-ios="3"] .as-switch { position: relative; min-inline-size: 56px; min-block-size: 32px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label-2); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .as-switch::after { content: ""; position: absolute; inset: -6px 0; }
+    #phone-panel[data-rp-ios="3"] .as-switch.on { background: color-mix(in srgb, var(--lt-sys-green) 18%, transparent); color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"] .as-era { min-block-size: 36px; margin-block-end: 0; }
+
+    /* ===== 状态：空 ===== */
+    #phone-panel[data-rp-ios="3"] .as-empty { padding: var(--rp33-sp-2) 0; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+}

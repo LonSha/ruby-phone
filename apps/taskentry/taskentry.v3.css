@@ -1,0 +1,90 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：任务入口（taskentry）—— 家族：作者案头 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的产物。修 v3.3 的 bug：manifest 里本 App 的类名前缀是空的（生成版作用域规则是无效的 `:where()`，
+         detect 也是 []，DOM 认不出本 App）；v3.5 把 detect 补成 ["te"]。
+   读过的源码：apps/taskentry/taskentry-view.js（_head / _filters / _media / _card / _group / _html）；taskentry-app.js 只取数与路由，无 DOM。
+   屏幕与状态：页头读数 · 页签真源说明 .te-source · 自检 .te-selfcheck / -bad · 能力筛选胶囊 .te-caps（选中 .te-cap-on）·
+               生成任务面板 .te-media（在飞计数、按分组的任务行、已有成果徽标；读失败 / 没有进行中）·
+               收藏（目标行 + 打开 / 取消；空；孤儿提示）· 卡片区（按档分组 .te-group-*，卡片 = 标题 + 原因 + 收藏，靶心行 + 打开；
+               不可用靶心 .te-target-bad；隐藏 / 恢复显示）· 最近使用（已下线 .te-stale）· 台账。
+   设计：作者案头 dashboard；强调色系统蓝。分组区 = 22 圆角卡，卡片 = 卡内 surface-2 的 16 圆角块；
+         「打开」是强调色浅底小胶囊（28 + ::after 到 44），收藏 / 取消 / 隐藏是中性小胶囊。旧版的 2px 左色条去掉。
+   无障碍台的「深色操作主题」（html[data-ax-theme="dark"]，用户设置）：旧样式给 .te-card 写死 #2a2a2c；v3.5 在该主题下把本页切到深色岛 token。
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构 / data-* 不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 5 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    #phone-panel[data-rp-ios="3"] :is(.te-root, .te-wrap) { --rp33-accent: var(--lt-sys-blue); --rp36-accent-text: var(--rp36-text-blue); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-blue) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-blue) 40%, transparent); }
+
+    /* ===== 屏：页面底 + 页头 ===== */
+    #phone-panel[data-rp-ios="3"] .te-wrap { min-block-size: 100%; box-sizing: border-box; padding: var(--rp33-sp-3) var(--rp33-margin) var(--rp33-sp-8); background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .te-head { margin-block-end: var(--rp33-sp-2); padding: 0 var(--rp33-sp-1) var(--rp33-sp-2); border: 0; }
+    #phone-panel[data-rp-ios="3"] .te-readings { font: 600 var(--lt-ios-subhead-size) / 1.35 var(--lt-font-ios); color: var(--rp33-label); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .te-state { font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+
+    /* ===== 状态：页签真源 + 自检 ===== */
+    #phone-panel[data-rp-ios="3"] .te-source { gap: 2px; margin-block-end: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-fill); opacity: 1; }
+    #phone-panel[data-rp-ios="3"] .te-source-note { font: var(--lt-type-footnote); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .te-source-read { font: var(--lt-type-caption1); color: var(--rp33-label-2); opacity: 1; font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .te-selfcheck { margin-block-end: var(--rp33-sp-3); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: color-mix(in srgb, var(--lt-sys-green) 12%, transparent); color: var(--rp33-label); font: var(--lt-type-footnote); opacity: 1; }
+    #phone-panel[data-rp-ios="3"] .te-selfcheck-bad { border: 0; background: var(--rp33-danger-soft); color: var(--rp36-text-red); font-weight: 600; }
+
+    /* ===== 组件：能力筛选（横排胶囊，选中 = 强调色实底） ===== */
+    #phone-panel[data-rp-ios="3"] .te-caps { flex-wrap: wrap; gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .te-cap { position: relative; min-block-size: var(--rp33-tab-h); padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-surface); box-shadow: var(--rp33-rim); color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .te-cap::after { content: ""; position: absolute; inset: -6px -2px; }
+    #phone-panel[data-rp-ios="3"] .te-cap-on { border: 0; background: var(--rp33-accent); box-shadow: none; color: var(--rp33-on-accent); font-weight: 600; }
+
+    /* ===== 组件：分组卡（收藏 / 卡片区 / 最近使用 / 台账 / 生成任务） ===== */
+    #phone-panel[data-rp-ios="3"] :is(.te-pinned, .te-recent, .te-ledger, .te-cards, .te-media) { margin-block-end: var(--rp33-sp-4); padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] :is(.te-pinned, .te-recent, .te-ledger, .te-media, .te-group) h3 { margin: 0 0 var(--rp33-sp-2); font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .te-group + .te-group { margin-block-start: var(--rp33-sp-4); }
+
+    /* ===== 屏：卡片区 · 卡片 + 靶心行 ===== */
+    #phone-panel[data-rp-ios="3"] .te-card { margin-block-end: var(--rp33-sp-2); padding: var(--rp33-sp-3); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .te-card-head { align-items: center; gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .te-card-label { font: var(--lt-type-headline); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .te-card-why { flex: 1 1 auto; min-inline-size: 0; font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .te-target { align-items: center; gap: var(--rp33-sp-2); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-1) 0; font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .te-target + .te-target { border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .te-target.te-target-bad { opacity: 0.5; }
+    #phone-panel[data-rp-ios="3"] .te-target-name { color: var(--rp33-label); font-weight: 500; }
+    #phone-panel[data-rp-ios="3"] .te-target-note { flex: 1 1 auto; min-inline-size: 0; font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .te-target-tab { font: var(--lt-type-caption1); color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .te-stale { padding: 2px var(--rp33-sp-2); border-radius: 999px; background: var(--rp33-fill); font: var(--lt-type-caption1); color: var(--rp33-label-2); }
+
+    /* ===== 组件：小胶囊按钮（打开 = 强调；收藏 / 取消 / 隐藏 = 中性） ===== */
+    #phone-panel[data-rp-ios="3"] :is(.te-pin, .te-unpin, .te-open, .te-hide) { position: relative; flex: none; min-block-size: 28px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] :is(.te-pin, .te-unpin, .te-open, .te-hide)::after { content: ""; position: absolute; inset: -8px -2px; }
+    #phone-panel[data-rp-ios="3"] .te-open { background: var(--rp33-accent-soft); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .te-open:disabled { background: var(--rp33-fill); color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .te-hide { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] :is(.te-pin, .te-unpin, .te-open, .te-hide):active { filter: brightness(0.92); scale: 0.97; }
+
+    /* ===== 屏：生成任务面板 ===== */
+    #phone-panel[data-rp-ios="3"] .te-media { border-inline-start: 0; }
+    #phone-panel[data-rp-ios="3"] .te-media-counts { margin-block-end: var(--rp33-sp-2); font: var(--lt-type-footnote); color: var(--rp33-label-2); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .te-media-live { padding: 2px var(--rp33-sp-2); border-radius: 999px; background: color-mix(in srgb, var(--lt-sys-orange) 16%, transparent); color: var(--rp36-text-orange); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .te-media-group + .te-media-group { margin-block-start: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .te-media-head { padding: var(--rp33-sp-1) 0; font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .te-media-row { align-items: center; gap: var(--rp33-sp-2); min-block-size: 40px; padding: var(--rp33-sp-1) 0; border: 0; border-block-start: 0.5px solid var(--rp33-sep); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .te-media-title { flex: 1 1 auto; min-inline-size: 0; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .te-media-app { font: var(--lt-type-caption1); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .te-media-has { padding: 2px var(--rp33-sp-2); border: 0; border-radius: 999px; background: color-mix(in srgb, var(--lt-sys-green) 14%, transparent); color: var(--rp36-text-green); font: 600 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+
+    /* ===== 屏：台账行 ===== */
+    #phone-panel[data-rp-ios="3"] .te-row { justify-content: space-between; gap: var(--rp33-sp-3); min-block-size: 40px; align-items: center; padding: var(--rp33-sp-1) 0; border: 0; border-block-start: 0.5px solid var(--rp33-sep); font: var(--lt-type-subhead); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .te-ledger h3 + .te-row { border-block-start: 0; }
+    #phone-panel[data-rp-ios="3"] .te-row > span + span { color: var(--rp33-label-2); font: var(--lt-type-footnote); text-align: end; }
+
+    /* ===== 状态：用户在无障碍台选了「深色操作主题」（html[data-ax-theme="dark"]）—— 尊重用户设置：本页就地切到深色岛取值 ===== */
+    #phone-panel[data-rp-ios="3"]:where(html[data-ax-theme="dark"] *) :is(.te-root, .te-wrap) { --rp33-bg: var(--rp34-dk-bg); --rp33-bg-plain: var(--rp34-dk-bg); --rp33-label: var(--rp34-dk-label); --rp33-label-2: var(--rp34-dk-label-2); --rp33-label-3: var(--rp34-dk-label-3); --rp33-surface: var(--rp34-dk-surface); --rp33-surface-2: var(--rp34-dk-surface-2); --rp33-fill: var(--rp34-dk-fill); --rp33-fill-2: var(--rp34-dk-fill-2); --rp33-field-bg: var(--rp34-dk-fill); --rp33-sep: var(--rp34-dk-sep); --rp33-card-shadow: var(--rp34-dk-shadow); --rp33-rim: none; color-scheme: dark; }
+
+    /* ===== 状态：空 / 孤儿与挤掉提示 ===== */
+    #phone-panel[data-rp-ios="3"] .te-empty { padding: var(--rp33-sp-2) 0; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .te-orphan { padding: var(--rp33-sp-2) 0 0; color: var(--rp36-text-orange); font: var(--lt-type-footnote); }
+}

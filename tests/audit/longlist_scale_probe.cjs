@@ -257,12 +257,22 @@ const ms = (t0) => Math.round((Number(process.hrtime.bigint() - t0) / 1e6) * 100
     'honeyTitleMarqueeLinear', 'honeyRefreshSpin', 'honeyFollowPulse',
     'yzp-calendar-api-spin', 'diary-spin',
     'games-catbox-breathe', 'games-catbox-idle',
-  ];
-  const MOTION_STATE = [
+    /* 设计系统（v3 组件层）的三条纯装饰动画：
+     *   rp2-breathe —— 锁屏「上滑提示」的呼吸（不动也不丢信息：提示文字本身还在）；
+     *   rp2-jiggle  —— 桌面图标「编辑态」抖动（编辑态由按钮与布局自己说明，抖动只是强调）。
+     * 两者在 phone-components.css 的 still 覆盖段里按名停掉。 */
+    'rp2-breathe', 'rp2-jiggle',
+];
+const MOTION_STATE = [
     'voiceArcBlink', 'phone-typing-dots', 'phone-sms-typing-pulse',
     'games-werewolf-speaking-dot', 'games-werewolf-waiting-pulse', 'games-werewolf-waiting-dots',
     'games-undercover-speaker-pulse',
-  ];
+    /* 设计系统里承载「正在进行」的三条，**不得进 still 覆盖**：
+     *   rp2-wave  —— 灵动岛声波（正在播 / 正在收音的唯一可见回执）；
+     *   rp2-dots / rp3-dots —— 输入中指示器（两代组件各一份）。
+     * 把它们停掉等于「把用户正在看的进行中状态停掉」，那正是本表立在这里要拦的。 */
+    'rp2-wave', 'rp2-dots', 'rp3-dots',
+];
   /* 挂 body、不在 .phone-screen 子树内的浮层 —— App 图层级的通配盖不到它们，
    *   必须在降频规则里按名列出（与 phone.css 的第 ⑤ 段同源）。 */
   const MOTION_BODY_FLOATS = ['.music-floating-panel'];
@@ -285,6 +295,16 @@ const ms = (t0) => Math.round((Number(process.hrtime.bigint() - t0) / 1e6) * 100
       else if (nm.slice(-4) === '.css') cssFiles.push(path.relative(ROOT, abs));
     }
   })(ROOT, 0);
+  /* 跳过「生成产物镜像」：phone/design/legacy-phone.css 是根 phone.css 的逐字分层副本
+   *   （带「自动生成，请勿手改」头，由 scripts/gen-legacy-layer.mjs 生成）。把它计入枚举面，
+   *   同一套规则会被数两遍，还会让负控制失灵 —— 拆掉 phone.css 里的一行覆盖选择器，
+   *   镜像副本里那一行还在，判据于是看不见破坏（本仓最恨的那种假绿）。
+   *   安全前提：镜像与源必须逐字同源，由 gen-legacy-layer.mjs --check 看守。 */
+  for (let i = cssFiles.length - 1; i >= 0; i -= 1) {
+    let head = '';
+    try { head = fs.readFileSync(path.join(ROOT, cssFiles[i]), 'utf8').slice(0, 200); } catch (_e) { continue; }
+    if (head.indexOf('自动生成，请勿手改') >= 0) cssFiles.splice(i, 1);   // 生成产物镜像：同一套规则不数两遍
+  }
   cssFiles.sort();
 
   let cssJoined = '';

@@ -1,0 +1,74 @@
+/* ============================================================
+   RubyPhone 主题包 · Obsidian 钛黑（rp.themes 层，只覆盖 token，不写任何结构样式）
+   原「Obsidian Titanium OS」视觉：冷黛钛灰 + 极光冰蓝 + 刻印金，玻璃更重、带冷光描边。
+   启用：手机根节点 data-rp-pack="obsidian"（theme-controller.js -> setPack('obsidian')）
+   ============================================================ */
+@layer rp.themes {
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="obsidian"] {
+    --rp-frame: #111622;
+    --rp-frame-edge: #26334a;
+    --rp-frame-rim: rgb(56 189 248 / 0.25);
+    --rp-badge-bg: #f87171;
+    --rp-toggle-on: #38bdf8;
+    --rp-gold: #fbbf24;
+    --rp-font: -apple-system, "SF Pro Display", "PingFang SC", "HarmonyOS Sans SC", system-ui, sans-serif;
+    --rp-bubble-radius: 16px;
+    --rp-card-radius: 12px;
+}
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="obsidian"] {
+    --rp-bg: #eef1f6;
+    --rp-surface-1: #ffffff;
+    --rp-surface-2: #e6ebf2;
+    --rp-surface-3: #d8dfe9;
+    --rp-accent: #0369a1;
+    --rp-frame: #2a3446;
+    --rp-dock-bg: rgb(238 241 246 / 0.5);
+}
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="obsidian"][data-lonsha-theme="dark"],
+[data-lonsha-theme="dark"] :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="obsidian"]:not([data-lonsha-theme="light"]) {
+    --rp-bg: #06080d;
+    --rp-surface-1: #0f1520;
+    --rp-surface-2: #172031;
+    --rp-surface-3: #222d42;
+    --rp-text-1: #f1f5f9;
+    --rp-text-2: #a3b1c6;
+    --rp-text-3: #8391a7;
+    --rp-accent: #38bdf8;
+    --rp-on-accent: #04121e;
+    --app-on-accent: #04121e;
+    --rp-line: rgb(56 189 248 / 0.14);
+    --rp-line-strong: rgb(56 189 248 / 0.28);
+    --rp-glass-bg: rgb(10 15 24 / 0.72);
+    --rp-dock-bg: rgb(10 15 24 / 0.55);
+    --rp-notif-bg: rgb(15 21 32 / 0.82);
+    --rp-shadow-1: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 4px 14px rgb(0 0 0 / 0.5);
+    --rp-card-shadow: 0 0 0 1px rgb(56 189 248 / 0.12), 0 8px 24px -8px rgb(0 0 0 / 0.7);
+}
+}
+
+/* ---------- v2 追加：新组件 token（锁屏 / 灵动岛 / 小组件 / 控制中心 / 聊天 / 设置） 冷光描边、更细的锁屏数字 ---------- */
+@layer rp.themes {
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="obsidian"] {
+    --rp-lock-font: -apple-system, "SF Pro Display", var(--rp-font);
+    --rp-lock-time-weight: 300;
+    --rp-island-bg: #05070b;
+    --rp-widget-radius: 18px;
+    --rp-group-radius: 12px;
+    --rp-cc-module-radius: 18px;
+    --rp-wallpaper: radial-gradient(90% 70% at 20% 10%, rgb(56 189 248 / 0.35), transparent 60%),
+                    radial-gradient(80% 60% at 90% 80%, rgb(251 191 36 / 0.18), transparent 60%),
+                    linear-gradient(170deg, #0b111c, #05070b);
+    --rp-moments-name: #0369a1;
+}
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="obsidian"][data-lonsha-theme="dark"],
+[data-lonsha-theme="dark"] :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="obsidian"]:not([data-lonsha-theme="light"]) {
+    --rp-widget-bg: rgb(15 21 32 / 0.66);
+    --rp-widget-fg: #e2e8f0;
+    --rp-widget-fg-2: #94a3b8;
+    --rp-cc-module-bg: rgb(15 21 32 / 0.6);
+    --rp-cc-tile-accent: #38bdf8;
+    --rp-imsg-me-bg: #0369a1;
+    --rp-moments-name: #7dd3fc;
+    --rp-chat-wallpaper: radial-gradient(circle at 1px 1px, rgb(56 189 248 / 0.06) 1px, transparent 0) 0 0 / 20px 20px, linear-gradient(180deg, #06080d, #0b111c);
+}
+}

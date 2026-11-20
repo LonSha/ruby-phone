@@ -941,7 +941,11 @@ test('E4 前缀不与他人撞：.avf- / .shp- / .blk- / .wth- 全仓唯一（�
         const users = files.filter((f) => fs.readFileSync(f, 'utf8').includes(prefix));
         assert.ok(users.length > 0, prefix + ' 必须在仓里被用到');
         for (const f of users) {
-            assert.ok(f.includes(owner) || f.endsWith('phone.css'),
+            /* 豁免面只有一个：v3.6 的字符图标站点表按设计要写 App 的类选择器（它是这些类的**消费面** ——
+             *   查 DOM 换 SVG，不定义任何样式规则），所以它出现前缀不等于「两个主人」。其余任何 .js/.css
+             *   仍只准落在本 App 目录与 phone.css 上；放宽成「phone/ui/ 整个目录豁免」是不行的：那层能注入 CSS。 */
+            const isGlyphSites = f.replace(/\\/g, '/').endsWith('phone/ui/rp-glyph-sites-v3.6.js');
+            assert.ok(f.includes(owner) || f.endsWith('phone.css') || isGlyphSites,
                 prefix + ' 只应出现在 ' + owner + ' 与 phone.css，实测还有：' + f.replace(ROOT, ''));
         }
     }

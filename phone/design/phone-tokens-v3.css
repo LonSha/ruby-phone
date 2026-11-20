@@ -1,0 +1,280 @@
+/* ============================================================
+   RubyPhone · 组件 token v3（iOS 拟真度）—— 自带 @layer rp.tokens
+   ------------------------------------------------------------
+   颜色字面量只出现在本文件与 shared/lonsha-tokens-v3.css；phone-components-v3.css 只引用变量。
+   尺寸按 iPhone 18 Pro Max 取值：2868 x 1320 px @3x（460 ppi）= 逻辑 440 x 956 pt（1 CSS px = 1 pt）。
+   设计语言：iOS 26「液态玻璃」的原创近似（材质 token 见 lonsha-tokens-v3.css 的 --lt-glass-*）。
+   同心圆角：内层圆角 = 外层圆角 - 内缩距离（屏幕 62 -> Dock 内缩 14 -> 48；Tab 栏内缩 20 -> 胶囊）。
+   ============================================================ */
+@layer rp.tokens {
+:root, [data-lonsha-theme] {
+    /* ---------- 机身与屏幕 ---------- */
+    --rp3-screen-w: 440px;
+    --rp3-screen-h: 956px;
+    --rp3-screen-radius: 62px;           /* 屏幕圆角（与机身同心） */
+    --rp3-bezel: 12px;
+    --rp3-safe-top: 68px;                /* 状态栏 62 + 6 */
+    --rp3-safe-bottom: 34px;
+
+    /* ---------- 状态栏 / 灵动岛 ---------- */
+    --rp3-status-h: 62px;
+    --rp3-island-w: 126px;
+    --rp3-island-h: 37px;
+    --rp3-island-top: 14px;
+    --rp3-island-bg: #000000;
+    --rp3-status-time-size: 17px;
+
+    /* ---------- 导航栏 / 列表 / Tab 栏 ---------- */
+    --rp3-nav-h: 44px;
+    --rp3-largetitle-pad-top: 3px;
+    --rp3-largetitle-pad-bottom: 8px;
+    --rp3-margin: 20px;                  /* 内容左右边距 / inset grouped 缩进 */
+    --rp3-row-h: 52px;                   /* iOS 26 设置行（带图标）实测约 52pt；纯文字行最小 44 */
+    --rp3-row-h-min: 44px;
+    --rp3-row-radius: 26px;               /* iOS 26 分组列表更大的圆角 */
+    --rp3-row-icon: 30px;
+    --rp3-row-icon-radius: 6.5px;
+    --rp3-row-icon-gap: 15px;
+    --rp3-search-h: 48px;
+    --rp3-tabbar-h: 62px;                /* 悬浮胶囊高度（不含底部安全区） */
+    --rp3-tabbar-inset: 20px;            /* 胶囊左右 / 底部内缩 */
+    --rp3-tabbar-bottom: 26px;
+    --rp3-glass-btn: 44px;               /* 导航栏玻璃圆钮 */
+    --rp3-tabbar-icon: 25px;
+    --rp3-homebar-w: 134px;
+    --rp3-homebar-h: 5px;
+    --rp3-homebar-bottom: 8px;
+    --rp3-toggle-w: 63px;
+    --rp3-toggle-h: 28px;
+
+    /* ---------- 主屏 ---------- */
+    --rp3-icon: 64px;
+    --rp3-grid-cols: 4;
+    --rp3-grid-inset: 30px;              /* 图标列左右边距 */
+    --rp3-grid-col-gap: calc((var(--rp3-screen-w) - 2 * var(--rp3-grid-inset) - 4 * var(--rp3-icon)) / 3);
+    --rp3-grid-row-gap: 24px;
+    --rp3-label-gap: 7px;
+    --rp3-widget-small: 174px;
+    --rp3-widget-gap: 24px;
+    --rp3-widget-radius: 28px;
+    --rp3-dock-h: 100px;
+    --rp3-dock-inset: 14px;
+    --rp3-dock-radius: calc(var(--rp3-screen-radius) - var(--rp3-dock-inset));   /* 同心：62 - 14 = 48 */
+    --rp3-dock-bottom: 14px;
+
+    /* ---------- App 图标（连续曲率圆角，60 视窗缩放到任意尺寸） ---------- */
+    --rp3-squircle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'%3E%3Cpath d='M38.56 0c7.505 0 11.257 0 14.123 1.461a13.4 13.4 0 0 1 5.856 5.856c1.461 2.866 1.461 6.619 1.461 14.123V38.56c0 7.505 0 11.257 -1.461 14.123a13.4 13.4 0 0 1 -5.856 5.856c-2.866 1.461 -6.619 1.461 -14.123 1.461H21.44c-7.505 0 -11.257 0 -14.123 -1.461a13.4 13.4 0 0 1 -5.856 -5.856c-1.461 -2.866 -1.461 -6.619 -1.461 -14.123V21.44c0 -7.505 0 -11.257 1.461 -14.123a13.4 13.4 0 0 1 5.856 -5.856c2.866 -1.461 6.619 -1.461 14.123 -1.461Z'/%3E%3C/svg%3E");
+    --rp-heart-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12%2020.1c-.25%200-.5-.07-.72-.2C8.1%2018%203.25%2014.3%203.25%209.55%203.25%206.8%205.33%204.6%208%204.6c1.66%200%203.07.86%204%202.17.93-1.31%202.34-2.17%204-2.17%202.67%200%204.75%202.2%204.75%204.95%200%204.75-4.85%208.45-8.03%2010.35-.22.13-.47.2-.72.2Z' fill='none' stroke='%23000' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E");   /* v2 朋友圈点赞行用（替换原来的字符） */
+    --rp3-squircle-rim: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23fff' stop-opacity='.55'/%3E%3Cstop offset='.5' stop-color='%23fff' stop-opacity='.14'/%3E%3Cstop offset='1' stop-color='%23fff' stop-opacity='.22'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M38.56 0c7.505 0 11.257 0 14.123 1.461a13.4 13.4 0 0 1 5.856 5.856c1.461 2.866 1.461 6.619 1.461 14.123V38.56c0 7.505 0 11.257 -1.461 14.123a13.4 13.4 0 0 1 -5.856 5.856c-2.866 1.461 -6.619 1.461 -14.123 1.461H21.44c-7.505 0 -11.257 0 -14.123 -1.461a13.4 13.4 0 0 1 -5.856 -5.856c-1.461 -2.866 -1.461 -6.619 -1.461 -14.123V21.44c0 -7.505 0 -11.257 1.461 -14.123a13.4 13.4 0 0 1 5.856 -5.856c2.866 -1.461 6.619 -1.461 14.123 -1.461Z' fill='none' stroke='url(%23g)' stroke-width='1'/%3E%3C/svg%3E");
+    --rp3-tile-green: linear-gradient(180deg, #6BE28A 0%, #1FB350 100%);
+    --rp3-tile-leaf: linear-gradient(180deg, #5BD978 0%, #10A53C 100%);
+    --rp3-tile-blue: linear-gradient(180deg, #5CB6FF 0%, #1A6EF0 100%);
+    --rp3-tile-sky: linear-gradient(180deg, #62B7FA 0%, #2366E0 100%);
+    --rp3-tile-gray: linear-gradient(180deg, #A6ABB4 0%, #6A6F78 100%);
+    --rp3-tile-red: linear-gradient(180deg, #FF6B80 0%, #F02448 100%);
+    --rp3-tile-pink: linear-gradient(180deg, #FF84BE 0%, #E8408F 100%);
+    --rp3-tile-orange: linear-gradient(180deg, #FFB457 0%, #FF7A1F 100%);
+    --rp3-tile-yellow: linear-gradient(180deg, #FFDA5E 0%, #F6B314 100%);
+    --rp3-tile-purple: linear-gradient(180deg, #B88BFF 0%, #7A47E6 100%);
+    --rp3-tile-indigo: linear-gradient(180deg, #8189FF 0%, #4B4FDB 100%);
+    --rp3-tile-teal: linear-gradient(180deg, #55DAD2 0%, #0F9C98 100%);
+    --rp3-tile-graphite: linear-gradient(180deg, #4C4C52 0%, #1C1C1F 100%);
+    --rp3-tile-white: linear-gradient(180deg, #FFFFFF 0%, #E9E9EE 100%);
+    --rp3-tile-brown: linear-gradient(180deg, #CC9D6D 0%, #8D6237 100%);
+    --rp3-tile-mint: linear-gradient(180deg, #72E8BC 0%, #12B07E 100%);
+    --rp3-tile-coral: linear-gradient(180deg, #FF9670 0%, #F24E35 100%);
+    --rp3-tile-navy: linear-gradient(180deg, #5574F5 0%, #2337B8 100%);
+    /* iOS 18「深色」图标：深底 + 彩色字形（深色模式下自动切换，见 phone-components-v3.css） */
+    --rp3-knock-green: #1FB350;
+    --rp3-knock-leaf: #10A53C;
+    --rp3-knock-blue: #1A6EF0;
+    --rp3-knock-sky: #2366E0;
+    --rp3-knock-gray: #6A6F78;
+    --rp3-knock-red: #F02448;
+    --rp3-knock-pink: #E8408F;
+    --rp3-knock-orange: #FF7A1F;
+    --rp3-knock-yellow: #F6B314;
+    --rp3-knock-purple: #7A47E6;
+    --rp3-knock-indigo: #4B4FDB;
+    --rp3-knock-teal: #0F9C98;
+    --rp3-knock-graphite: #1C1C1F;
+    --rp3-knock-white: #E9E9EE;
+    --rp3-knock-brown: #8D6237;
+    --rp3-knock-mint: #12B07E;
+    --rp3-knock-coral: #F24E35;
+    --rp3-knock-navy: #2337B8;
+    --rp3-knock-dark: #1c1c1f;
+    --rp3-knock-clear: rgb(0 0 0 / 0.2);
+    --rp3-tile-dark: linear-gradient(180deg, #303034 0%, #141416 100%);
+    --rp3-tint-green: #30d158;
+    --rp3-tint-leaf: #3ed36a;
+    --rp3-tint-blue: #3d9bff;
+    --rp3-tint-sky: #5aaef7;
+    --rp3-tint-gray: #aeb3bb;
+    --rp3-tint-red: #ff5a6e;
+    --rp3-tint-pink: #ff7ab4;
+    --rp3-tint-orange: #ffa040;
+    --rp3-tint-yellow: #ffd23f;
+    --rp3-tint-purple: #b48aff;
+    --rp3-tint-indigo: #8a91ff;
+    --rp3-tint-teal: #4fd3cb;
+    --rp3-tint-graphite: #d1d1d6;
+    --rp3-tint-white: #ff453a;
+    --rp3-tint-brown: #d0a274;
+    --rp3-tint-mint: #5fe0b0;
+    --rp3-tint-coral: #ff8a66;
+    --rp3-tint-navy: #7b93ff;
+    --rp3-icon-shadow: drop-shadow(0 2px 4px rgb(0 0 0 / 0.16));
+    --rp3-glyph-depth: drop-shadow(0 1.5px 1.2px rgb(0 0 0 / 0.22));     /* 字形「浮起」的层次感 */
+    --rp3-glyph-gloss: linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0.84) 100%);   /* 字形自上而下的玻璃透感（作遮罩用） */
+    --rp3-tile-gloss: radial-gradient(120% 60% at 50% -8%, rgb(255 255 255 / 0.42) 0%, rgb(255 255 255 / 0) 62%);
+    --rp3-tile-clear: linear-gradient(180deg, rgb(255 255 255 / 0.26) 0%, rgb(255 255 255 / 0.08) 100%);
+    --rp3-tile-clear-blur: blur(10px) saturate(180%);
+    --rp3-glyph-clear: rgb(255 255 255 / 0.92);
+    --rp3-weather-glass: linear-gradient(180deg, rgb(64 140 240 / 0.55) 0%, rgb(110 175 245 / 0.32) 100%);
+    --rp3-label-fg: #ffffff;
+    --rp3-label-shadow: 0 0.5px 1px rgb(0 0 0 / 0.35), 0 0 6px rgb(0 0 0 / 0.22);
+    --rp3-badge-bg: #ff3b30;
+    --rp3-badge-fg: #ffffff;
+    --rp3-cal-weekday-size: 10px;        /* 日历图标里的星期字样（图标绘制，不是正文） */
+    --rp3-cal-day-size: 32px;
+    --rp3-cal-fg: #1c1c1e;
+    --rp3-cal-red: #ff3b30;
+    --rp3-clock-face: #ffffff;
+    --rp3-clock-ink: #1c1c1e;
+    --rp3-clock-sec: #ff9500;
+
+    /* ---------- 壁纸（原创网格渐变；浅 / 深两张） ---------- */
+    --rp3-wall-light:
+        radial-gradient(60% 45% at 12% 8%, #ffae8c 0%, rgb(255 174 140 / 0) 70%),
+        radial-gradient(55% 40% at 92% 14%, #a985ff 0%, rgb(169 133 255 / 0) 72%),
+        radial-gradient(70% 50% at 78% 62%, #5a86ff 0%, rgb(90 134 255 / 0) 70%),
+        radial-gradient(65% 45% at 8% 72%, #ff79b0 0%, rgb(255 121 176 / 0) 70%),
+        radial-gradient(80% 45% at 50% 108%, #4152f0 0%, rgb(65 82 240 / 0) 72%),
+        linear-gradient(168deg, #f2b9d3 0%, #b3a2ff 46%, #6f8ff5 100%);
+    --rp3-wall-dark:
+        radial-gradient(60% 42% at 14% 6%, #5b2a7a 0%, rgb(91 42 122 / 0) 72%),
+        radial-gradient(55% 40% at 95% 20%, #12457a 0%, rgb(18 69 122 / 0) 72%),
+        radial-gradient(70% 48% at 72% 64%, #2a2c8f 0%, rgb(42 44 143 / 0) 72%),
+        radial-gradient(60% 45% at 6% 80%, #7a1f52 0%, rgb(122 31 82 / 0) 72%),
+        radial-gradient(90% 40% at 50% 112%, #0e6c78 0%, rgb(14 108 120 / 0) 72%),
+        linear-gradient(170deg, #0b0a14 0%, #0a0d22 50%, #050508 100%);
+    --rp3-wall-grain: radial-gradient(rgb(255 255 255 / 0.05) 0.5px, transparent 0.6px);
+    --rp3-on-wall: #ffffff;
+    --rp3-on-wall-2: rgb(255 255 255 / 0.78);
+    --rp3-lock-shadow: 0 1px 24px rgb(0 0 0 / 0.18);
+    --rp3-lock-clock-fill: linear-gradient(180deg, rgb(255 255 255 / 0.98) 0%, rgb(255 255 255 / 0.78) 100%);   /* 大时钟的玻璃透感 */
+    --rp3-widget-red-on-glass: #ff5a50;
+
+    /* ---------- Dock / 小组件 / 通知 / 控制中心材质 ---------- */
+    --rp3-dock-bg: rgb(255 255 255 / 0.26);
+    --rp3-dock-blur: saturate(180%) blur(30px);
+    --rp3-widget-bg: #ffffff;
+    --rp3-widget-fg: #000000;
+    --rp3-widget-fg-2: rgba(60, 60, 67, 0.6);
+    --rp3-widget-red: #ff3b30;
+    --rp3-weather-bg: linear-gradient(180deg, #3f8ff2 0%, #6bb3f7 100%);
+    --rp3-weather-fg: #ffffff;
+    --rp3-sun: #ffd60a;
+    --rp3-notif-bg: rgb(250 250 250 / 0.72);
+    --rp3-notif-fg: #000000;
+    --rp3-notif-fg-2: rgb(0 0 0 / 0.55);
+    --rp3-lockbtn-bg: rgb(30 30 30 / 0.32);
+    --rp3-cc-scrim: rgb(20 20 24 / 0.32);
+    --rp3-cc-blur: saturate(160%) blur(36px);
+    --rp3-cc-module: rgb(255 255 255 / 0.14);
+    --rp3-cc-module-rim: inset 0 0 0 0.5px rgb(255 255 255 / 0.18);
+    --rp3-cc-on: #ffffff;
+    --rp3-cc-fg: #ffffff;
+    --rp3-cc-fg-2: rgb(255 255 255 / 0.62);
+    --rp3-cc-slider-fill: #ffffff;
+    --rp3-cc-slider-ico: #6c6c70;
+    --rp3-cc-orange: #ff9f0a;
+    --rp3-cc-green: #30d158;
+    --rp3-cc-blue: #0a84ff;
+    --rp3-cc-indigo: #5e5ce6;
+
+    /* ---------- 信息（iMessage 风格） ---------- */
+    --rp3-imsg-bg: var(--lt-sys-bg);
+    --rp3-imsg-me: #007aff;
+    --rp3-imsg-me-fg: #ffffff;
+    --rp3-imsg-them: #e9e9eb;
+    --rp3-imsg-them-fg: #000000;
+    --rp3-imsg-sms: #34c759;
+    --rp3-bubble-radius: 18px;
+    --rp3-bubble-pad: 7px 12px 8px;
+    --rp3-bubble-max: 74%;
+
+    /* ---------- 微信风格 ---------- */
+    --rp3-wx-bg: #ededed;
+    --rp3-wx-bar: #ededed;
+    --rp3-wx-input-bar: #f7f7f7;
+    --rp3-wx-me: #95ec69;
+    --rp3-wx-me-fg: #000000;
+    --rp3-wx-them: #ffffff;
+    --rp3-wx-them-fg: #000000;
+    --rp3-wx-green: #07c160;
+    --rp3-wx-time: #b2b2b2;
+    --rp3-wx-tab: #181818;
+    --rp3-wx-tab-off: #181818;
+    --rp3-wx-icon: #181818;
+    --rp3-wx-line: rgb(0 0 0 / 0.1);
+    --rp3-wx-field: #ffffff;
+    --rp3-wx-avatar-radius: 4px;
+
+    /* ---------- 设置图标块颜色（系统色） ---------- */
+    --rp3-chip-orange: #ff9500; --rp3-chip-blue: #007aff; --rp3-chip-green: #34c759; --rp3-chip-red: #ff3b30;
+    --rp3-chip-pink: #ff2d55;   --rp3-chip-indigo: #5856d6; --rp3-chip-purple: #af52de; --rp3-chip-gray: #8e8e93;
+    --rp3-chip-teal: #30b0c7;   --rp3-chip-cyan: #32ade6; --rp3-chip-yellow: #ffcc00; --rp3-chip-mint: #00c7be;
+    --rp3-on-chip: #ffffff;
+    --rp3-switch-on: #34c759;
+    --rp3-switch-knob: #ffffff;
+    --rp3-switch-knob-glass: rgb(255 255 255 / 0.35);
+    --rp3-switch-knob-shadow: 0 3px 8px rgb(0 0 0 / 0.15), 0 3px 1px rgb(0 0 0 / 0.06);
+    --rp3-avatar-bg: linear-gradient(180deg, #a3a9b4 0%, #858b96 100%);
+    --rp3-avatar-fg: #ffffff;
+    --rp3-tab-off: #999999;
+    --rp3-scrim: rgb(0 0 0 / 0.3);
+}
+[data-lonsha-theme="dark"] {
+    --rp3-widget-bg: #1c1c1e;
+    --rp3-widget-fg: #ffffff;
+    --rp3-widget-fg-2: rgba(235, 235, 245, 0.6);
+    --rp3-widget-red: #ff453a;
+    --rp3-weather-bg: linear-gradient(180deg, #102a54 0%, #24508f 100%);
+    --rp3-weather-glass: linear-gradient(180deg, rgb(20 50 110 / 0.6) 0%, rgb(40 80 150 / 0.36) 100%);
+    --rp3-dock-bg: rgb(60 60 66 / 0.3);
+    --rp3-notif-bg: rgb(40 40 44 / 0.66);
+    --rp3-notif-fg: #ffffff;
+    --rp3-notif-fg-2: rgb(255 255 255 / 0.6);
+    --rp3-cc-scrim: rgb(0 0 0 / 0.4);
+    --rp3-imsg-me: #0a84ff;
+    --rp3-imsg-them: #262628;
+    --rp3-imsg-them-fg: #ffffff;
+    --rp3-imsg-sms: #30d158;
+    --rp3-wx-bg: #111111;
+    --rp3-wx-bar: #111111;
+    --rp3-wx-input-bar: #1e1e1e;
+    --rp3-wx-me: #3eb575;
+    --rp3-wx-me-fg: #000000;
+    --rp3-wx-them: #2c2c2c;
+    --rp3-wx-them-fg: #ffffff;
+    --rp3-wx-time: #5f5f5f;
+    --rp3-wx-tab: #ffffff;
+    --rp3-wx-tab-off: #d5d5d5;
+    --rp3-wx-icon: #d5d5d5;
+    --rp3-wx-line: rgb(255 255 255 / 0.08);
+    --rp3-wx-field: #2c2c2c;
+    --rp3-chip-orange: #ff9f0a; --rp3-chip-blue: #0a84ff; --rp3-chip-green: #30d158; --rp3-chip-red: #ff453a;
+    --rp3-chip-pink: #ff375f;   --rp3-chip-indigo: #5e5ce6; --rp3-chip-purple: #bf5af2; --rp3-chip-gray: #8e8e93;
+    --rp3-chip-teal: #40c8e0;   --rp3-chip-cyan: #64d2ff; --rp3-chip-yellow: #ffd60a; --rp3-chip-mint: #63e6e2;
+    --rp3-switch-on: #30d158;
+    --rp3-switch-knob-shadow: 0 3px 8px rgb(0 0 0 / 0.3);
+    --rp3-avatar-bg: linear-gradient(180deg, #6d7280 0%, #4b505b 100%);
+    --rp3-tab-off: #8e8e93;
+}
+/* 主题包：保留 v2 的包机制，v3 只给像素包关掉模糊与圆角（其余包沿用 iOS 取值） */
+[data-rp-pack="pixel"] {
+    --rp3-dock-blur: none; --rp3-cc-blur: none; --rp3-screen-radius: 0px; --rp3-dock-radius: 0px; --rp3-widget-radius: 0px; --rp3-row-radius: 0px;
+}
+}

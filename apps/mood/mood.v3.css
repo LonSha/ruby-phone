@@ -1,0 +1,58 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：心境（mood）—— 家族：角色扮演专属 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/mood/mood-view.js（render 拼 _moodCard / _drivesBars / _jiwenCard / _memoryCard + 模板里的 <style>）；mood-app.js 只取引擎读数。
+   屏幕与状态：页头（标题 + 时间）· 心境卡（主情绪、强度、睡眠态、前几项维度 +/-）· 情绪维度条 · 积温五轴条（主动想法 .mood-probe）·
+               记忆统计 8 格 · 三种「引擎尚未初始化」空态。
+   设计：原生是深海蓝底 dashboard；v3.5 改成与 v3.4「记忆」同一套 iOS 26 健康式 dashboard，跟随系统浅深色，强调色系统靛蓝。
+         **数据色不动**：心境卡的渐变底（style 里的 ${bgColor}33）、维度条填充色、维度圆点都是引擎给的情绪色，原样保留；
+         皮肤只换卡片表面、文字层级、轨道、圆角与字号（旧 10~11px 抬到 12 / 13）。
+   keep-legacy: .mood-card —— 心境卡的底是内联渐变（引擎情绪色），旧样式只给了 rgba 白描边；描边换掉，底色按数据保留
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 2 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    #phone-panel[data-rp-ios="3"] .mood-root { --rp33-accent: var(--lt-sys-indigo); --rp36-accent-text: var(--rp36-text-indigo); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-indigo) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-indigo) 40%, transparent); }
+
+    /* ===== 屏：页面底 + 页头 ===== */
+    #phone-panel[data-rp-ios="3"] .mood-root { min-block-size: 100%; box-sizing: border-box; padding: var(--rp33-sp-2) var(--rp33-margin) var(--rp33-sp-8); background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .mood-header { align-items: baseline; justify-content: space-between; margin-block-end: var(--rp33-sp-3); padding: var(--rp33-sp-2) var(--rp33-sp-1) 0; }
+    #phone-panel[data-rp-ios="3"] .mood-header h2 { margin: 0; font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .mood-header .mood-time { color: var(--rp33-label-2); font: var(--lt-type-footnote); font-variant-numeric: tabular-nums; }
+
+    /* ===== 屏：心境卡（底色 = 引擎情绪色渐变，保留） ===== */
+    #phone-panel[data-rp-ios="3"] .mood-card { margin-block-end: var(--rp33-sp-4); padding: var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); box-shadow: var(--rp33-card-shadow), var(--rp33-rim); }
+    #phone-panel[data-rp-ios="3"] .mood-card-head { align-items: center; gap: var(--rp33-sp-3); margin-block-end: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .mood-emoji { font-size: 32px; line-height: 1; }
+    #phone-panel[data-rp-ios="3"] .mood-label { font: var(--lt-type-title3); letter-spacing: var(--lt-ios-title3-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .mood-strength { color: var(--rp33-label-2); font: var(--lt-type-footnote); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .mood-sleep { margin-inline-start: auto; padding: 2px var(--rp33-sp-2); border-radius: 999px; background: color-mix(in srgb, var(--lt-sys-mint) 16%, transparent); color: var(--rp36-text-mint); font: 600 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .mood-toplist { gap: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .mood-top-item { align-items: center; gap: var(--rp33-sp-2); min-block-size: 28px; font: var(--lt-type-subhead); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .mood-top-dot { inline-size: 8px; block-size: 8px; flex: none; border-radius: 999px; }
+    #phone-panel[data-rp-ios="3"] .mood-top-val { margin-inline-start: auto; color: var(--rp33-label); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .mood-top-val.neg { color: var(--rp36-text-red); }
+
+    /* ===== 屏：情绪维度 / 积温五轴 / 记忆（分组卡） ===== */
+    #phone-panel[data-rp-ios="3"] .mood-section { margin-block-end: var(--rp33-sp-4); padding: var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .mood-section-title { margin-block-end: var(--rp33-sp-3); font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .mood-bar-row { align-items: center; gap: var(--rp33-sp-2); min-block-size: 28px; font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .mood-bar-label { inline-size: 56px; flex: none; color: var(--rp33-label-2); }
+    /* 轨道 6pt 中性填充；填充色是数据（内联），只给圆角 */
+    #phone-panel[data-rp-ios="3"] .mood-bar-track { block-size: 6px; border-radius: 999px; background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] .mood-bar-fill { border-radius: 999px; }
+    #phone-panel[data-rp-ios="3"] .mood-bar-val { inline-size: 44px; flex: none; color: var(--rp33-label); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; text-align: end; }
+    #phone-panel[data-rp-ios="3"] .mood-probe { margin-block-start: var(--rp33-sp-3); padding: var(--rp33-sp-3); border-radius: var(--rp33-feed-radius); background: var(--rp33-accent-soft); color: var(--rp33-label); font: var(--lt-type-subhead); }
+    /* 记忆 8 格：4 列数据格，大号圆体数字 + caption 说明 */
+    #phone-panel[data-rp-ios="3"] .mood-stat-grid { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .mood-stat { padding: var(--rp33-sp-3) var(--rp33-sp-2); border-radius: var(--rp33-field-radius); background: var(--rp33-surface-2); text-align: center; }
+    #phone-panel[data-rp-ios="3"] .mood-stat b { color: var(--rp33-label); font: 600 var(--lt-ios-title3-size) / 1.2 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .mood-stat span { color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+
+    /* ===== 状态：引擎尚未初始化 ===== */
+    #phone-panel[data-rp-ios="3"] .mood-empty { margin-block-end: var(--rp33-sp-4); padding: var(--rp33-sp-6) var(--rp33-sp-4); border-radius: var(--rp33-card-radius); background: var(--rp33-surface); color: var(--rp33-label-2); font: var(--lt-type-subhead); text-align: center; }
+}

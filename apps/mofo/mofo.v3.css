@@ -1,0 +1,77 @@
+/* ============================================================
+   RubyPhone v3.4 · App 皮肤：魔坊（mofo）—— 家族：角色扮演专属
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   三个子层（右边赢左边，与特异性无关）：
+     rp.skins.remap   旧规则重映射：写死颜色 -> 语义 token（浅 / 深自动），字号吸附 iOS 阶梯（最小 11pt），
+                      间距吸附 4pt 栅格（8pt 栅格 + 半步），圆角吸附阶梯，霓虹投影 / 文字阴影去掉
+     rp.skins.roles   结构角色 -> v3 组件（导航栏 / 玻璃圆钮 / 分段 / 分组列表 / 卡片 / Sheet / 表单 / 按钮 / 徽标）
+     rp.skins.curated 手工精修（只有重点 App 有）
+   规矩：零 !important、零写死颜色、零字符图标；不改元素 ID / 类名 / 结构，不碰 display / position 以外的状态切换。
+   生成：v3.3 皮肤生成器（输入与角色表见 tools/app-skins-v33.manifest.json；角色 14 个类 / 11 种角色，重映射 10 / 21 条旧规则，
+         伪元素字符图标 0 处，扩大点击区 4 个类）。原生配色：light。
+   v3.4：done-partial -> done。层序多一个子层 rp.skins.inline（运行时逐站点内联映射写出的 data-rp34 令牌，样式在
+         phone/design/app-skins-inline-v3.4.css）；本文件末尾「v3.4 逐屏精修」一段是读完该 App 全部视图模板后手工写的，
+         所选类名全部在源码里核对过（verification/selector-audit.tsv）。改动说明见 README 第三节。
+   ============================================================ 
+ * v3.6：小字强调色 2 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.roles {
+    /* 作用域：强调色（sys:blue）*/
+    #phone-panel[data-rp-ios="3"] :where([class^="mofo-"], [class*=" mofo-"]) { --rp33-accent: var(--lt-sys-blue); --rp36-accent-text: var(--rp36-text-blue); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-blue) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-blue) 40%, transparent); }
+    #phone-panel[data-rp-ios="3"] .mofo-app { background-color: var(--rp33-bg); background-image: none; color: var(--rp33-label); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+    #phone-panel[data-rp-ios="3"] .mofo-back-btn { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); min-inline-size: var(--rp3-glass-btn); flex: none; padding: 0; justify-content: center; align-items: center; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 19px; line-height: 1; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .mofo-back-btn:active { scale: 0.94; }
+    #phone-panel[data-rp-ios="3"] :is(.mofo-bubble-rank-row, .mofo-item-row) { min-block-size: var(--rp3-row-h-min); border: 0; border-radius: var(--rp33-row-radius-single); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-shadow-1); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .mofo-editor-panel { border: 0; border-radius: var(--rp33-card-radius); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-card-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .mofo-update-bubble { border-radius: var(--rp3-bubble-radius); border: 0; box-shadow: none; font-family: var(--lt-font-ios); font-size: var(--lt-ios-body-size); line-height: 1.32; letter-spacing: var(--lt-ios-body-track); }
+    #phone-panel[data-rp-ios="3"] .mofo-editor-overlay { background: var(--rp33-scrim); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.mofo-export-btn, .mofo-select-btn, .mofo-sort-btn) { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; box-shadow: none; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.mofo-export-btn, .mofo-select-btn, .mofo-sort-btn):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.mofo-export-btn, .mofo-select-btn, .mofo-sort-btn):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] .mofo-delete-btn { border: 0; border-radius: 999px; background-color: var(--rp33-danger-soft); background-image: none; box-shadow: none; color: var(--rp36-text-red); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .mofo-delete-btn:active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] .mofo-delete-btn:disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] .mofo-burst-dot { background-color: var(--rp33-badge-bg); background-image: none; color: var(--rp33-badge-fg); border: 0; border-radius: 999px; box-shadow: none; font-family: var(--lt-font-ios-rounded); font-weight: 600; font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .mofo-bubble-rank-name { color: var(--rp33-label); font-weight: 600; text-shadow: none; }
+    /* 点击区不小于 44pt：视觉尺寸不变，用透明伪元素扩大命中区 */
+    #phone-panel[data-rp-ios="3"] :is(.mofo-delete-btn, .mofo-export-btn, .mofo-select-btn, .mofo-sort-btn) { position: relative; }
+    #phone-panel[data-rp-ios="3"] :is(.mofo-delete-btn, .mofo-export-btn, .mofo-select-btn, .mofo-sort-btn)::after { content: ""; position: absolute; inset: min(0px, calc((100% - var(--rp33-hit)) / 2)); }
+}
+@layer rp.skins.remap {
+    #phone-panel[data-rp-ios="3"] .app-back-btn { background: var(--rp33-bg); color: var(--rp33-label); padding: 8px 12px; font-size: var(--lt-ios-caption1-size); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .app-back-btn:hover { background: var(--rp33-surface-2); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .mofo-update-bubble { background: radial-gradient(150% 150% at 30% 30%, color-mix(in srgb, var(--mofo-bubble-highlight) 32%, transparent), transparent),
+                            color-mix(in srgb, var(--mofo-bubble-accent) 10%, transparent); box-shadow: inset 6px 0 12px color-mix(in srgb, var(--mofo-bubble-accent) 30%, var(--rp33-sep)),
+                            inset -6px 0 12px color-mix(in srgb, var(--mofo-bubble-accent) 18%, var(--rp33-sep)),
+                            inset 0 -6px 12px color-mix(in srgb, var(--mofo-bubble-accent) 16%, var(--rp33-sep)),
+                            inset 0 6px 12px color-mix(in srgb, var(--mofo-bubble-highlight) 82%, var(--rp33-sep)),
+                            0 7px 14px var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .mofo-update-bubble::before { background: color-mix(in srgb, var(--mofo-bubble-highlight) 92%, var(--rp33-surface)); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .mofo-update-bubble::after { background: color-mix(in srgb, var(--mofo-bubble-highlight) 80%, var(--rp33-surface)); }
+    #phone-panel[data-rp-ios="3"] .mofo-burst-dot { background: radial-gradient(circle at 30% 30%, var(--rp33-surface), color-mix(in srgb, var(--mofo-bubble-accent) 26%, color-mix(in srgb, var(--lt-sys-mint) 28%, transparent)) 68%, transparent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .mofo-bubble-rank-mini { padding: 0 8px; }
+    #phone-panel[data-rp-ios="3"] .mofo-bubble-rank-name { font-size: var(--lt-ios-caption2-size); text-shadow: none; }
+    @media (max-width: 640px), (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"] .mofo-bubble-rank-mini { padding: 0 4px; }
+    }
+    @media (max-width: 640px), (pointer: coarse) {
+    #phone-panel[data-rp-ios="3"] .mofo-bubble-rank-name { font-size: var(--lt-ios-caption2-size); }
+    }
+}
+@layer rp.skins.curated {
+    /* ===================== v3.4 逐屏精修 ===================== */
+    /* ---- 魔坊 v3.4：整屏几乎都是内联写法（35 处），由逐站点映射换成令牌；这里补导航栏、列表行与小按钮的尺寸。
+            全局「更新气泡」挂在宿主页面 documentElement 上、颜色读宿主主题取色器 —— 不在手机里，按架构不碰（运行时也不再收编它的 <style>）。---- */
+    #phone-panel[data-rp-ios="3"] .mofo-app { --rp33-accent: var(--lt-sys-blue); --rp36-accent-text: var(--rp36-text-blue); background: var(--rp33-bg); color: var(--rp33-label); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .mofo-back-btn { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); min-inline-size: var(--rp3-glass-btn); padding: 0; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .mofo-back-btn i { font-size: 17px; }
+    #phone-panel[data-rp-ios="3"] .mofo-item-row { min-block-size: 64px; padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); box-shadow: var(--rp33-shadow-1); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.mofo-select-btn, .mofo-sort-btn) { min-inline-size: 24px; min-block-size: 24px; border-radius: 999px; position: relative; }
+    #phone-panel[data-rp-ios="3"] :is(.mofo-select-btn, .mofo-sort-btn, .mofo-export-btn, .mofo-delete-btn)::after { content: ""; position: absolute; inset: -10px -6px; }
+    #phone-panel[data-rp-ios="3"] :is(.mofo-export-btn, .mofo-delete-btn) { min-block-size: 28px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); position: relative; }
+    #phone-panel[data-rp-ios="3"] :is(.mofo-import-btn, .mofo-export-all-btn, .mofo-export-selected-btn, .mofo-select-all-btn, .mofo-toggle-select-btn) { min-block-size: 40px; border: 0; border-radius: 999px; font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .mofo-preview-card { border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .mofo-runtime-empty { font: var(--lt-type-subhead); color: var(--rp33-label-2); }
+}

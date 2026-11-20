@@ -1,0 +1,88 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：小红书（xhs）—— 家族：社交信息流 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/xhs/xhs-view.js（render 外壳 / _cardHtml / _renderMasonry / _openDetail 详情 / 发布抽屉 / 空态 / 「加载更多」提示）；xhs-app.js、xhs-data.js 无 DOM。
+   屏幕与状态：导航栏（返回圆钮 · 发现 / 关注 / 江城 三段 · 发布圆钮）· 双列瀑布流卡片（封面、标题两行、作者头像 + 名、点赞 .liked）· 空态 ·
+               笔记详情 Sheet（作者、关闭、封面、标题 / 正文 / 话题、评论数与评论、底部评论输入 + 发送）·
+               发布抽屉 Sheet（关闭 · 标题 · 发布；标题 / 正文 / 封面 URL / 话题四个输入）。
+               详情与抽屉的显隐是 JS 写的 style="display"，皮肤不碰。
+   设计：原生深色。小红书是图片信息流，内容本身不暗，v3.5 跟随系统浅深色；品牌红只给发布按钮、选中页签的下划线、点赞态、发送 / 发布。
+         卡片 16 圆角 + 卡片裁切（封面贴边、无间隙）；导航按钮 = 44pt 玻璃圆钮；详情 / 抽屉 = 34 圆角底部 Sheet + 浮层投影；
+         话题用系统链接蓝（与旧版一致的语义：可点的 tag）。
+   规矩：零 !important、零写死颜色、零字符图标；类名 / ID / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 3 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    #phone-panel[data-rp-ios="3"] .xhs-root { --rp33-accent: var(--rp33-brand-xhs); --rp36-accent-text: var(--rp36-text-brand-xhs); --rp33-accent-soft: color-mix(in srgb, var(--rp33-brand-xhs) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--rp33-brand-xhs) 40%, transparent); }
+
+    /* ===== 屏：发现页 · 页面底 + 导航栏 ===== */
+    #phone-panel[data-rp-ios="3"] .xhs-root { background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .xhs-header { block-size: auto; min-block-size: 52px; padding: var(--rp33-sp-1) var(--rp33-sp-3); gap: var(--rp33-sp-2); border: 0; background: var(--lt-mat3-bar); -webkit-backdrop-filter: var(--lt-mat3-blur); backdrop-filter: var(--lt-mat3-blur); }
+    #phone-panel[data-rp-ios="3"] :is(.xhs-back-btn, .xhs-post-btn, .xhs-detail-close, .xhs-drawer-close) { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); flex: none; padding: 0; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 17px; cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .xhs-post-btn { color: var(--rp36-accent-text); font-size: 19px; }
+    #phone-panel[data-rp-ios="3"] :is(.xhs-back-btn, .xhs-post-btn, .xhs-detail-close, .xhs-drawer-close):active { scale: 0.94; }
+    /* 三个页签：分段控件 */
+    #phone-panel[data-rp-ios="3"] .xhs-header-tabs { gap: 0; padding: 2px; border-radius: 999px; background: var(--rp33-seg-bg); }
+    #phone-panel[data-rp-ios="3"] .xhs-tab { min-block-size: var(--rp33-tab-h); padding: 0 var(--rp33-sp-4); display: inline-flex; align-items: center; border-radius: 999px; color: var(--rp33-label); font: 500 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .xhs-tab { position: relative; }
+    #phone-panel[data-rp-ios="3"] .xhs-tab:not(.active)::after { content: ""; position: absolute; inset: -6px 0; }
+    #phone-panel[data-rp-ios="3"] .xhs-tab.active { background: var(--rp33-seg-on); box-shadow: var(--rp33-seg-shadow); color: var(--rp33-label); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .xhs-tab.active::after { inset-inline: 35%; inset-block-end: 3px; block-size: 2px; border-radius: 999px; background: var(--rp33-accent); }
+
+    /* ===== 屏：双列瀑布流 · 卡片 ===== */
+    #phone-panel[data-rp-ios="3"] .xhs-body { padding: var(--rp33-sp-2) var(--rp33-sp-2) var(--rp33-sp-8); }
+    #phone-panel[data-rp-ios="3"] .xhs-card { border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); overflow: clip; cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .xhs-card:active { scale: 0.98; }
+    #phone-panel[data-rp-ios="3"] .xhs-card-info { padding: var(--rp33-sp-2) var(--rp33-sp-3) var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .xhs-card-title { margin: 0 0 var(--rp33-sp-2); color: var(--rp33-label); font: 500 var(--lt-ios-subhead-size) / 1.35 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .xhs-card-author-row { gap: var(--rp33-sp-2); color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .xhs-author-group { gap: var(--rp33-sp-1); min-inline-size: 0; }
+    #phone-panel[data-rp-ios="3"] .xhs-author-avatar { inline-size: 20px; block-size: 20px; border-radius: 999px; box-shadow: 0 0 0 0.5px var(--rp33-avatar-ring); }
+    #phone-panel[data-rp-ios="3"] .xhs-author-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #phone-panel[data-rp-ios="3"] .xhs-like-badge { gap: var(--rp33-sp-1); align-items: center; min-block-size: 28px; position: relative; color: var(--rp33-label-2); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .xhs-like-badge::after { content: ""; position: absolute; inset: -8px -6px; }
+    #phone-panel[data-rp-ios="3"] .xhs-like-badge.liked { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .xhs-more-hint { padding: var(--rp33-sp-4); color: var(--rp33-label-3); font: var(--lt-type-footnote); text-align: center; }
+
+    /* ===== 状态：空（还没有笔记） ===== */
+    #phone-panel[data-rp-ios="3"] .xhs-empty { padding: var(--rp33-sp-8) var(--rp33-sp-6); color: var(--rp33-label-2); font: var(--lt-type-subhead); text-align: center; }
+
+    /* ===== 屏：笔记详情 / 发布抽屉 · Sheet 外框 ===== */
+    #phone-panel[data-rp-ios="3"] :is(.xhs-modal-overlay, .xhs-drawer-overlay) { background: var(--rp33-scrim); }
+    #phone-panel[data-rp-ios="3"] :is(.xhs-modal-card, .xhs-drawer-content) { border: 0; border-start-start-radius: var(--rp33-sheet-radius); border-start-end-radius: var(--rp33-sheet-radius); background: var(--rp33-sheet-bg); box-shadow: var(--rp33-float-shadow); color: var(--rp33-label); overflow: clip; }
+    #phone-panel[data-rp-ios="3"] :is(.xhs-detail-header, .xhs-drawer-header) { align-items: center; gap: var(--rp33-sp-3); min-block-size: 60px; padding: var(--rp33-sp-2) var(--rp33-sp-4); border: 0; }
+
+    /* ===== 屏：笔记详情 · 作者 / 正文 / 评论 / 评论输入 ===== */
+    #phone-panel[data-rp-ios="3"] .xhs-detail-author { gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .xhs-detail-author img { inline-size: 40px; block-size: 40px; border-radius: 999px; box-shadow: 0 0 0 0.5px var(--rp33-avatar-ring); }
+    #phone-panel[data-rp-ios="3"] .xhs-detail-author-meta .name { color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .xhs-detail-author-meta .time { color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .xhs-detail-cover img { border-radius: 0; }
+    #phone-panel[data-rp-ios="3"] .xhs-detail-content { padding: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .xhs-detail-content .title { margin: 0 0 var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-title3); letter-spacing: var(--lt-ios-title3-track); }
+    #phone-panel[data-rp-ios="3"] .xhs-detail-content .desc { margin: 0 0 var(--rp33-sp-3); color: var(--rp33-label); font: var(--lt-type-body); line-height: 1.55; }
+    #phone-panel[data-rp-ios="3"] .xhs-detail-content .tag { color: var(--rp36-text-blue); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .xhs-detail-comments { padding: var(--rp33-sp-3) var(--rp33-sp-4) var(--rp33-sp-6); border: 0; border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .xhs-detail-comments .comments-count { margin-block-end: var(--rp33-sp-2); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .xhs-detail-comments .comment-item { padding: var(--rp33-sp-2) 0; color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .xhs-detail-comments .c-author { color: var(--rp33-label-2); font-weight: 500; }
+    #phone-panel[data-rp-ios="3"] .xhs-detail-footer { gap: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3) var(--rp33-sp-3); border-block-start: 0.5px solid var(--rp33-sep); background: var(--lt-mat3-bar); -webkit-backdrop-filter: var(--lt-mat3-blur); backdrop-filter: var(--lt-mat3-blur); }
+    #phone-panel[data-rp-ios="3"] .xhs-comment-input { min-block-size: 40px; padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; }
+    #phone-panel[data-rp-ios="3"] .xhs-comment-input::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] :is(.xhs-comment-send, .xhs-drawer-publish) { min-block-size: 40px; padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; position: relative; }
+    #phone-panel[data-rp-ios="3"] :is(.xhs-comment-send, .xhs-drawer-publish)::after { content: ""; position: absolute; inset: -2px 0; }
+    #phone-panel[data-rp-ios="3"] :is(.xhs-comment-send, .xhs-drawer-publish):active { filter: brightness(0.92); scale: 0.97; }
+
+    /* ===== 屏：发布抽屉 · 标题与四个输入 ===== */
+    #phone-panel[data-rp-ios="3"] .xhs-drawer-header h3 { flex: 1 1 auto; margin: 0; color: var(--rp33-label); font: var(--lt-type-headline); text-align: center; }
+    #phone-panel[data-rp-ios="3"] .xhs-drawer-body { gap: var(--rp33-sp-3); padding: var(--rp33-sp-2) var(--rp33-sp-4) var(--rp33-sp-6); }
+    #phone-panel[data-rp-ios="3"] :is(.xhs-input-title, .xhs-input-cover, .xhs-input-tags, .xhs-input-desc) { min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .xhs-input-title { font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .xhs-input-desc { min-block-size: 160px; line-height: 1.5; }
+    #phone-panel[data-rp-ios="3"] :is(.xhs-input-title, .xhs-input-cover, .xhs-input-tags, .xhs-input-desc)::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] :is(.xhs-input-title, .xhs-input-cover, .xhs-input-tags, .xhs-input-desc, .xhs-comment-input):focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+}

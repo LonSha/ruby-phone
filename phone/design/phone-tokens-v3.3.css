@@ -1,0 +1,128 @@
+/* ============================================================
+   RubyPhone · App 皮肤 token v3.3（自带 @layer rp.tokens，只声明自定义属性）
+   ------------------------------------------------------------
+   v3.3 给全部 App 的 iOS 26 皮肤（apps/<id>/<id>.v3.css）提供语义别名。
+   颜色字面量只出现在本文件、phone-tokens-v3.css 与 lonsha-tokens-v3.css；皮肤 CSS 只引用变量。
+   选择器与 v3 相同（:root, [data-lonsha-theme]），保证 #phone-panel 上的明暗切换会就地重算这些别名。
+   命名：--rp33-*。皮肤里的 --rp33-accent 由各 App 在自己的作用域里指向品牌色或系统色。
+   ============================================================ */
+@layer rp.tokens {
+:root, [data-lonsha-theme] {
+    /* ---------- 表面（iOS inset grouped 一族） ---------- */
+    --rp33-bg: var(--lt-sys-grouped-bg);            /* 页面底：浅 #f2f2f7 / 深 #000 */
+    --rp33-bg-plain: var(--lt-sys-bg);              /* 无分组的纯底：浅 #fff / 深 #000 */
+    --rp33-surface: var(--lt-sys-grouped-bg-2);     /* 卡片 / 分组：浅 #fff / 深 #1c1c1e */
+    --rp33-surface-2: var(--lt-sys-grouped-bg-3);   /* 卡片里的二级块：浅 #f2f2f7 / 深 #2c2c2e */
+    --rp33-fill: var(--lt-sys-fill-3);
+    --rp33-fill-2: var(--lt-sys-fill-4);
+    --rp33-field-bg: var(--lt-sys-fill-3);
+    --rp33-label: var(--lt-sys-label);
+    --rp33-label-2: var(--lt-sys-label-2);
+    --rp33-label-3: var(--lt-sys-label-3);
+    --rp33-sep: var(--lt-sys-separator);
+    --rp33-on-accent: #ffffff;
+    --rp33-accent: var(--lt-sys-tint);
+    --rp33-accent-soft: color-mix(in srgb, var(--rp33-accent) 14%, transparent);
+    --rp33-accent-ring: color-mix(in srgb, var(--rp33-accent) 40%, transparent);
+    --rp33-danger-soft: color-mix(in srgb, var(--lt-sys-red) 14%, transparent);
+    --rp33-scrim: rgb(0 0 0 / 0.28);
+    --rp33-sheet-bg: var(--lt-sys-bg);
+    --rp33-seg-bg: var(--lt-sys-fill-3);
+    --rp33-seg-on: #ffffff;
+    --rp33-seg-shadow: 0 3px 8px rgb(0 0 0 / 0.12), 0 3px 1px rgb(0 0 0 / 0.04);
+    --rp33-bar-sep: transparent;
+    --rp33-glassbtn-bg: rgb(255 255 255 / 0.72);
+    --rp33-glassbtn-rim: inset 0 1px 0.5px rgb(255 255 255 / 0.9), inset 0 0 0 0.5px rgb(0 0 0 / 0.06), 0 2px 10px -2px rgb(0 0 0 / 0.12);
+    --rp33-toast-bg: rgb(250 250 252 / 0.86);
+    --rp33-avatar-ring: rgb(0 0 0 / 0.06);
+    --rp33-badge-bg: var(--lt-sys-red);
+    --rp33-badge-fg: #ffffff;
+    --rp33-highlight: var(--lt-sys-highlight);
+
+    /* ---------- 阴影（浅色有，深色几乎没有 —— 深色靠表面亮度分层） ---------- */
+    --rp33-shadow-1: 0 1px 2px rgb(0 0 0 / 0.05);
+    --rp33-shadow-2: 0 1px 2px rgb(0 0 0 / 0.04), 0 6px 18px -8px rgb(0 0 0 / 0.14);
+    --rp33-card-shadow: 0 0.5px 0 rgb(0 0 0 / 0.04), 0 1px 2px rgb(0 0 0 / 0.04), 0 6px 18px -10px rgb(0 0 0 / 0.12);
+    --rp33-float-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.05), 0 24px 64px -12px rgb(0 0 0 / 0.3), 0 8px 24px -8px rgb(0 0 0 / 0.12);
+    --rp33-rim: inset 0 0 0 0.5px rgb(0 0 0 / 0.04);
+
+    /* ---------- 尺寸（iPhone 18 Pro Max · 440 x 956 pt；8pt 栅格，4pt 半步） ---------- */
+    --rp33-sp-1: 4px; --rp33-sp-2: 8px; --rp33-sp-3: 12px; --rp33-sp-4: 16px; --rp33-sp-5: 20px; --rp33-sp-6: 24px; --rp33-sp-8: 32px;
+    --rp33-hit: 44px;                 /* 最小点击区（HIG） */
+    --rp33-margin: 16px;              /* 卡片 / 分组的左右内缩（App 内容区；系统 App 用 v3 的 20） */
+    --rp33-card-radius: 22px;
+    --rp33-feed-radius: 16px;
+    --rp33-media-radius: 14px;
+    --rp33-row-radius-single: 16px;
+    --rp33-field-radius: 12px;
+    --rp33-dialog-radius: 30px;
+    --rp33-sheet-radius: 34px;
+    --rp33-btn-h: 50px;
+    --rp33-btn-h-sm: 34px;
+    --rp33-tab-h: 32px;
+    --rp33-icon: 1.15em;
+
+    /* ---------- 品牌色（只给真正有品牌色的 App；其余 App 用系统色） ---------- */
+    --rp33-brand-wechat: #07c160;
+    --rp33-brand-weibo: #ff8200;
+    --rp33-brand-xhs: #ff2442;
+    --rp33-brand-bilibili: #fb7299;
+    --rp33-brand-tieba: #3385ff;
+    --rp33-brand-taobao: #ff5000;
+    --rp33-brand-lofter: #12b5a5;
+    --rp33-brand-pixiv: #0096fa;
+    --rp33-brand-honey: #ff5c8a;
+    --rp33-brand-doujin: #e8530e;
+
+    /* ---------- 日记纸张（ui_analysis：纸质感保留，文字接语义色） ---------- */
+    --rp33-paper: #fbf7ef;
+    --rp33-paper-line: rgb(120 96 60 / 0.14);
+    --rp33-paper-ink: #2b2420;
+
+    /* ---------- 微信补充（朋友圈昵称蓝、评论区底、聊天列表行高） ---------- */
+    --rp33-wx-name: #576b95;
+    --rp33-wx-comment-bg: #f3f3f5;
+    --rp33-wx-row-h: 72px;
+    --rp33-wx-avatar: 48px;
+
+    /* ---------- 游戏桌面（牌桌 / 棋盘保留自己的主题色；只给 HUD 用的玻璃） ---------- */
+    --rp33-hud-bg: rgb(255 255 255 / 0.78);
+    --rp33-hud-fg: #000000;
+}
+[data-lonsha-theme="dark"] {
+    --rp33-on-accent: #ffffff;
+    --rp33-scrim: rgb(0 0 0 / 0.5);
+    --rp33-sheet-bg: var(--lt-sys-bg-2);
+    --rp33-seg-on: #636366;
+    --rp33-seg-shadow: 0 3px 8px rgb(0 0 0 / 0.24);
+    --rp33-glassbtn-bg: rgb(58 58 62 / 0.58);
+    --rp33-glassbtn-rim: inset 0 1px 0.5px rgb(255 255 255 / 0.22), inset 0 0 0 0.5px rgb(255 255 255 / 0.1), 0 2px 10px -2px rgb(0 0 0 / 0.4);
+    --rp33-toast-bg: rgb(44 44 48 / 0.86);
+    --rp33-avatar-ring: rgb(255 255 255 / 0.08);
+    --rp33-shadow-1: none;
+    --rp33-shadow-2: 0 0 0 0.5px rgb(255 255 255 / 0.06);
+    --rp33-card-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.06);
+    --rp33-float-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.08), 0 24px 64px -12px rgb(0 0 0 / 0.6);
+    --rp33-rim: inset 0 0 0 0.5px rgb(255 255 255 / 0.08);
+    --rp33-brand-weibo: #ff9a2e;
+    --rp33-brand-xhs: #ff4d61;
+    --rp33-brand-bilibili: #ff85a8;
+    --rp33-brand-tieba: #4d94ff;
+    --rp33-brand-taobao: #ff6a1f;
+    --rp33-brand-lofter: #2fd0bf;
+    --rp33-brand-pixiv: #3aa9ff;
+    --rp33-brand-honey: #ff7aa0;
+    --rp33-brand-doujin: #ff7a3d;
+    --rp33-paper: #1e1b17;
+    --rp33-paper-line: rgb(255 236 200 / 0.08);
+    --rp33-paper-ink: #ece4d8;
+    --rp33-wx-name: #7d90a9;
+    --rp33-wx-comment-bg: #202022;
+    --rp33-hud-bg: rgb(36 36 40 / 0.78);
+    --rp33-hud-fg: #ffffff;
+}
+[data-rp-pack="pixel"] {
+    --rp33-card-radius: 0px; --rp33-feed-radius: 0px; --rp33-media-radius: 0px; --rp33-row-radius-single: 0px;
+    --rp33-field-radius: 0px; --rp33-dialog-radius: 0px; --rp33-sheet-radius: 0px;
+}
+}

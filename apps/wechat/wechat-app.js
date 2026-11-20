@@ -6392,8 +6392,8 @@ export class WechatApp {
                 top: ${isBodyHost ? topPx : (topPx - hostRect.top)}px;
                 left: ${isBodyHost ? leftPx : (leftPx - hostRect.left)}px;
                 z-index: 2147483646;
-                background: #fff;
-                border: 1px solid #e5e5e5;
+                background:var(--rp34-js-surface, #fff);
+                border:1px solid var(--rp34-js-sep, #e5e5e5);
                 border-radius: 6px;
                 padding: 0;
                 box-shadow: 0 2px 10px rgba(0,0,0,0.2);
@@ -6417,7 +6417,7 @@ export class WechatApp {
             const pinBtn = document.createElement('button');
             pinBtn.type = 'button';
             pinBtn.textContent = isPinned ? '取消置顶' : '置顶';
-            pinBtn.style.cssText = `${baseBtnStyle}border-right: 0.5px solid #e5e5e5;color:#07c160;`;
+            pinBtn.style.cssText = `${baseBtnStyle}border-right:0.5px solid var(--rp34-js-sep, #e5e5e5);color:var(--rp34-js-wx-green, #07c160);`;
             pinBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const targetChat = this.wechatData.getChat(chatId);
@@ -6435,7 +6435,7 @@ export class WechatApp {
             const editBtn = document.createElement('button');
             editBtn.type = 'button';
             editBtn.textContent = '编辑';
-            editBtn.style.cssText = `${baseBtnStyle}border-right: 0.5px solid #e5e5e5;color:#576b95;`;
+            editBtn.style.cssText = `${baseBtnStyle}border-right:0.5px solid var(--rp34-js-sep, #e5e5e5);color:var(--rp34-js-link, #576b95);`;
             editBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 closeDeleteMenu();
@@ -7747,7 +7747,7 @@ export class WechatApp {
                 cssTextarea.placeholder = hasProfile
                     ? '.message-right .message-text { border-radius: 14px; background: #c9f7b9; }'
                     : '请先新增或选择一个会话样式预设';
-                cssTextarea.style.background = canEdit ? '#fbfbfb' : '#f3f3f3';
+                cssTextarea.style.background = canEdit ? 'var(--rp34-js-fill, #fbfbfb)' : 'var(--rp34-js-fill, #f3f3f3)';
             }
             [saveProfileBtn, deleteProfileBtn].forEach((button) => {
                 if (!button) return;

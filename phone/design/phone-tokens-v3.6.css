@@ -1,0 +1,70 @@
+/* ============================================================
+   RubyPhone · 文字安全强调色 token v3.6（自带 @layer rp.tokens，只声明自定义属性，开关关着也无副作用）
+   ------------------------------------------------------------
+   为什么要有：系统橙 / 绿 / 青 / 薄荷 / 黄与多数品牌色直接当 11–17pt 小字颜色时，浅色下只有 1.2–3 : 1（iOS 系统色本身就是这个值，
+   Apple 自己也只把它们用在填充、图标和大字上）。v3.6 给每个强调色配一个「文字安全色」：
+     浅色 = 原色与 --lt-sys-black 按 sRGB 混合，深色 = 原色与 --lt-sys-white 混合；混合比例取「仍 ≥ 4.6 : 1 的最大原色占比」，
+     尽量保住色相。目标 4.5 : 1（WCAG AA 正文），留 0.1 余量给渲染误差。
+   「实际底色」= 皮肤里小字会落上去的全部底：
+     浅色：卡片 #fff、分组底 #f2f2f7、同色 18% 浅底胶囊（--rp33-accent-soft 是 14%，危险 / 警告胶囊 14–16%）叠在 #f2f2f7 上、
+           fill-3 灰胶囊叠在 #f2f2f7 上；
+     深色：页底 #000、卡片 #1c1c1e、二级块 #2c2c2e、同色 18% 胶囊叠在 #2c2c2e 上、fill-3 灰胶囊叠在 #2c2c2e 上。
+   取其中对比度最低的一个算（逐项数值见 verification/contrast-audit-v36.md）。
+   只给小字用：小于 20px，或不加粗且小于 24px 的文字。填充、图标、描边、大字继续用原强调色（--rp33-accent / --lt-sys-*）。
+   --rp36-accent-text：皮肤里「当前 App 强调色」的文字安全版。默认跟 --lt-sys-tint（蓝）；各皮肤在设置 --rp33-accent 的同一条规则里
+     同时设置它（v3.6 逐条补上），App 自己的强调色别名（--pvd-accent 等）同样补一个 --rp36-t-<名字>。
+   颜色字面量：本文件没有新的颜色字面量，全部由已有的系统色 / 品牌色 token 混合而来。
+   ============================================================ */
+@layer rp.tokens {
+:root, [data-lonsha-theme] {
+    --rp36-text-blue: color-mix(in srgb, var(--lt-sys-blue) 75%, var(--lt-sys-black));   /* 2.88 -> 4.61 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-green: color-mix(in srgb, var(--lt-sys-green) 57%, var(--lt-sys-black));   /* 1.74 -> 4.72 : 1（最差底：fill-3 on #f2f2f7） */
+    --rp36-text-indigo: color-mix(in srgb, var(--lt-sys-indigo) 90%, var(--lt-sys-black));   /* 3.97 -> 4.65 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-orange: color-mix(in srgb, var(--lt-sys-orange) 57%, var(--lt-sys-black));   /* 1.72 -> 4.69 : 1（最差底：fill-3 on #f2f2f7） */
+    --rp36-text-pink: color-mix(in srgb, var(--lt-sys-pink) 70%, var(--lt-sys-black));   /* 2.56 -> 4.65 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-purple: color-mix(in srgb, var(--lt-sys-purple) 76%, var(--lt-sys-black));   /* 2.99 -> 4.65 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-red: color-mix(in srgb, var(--lt-sys-red) 69%, var(--lt-sys-black));   /* 2.52 -> 4.69 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-teal: color-mix(in srgb, var(--lt-sys-teal) 61%, var(--lt-sys-black));   /* 1.99 -> 4.7 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-yellow: color-mix(in srgb, var(--lt-sys-yellow) 47%, var(--lt-sys-black));   /* 1.18 -> 4.75 : 1（最差底：fill-3 on #f2f2f7） */
+    --rp36-text-mint: color-mix(in srgb, var(--lt-sys-mint) 56%, var(--lt-sys-black));   /* 1.66 -> 4.69 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-cyan: color-mix(in srgb, var(--lt-sys-cyan) 61%, var(--lt-sys-black));   /* 1.97 -> 4.67 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-brown: color-mix(in srgb, var(--lt-sys-brown) 71%, var(--lt-sys-black));   /* 2.63 -> 4.64 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-brand-wechat: color-mix(in srgb, var(--rp33-brand-wechat) 59%, var(--lt-sys-black));   /* 1.83 -> 4.66 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-brand-weibo: color-mix(in srgb, var(--rp33-brand-weibo) 60%, var(--lt-sys-black));   /* 1.91 -> 4.69 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-brand-xhs: color-mix(in srgb, var(--rp33-brand-xhs) 71%, var(--lt-sys-black));   /* 2.61 -> 4.62 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-brand-bilibili: color-mix(in srgb, var(--rp33-brand-bilibili) 62%, var(--lt-sys-black));   /* 2.02 -> 4.65 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-brand-tieba: color-mix(in srgb, var(--rp33-brand-tieba) 71%, var(--lt-sys-black));   /* 2.61 -> 4.62 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-brand-taobao: color-mix(in srgb, var(--rp33-brand-taobao) 67%, var(--lt-sys-black));   /* 2.38 -> 4.68 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-brand-lofter: color-mix(in srgb, var(--rp33-brand-lofter) 61%, var(--lt-sys-black));   /* 1.97 -> 4.67 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-brand-pixiv: color-mix(in srgb, var(--rp33-brand-pixiv) 66%, var(--lt-sys-black));   /* 2.31 -> 4.68 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-brand-honey: color-mix(in srgb, var(--rp33-brand-honey) 65%, var(--lt-sys-black));   /* 2.19 -> 4.61 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-brand-doujin: color-mix(in srgb, var(--rp33-brand-doujin) 72%, var(--lt-sys-black));   /* 2.67 -> 4.61 : 1（最差底：accent-chip 18% on #f2f2f7） */
+    --rp36-text-wanx: color-mix(in srgb, var(--rp34-wanx-accent) 53%, var(--lt-sys-black));   /* 1.47 -> 4.64 : 1（最差底：fill-3 on #f2f2f7） */
+    --rp36-accent-text: var(--rp36-text-blue);
+}
+[data-lonsha-theme="dark"] {
+    --rp36-text-blue: color-mix(in srgb, var(--lt-sys-blue) 65%, var(--lt-sys-white));   /* 2.93 -> 4.62 : 1（最差底：fill-3 on #2c2c2e） */
+    --rp36-text-green: var(--lt-sys-green);   /* 4.87 -> 4.87 : 1（最差底：accent-chip 18% on #2c2c2e） */
+    --rp36-text-indigo: color-mix(in srgb, var(--lt-sys-indigo) 56%, var(--lt-sys-white));   /* 2.11 -> 4.66 : 1（最差底：fill-3 on #2c2c2e） */
+    --rp36-text-orange: var(--lt-sys-orange);   /* 4.78 -> 4.78 : 1（最差底：accent-chip 18% on #2c2c2e） */
+    --rp36-text-pink: color-mix(in srgb, var(--lt-sys-pink) 61%, var(--lt-sys-white));   /* 3.03 -> 4.63 : 1（最差底：fill-3 on #2c2c2e） */
+    --rp36-text-purple: color-mix(in srgb, var(--lt-sys-purple) 67%, var(--lt-sys-white));   /* 3.03 -> 4.66 : 1（最差底：fill-3 on #2c2c2e） */
+    --rp36-text-red: color-mix(in srgb, var(--lt-sys-red) 64%, var(--lt-sys-white));   /* 3.14 -> 4.62 : 1（最差底：fill-3 on #2c2c2e） */
+    --rp36-text-teal: var(--lt-sys-teal);   /* 4.88 -> 4.88 : 1（最差底：accent-chip 18% on #2c2c2e） */
+    --rp36-text-yellow: var(--lt-sys-yellow);   /* 6.24 -> 6.24 : 1（最差底：accent-chip 18% on #2c2c2e） */
+    --rp36-text-mint: var(--lt-sys-mint);   /* 5.95 -> 5.95 : 1（最差底：accent-chip 18% on #2c2c2e） */
+    --rp36-text-cyan: var(--lt-sys-cyan);   /* 5.4 -> 5.4 : 1（最差底：accent-chip 18% on #2c2c2e） */
+    --rp36-text-brown: color-mix(in srgb, var(--lt-sys-brown) 77%, var(--lt-sys-white));   /* 3.45 -> 4.65 : 1（最差底：accent-chip 18% on #2c2c2e） */
+    --rp36-text-brand-wechat: color-mix(in srgb, var(--rp33-brand-wechat) 91%, var(--lt-sys-white));   /* 4.33 -> 4.63 : 1（最差底：accent-chip 18% on #2c2c2e） */
+    --rp36-text-brand-weibo: var(--rp33-brand-weibo);   /* 4.66 -> 4.66 : 1（最差底：accent-chip 18% on #2c2c2e） */
+    --rp36-text-brand-xhs: color-mix(in srgb, var(--rp33-brand-xhs) 68%, var(--lt-sys-white));   /* 3.3 -> 4.62 : 1（最差底：fill-3 on #2c2c2e） */
+    --rp36-text-brand-bilibili: color-mix(in srgb, var(--rp33-brand-bilibili) 94%, var(--lt-sys-white));   /* 4.39 -> 4.61 : 1（最差底：accent-chip 18% on #2c2c2e） */
+    --rp36-text-brand-tieba: color-mix(in srgb, var(--rp33-brand-tieba) 78%, var(--lt-sys-white));   /* 3.56 -> 4.6 : 1（最差底：accent-chip 18% on #2c2c2e） */
+    --rp36-text-brand-taobao: color-mix(in srgb, var(--rp33-brand-taobao) 78%, var(--lt-sys-white));   /* 3.73 -> 4.6 : 1（最差底：fill-3 on #2c2c2e） */
+    --rp36-text-brand-lofter: var(--rp33-brand-lofter);   /* 5.02 -> 5.02 : 1（最差底：accent-chip 18% on #2c2c2e） */
+    --rp36-text-brand-pixiv: color-mix(in srgb, var(--rp33-brand-pixiv) 86%, var(--lt-sys-white));   /* 4.08 -> 4.64 : 1（最差底：accent-chip 18% on #2c2c2e） */
+    --rp36-text-brand-honey: color-mix(in srgb, var(--rp33-brand-honey) 88%, var(--lt-sys-white));   /* 4.18 -> 4.63 : 1（最差底：accent-chip 18% on #2c2c2e） */
+    --rp36-text-brand-doujin: color-mix(in srgb, var(--rp33-brand-doujin) 85%, var(--lt-sys-white));   /* 4.03 -> 4.61 : 1（最差底：accent-chip 18% on #2c2c2e） */
+    --rp36-text-wanx: var(--rp34-wanx-accent);   /* 5.06 -> 5.06 : 1（最差底：accent-chip 18% on #2c2c2e） */
+}
+}

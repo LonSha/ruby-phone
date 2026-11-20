@@ -1,0 +1,60 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：灵感工坊（playbook）—— 家族：角色扮演专属 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/playbook/playbook-view.js（render / _renderCategories / _renderPlays；外壳、搜索、分类、玩法 chip、底栏）。
+   屏幕与状态：导航（返回 + 标题 + 帮助圆钮）· 搜索胶囊（清除）· 分类横滑胶囊（.active）· 玩法 chip 流（.selected + 对勾）· 空态 ·
+               底部工具栏（已选数 .has-items、自动清空开关、清空 / 注入两个按钮）。
+   设计：原生是深紫渐变 + 霓虹紫投影。v3.5 跟随系统，强调色系统紫；底部工具栏浮在内容上 -> 玻璃材质；
+         玩法 chip = 16 圆角浅底胶囊，选中 = 强调色浅底 + 1.5pt 强调描边（不用光晕）。
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 2 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+ * v3.6：可点元素热区补到 44pt（v3.5 审计 W3：.pb-play-chip、.pb-autoclear-toggle）。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    #phone-panel[data-rp-ios="3"] .playbook-root { --rp33-accent: var(--lt-sys-purple); --rp36-accent-text: var(--rp36-text-purple); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-purple) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-purple) 40%, transparent); }
+
+    /* ===== 屏：外壳（页面底 / 导航 / 搜索 / 分类） ===== */
+    #phone-panel[data-rp-ios="3"] .playbook-root { background: var(--rp33-bg); background-image: none; color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .playbook-header { padding: var(--rp33-sp-1) var(--rp33-margin) var(--rp33-sp-2); border: 0; background: var(--lt-mat3-bar); -webkit-backdrop-filter: var(--lt-mat3-blur); backdrop-filter: var(--lt-mat3-blur); }
+    #phone-panel[data-rp-ios="3"] .playbook-title-row { block-size: auto; min-block-size: var(--rp3-nav-h); align-items: center; }
+    #phone-panel[data-rp-ios="3"] .playbook-title { margin: 0; color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] :is(.playbook-back-btn, .playbook-icon-btn) { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); padding: 0; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 17px; cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] :is(.playbook-back-btn, .playbook-icon-btn):hover { background: var(--rp33-glassbtn-bg); filter: brightness(0.97); }
+    #phone-panel[data-rp-ios="3"] .playbook-search-box { align-items: center; gap: var(--rp33-sp-2); min-block-size: 36px; margin-block-start: var(--rp33-sp-1); padding: 0 var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label-2); font: var(--lt-type-body); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .playbook-search-box input { color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; }
+    #phone-panel[data-rp-ios="3"] .playbook-search-box input::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .pb-clear-search { position: relative; color: var(--rp33-label-3); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pb-clear-search::after { content: ""; position: absolute; inset: -12px; }
+    #phone-panel[data-rp-ios="3"] .playbook-cat-nav { gap: var(--rp33-sp-2); padding: var(--rp33-sp-2) 0 0; }
+    #phone-panel[data-rp-ios="3"] .pb-cat-pill { flex: none; position: relative; min-block-size: var(--rp33-tab-h); padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-surface); box-shadow: var(--rp33-rim); color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pb-cat-pill::after { content: ""; position: absolute; inset: -6px -2px; }
+    #phone-panel[data-rp-ios="3"] .pb-cat-pill.active { background: var(--rp33-accent); box-shadow: none; color: var(--rp33-on-accent); font-weight: 600; }
+
+    /* ===== 屏：玩法 chip 流 ===== */
+    #phone-panel[data-rp-ios="3"] .playbook-body { padding: var(--rp33-sp-3) var(--rp33-margin) 96px; }
+    #phone-panel[data-rp-ios="3"] .playbook-grid { flex-wrap: wrap; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .pb-play-chip { align-items: center; gap: var(--rp33-sp-1); min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-3); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); color: var(--rp33-label); font: var(--lt-type-subhead); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pb-play-chip:hover { background: var(--rp33-surface); filter: brightness(0.98); }
+    #phone-panel[data-rp-ios="3"] .pb-play-chip.selected { background: var(--rp33-accent-soft); box-shadow: inset 0 0 0 1.5px var(--rp33-accent); color: var(--rp33-label); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .pb-chip-check { color: var(--rp36-accent-text); font-size: 12px; }
+    #phone-panel[data-rp-ios="3"] .pb-empty { padding: var(--rp33-sp-8) var(--rp33-sp-4); color: var(--rp33-label-2); font: var(--lt-type-subhead); text-align: center; }
+
+    /* ===== 组件：底部工具栏（浮在内容上的玻璃栏） ===== */
+    #phone-panel[data-rp-ios="3"] .playbook-bottom-bar { block-size: auto; min-block-size: 64px; gap: var(--rp33-sp-3); padding: var(--rp33-sp-2) var(--rp33-margin); border: 0; border-block-start: 0.5px solid var(--rp33-sep); background: var(--lt-mat3-bar); -webkit-backdrop-filter: var(--lt-mat3-blur); backdrop-filter: var(--lt-mat3-blur); }
+    #phone-panel[data-rp-ios="3"] .pb-status-info { gap: var(--rp33-sp-2); align-items: center; }
+    #phone-panel[data-rp-ios="3"] .pb-selected-badge { color: var(--rp33-label-2); font: var(--lt-type-footnote); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .pb-selected-badge.has-items { color: var(--rp36-accent-text); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .pb-autoclear-toggle { align-items: center; gap: var(--rp33-sp-1); min-block-size: 28px; color: var(--rp33-label-2); font: var(--lt-type-caption1); accent-color: var(--rp33-accent); cursor: pointer; position: relative; }
+    /* v3.6：自动清空开关的视觉高度保持 28pt（工具栏里一行小字），用 ::after 把点击区扩到 44pt，与 v3.5 小胶囊同一做法 */
+    #phone-panel[data-rp-ios="3"] .pb-autoclear-toggle::after { content: ""; position: absolute; inset: min(0px, calc((100% - var(--rp33-hit)) / 2)); }
+    #phone-panel[data-rp-ios="3"] .pb-action-buttons { gap: var(--rp33-sp-2); margin-inline-start: auto; }
+    #phone-panel[data-rp-ios="3"] .pb-btn { align-items: center; gap: var(--rp33-sp-1); min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pb-btn-secondary { background: var(--rp33-fill); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .pb-btn-primary { background: var(--rp33-accent); background-image: none; box-shadow: none; color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .pb-btn-primary:hover { opacity: 1; filter: brightness(0.97); }
+    #phone-panel[data-rp-ios="3"] :is(.pb-btn, .pb-play-chip, .pb-cat-pill):active { filter: brightness(0.92); scale: 0.97; }
+}

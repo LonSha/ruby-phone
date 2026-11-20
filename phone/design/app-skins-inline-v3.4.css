@@ -1,0 +1,142 @@
+/* ============================================================
+   RubyPhone v3.4 · 内联样式角色（rp.skins.inline）
+   ------------------------------------------------------------
+   v3.3 的运行时把内联 style 里的装饰属性「原样」挪进 @layer rp.apps（视觉不变、皮肤可盖），
+   但挪过去的仍是写死的白底、浅灰字 —— 深色下照旧是白卡片，皮肤又只能靠通用启发式去猜。
+   v3.4 换成「逐站点精确映射」：tools/gen-inline-map-v34.py 读 12 个 App 源码里的每一处 style="..."（共 2107 处：1343 处有装饰声明、已映射；631 处只有布局 / 状态；133 处属性名本身是模板变量，跳过），
+   按 App 的调色板把每条装饰声明翻译成语义令牌，写进 phone/ui/rp-inline-map-v3.4.js；运行时按「属性集合 + 静态取值」
+   精确匹配元素的原始 style 文本，命中后：
+     · 删掉已映射的装饰声明（布局 / 尺寸 / 状态 / 含 url() / 含模板变量的声明一律留在原处）；
+     · 在元素上写 data-rp34="c2 t13 b0 r12 ..."（令牌，等同类名，但不改 className —— App 代码会读 className）。
+   本文件定义这些令牌的样式。层序：rp.skins.remap < rp.skins.roles < rp.skins.inline < rp.skins.curated，
+   所以各 App 的手工精修（curated）仍然能按场景再改。
+   令牌表：
+     文字色  c1 主 / c2 次 / c3 三级 / c4 占位 / ca 强调 / cl 链接（微信昵称蓝）/ cr 红 / co 橙 / cg 绿 / cb 蓝 / cp 紫 / cy 黄
+             cw 彩底白字 / cw2 彩底次级白字 / cm 媒体上白字
+     底色    b0 表面 / b1 页面底 / bf 二级表面 / bq 极淡填充 / ba 强调 / bas 强调浅底 / br 红 / brs 红浅底 / bo 橙 / bos 橙浅底
+             bg 绿 / bgs 绿浅底 / bb 蓝 / bbs 蓝浅底 / bp 紫 / bps 紫浅底 / bys 黄浅底 / bsc 遮罩 / bd 媒体深底 / bgl 浅玻璃
+             bme 微信「我」气泡绿 / brp 微信红包橙
+     边框    k 四边发丝线 / kt kb kl kr 单边发丝线 / k0 无边 / kc 只换色（宽度与线型留在内联）/ ka 强调色边 / kred 红边 / km 媒体线
+     圆角    r0 r8 r12 r16 r22 rp（胶囊）   阴影 s0 无 / s1 卡片   ts0 去文字阴影   gl 背景模糊
+     字号    t11 t12 t13 t15 t16 t17 t20 t22 t28 t34（iOS 阶梯，最小 11）   字重 w4 w5 w6 w7 w8   fm 等宽
+     组件    fld 输入框 / sel 下拉 / grp 折叠分组卡 / grph 分组标题行 / btn2 次级胶囊钮 / btnp 主钮 / btnd 危险钮 / chip 小胶囊
+   规矩：零 !important、零写死颜色、零字符图标；只在 #phone-panel[data-rp-ios="3"] 下命中。
+   ============================================================ */
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.inline {
+    #phone-panel[data-rp-ios="3"] { --rp34-link: var(--lt-sys-link); }
+
+    /* ---------- JS 运行中写的颜色（微信 / 设置 共 47 处，见 patches/apps-js.v3.4.patch）----------
+       App 代码改成写 var(--rp34-js-*, 原色)：开关关着时这些变量不存在，回落到原色，外观与上游一字不差；
+       打开 v3 时由这里给出语义色（深色下不再出现黑字 / 白底卡）。只在手机根节点上声明。 */
+    #phone-panel[data-rp-ios="3"] {
+        --rp34-js-label: var(--rp33-label); --rp34-js-label-2: var(--rp33-label-2); --rp34-js-label-3: var(--rp33-label-3);
+        --rp34-js-red: var(--lt-sys-red); --rp34-js-green: var(--lt-sys-green); --rp34-js-blue: var(--lt-sys-blue); --rp34-js-orange: var(--lt-sys-orange);
+        --rp34-js-wx-green: var(--rp33-brand-wechat); --rp34-js-link: var(--rp33-wx-name);
+        --rp34-js-surface: var(--rp33-surface); --rp34-js-fill: var(--rp33-surface-2); --rp34-js-sep: var(--rp33-sep);
+        --rp34-js-blue-soft: color-mix(in srgb, var(--lt-sys-blue) 12%, transparent);
+        --rp34-js-green-soft: color-mix(in srgb, var(--lt-sys-green) 16%, transparent);
+        --rp34-js-red-soft: var(--rp33-danger-soft);
+        --rp34-js-sel-glow: 0 0 0 3px var(--rp33-accent-ring);
+    }
+
+    /* ---------- 文字色 ---------- */
+    #phone-panel[data-rp-ios="3"] [data-rp34~="c1"] { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="c2"] { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="c3"] { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="c4"] { color: var(--lt-sys-label-4); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="ca"] { color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="cl"] { color: var(--rp34-link); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="cr"] { color: var(--lt-sys-red); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="co"] { color: var(--lt-sys-orange); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="cg"] { color: var(--lt-sys-green); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="cb"] { color: var(--lt-sys-blue); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="cp"] { color: var(--lt-sys-purple); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="cy"] { color: var(--rp34-tint-yellow-ink); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="cw"] { color: var(--rp34-on-color); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="cw2"] { color: var(--rp34-on-color-2); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="cm"] { color: var(--rp34-media-fg); }
+
+    /* ---------- 底色 ---------- */
+    #phone-panel[data-rp-ios="3"] [data-rp34~="b0"] { background-color: var(--rp33-surface); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="b1"] { background-color: var(--rp33-bg); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="bf"] { background-color: var(--rp33-surface-2); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="bq"] { background-color: var(--rp33-fill-2); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="ba"] { background-color: var(--rp33-accent); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="bas"] { background-color: var(--rp33-accent-soft); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="br"] { background-color: var(--lt-sys-red); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="brs"] { background-color: var(--rp33-danger-soft); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="bo"] { background-color: var(--lt-sys-orange); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="bos"] { background-color: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="bg"] { background-color: var(--lt-sys-green); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="bgs"] { background-color: color-mix(in srgb, var(--lt-sys-green) 14%, transparent); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="bb"] { background-color: var(--lt-sys-blue); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="bbs"] { background-color: color-mix(in srgb, var(--lt-sys-blue) 12%, transparent); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="bp"] { background-color: var(--lt-sys-purple); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="bps"] { background-color: color-mix(in srgb, var(--lt-sys-purple) 12%, transparent); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="bys"] { background-color: color-mix(in srgb, var(--lt-sys-yellow) 18%, transparent); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="bsc"] { background-color: var(--rp33-scrim); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="bd"] { background-color: var(--rp34-call-bg); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="bgl"] { background-color: var(--rp34-glass-light); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="bme"] { background-color: var(--rp3-wx-me); background-image: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="brp"] { background-color: var(--rp34-wx-redpacket); background-image: none; }
+
+    /* ---------- 边框 ---------- */
+    #phone-panel[data-rp-ios="3"] [data-rp34~="k"] { border: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="kt"] { border-top: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="kb"] { border-bottom: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="kl"] { border-left: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="kr"] { border-right: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="k0"] { border: 0; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="kc"] { border-color: var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="ka"] { border-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="kred"] { border-color: color-mix(in srgb, var(--lt-sys-red) 45%, transparent); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="km"] { border-color: var(--rp34-media-line); }
+
+    /* ---------- 圆角 / 阴影 / 材质 ---------- */
+    #phone-panel[data-rp-ios="3"] [data-rp34~="r0"] { border-radius: 0; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="r8"] { border-radius: 8px; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="r12"] { border-radius: var(--rp33-field-radius); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="r16"] { border-radius: var(--rp33-feed-radius); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="r22"] { border-radius: var(--rp33-card-radius); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="rp"] { border-radius: 999px; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="s0"] { box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="s1"] { box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="ts0"] { text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="gl"] { -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); }
+
+    /* ---------- 字号（iOS 阶梯）/ 字重 / 字族 ---------- */
+    #phone-panel[data-rp-ios="3"] [data-rp34~="t11"] { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="t12"] { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="t13"] { font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="t15"] { font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="t16"] { font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="t17"] { font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="t20"] { font-size: var(--lt-ios-title3-size); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="t22"] { font-size: var(--lt-ios-title2-size); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="t28"] { font-size: var(--lt-ios-title1-size); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="t34"] { font-size: var(--lt-ios-largetitle-size); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="w4"] { font-weight: 400; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="w5"] { font-weight: 500; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="w6"] { font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="w7"] { font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="w8"] { font-weight: 700; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="fm"] { font-family: var(--lt-font-ios-mono); font-variant-numeric: tabular-nums; }
+
+    /* ---------- 组件（由逐站点识别器认出：设置 / 魔坊 / 微信表单里反复出现的同一套内联写法） ---------- */
+    #phone-panel[data-rp-ios="3"] :is([data-rp34~="fld"], [data-rp34~="sel"]) {
+        min-block-size: 36px; border: 0; border-radius: 10px; background-color: var(--rp33-field-bg); background-image: none;
+        box-shadow: var(--rp34-field-rim); color: var(--rp33-label); font-family: var(--lt-font-ios); font-size: var(--lt-ios-subhead-size);
+        caret-color: var(--rp33-accent); accent-color: var(--rp33-accent);
+    }
+    #phone-panel[data-rp-ios="3"] :is([data-rp34~="fld"], [data-rp34~="sel"]):focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="fld"]::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="grp"] { border: 0; border-radius: var(--rp3-row-radius); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="grph"] { min-block-size: var(--rp3-row-h-min); color: var(--rp33-label); font-family: var(--lt-font-ios); font-size: var(--lt-ios-body-size); font-weight: 400; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="btn2"] { min-block-size: 34px; border: 0; border-radius: 999px; background-color: var(--rp33-fill); background-image: none; box-shadow: none; color: var(--rp33-accent); font-family: var(--lt-font-ios); font-size: var(--lt-ios-subhead-size); font-weight: 600; -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="btnp"] { min-block-size: 34px; border: 0; border-radius: 999px; background-color: var(--rp33-accent); background-image: none; box-shadow: none; color: var(--rp33-on-accent); font-family: var(--lt-font-ios); font-size: var(--lt-ios-subhead-size); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="btnd"] { min-block-size: 34px; border: 0; border-radius: 999px; background-color: var(--rp33-danger-soft); background-image: none; box-shadow: none; color: var(--lt-sys-red); font-family: var(--lt-font-ios); font-size: var(--lt-ios-subhead-size); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] :is([data-rp34~="btn2"], [data-rp34~="btnp"], [data-rp34~="btnd"]):active { scale: 0.97; }
+    #phone-panel[data-rp-ios="3"] :is([data-rp34~="btn2"], [data-rp34~="btnp"], [data-rp34~="btnd"]):disabled { background-color: var(--rp33-fill-2); color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] [data-rp34~="chip"] { border: 0; border-radius: 999px; background-color: var(--rp33-fill); background-image: none; color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); font-weight: 500; }
+}

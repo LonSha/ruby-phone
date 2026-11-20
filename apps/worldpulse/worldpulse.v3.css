@@ -1,0 +1,73 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：世界脉搏（worldpulse）—— 家族：社交信息流 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/worldpulse/worldpulse-view.js（_layout 控制卡 + 动态流 + 空态、_bridgeCard 跨插件世界桥的读取失败 / 正常两种）；
+               worldpulse-app.js / -engine.js 是调度与生成，没有 DOM（跳过）。
+   屏幕与状态：大标题 · 控制卡（自动脉搏开关 .wp-switch.on、风格按钮 .on、自定义前缀输入、阈值滑杆、队列读数、立即脉冲 / 清空历史，按钮 :disabled）·
+               世界桥卡（WorldAxis / LonSha 三态 ok / warn / off、提示）· 动态流（风格、楼层、正文）· 空态。
+   设计：原生是 GitHub 深色。动态流是文字信息流，v3.5 跟随系统，强调色系统青。控制卡 = iOS 分组卡，行 = 左标签右控件（44pt）；
+         开关是文字胶囊（源码写的就是「开 / 关」文字按钮，不改成假开关），开 = 绿浅底；动态条目去掉 3px 左色条，靠风格标签的强调色区分。
+         滑杆用 accent-color 跟随强调色。桥三态：绿 / 橙 / 灰字。
+   规矩：零 !important、零写死颜色、零字符图标；类名 / ID / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 6 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    /* 渲染自查（v3.5）：白字在本强调色上只有 2.54:1（浅）/ 1.72:1（深），不到 4.5:1；填充按钮 / 选中胶囊的文字改用带一点强调色相的近黑墨（7.31:1 / 10.38:1）。 */
+    #phone-panel[data-rp-ios="3"] .wp-wrap { --rp33-accent: var(--lt-sys-cyan); --rp36-accent-text: var(--rp36-text-cyan); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-cyan) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-cyan) 40%, transparent); --rp33-on-accent: color-mix(in srgb, var(--lt-sys-black) 88%, var(--rp33-accent)); }
+
+    /* ===== 屏：页面底 + 大标题 ===== */
+    #phone-panel[data-rp-ios="3"] .wp-wrap { min-block-size: 100%; box-sizing: border-box; padding: var(--rp33-sp-2) var(--rp33-margin) var(--rp33-sp-8); background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .wp-hero { padding: var(--rp33-sp-2) var(--rp33-sp-1) var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .wp-hero-title { font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .wp-hero-sub { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label-2); font: var(--lt-type-footnote); font-variant-numeric: tabular-nums; }
+
+    /* ===== 屏：控制卡（行 = 标签 + 控件） ===== */
+    #phone-panel[data-rp-ios="3"] .wp-card { margin-block-end: var(--rp33-sp-4); padding: var(--rp33-sp-1) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .wp-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rp33-sp-2) var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) 0; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .wp-row + .wp-row { border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .wp-label { color: var(--rp33-label); font: var(--lt-type-body); font-weight: 400; }
+    /* 「开 / 关」文字胶囊（不是假开关） */
+    #phone-panel[data-rp-ios="3"] .wp-switch { margin-inline-start: auto; min-inline-size: 56px; min-block-size: 32px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label-2); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; position: relative; }
+    #phone-panel[data-rp-ios="3"] .wp-switch::after { content: ""; position: absolute; inset: -6px 0; }
+    #phone-panel[data-rp-ios="3"] .wp-switch.on { background: color-mix(in srgb, var(--lt-sys-green) 18%, transparent); color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"] .wp-styles { flex-wrap: wrap; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .wp-style { min-block-size: var(--rp33-tab-h); padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; position: relative; }
+    #phone-panel[data-rp-ios="3"] .wp-style::after { content: ""; position: absolute; inset: -6px -2px; }
+    #phone-panel[data-rp-ios="3"] .wp-style.on { background: var(--rp33-accent-soft); color: var(--rp36-accent-text); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .wp-input { min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .wp-input::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .wp-input:focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .wp-range { min-block-size: 32px; accent-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .wp-queue { color: var(--rp33-label-2); font: var(--lt-type-footnote); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .wp-actions { flex-wrap: nowrap; gap: var(--rp33-sp-2); padding-block: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .wp-btn { flex: 1 1 0; min-block-size: var(--rp33-hit); border: 0; border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .wp-btn-ghost { border: 0; background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .wp-btn:active { filter: brightness(0.92); scale: 0.97; }
+    #phone-panel[data-rp-ios="3"] .wp-btn:disabled { background: var(--rp33-fill); color: var(--rp33-label-3); opacity: 1; filter: none; scale: 1; }
+
+    /* ===== 屏：跨插件世界桥 ===== */
+    #phone-panel[data-rp-ios="3"] .wp-bridge { padding-block: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .wp-bridge .wp-label { margin-block-end: var(--rp33-sp-2); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .wp-bridge-line { padding: var(--rp33-sp-1) 0; color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .wp-bridge-ok { color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"] .wp-bridge-warn { color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .wp-bridge-off { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .wp-bridge-hint { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：动态流 ===== */
+    #phone-panel[data-rp-ios="3"] .wp-feed { gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .wp-item { padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .wp-item-head { align-items: center; justify-content: space-between; margin-block-end: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .wp-item-style { color: var(--rp36-accent-text); font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .wp-item-time { color: var(--rp33-label-3); font: var(--lt-type-caption1); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .wp-item-text { color: var(--rp33-label); font: var(--lt-type-subhead); line-height: 1.5; }
+
+    /* ===== 状态：空（还没有世界动态） ===== */
+    #phone-panel[data-rp-ios="3"] .wp-empty { padding: var(--rp33-sp-8) var(--rp33-sp-6); color: var(--rp33-label); font: var(--lt-type-headline); text-align: center; }
+    #phone-panel[data-rp-ios="3"] .wp-empty-icon { margin-block-end: var(--rp33-sp-2); color: var(--rp33-label-3); font-size: 44px; line-height: 1; }
+    #phone-panel[data-rp-ios="3"] .wp-empty-sub { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label-2); font: var(--lt-type-subhead); }
+}

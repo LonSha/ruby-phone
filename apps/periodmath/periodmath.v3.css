@@ -1,0 +1,46 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：周期数学案头（periodmath）—— 家族：角色扮演专属（作者案头式小工具）· 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/periodmath/periodmath-view.js（唯一视图，一屏）；periodmath-app.js / -data.js 只算周期，无 DOM。
+   屏幕与状态：当前状态胶囊（.pm-status）· 读数行 · 操作分组 · 预警（触发 / 未触发，只在算过之后出现）· 收周期记录（JSON 输入）· 记录列表（进行中 / 已结束）。
+   设计：iOS inset grouped；强调色系统粉。旧版的「粉底粉字」状态块改成 16 圆角的强调色浅底 + 主文字色（headline），
+         读数是等宽数字的 footnote；「清记录」走危险色（data-act="clear"）。
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构 / data-* 不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 2 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    #phone-panel[data-rp-ios="3"] :is(.pm-root, .pm-wrap) { --rp33-accent: var(--lt-sys-pink); --rp36-accent-text: var(--rp36-text-pink); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-pink) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-pink) 40%, transparent); }
+
+    /* ===== 屏：案头页面底 ===== */
+    #phone-panel[data-rp-ios="3"] .pm-wrap { min-block-size: 100%; box-sizing: border-box; padding: var(--rp33-sp-3) var(--rp33-margin) var(--rp33-sp-8); background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+
+    /* ===== 状态：当前周期状态 + 读数 ===== */
+    #phone-panel[data-rp-ios="3"] .pm-status { margin-block-end: var(--rp33-sp-2); padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-accent-soft); color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .pm-readings { padding: var(--rp33-sp-1) var(--rp33-sp-1) var(--rp33-sp-3); color: var(--rp33-label-2); font: var(--lt-type-footnote); font-variant-numeric: tabular-nums; }
+
+    /* ===== 组件：分组卡（操作 / 预警 / 收记录 / 记录） ===== */
+    #phone-panel[data-rp-ios="3"] .pm-sec { margin-block-end: var(--rp33-sp-4); padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .pm-sec h3 { margin: 0 0 var(--rp33-sp-2); font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); }
+
+    /* ===== 组件：JSON 输入框 ===== */
+    #phone-panel[data-rp-ios="3"] .pm-input { box-sizing: border-box; min-block-size: 88px; margin-block-end: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: 400 var(--lt-ios-footnote-size) / 1.45 var(--lt-font-ios-mono); outline: none; resize: vertical; }
+    #phone-panel[data-rp-ios="3"] .pm-input::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .pm-input:focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+
+    /* ===== 组件：按钮（次级胶囊；收下记录 = 主按钮；清记录 = 危险） ===== */
+    #phone-panel[data-rp-ios="3"] .pm-btn { position: relative; min-block-size: 36px; margin: var(--rp33-sp-1) var(--rp33-sp-2) var(--rp33-sp-1) 0; padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pm-btn::after { content: ""; position: absolute; inset: -4px 0; }
+    #phone-panel[data-rp-ios="3"] .pm-btn[data-act="intake"] { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .pm-btn[data-act="clear"] { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .pm-btn:active { filter: brightness(0.92); scale: 0.97; }
+
+    /* ===== 组件：列表行（记录 id ···· 进行中 / 已结束；预警说明） ===== */
+    #phone-panel[data-rp-ios="3"] .pm-row { position: relative; justify-content: space-between; align-items: center; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) 0; border: 0; color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .pm-row + .pm-row::before { content: ""; position: absolute; inset-block-start: 0; inset-inline: 0 calc(var(--rp33-sp-4) * -1); border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .pm-row > span:first-child { font: 400 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios-mono); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .pm-row > span + span { flex: none; color: var(--rp33-label); }
+}

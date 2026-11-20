@@ -1,0 +1,59 @@
+/* ============================================================
+   RubyPhone · 设计系统入口 v3.6（manifest.json -> "css": "phone/design/rp-entry.css"）
+   v3.6：追加 phone-tokens-v3.6.css（只声明 --rp36-* 文字安全强调色变量，开关关着也无副作用）；层序不变。
+   v3.4：rp.skins 子层加 rp.skins.inline（remap < roles < inline < curated；运行时逐站点内联映射的 data-rp34 令牌）；
+         追加 phone-tokens-v3.4.css（只声明 --rp34-* 变量：媒体之上 / 微信卡片 / 万象 / 棋盘 / 2048 / 数独 / 深色岛）。
+   v3.3：层序在 rp.apps 与 rp.themes 之间加入 rp.skins（App 皮肤，apps/<id>/<id>.v3.css，由 ui/rp-skin-runtime.js 在 v3 打开时按需加载）；
+         追加 phone-tokens-v3.3.css（只声明 --rp33-* 变量，开关关着也无副作用）。图标遮罩与皮肤本身不在这里加载。
+   v3：追加 lonsha-tokens-v3.css / phone-tokens-v3.css / phone-components-v3.css；层序不变。
+       v3 外观只在手机根节点 data-rp-ios="3" 时作用于旧 DOM（theme-controller.js -> enableIosV3()，默认关）
+   v2：追加 phone-tokens-v2.css / phone-components-v2.css / themes/material-you.css；层序不变。
+       v2 新外观只在手机根节点 data-rp-ui="2" 时生效（theme-controller.js -> enableUiV2()，默认关）
+   ------------------------------------------------------------
+   1. 第一行声明全部层的顺序。层序一旦由第一次出现确定就不会再变，
+      所以这一行必须是整个页面里最早出现的 rp.* 层声明（manifest 的 css 比 JS 注入的 <style> 早）。
+   2. 层序含义（右边赢左边，与特异性无关）：
+        rp.reset   基础重置
+        rp.tokens  token（共享 --lt-* + 手机 --rp-*）
+        rp.legacy  旧 phone.css（由 font-scale.js 包进本层，并去掉 !important）
+        rp.base    排版 / 焦点 / 旧变量桥
+        rp.components  UI Kit + 旧 DOM 桥接
+        rp.apps    各 App 样式（honey / diary / memory …，懒加载时自带 @layer rp.apps；v3.3 收编的未分层 App 样式也进这里）
+        rp.skins   v3.3 / v3.4 App 皮肤（子层 remap < roles < inline < curated；只在 data-rp-ios="3" 下有选择器命中）
+        rp.themes  主题包（只覆盖 token）
+        rp.user    用户自定义 CSS（卡片布局自定义样式等）
+   3. 文件末尾是唯一一段「未分层」规则：宿主护盾。
+   ============================================================ */
+@layer rp.reset, rp.tokens, rp.legacy, rp.base, rp.components, rp.apps, rp.skins, rp.themes, rp.user;
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+
+@import url("./lonsha-tokens.css") layer(rp.tokens);
+@import url("./phone-tokens.css") layer(rp.tokens);
+@import url("./phone-tokens-v2.css");          /* 自带 @layer rp.tokens */
+@import url("./lonsha-tokens-v3.css") layer(rp.tokens);
+@import url("./phone-tokens-v3.css");          /* 自带 @layer rp.tokens */
+@import url("./phone-tokens-v3.3.css");        /* v3.3：自带 @layer rp.tokens，只有变量 */
+@import url("./phone-tokens-v3.4.css");        /* v3.4：自带 @layer rp.tokens，只有变量 */
+@import url("./phone-tokens-v3.6.css");        /* v3.6：自带 @layer rp.tokens，只有变量（小字用的文字安全强调色） */
+/* 旧 phone.css 整体下沉到 rp.legacy：层序里 legacy 在 base / components 之前，
+   所以皮肤与组件规则天然压过旧样式，不需要靠特异性或 !important 打架。
+   文件由 scripts/gen-legacy-layer.mjs 从根 phone.css 生成（去 !important + url 上移一级）。 */
+@import url("./legacy-phone.css") layer(rp.legacy);
+@import url("./phone-components.css");
+@import url("./phone-components-v2.css");      /* 自带 @layer rp.components */
+@import url("./phone-components-v3.css");      /* 自带 @layer rp.components */
+@import url("../themes/obsidian.css");
+@import url("../themes/huawei.css");
+@import url("../themes/pixel.css");
+@import url("../themes/material-you.css");
+
+/* ---------- 宿主护盾（未分层，必须在层外） ----------
+   SillyTavern 主题和其他扩展的样式都是「未分层」的，天然高于任何 @layer。
+   这里对手机内的表单 / 文本类元素 all: revert-layer：宿主对它们的普通声明整体作废，
+   计算值回到 rp.* 各层。特异性 (2,1,0)，高于 ST 常见的 #chat button / body.xxx button。
+   · 只覆盖宿主最常改的几类标签，div / span 不碰，避免误伤其他运行时注入的样式；
+   · all 不包含自定义属性，token 不受影响；元素的 style 属性（JS 写的位置、缩放）仍然最高；
+   · 只在 data-rp-ds="2"（新设计系统开关打开）时生效。 */
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root)[data-rp-ds="2"] :is(button, input, select, textarea, a, label, hr, code, #rp-scope-anchor) {
+    all: revert-layer;
+}

@@ -1,0 +1,101 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：创作台（creationdesk）—— 家族：作者案头 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/creationdesk/creationdesk-view.js（_head / _states / _materials / _targets / _plan / _multiTargets / _drafts / _topics / _hypo / _board / _commissions / _html）。
+   屏幕与状态：页头（标题 / 说明 / 读取来源 / 自检 .cwb-self-bad / 回执 .cwb-flash-bad）·
+               状态（行：.cwb-st-ok / -bad / -empty / -write）· 素材（行 .cwb-mat-on / -bad：选择钮 / 名称 / 元信息 / 坏原因）·
+               目标（胶囊 .cwb-tgt-on / 无目标）· 计划（条 .cwb-plan-bad + 检查项 .cwb-chk-ok / -warn / -bad）·
+               草稿 / 话题 / 委托（分组 + 行 + 输入框 / 备注框 + 动作：发布 .cwb-btn-pub、警告 .cwb-btn-warn、切换 .cwb-btn-on）·
+               假设推演（.cwb-hy：说明行、泳道卡 .cwb-hy-lane-on：名称 / 状态 .cwb-hy-st-pending / -written / -refused / 行 / 比较）。
+   设计：作者案头家族模板（与 backupdesk 同构，前缀 cwb）：跟随系统 inset grouped、强调色系统蓝；行 = 44pt 发丝线行、键等宽；
+         素材坏 = 红浅底（旧版 3px 左线去掉）；泳道 = 次级表面圆角卡，开着的泳道 = 强调色描边；状态全部用系统色。
+   audit-allow: cwb-hy-st-pending cwb-hy-st-written cwb-hy-st-refused —— 'cwb-hy-st-' + 状态拼出来的；cwb-root cwb-st-write cwb-actions —— 旧样式 / 模板里出现的容器名
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 17 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    #phone-panel[data-rp-ios="3"] .cwb-wrap { --rp33-accent: var(--lt-sys-blue); --rp36-accent-text: var(--rp36-text-blue); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-blue) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-blue) 40%, transparent); }
+
+    /* ===== 屏：案头页面底 + 页头 ===== */
+    #phone-panel[data-rp-ios="3"] .cwb-wrap { min-block-size: 100%; box-sizing: border-box; padding: var(--rp33-sp-3) var(--rp33-margin) var(--rp33-sp-8); background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .cwb-head { margin-block-end: var(--rp33-sp-4); padding: var(--rp33-sp-1) var(--rp33-sp-1) var(--rp33-sp-2); border: 0; }
+    #phone-panel[data-rp-ios="3"] .cwb-title { color: var(--rp33-label); font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); }
+    #phone-panel[data-rp-ios="3"] .cwb-sub { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .cwb-reads { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label-3); font: var(--lt-type-caption1); }
+
+    /* ===== 状态：自检 / 回执 ===== */
+    #phone-panel[data-rp-ios="3"] .cwb-self { margin-block-end: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: var(--rp33-fill); color: var(--rp33-label-2); font: var(--lt-type-footnote); opacity: 1; }
+    #phone-panel[data-rp-ios="3"] .cwb-self-bad { border: 0; background: var(--rp33-danger-soft); color: var(--rp36-text-red); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .cwb-flash { margin-block-end: var(--rp33-sp-3); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-accent-soft); color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1.35 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .cwb-flash-bad { border: 0; background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+
+    /* ===== 组件：分组卡 / 注 ===== */
+    #phone-panel[data-rp-ios="3"] .cwb-box { margin-block-end: var(--rp33-sp-4); padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .cwb-box h3 { margin: 0 0 var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); }
+    #phone-panel[data-rp-ios="3"] .cwb-note { margin-block: var(--rp33-sp-1); color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+
+    /* ===== 屏：状态 · 行 ===== */
+    #phone-panel[data-rp-ios="3"] .cwb-row { justify-content: space-between; align-items: center; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) 0; border: 0; border-block-start: 0.5px solid var(--rp33-sep); font: var(--lt-type-subhead); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .cwb-box h3 + .cwb-row { border-block-start: 0; }
+    #phone-panel[data-rp-ios="3"] .cwb-row-k { min-inline-size: 0; overflow-wrap: anywhere; color: var(--rp33-label); font: 400 var(--lt-ios-footnote-size) / 1.35 var(--lt-font-ios-mono); }
+    #phone-panel[data-rp-ios="3"] .cwb-row-v { flex: none; max-inline-size: 55%; color: var(--rp33-label-2); font: var(--lt-type-footnote); text-align: end; }
+    #phone-panel[data-rp-ios="3"] .cwb-st-ok { color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"] .cwb-st-bad .cwb-row-v { color: var(--rp36-text-red); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .cwb-st-empty .cwb-row-v { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .cwb-st-write .cwb-row-k { color: var(--rp36-accent-text); }
+
+    /* ===== 屏：素材 · 行 + 选择钮 ===== */
+    #phone-panel[data-rp-ios="3"] .cwb-mat { flex-wrap: wrap; align-items: center; gap: var(--rp33-sp-2); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-1) 0; border: 0; border-block-start: 0.5px solid var(--rp33-sep); font: var(--lt-type-subhead); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .cwb-mat-on { border: 0; margin-inline: calc(var(--rp33-sp-2) * -1); padding-inline: var(--rp33-sp-2); border-radius: var(--rp33-field-radius); background: var(--rp33-accent-soft); }
+    #phone-panel[data-rp-ios="3"] .cwb-mat-bad { border: 0; margin-inline: calc(var(--rp33-sp-2) * -1); padding-inline: var(--rp33-sp-2); border-radius: var(--rp33-field-radius); background: var(--rp33-danger-soft); }
+    #phone-panel[data-rp-ios="3"] .cwb-mat-label { color: var(--rp33-label); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .cwb-mat-meta { color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .cwb-mat-bad-text { flex: 1 1 100%; color: var(--rp36-text-red); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] :is(.cwb-pick, .cwb-tgt) { position: relative; min-block-size: 28px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] :is(.cwb-pick, .cwb-tgt)::after { content: ""; position: absolute; inset: -8px -2px; }
+    #phone-panel[data-rp-ios="3"] .cwb-pick { color: var(--rp36-accent-text); }
+
+    /* ===== 屏：目标胶囊 ===== */
+    #phone-panel[data-rp-ios="3"] .cwb-tgt { margin: var(--rp33-sp-1) var(--rp33-sp-1) var(--rp33-sp-1) 0; }
+    #phone-panel[data-rp-ios="3"] .cwb-tgt-on { border: 0; background: var(--rp33-accent); color: var(--rp33-on-accent); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .cwb-tgt-none { color: var(--rp33-label-3); }
+
+    /* ===== 屏：计划条 + 检查项 ===== */
+    #phone-panel[data-rp-ios="3"] .cwb-plan { margin-block: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-accent-soft); color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .cwb-plan-bad { border: 0; background: var(--rp33-danger-soft); color: var(--rp36-text-red); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .cwb-chk { padding: 2px 0; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .cwb-chk-ok { color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"] .cwb-chk-warn { color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .cwb-chk-bad { color: var(--rp36-text-red); font-weight: 600; }
+
+    /* ===== 组件：输入 / 备注 / 动作按钮 ===== */
+    #phone-panel[data-rp-ios="3"] :is(.cwb-inp, .cwb-note-area) { min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .cwb-note-area { min-block-size: 88px; line-height: 1.5; }
+    #phone-panel[data-rp-ios="3"] .cwb-inp::placeholder { color: var(--rp33-label-3); opacity: 1; }
+    #phone-panel[data-rp-ios="3"] :is(.cwb-inp, .cwb-note-area):focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] :is(.cwb-acts, .cwb-actions) { display: flex; flex-wrap: wrap; gap: var(--rp33-sp-2); margin-block-start: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .cwb-btn { position: relative; min-block-size: 36px; padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .cwb-btn::after { content: ""; position: absolute; inset: -4px 0; }
+    #phone-panel[data-rp-ios="3"] .cwb-btn-pub { border: 0; background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .cwb-btn-warn { border: 0; background: color-mix(in srgb, var(--lt-sys-orange) 16%, transparent); color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .cwb-btn-on { border: 0; background: var(--rp33-accent-soft); color: var(--rp36-accent-text); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] :is(.cwb-btn, .cwb-pick, .cwb-tgt):active { filter: brightness(0.92); scale: 0.97; }
+
+    /* ===== 屏：假设推演（说明 / 泳道） ===== */
+    #phone-panel[data-rp-ios="3"] .cwb-hy { border: 0; background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .cwb-hy-line { margin-block-end: var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .cwb-hy-lane { margin-block-end: var(--rp33-sp-2); padding: var(--rp33-sp-3); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .cwb-hy-lane-on { border: 0; background: var(--rp33-accent-soft); box-shadow: inset 0 0 0 1.5px var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .cwb-hy-head { align-items: baseline; justify-content: space-between; gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .cwb-hy-name { color: var(--rp33-label); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .cwb-hy-state { color: var(--rp33-label-3); font: 600 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .cwb-hy-st-pending { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .cwb-hy-st-written { color: var(--rp36-text-green); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .cwb-hy-st-refused { color: var(--rp36-text-red); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .cwb-hy-row { color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .cwb-hy-cmp { margin-block-start: var(--rp33-sp-1); color: var(--rp36-accent-text); font: var(--lt-type-footnote); }
+}

@@ -1,0 +1,96 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：PV 案头（pvdesk）—— 家族：作者案头 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/pvdesk/pvdesk-view.js（_buildHTML / _gaugeBlock / _chip / _briefPanel / _shotsPanel / _fillTone / _castPanel / _lyricsPanel / _composePanel / _shelfPanel）；其余文件无 DOM。
+   屏幕与状态：根 .pvd-tone-ok / -warn / -err / -none（只换 --pvd-accent）· 页头（标题 / 说明）· 状态条（.pvd-face-ok / -warn / -err）·
+               读数 chip（.is-unk / .is-over / .is-warn）· 页签（.is-on）· 回执 · 面板 + 提示 / 说明 / 注 / 警告 / 列表 / 空 ·
+               题面（键值行、下拉 / 数字 / 文本框、勾选、按钮）· 分镜（镜头卡 .pvd-card.is-on：序号 / 时段 + 填写态 chip、正文 pre、展开详情 + 输出 pre .pvd-pre-out）·
+               选角 / 歌词 / 合成（表格：表头 / 行 / 超限行 tr.pvd-over / 正文格 / 行内按钮）· 书架。
+   设计：原生是深蓝「剪辑台」。v3.5 跟随系统 inset grouped，强调色系统青；12 个 --pvd-* 调色变量在根上逐个指到语义 token，
+         根上的 tone 只改 --pvd-accent（保留 App 语义：整体口径决定强调色）；pre 的写死半透明黑底换成次级表面，输出块用强调色浅底。
+   audit-allow: pvd-tone-ok pvd-tone-warn pvd-tone-err pvd-face-ok pvd-face-warn pvd-face-err —— 'pvd-tone-' / 'pvd-face-' + tone 拼出来的
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 6 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    /* ===== 作用域：App 自己的调色变量 -> 语义 token ===== */
+    #phone-panel[data-rp-ios="3"] .pvd-root {
+    /* 渲染自查（v3.5）：白字在本强调色上只有 2.54:1（浅）/ 1.72:1（深），不到 4.5:1；填充按钮 / 选中胶囊的文字改用带一点强调色相的近黑墨（7.31:1 / 10.38:1）。 */
+        --rp33-accent: var(--lt-sys-cyan); --rp36-accent-text: var(--rp36-text-cyan); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-cyan) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-cyan) 40%, transparent); --rp33-on-accent: color-mix(in srgb, var(--lt-sys-black) 88%, var(--rp33-accent));
+        --pvd-bg: var(--rp33-bg); --pvd-panel: var(--rp33-surface); --pvd-panel-2: var(--rp33-surface-2); --pvd-line: var(--rp33-sep);
+        --pvd-ink: var(--rp33-label); --pvd-ink-2: var(--rp33-label-2); --pvd-ink-3: var(--rp33-label-3);
+        --pvd-ok: var(--lt-sys-green); --rp36-t-pvd-ok: var(--rp36-text-green); --pvd-warn: var(--lt-sys-orange); --rp36-t-pvd-warn: var(--rp36-text-orange); --pvd-err: var(--lt-sys-red); --rp36-t-pvd-err: var(--rp36-text-red); --pvd-off: var(--rp33-label-3); --pvd-mono: var(--lt-font-ios-mono);
+        --pvd-accent: var(--rp33-accent); --rp36-t-pvd-accent: var(--rp36-accent-text);
+    }
+    #phone-panel[data-rp-ios="3"] .pvd-root.pvd-tone-ok { --pvd-accent: var(--lt-sys-green); --rp36-t-pvd-accent: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"] .pvd-root.pvd-tone-warn { --pvd-accent: var(--lt-sys-orange); --rp36-t-pvd-accent: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .pvd-root.pvd-tone-err { --pvd-accent: var(--lt-sys-red); --rp36-t-pvd-accent: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .pvd-root.pvd-tone-none { --pvd-accent: var(--rp33-accent); --rp36-t-pvd-accent: var(--rp36-accent-text); }
+
+    /* ===== 屏：外壳（页面底 / 页头 / 状态条 / 读数 / 页签 / 回执） ===== */
+    #phone-panel[data-rp-ios="3"] .pvd-root { gap: var(--rp33-sp-3); min-block-size: 100%; padding: var(--rp33-sp-2) var(--rp33-margin) var(--rp33-sp-8); border-radius: 0; background: var(--pvd-bg); color: var(--pvd-ink); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .pvd-head { gap: var(--rp33-sp-1); padding: var(--rp33-sp-2) var(--rp33-sp-1) 0; }
+    #phone-panel[data-rp-ios="3"] .pvd-head h2 { margin: 0; font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); color: var(--pvd-ink); }
+    #phone-panel[data-rp-ios="3"] .pvd-head-sub { color: var(--pvd-ink-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pvd-face { gap: 2px; padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-feed-radius); background: var(--pvd-panel); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .pvd-face-label { font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .pvd-face-sub { color: var(--pvd-ink-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pvd-face-err { background: var(--rp33-danger-soft); }
+    #phone-panel[data-rp-ios="3"] :is(.pvd-gauges, .pvd-reads) { flex-wrap: wrap; gap: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .pvd-chip { align-items: baseline; gap: var(--rp33-sp-1); padding: 2px var(--rp33-sp-2); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--pvd-ink-2); font: 500 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .pvd-chip b { color: var(--pvd-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .pvd-chip.is-unk { color: var(--pvd-ink-3); }
+    #phone-panel[data-rp-ios="3"] .pvd-chip.is-unk b { color: var(--pvd-ink-3); }
+    #phone-panel[data-rp-ios="3"] .pvd-chip.is-over { background: var(--rp33-danger-soft); }
+    #phone-panel[data-rp-ios="3"] .pvd-chip.is-over b { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .pvd-chip.is-warn { background: color-mix(in srgb, var(--lt-sys-orange) 16%, transparent); color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .pvd-tabs { flex-wrap: wrap; gap: 0; padding: 2px; border-radius: 999px; background: var(--rp33-seg-bg); }
+    #phone-panel[data-rp-ios="3"] .pvd-tab { flex: 1 1 auto; position: relative; min-block-size: var(--rp33-tab-h); padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: transparent; color: var(--pvd-ink); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pvd-tab::after { content: ""; position: absolute; inset: -6px 0; }
+    #phone-panel[data-rp-ios="3"] .pvd-tab.is-on { background: var(--rp33-seg-on); box-shadow: var(--rp33-seg-shadow); color: var(--pvd-ink); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .pvd-flash { padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); color: var(--pvd-ink); font: 500 var(--lt-ios-footnote-size) / 1.35 var(--lt-font-ios); }
+
+    /* ===== 组件：面板 / 文字 / 警告 / 空 ===== */
+    #phone-panel[data-rp-ios="3"] .pvd-panel { gap: var(--rp33-sp-3); padding: var(--rp33-sp-4); border-radius: var(--rp33-card-radius); background: var(--pvd-panel); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .pvd-hint { margin: 0; color: var(--pvd-ink-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] :is(.pvd-sub, .pvd-note) { color: var(--pvd-ink-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pvd-empty { padding: var(--rp33-sp-4); border: 0; border-radius: var(--rp33-field-radius); background: var(--pvd-panel-2); color: var(--pvd-ink-2); font: var(--lt-type-footnote); text-align: center; }
+    #phone-panel[data-rp-ios="3"] .pvd-warn { padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-danger-soft); color: var(--pvd-ink); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pvd-warn b { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .pvd-list { margin: 0; padding-inline-start: var(--rp33-sp-5); color: var(--pvd-ink-2); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：题面 · 行 / 表单 / 按钮 ===== */
+    #phone-panel[data-rp-ios="3"] .pvd-row { flex-wrap: wrap; align-items: center; gap: var(--rp33-sp-2); min-block-size: 36px; font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .pvd-row > span:first-child { color: var(--pvd-ink-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] :is(.pvd-sel, .pvd-num) { min-block-size: 36px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--pvd-ink); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); font-variant-numeric: tabular-nums; outline: none; }
+    #phone-panel[data-rp-ios="3"] .pvd-ta { min-block-size: 112px; padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--pvd-ink); caret-color: var(--rp33-accent); font: 400 var(--lt-ios-footnote-size) / 1.5 var(--lt-font-ios-mono); outline: none; }
+    #phone-panel[data-rp-ios="3"] :is(.pvd-sel, .pvd-num, .pvd-ta):focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .pvd-check { align-items: center; gap: var(--rp33-sp-1); min-block-size: var(--rp33-hit); color: var(--pvd-ink); font: var(--lt-type-subhead); accent-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .pvd-btns { flex-wrap: wrap; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .pvd-btns button { min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-t-pvd-accent); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pvd-btns button:first-child { background: var(--pvd-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] :is(.pvd-btns button, .pvd-tab, .pvd-card, .pvd-table button):active { filter: brightness(0.92); scale: 0.98; }
+
+    /* ===== 屏：分镜 · 镜头卡 / 正文 / 详情 ===== */
+    #phone-panel[data-rp-ios="3"] .pvd-card { gap: var(--rp33-sp-2); padding: var(--rp33-sp-3); border: 0; border-radius: var(--rp33-feed-radius); background: var(--pvd-panel-2); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pvd-card.is-on { background: var(--rp33-accent-soft); box-shadow: inset 0 0 0 1.5px var(--pvd-accent); }
+    #phone-panel[data-rp-ios="3"] .pvd-card-top { flex-wrap: wrap; align-items: baseline; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .pvd-card-n { color: var(--pvd-ink); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .pvd-card-clock { color: var(--pvd-ink-2); font: 500 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios-mono); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .pvd-pre { margin: 0; max-block-size: 280px; overflow: auto; padding: var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--pvd-panel); color: var(--pvd-ink); font: 400 var(--lt-ios-caption1-size) / 1.5 var(--lt-font-ios-mono); white-space: pre-wrap; }
+    #phone-panel[data-rp-ios="3"] .pvd-pre-out { background: var(--rp33-accent-soft); }
+    #phone-panel[data-rp-ios="3"] .pvd-detail { gap: var(--rp33-sp-2); padding-block-start: var(--rp33-sp-2); border: 0; border-block-start: 0.5px solid var(--pvd-line); }
+
+    /* ===== 屏：选角 / 歌词 / 合成 · 表格 ===== */
+    #phone-panel[data-rp-ios="3"] .pvd-table { border-collapse: collapse; font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pvd-table thead th { padding: var(--rp33-sp-1) var(--rp33-sp-2); border: 0; border-block-end: 0.5px solid var(--pvd-line); color: var(--pvd-ink-3); font: 600 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios); text-align: start; }
+    #phone-panel[data-rp-ios="3"] .pvd-table tbody td { padding: var(--rp33-sp-2); border: 0; border-block-end: 0.5px solid var(--pvd-line); color: var(--pvd-ink-2); vertical-align: top; }
+    #phone-panel[data-rp-ios="3"] .pvd-table tbody tr.pvd-over td { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .pvd-cell-text { color: var(--pvd-ink); }
+    #phone-panel[data-rp-ios="3"] .pvd-table button { position: relative; min-block-size: 28px; padding: 0 var(--rp33-sp-2); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-t-pvd-accent); font: 600 var(--lt-ios-caption1-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pvd-table button::after { content: ""; position: absolute; inset: -8px -2px; }
+}

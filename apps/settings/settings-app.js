@@ -3573,11 +3573,11 @@ export class SettingsApp {
                 wrap.setAttribute('aria-label', '搜索设置');
                 wrap.style.cssText = 'display:flex;gap:6px;align-items:center;margin:8px 10px 4px;';
                 _r22Search = document.createElement('input'); _r22Search.type = 'search'; _r22Search.id = 'r22-settings-filter'; _r22Search.placeholder = '搜索设置（如：头像、API、微信）'; _r22Search.setAttribute('aria-label', '搜索设置');
-                _r22Search.style.cssText = 'flex:1;min-width:0;padding:8px 10px;border:1px solid #ddd;border-radius:9px;box-sizing:border-box;';
+                _r22Search.style.cssText = 'flex:1;min-width:0;padding:8px 10px;border:1px solid var(--rp34-js-sep, #ddd);border-radius:9px;box-sizing:border-box;';
                 _r22SearchClear = document.createElement('button'); _r22SearchClear.type = 'button'; _r22SearchClear.id = 'r22-settings-filter-clear'; _r22SearchClear.textContent = '清空'; _r22SearchClear.setAttribute('aria-label', '清空设置搜索');
-                _r22SearchClear.style.cssText = 'flex:0 0 auto;padding:8px 10px;border:1px solid #ddd;border-radius:9px;background:#fff;color:#555;cursor:pointer;';
+                _r22SearchClear.style.cssText = 'flex:0 0 auto;padding:8px 10px;border:1px solid var(--rp34-js-sep, #ddd);border-radius:9px;background:var(--rp34-js-surface, #fff);color:var(--rp34-js-label-2, #555);cursor:pointer;';
                 wrap.append(_r22Search, _r22SearchClear);
-                _r22SearchStatus = document.createElement('div'); _r22SearchStatus.id = 'r22-settings-filter-status'; _r22SearchStatus.setAttribute('role', 'status'); _r22SearchStatus.setAttribute('aria-live', 'polite'); _r22SearchStatus.style.cssText = 'min-height:18px;margin:0 12px 6px;color:#777;font-size:11px;';
+                _r22SearchStatus = document.createElement('div'); _r22SearchStatus.id = 'r22-settings-filter-status'; _r22SearchStatus.setAttribute('role', 'status'); _r22SearchStatus.setAttribute('aria-live', 'polite'); _r22SearchStatus.style.cssText = 'min-height:18px;margin:0 12px 6px;color:var(--rp34-js-label-2, #777);font-size:11px;';
                 const _r22Tabs = _r22Root.querySelector('.settings-tabs'); if (_r22Tabs) { _r22Tabs.insertAdjacentElement('afterend', wrap); wrap.insertAdjacentElement('afterend', _r22SearchStatus); }
             }
             const _r22Containers = Array.from(_r22Root.querySelectorAll('.setting-section, details')).filter((el) => el.querySelector('.setting-item'));
@@ -6282,8 +6282,8 @@ export class SettingsApp {
                 whitelist: whitelistValue
             });
 
-            if (blacklistInput) blacklistInput.style.background = 'rgba(76, 175, 80, 0.16)';
-            if (whitelistInput) whitelistInput.style.background = 'rgba(76, 175, 80, 0.16)';
+            if (blacklistInput) blacklistInput.style.background = 'var(--rp34-js-green-soft, rgba(76, 175, 80, 0.16))';
+            if (whitelistInput) whitelistInput.style.background = 'var(--rp34-js-green-soft, rgba(76, 175, 80, 0.16))';
             setTimeout(() => {
                 if (blacklistInput) blacklistInput.style.background = '';
                 if (whitelistInput) whitelistInput.style.background = '';
@@ -10992,7 +10992,7 @@ export class SettingsApp {
                 ttsModelsResult.textContent = provider === 'indextts'
                     ? '旧兼容版可拉取 /v1/models；雨落版使用 /api/clone，无需 API Key。'
                     : (provider === 'nimo' ? 'MiMo 公益站可从当前站点 /v1/models 拉取可用模型。' : '');
-                ttsModelsResult.style.color = '#666';
+                ttsModelsResult.style.color = 'var(--rp34-js-label-2, #666)';
             }
             if (ttsModelPreset) {
                 const models = ttsModelPresetOptions[provider] || [];
@@ -11086,17 +11086,17 @@ export class SettingsApp {
         const setCloneResult = (message, isError = false) => {
             if (!ttsVolcCloneResult) return;
             ttsVolcCloneResult.textContent = message || '';
-            ttsVolcCloneResult.style.color = isError ? '#ff3b30' : '#666';
+            ttsVolcCloneResult.style.color = isError ? 'var(--rp34-js-red, #ff3b30)' : 'var(--rp34-js-label-2, #666)';
         };
         const setNimoCloneResult = (message, isError = false) => {
             if (!ttsNimoCloneResult) return;
             ttsNimoCloneResult.textContent = message || '';
-            ttsNimoCloneResult.style.color = isError ? '#ff3b30' : '#666';
+            ttsNimoCloneResult.style.color = isError ? 'var(--rp34-js-red, #ff3b30)' : 'var(--rp34-js-label-2, #666)';
         };
         const setTtsModelsResult = (message, isError = false) => {
             if (!ttsModelsResult) return;
             ttsModelsResult.textContent = message || '';
-            ttsModelsResult.style.color = isError ? '#ff3b30' : '#666';
+            ttsModelsResult.style.color = isError ? 'var(--rp34-js-red, #ff3b30)' : 'var(--rp34-js-label-2, #666)';
         };
         const getCloneForm = () => ({
             apiKey: String(ttsVolcCloneAccessToken?.value || ttsVolcKey?.value || ttsKey?.value || '').trim(),
@@ -11392,7 +11392,7 @@ export class SettingsApp {
                 const file = ttsVolcCloneAudio.files?.[0];
                 if (ttsVolcCloneAudioName) {
                     ttsVolcCloneAudioName.textContent = file ? `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)` : '未选择文件';
-                    ttsVolcCloneAudioName.style.color = file ? '#333' : '#999';
+                    ttsVolcCloneAudioName.style.color = file ? 'var(--rp34-js-label, #333)' : 'var(--rp34-js-label-3, #999)';
                 }
             });
         }
@@ -11404,7 +11404,7 @@ export class SettingsApp {
                 const file = ttsNimoCloneAudio.files?.[0];
                 if (ttsNimoCloneAudioName) {
                     ttsNimoCloneAudioName.textContent = file ? `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)` : '未选择文件';
-                    ttsNimoCloneAudioName.style.color = file ? '#333' : '#999';
+                    ttsNimoCloneAudioName.style.color = file ? 'var(--rp34-js-label, #333)' : 'var(--rp34-js-label-3, #999)';
                 }
                 if (ttsNimoCloneNick && file && !String(ttsNimoCloneNick.value || '').trim()) {
                     ttsNimoCloneNick.value = file.name.replace(/\.[^.]+$/, '');
@@ -11669,7 +11669,7 @@ export class SettingsApp {
             const setBusy = (busy, text = '') => {
                 if (!asrResultEl) return;
                 asrResultEl.textContent = busy ? '🎙️ 正在聆听…（说完后自动结束）' : text;
-                asrResultEl.style.color = busy ? '#1677ff' : (text.startsWith('✅') ? '#16a34a' : '#dc2626');
+                asrResultEl.style.color = busy ? 'var(--rp34-js-blue, #1677ff)' : (text.startsWith('✅') ? 'var(--rp34-js-green, #16a34a)' : 'var(--rp34-js-red, #dc2626)');
                 if (asrTestBtn) {
                     asrTestBtn.disabled = busy;
                     asrTestBtn.style.opacity = busy ? '0.6' : '1';
@@ -11881,8 +11881,8 @@ export class SettingsApp {
                 const isNowSelected = dockAppIds.includes(appId);
                 const iconBox = item.querySelector('div > div');
                 if (iconBox) {
-                    iconBox.style.border = `2px solid ${isNowSelected ? '#07c160' : 'transparent'}`;
-                    iconBox.style.boxShadow = isNowSelected ? '0 0 6px rgba(7, 193, 96, 0.5)' : 'none';
+                    iconBox.style.border = `2px solid ${isNowSelected ? 'var(--rp34-js-green, #07c160)' : 'transparent'}`;
+                    iconBox.style.boxShadow = isNowSelected ? 'var(--rp34-js-sel-glow, 0 0 6px rgba(7, 193, 96, 0.5))' : 'none';
 
                     // 更新勾选标记
                     const checkMark = iconBox.querySelector('span');

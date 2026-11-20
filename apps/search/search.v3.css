@@ -1,0 +1,134 @@
+/* ============================================================
+   RubyPhone v3.3 · App 皮肤：全局搜索（search）—— 家族：系统 / 工具
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   三个子层（右边赢左边，与特异性无关）：
+     rp.skins.remap   旧规则重映射：写死颜色 -> 语义 token（浅 / 深自动），字号吸附 iOS 阶梯（最小 11pt），
+                      间距吸附 4pt 栅格（8pt 栅格 + 半步），圆角吸附阶梯，霓虹投影 / 文字阴影去掉
+     rp.skins.roles   结构角色 -> v3 组件（导航栏 / 玻璃圆钮 / 分段 / 分组列表 / 卡片 / Sheet / 表单 / 按钮 / 徽标）
+     rp.skins.curated 手工精修（只有重点 App 有）
+   规矩：零 !important、零写死颜色、零字符图标；不改元素 ID / 类名 / 结构，不碰 display / position 以外的状态切换。
+   生成：v3.3 皮肤生成器（输入与角色表见 tools/app-skins-v33.manifest.json；角色 32 个类 / 17 种角色，重映射 66 / 76 条旧规则，
+         伪元素字符图标 0 处，扩大点击区 6 个类）。原生配色：light。
+   ============================================================ 
+ * v3.6：小字强调色 18 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 1 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.curated;
+@layer rp.skins.roles {
+    /* 作用域：强调色（sys:blue）*/
+    #phone-panel[data-rp-ios="3"] :where([class^="gs-"], [class*=" gs-"]) { --rp33-accent: var(--lt-sys-blue); --rp36-accent-text: var(--rp36-text-blue); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-blue) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-blue) 40%, transparent); }
+    #phone-panel[data-rp-ios="3"] .gs-wrap { background-color: var(--rp33-bg); background-image: none; color: var(--rp33-label); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+    #phone-panel[data-rp-ios="3"] .gs-topbar { background-color: var(--rp33-bg); background-image: none; border: 0; box-shadow: none; color: var(--rp33-label); min-block-size: var(--rp3-nav-h); padding-inline: var(--rp33-sp-2); gap: var(--rp33-sp-2); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] .gs-title { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .gs-hint-chips { background: var(--rp33-seg-bg); border: 0; border-radius: 999px; box-shadow: none; padding: 2px; gap: 0; }
+    #phone-panel[data-rp-ios="3"] .gs-hint-chips:has(> :nth-child(5)) { background: transparent; padding: 0; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .gs-hint-chips:has(> :nth-child(5)) > :is(.gs-chip) { background-color: var(--rp33-fill); color: var(--rp33-label); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .gs-hint-chips:has(> :nth-child(5)) > :is(.gs-chip):is(.active, .is-active, .on, .selected, .is-selected, .current, .is-current, .checked, [aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) { background-color: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .gs-chip { min-block-size: var(--rp33-tab-h); padding-inline: var(--rp33-sp-3); border: 0; border-radius: 999px; background: transparent; box-shadow: none; color: var(--rp33-label-2); font-family: var(--lt-font-ios); font-size: var(--lt-ios-subhead-size); font-weight: 600; letter-spacing: var(--lt-ios-subhead-track); text-shadow: none; justify-content: center; align-items: center; text-align: center; }
+    #phone-panel[data-rp-ios="3"] .gs-chip:is(.active, .is-active, .on, .selected, .is-selected, .current, .is-current, .checked, [aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) { background-color: var(--rp33-seg-on); color: var(--rp33-label); box-shadow: var(--rp33-seg-shadow); }
+    #phone-panel[data-rp-ios="3"] :is(.gs-item, .gs-vague-row) { min-block-size: var(--rp3-row-h-min); border: 0; border-radius: var(--rp33-row-radius-single); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-shadow-1); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .gs-spot-note { border: 0; border-radius: var(--rp33-card-radius); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-card-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .gs-input { border: 0; border-radius: var(--rp33-field-radius); background-color: var(--rp33-field-bg); background-image: none; box-shadow: none; color: var(--rp33-label); caret-color: var(--rp33-accent); font-family: var(--lt-font-ios); font-size: var(--lt-ios-body-size); line-height: var(--lt-ios-body-line); min-block-size: var(--rp33-hit); padding: 10px var(--rp33-sp-3); outline: none; }
+    #phone-panel[data-rp-ios="3"] .gs-input::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .gs-input:focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .gs-mode { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; box-shadow: none; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .gs-vague-toggle { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; box-shadow: none; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.gs-mode, .gs-vague-toggle):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.gs-mode, .gs-vague-toggle):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] .gs-scan-cancel { border: 0; border-radius: 999px; background-color: var(--rp33-fill); background-image: none; box-shadow: none; color: var(--rp33-label); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .gs-scan-cancel:active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] .gs-scan-cancel:disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.gs-hint-chip, .gs-mark) { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; color: var(--rp36-accent-text); box-shadow: none; font-family: var(--lt-font-ios); font-size: var(--lt-ios-caption1-size); line-height: var(--lt-ios-caption1-line); font-weight: 600; padding: 2px var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(.gs-empty-title, .gs-hint-title, .gs-item-title, .gs-vague-title) { color: var(--rp33-label); font-weight: 600; letter-spacing: -0.2px; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.gs-hint-sub, .gs-hint-tip, .gs-item-meta, .gs-spot-sub, .gs-sub, .gs-vague-meta) { color: var(--rp33-label-2); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .gs-group-num { font-family: var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.gs-dom-empty, .gs-empty, .gs-empty-icon, .gs-empty-sub, .gs-vague-none) { color: var(--rp33-label-2); font-family: var(--lt-font-ios); text-align: center; text-shadow: none; }
+    /* 点击区不小于 44pt：视觉尺寸不变，用透明伪元素扩大命中区 */
+    #phone-panel[data-rp-ios="3"] :is(.gs-chip, .gs-hint-chip, .gs-mark, .gs-mode, .gs-scan-cancel, .gs-vague-toggle) { position: relative; }
+    #phone-panel[data-rp-ios="3"] :is(.gs-chip, .gs-hint-chip, .gs-mark, .gs-mode, .gs-scan-cancel, .gs-vague-toggle)::after { content: ""; position: absolute; inset: min(0px, calc((100% - var(--rp33-hit)) / 2)); }
+}
+@layer rp.skins.remap {
+    #phone-panel[data-rp-ios="3"] .gs-wrap { background: var(--lt-sys-gray); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .gs-topbar { padding: 16px 16px 8px; }
+    #phone-panel[data-rp-ios="3"] .gs-title { font-size: var(--lt-ios-title3-size); }
+    #phone-panel[data-rp-ios="3"] .gs-sub { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .gs-searchbar { margin: 8px 16px 8px; padding: 8px 12px; background: transparent; }
+    #phone-panel[data-rp-ios="3"] .gs-searchbar i { color: var(--rp33-label-2); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .gs-input { color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .gs-clear { background: transparent; color: var(--rp33-label-3); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .gs-scopes { gap: 8px; padding: 2px 16px 12px; }
+    #phone-panel[data-rp-ios="3"] .gs-chip { padding: 4px 12px; font-size: var(--lt-ios-caption1-size); background: transparent; color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .gs-chip-on { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .gs-count { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); padding: 2px 4px 12px; }
+    #phone-panel[data-rp-ios="3"] .gs-group-head { gap: 8px; font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); padding: 8px 4px; }
+    #phone-panel[data-rp-ios="3"] .gs-group-num { font-size: var(--lt-ios-caption2-size); background: transparent; padding: 0 8px; }
+    #phone-panel[data-rp-ios="3"] .gs-item { gap: 12px; padding: 12px; background: transparent; margin-bottom: 4px; }
+    #phone-panel[data-rp-ios="3"] .gs-item.gs-jumpable:hover { background: transparent; }
+    #phone-panel[data-rp-ios="3"] .gs-item-icon { background: transparent; font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .gs-item-title { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .gs-item-snippet { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .gs-item-meta { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); margin-top: 4px; }
+    #phone-panel[data-rp-ios="3"] .gs-jump { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .gs-prov { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .gs-prov-warn { color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .gs-mark { background: color-mix(in srgb, var(--lt-sys-yellow) 28%, transparent); color: var(--rp36-text-yellow); border-radius: 4px; }
+    #phone-panel[data-rp-ios="3"] .gs-vague { margin: 0 4px 12px; background: color-mix(in srgb, var(--rp33-accent) 8%, transparent); border: 1px solid color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"] .gs-vague-toggle { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption1-size); padding: 8px 12px; }
+    #phone-panel[data-rp-ios="3"] .gs-vague-toggle.gs-vague-on { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .gs-vague-line { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-3); padding: 0 12px 8px; }
+    #phone-panel[data-rp-ios="3"] .gs-vague-none { font-size: var(--lt-ios-caption1-size); color: var(--rp36-text-yellow); padding: 0 12px 8px; }
+    #phone-panel[data-rp-ios="3"] .gs-vague-gap { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); padding: 0 12px 8px; }
+    #phone-panel[data-rp-ios="3"] .gs-vague-row { padding: 8px 12px; border-top: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .gs-vague-row.gs-jumpable:hover { background: transparent; }
+    #phone-panel[data-rp-ios="3"] .gs-vague-title { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .gs-vague-meta { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .gs-vague-why { font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-green); background: color-mix(in srgb, var(--lt-sys-green) 12%, transparent); padding: 1px 8px; }
+    #phone-panel[data-rp-ios="3"] .gs-err { font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-red); padding: 8px 4px; }
+    #phone-panel[data-rp-ios="3"] .gs-empty, #phone-panel[data-rp-ios="3"] .gs-hint { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .gs-empty-icon { font-size: var(--lt-ios-largetitle-size); margin-bottom: 12px; }
+    #phone-panel[data-rp-ios="3"] .gs-empty-title, #phone-panel[data-rp-ios="3"] .gs-hint-title { font-size: var(--lt-ios-subhead-size); color: var(--rp33-label-3); margin-bottom: 8px; }
+    #phone-panel[data-rp-ios="3"] .gs-empty-sub, #phone-panel[data-rp-ios="3"] .gs-hint-sub { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .gs-hint-chips { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .gs-hint-chip { font-size: var(--lt-ios-caption2-size); padding: 3px 8px; background: transparent; color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .gs-hint-tip { font-size: var(--lt-ios-caption1-size); margin-top: 12px; }
+    #phone-panel[data-rp-ios="3"] .gs-mode { border: var(--lt-hairline) solid var(--rp33-sep); background: transparent; color: var(--rp33-label-3); padding: 4px 12px; font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .gs-mode.gs-mode-on { background: var(--rp33-accent); border-color: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .gs-engine-unsupported { font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .gs-scanbar { background: color-mix(in srgb, var(--rp33-accent) 12%, transparent); font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .gs-scan-cancel { padding: 4px 12px; font-size: var(--lt-ios-caption2-size); background: transparent; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .gs-group-rest { font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .gs-spot { padding: 8px 12px; background: color-mix(in srgb, var(--rp33-accent) 8%, transparent); border: 1px solid color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"] .gs-spot-off { background: color-mix(in srgb, var(--lt-sys-yellow) 10%, transparent); border-color: color-mix(in srgb, var(--lt-sys-yellow) 22%, transparent); }
+    #phone-panel[data-rp-ios="3"] .gs-spot-line { font-size: var(--lt-ios-caption1-size); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .gs-spot-off .gs-spot-line { color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .gs-spot-sub { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .gs-spot-doms { gap: 4px; margin-top: 8px; }
+    #phone-panel[data-rp-ios="3"] .gs-dom { font-size: var(--lt-ios-caption2-size); background: transparent; color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .gs-dom-on { background: color-mix(in srgb, var(--rp33-accent) 22%, transparent); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .gs-dom-empty { background: transparent; color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .gs-dom-miss { background: color-mix(in srgb, var(--lt-sys-yellow) 16%, transparent); color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .gs-dom-n { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .gs-spot-note { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); margin-top: 4px; }
+    #phone-panel[data-rp-ios="3"] .gs-spot-miss { color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .gs-intent { padding: 8px 8px; background: color-mix(in srgb, var(--rp33-accent) 14%, transparent); }
+    #phone-panel[data-rp-ios="3"] .gs-intent:hover { background: color-mix(in srgb, var(--rp33-accent) 24%, transparent); }
+    #phone-panel[data-rp-ios="3"] .gs-intent-k { font-size: var(--lt-ios-caption2-size); padding: 1px 8px; background: transparent; color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .gs-intent-v { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-3); }
+}
+@layer rp.skins.curated {
+    /* ---- 全局搜索：Spotlight 式胶囊搜索框 + 分组结果（inset grouped）---- */
+    #phone-panel[data-rp-ios="3"] .gs-wrap { background: var(--lt-sys-grouped-bg); color: var(--lt-sys-label); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .gs-topbar { background: var(--lt-sys-grouped-bg); border: 0; box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .gs-searchbar { min-block-size: var(--rp3-search-h); margin: var(--rp33-sp-2) var(--rp33-margin); padding-inline: var(--rp33-sp-4); gap: var(--rp33-sp-2); border: 0; border-radius: 999px; background: var(--lt-glass-fill-strong); box-shadow: var(--lt-glass-rim), var(--rp33-shadow-2); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); }
+    #phone-panel[data-rp-ios="3"] .gs-input { min-block-size: var(--rp33-hit); border: 0; background: transparent; color: var(--lt-sys-label); font: var(--lt-type-body); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .gs-group { margin: 0 var(--rp33-margin) var(--rp33-sp-5); overflow: clip; border: 0; border-radius: var(--rp3-row-radius); background: var(--lt-sys-grouped-bg-2); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .gs-group-head { padding: var(--rp33-sp-3) var(--rp33-sp-4) var(--rp33-sp-1); font: var(--lt-type-footnote); font-weight: 600; color: var(--lt-sys-label-2); }
+    #phone-panel[data-rp-ios="3"] .gs-item { min-block-size: 56px; padding: var(--rp33-sp-2) var(--rp33-sp-4); gap: var(--rp33-sp-3); border: 0; border-block-end: var(--lt-hairline) solid var(--lt-sys-separator); background: transparent; }
+    #phone-panel[data-rp-ios="3"] .gs-item:last-child { border-block-end: 0; }
+    #phone-panel[data-rp-ios="3"] .gs-item-icon { inline-size: 32px; block-size: 32px; border-radius: 8px; background: var(--rp33-accent-soft); color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .gs-item-title { font: var(--lt-type-body); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] :is(.gs-item-meta, .gs-item-snippet) { font: var(--lt-type-footnote); color: var(--lt-sys-label-2); }
+    #phone-panel[data-rp-ios="3"] .gs-mark { border-radius: 3px; background: color-mix(in srgb, var(--lt-sys-yellow) 40%, transparent); color: inherit; }
+    #phone-panel[data-rp-ios="3"] :is(.gs-chip, .gs-hint-chip, .gs-mode) { min-block-size: var(--rp33-tab-h); padding-inline: var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--lt-sys-label); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] :is(.gs-chip-on, .gs-mode-on) { background: var(--lt-sys-tint); color: var(--rp33-on-accent); }
+}

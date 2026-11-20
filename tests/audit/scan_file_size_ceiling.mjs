@@ -168,6 +168,16 @@ export function buildLedger(rows, defaultMax = DEFAULT_MAX, now = new Date()) {
       '这一笔的纪律是**不许再造巨型文件**：逻辑一行都不进 settings-app.js，所以 r25_o5 测试里有一条正面判据盯它（主文件中不许出现 iaResetPlan / iaSearch / buildIaIndex / iaResetReceipt）。行数涨的是新文件，不是老文件 —— 这正是 O5 要的方向：主文件只付接线费。' +
       ' **v4107 取证后的上涨（385624 → 385660）**：这一笔不是新功能，是**判据口径**的成本 —— config/settings-ia.js +11、config/style-lazy.js +15，合计 +26。四处 `Number.isFinite(Number(x))` 弱口径换成 config/num-gate.js 的 `numOrNull()`（1 行 import + 每处 2~3 行分支），换来的是本仓纪律「读数空白先怀疑量法」的另一面：**空白只能来自真源，不能来自 `Number(undefined) === NaN` 之类的假转换**。顺带修掉 style-lazy 的一个真 bug：未给 timeoutMs 时旧写法 `Number(undefined) = 0` ⇒ 超时定时器 0ms ⇒ 每次打开 App 立刻判 unknown（v3570 套件为此新增 2 条判据）。' +
       ' **R24-O5 边界的上涨（385660 → 385830，+170）**：这一笔补的是计划书 O5 里此前**零消费点**的两句 —— 「release() 挂在会话切换与 releasePhoneInactiveResources 上」与「读数暴露到洞察 App 的一个分页」。新增 config/media-cache-hooks.js（139 行：单例确保 + 两个挂载钩子 + 读数三态 absent/ok/unknown + 文案与六格明细转发；零 DOM、零存储、时钟由参数给）。接线三处：apps/diagnose/diagnose-data.js +13（import + 取一面 + 返回对象加一个键 + 两行具名导出）、apps/diagnose/diagnose-view.js +18（import + _mediaCacheHtml + 一张卡 push）、index.js +13（import + 两个挂载点各一个 try 块；index.js 不在这张台账的扫描面，如实列在这里）。算术对得上：139 + 13 + 18 = 170，就是 385660 → 385830 的全部差额（两行具名导出是 named-import 门要求的：视图层具名 import 的名字必须在目标模块里真的存在）。这一笔换来的是「方法在盘」变成「机制在跑」：换会话与切 App 两条真实路径都会释放媒体缓存，而洞察页第一次能读到占用/命中/淘汰/释放四组数；判据 tests/r24_o5_media_cache_boundary.test.mjs 13 条（含 4 条真行为负控制：把 release 摘掉、把 stats 改成常量、把两处接线摘掉，逐条必红）。' +
+      ' **设计系统收编的上涨（389762 → 392884，+3122）**：这一笔基本全是新文件，没有一行寄生进老文件 —— 9 个 .js 合计 3122 行：' +
+      'phone/ui/rp-inline-map-v3.5.js 656、phone/ui/rp-skin-runtime.js 622、phone/ui/rp-inline-map-v3.4.js 515、phone/ui/rp-interactions.js 336、' +
+      'phone/theme-controller.js 312、config/style-skin-v3.js 232、phone/ui/rp-glyph-sites-v3.6.js 225、phone/design/lonsha-dynamic-color.js 159、' +
+      'phone/ui/rp-icons-bridge.js 65。逐文件天花板一条都没动：44 个大文件读数全部不变（R2 全绿）。' +
+      'index.js 不在扫描面，如实列在这里：+40（装配点 IIFE）与净 −1（去掉自建 createSkinLoader，只留 theme.ensureAppSkin 一条加载链）。' +
+      '口径更正一句：前面几段写的「台账只收 apps/ 与 config/ 下的 .js」是旧说法，现口径 TARGET_DIRS = apps / config / data / phone / workers / assets。' +
+      ' **同批的一笔反向修正（−484）**：收编时发现 phone/design/lonsha-icons.js 与 shared/icons.js 是**同一张图标注册表的两个副本**（逐字同 md5、各 484 行）。' +
+      '按本仓「一个事实一个主人」的纪律，留下 shared/ 那份、删掉 phone/design/ 那份，三个消费方的 import 改指 ../../shared/icons.js；' +
+      '于是扫描面少 484 行（shared/ 本就不在 TARGET_DIRS 内），「两份注册表」这个隐患一起消掉。' +
+      '压回原位只能靠删这层，不能靠压台账 —— 删了就等于把 App 皮肤运行时退回 v3 之前。' +
       '压回原位仍靠继续拆 index.js / settings-app.js。',
     default_max: defaultMax,
     generated_at: now.toISOString(),

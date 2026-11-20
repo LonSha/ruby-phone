@@ -1,0 +1,50 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：B站（bilibili）—— 家族：社交信息流 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/bilibili/bili-view.js（render -> _draw：页头 / 搜索 / 摘要 / 卡片流 / 空态，一屏）；bili-app.js、bili-data.js 只生成条目，无 DOM。
+   屏幕与状态：导航栏（返回圆钮 + 标题）· 搜索（输入胶囊 + 刷新）· 摘要行 · 视频卡片流（封面占位 + 标题 / UP 主 · 弹幕数 / 简介 / 热门弹幕 em）· 空态。
+   设计：原生是近黑底 + 浅字；视频信息流本身是内容而不是暗场景，所以 v3.5 跟随系统浅深色。品牌粉只给刷新按钮与焦点环；
+         卡片 = 16 圆角横排卡（左封面 96 宽、14 圆角，封面没有图，只有播放数，用 surface-2 + 次级字代替旧渐变）；
+         返回键是 44pt 玻璃圆钮（浮在内容上的导航控件）。
+   规矩：零 !important、零写死颜色、零字符图标；类名 / ID / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 0 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    /* 渲染自查（v3.5）：白字在本强调色上只有 2.64:1（浅）/ 2.29:1（深），不到 4.5:1；填充按钮 / 选中胶囊的文字改用带一点强调色相的近黑墨（7.08:1 / 8.04:1）。 */
+    #phone-panel[data-rp-ios="3"] .bl-root { --rp33-accent: var(--rp33-brand-bilibili); --rp36-accent-text: var(--rp36-text-brand-bilibili); --rp33-accent-soft: color-mix(in srgb, var(--rp33-brand-bilibili) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--rp33-brand-bilibili) 40%, transparent); --rp33-on-accent: color-mix(in srgb, var(--lt-sys-black) 88%, var(--rp33-accent)); }
+
+    /* ===== 屏：页面底 + 导航栏 ===== */
+    #phone-panel[data-rp-ios="3"] .bl-root { background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .bl-header { align-items: center; gap: var(--rp33-sp-3); min-block-size: var(--rp3-nav-h); padding: var(--rp33-sp-2) var(--rp33-margin); }
+    #phone-panel[data-rp-ios="3"] .bl-header h2 { margin: 0; font: var(--lt-type-title2); letter-spacing: var(--lt-ios-title2-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .bl-nav { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); flex: none; padding: 0; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 17px; cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .bl-nav:active { scale: 0.94; }
+
+    /* ===== 屏：搜索（输入胶囊 + 刷新） ===== */
+    #phone-panel[data-rp-ios="3"] .bl-search { gap: var(--rp33-sp-2); padding: 0 var(--rp33-margin) var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .bl-search input { flex: 1 1 auto; min-inline-size: 0; min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; }
+    #phone-panel[data-rp-ios="3"] .bl-search input::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .bl-search input:focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .bl-search button { flex: none; min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-5); border: 0; border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .bl-search button:active { filter: brightness(0.92); scale: 0.97; }
+    #phone-panel[data-rp-ios="3"] .bl-summary { margin: 0; padding: 0 calc(var(--rp33-margin) + var(--rp33-sp-1)) var(--rp33-sp-3); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：视频卡片流 ===== */
+    #phone-panel[data-rp-ios="3"] .bl-body { gap: var(--rp33-sp-3); padding: 0 var(--rp33-margin) var(--rp33-sp-6); }
+    #phone-panel[data-rp-ios="3"] .bl-card { gap: var(--rp33-sp-3); min-block-size: 96px; padding: var(--rp33-sp-2); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); overflow: clip; }
+    /* 封面位：没有图，只有播放数 —— 中性 surface-2 块 + 次级等宽数字，旧的蓝黑渐变去掉 */
+    #phone-panel[data-rp-ios="3"] .bl-cover { inline-size: 96px; flex: none; align-items: flex-end; padding: var(--rp33-sp-2); border-radius: var(--rp33-media-radius); background: var(--rp33-surface-2); background-image: none; color: var(--rp33-label-2); font: 600 var(--lt-ios-caption1-size) / 1.2 var(--lt-font-ios); font-variant-numeric: tabular-nums; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .bl-meta { min-inline-size: 0; padding: var(--rp33-sp-1) var(--rp33-sp-2) var(--rp33-sp-1) 0; }
+    #phone-panel[data-rp-ios="3"] .bl-meta b { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .bl-meta span { margin-block-start: 2px; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .bl-meta p { margin: var(--rp33-sp-1) 0 0; color: var(--rp33-label); font: var(--lt-type-subhead); line-height: 1.4; }
+    /* 热门弹幕：品牌色浅底的引用条，不用斜体 */
+    #phone-panel[data-rp-ios="3"] .bl-meta em { margin-block-start: var(--rp33-sp-2); padding: var(--rp33-sp-1) var(--rp33-sp-2); border-radius: var(--rp33-sp-2); background: var(--rp33-accent-soft); color: var(--rp33-label); font: var(--lt-type-footnote); font-style: normal; }
+
+    /* ===== 状态：空（还没有刷到视频） ===== */
+    #phone-panel[data-rp-ios="3"] .bl-empty { padding: var(--rp33-sp-8) var(--rp33-sp-4); color: var(--rp33-label-2); font: var(--lt-type-subhead); text-align: center; }
+}

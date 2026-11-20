@@ -58,7 +58,7 @@
     {
       "file": "apps/wechat/chat-read-cursor.js",
       "name": "cursorSelfCheck",
-      "line": 131,
+      "line": 135,
       "reason": "R21-X1 的对外机器读数出口：判据 system-v4149 B 组拿它与真代码面逐条对账（verdictSource/wallClockRole 是「铁律自述必须与代码一致」的对账锚），产品运行面不需要它。属测试消费面冻结。"
     },
     {
@@ -76,19 +76,19 @@
     {
       "file": "config/floor-store.js",
       "name": "isFloorStoreLive",
-      "line": 258,
+      "line": 259,
       "reason": "floor-store 整个模块（TH 五档降级链 + 内存影子层 + 两阶段批量写）当前零消费，接入点未定，暂整体冻结。"
     },
     {
       "file": "config/group-deliberation.js",
       "name": "GD_STORAGE_KEY",
-      "line": 44,
+      "line": 45,
       "reason": "R6-O3 群聊议事纯契约内核（批次B）：导出面由 system-v4510 定向测试逐条消费，产品接线在后续批次。"
     },
     {
       "file": "config/life-events.js",
       "name": "isHighValueChatLifeEventInput",
-      "line": 34,
+      "line": 35,
       "reason": "life-events 模块消费面未定，本项为高价值输入筛选判据，随模块冻结。"
     },
     {
@@ -118,13 +118,13 @@
     {
       "file": "config/points-engine.js",
       "name": "TASK_TYPES",
-      "line": 15,
+      "line": 16,
       "reason": "任务类型表，数据面：积分引擎内部消费路径未读，仅测试引用。"
     },
     {
       "file": "config/points-engine.js",
       "name": "DIFFICULTIES",
-      "line": 16,
+      "line": 17,
       "reason": "难度表，同上。"
     },
     {
@@ -146,6 +146,12 @@
       "reason": "已知缺口：onceFlag 有 8 处调用，而复位面零消费（幂等标记可设不可清）；但清除时机未定，贸然接线会破坏幂等语义，待专项处理。"
     },
     {
+      "file": "config/style-skin-v3.js",
+      "name": "skinV3SelfCheck",
+      "line": 216,
+      "reason": "皮肤账自检：返回 89 个 App 的登记/去重/前缀识别逐项结论，是账本的自证函数；产品路径不需要它跑（皮肤是否真加载由 rp-skin-runtime 的 collect() 报），本版无可视消费方，冻结在账本内，将来接进诊断面即从此表移除。"
+    },
+    {
       "file": "config/tag-filter.js",
       "name": "hasGaigaiTagFilter",
       "line": 65,
@@ -156,6 +162,54 @@
       "name": "lintPixelSvg",
       "line": 54,
       "reason": "像素纪律 lint 工具，产品端当前无直接调用（消费在判据套件 v4920），保留供后续产品端 SVG 生成/校验接线"
+    },
+    {
+      "file": "phone/ui/rp-interactions.js",
+      "name": "openAppZoom",
+      "line": 44,
+      "reason": "微交互层 openAppZoom：v2.1 交付的动作原语，宿主契约未落地 —— 它要挂的选择器（.rp-msg2 / .rp-bub / 控制中心手势层 / 锁屏拖拽层）属于 v3.7 外壳重写，当前 phone-shell 仍用旧 DOM 类名。盲接等于把监听器挂到不存在的节点上（无报错、也无效果），所以冻结在账本内带理由，而不是接一根假线充数；外壳重写落地后按此表逐条接线并移除条目。"
+    },
+    {
+      "file": "phone/ui/rp-interactions.js",
+      "name": "closeAppZoom",
+      "line": 52,
+      "reason": "微交互层 closeAppZoom：v2.1 交付的动作原语，宿主契约未落地 —— 它要挂的选择器（.rp-msg2 / .rp-bub / 控制中心手势层 / 锁屏拖拽层）属于 v3.7 外壳重写，当前 phone-shell 仍用旧 DOM 类名。盲接等于把监听器挂到不存在的节点上（无报错、也无效果），所以冻结在账本内带理由，而不是接一根假线充数；外壳重写落地后按此表逐条接线并移除条目。"
+    },
+    {
+      "file": "phone/ui/rp-interactions.js",
+      "name": "createIsland",
+      "line": 62,
+      "reason": "微交互层 createIsland：v2.1 交付的动作原语，宿主契约未落地 —— 它要挂的选择器（.rp-msg2 / .rp-bub / 控制中心手势层 / 锁屏拖拽层）属于 v3.7 外壳重写，当前 phone-shell 仍用旧 DOM 类名。盲接等于把监听器挂到不存在的节点上（无报错、也无效果），所以冻结在账本内带理由，而不是接一根假线充数；外壳重写落地后按此表逐条接线并移除条目。"
+    },
+    {
+      "file": "phone/ui/rp-interactions.js",
+      "name": "attachSwipeToReply",
+      "line": 95,
+      "reason": "微交互层 attachSwipeToReply：v2.1 交付的动作原语，宿主契约未落地 —— 它要挂的选择器（.rp-msg2 / .rp-bub / 控制中心手势层 / 锁屏拖拽层）属于 v3.7 外壳重写，当前 phone-shell 仍用旧 DOM 类名。盲接等于把监听器挂到不存在的节点上（无报错、也无效果），所以冻结在账本内带理由，而不是接一根假线充数；外壳重写落地后按此表逐条接线并移除条目。"
+    },
+    {
+      "file": "phone/ui/rp-interactions.js",
+      "name": "attachTapbacks",
+      "line": 147,
+      "reason": "微交互层 attachTapbacks：v2.1 交付的动作原语，宿主契约未落地 —— 它要挂的选择器（.rp-msg2 / .rp-bub / 控制中心手势层 / 锁屏拖拽层）属于 v3.7 外壳重写，当前 phone-shell 仍用旧 DOM 类名。盲接等于把监听器挂到不存在的节点上（无报错、也无效果），所以冻结在账本内带理由，而不是接一根假线充数；外壳重写落地后按此表逐条接线并移除条目。"
+    },
+    {
+      "file": "phone/ui/rp-interactions.js",
+      "name": "attachControlCenter",
+      "line": 208,
+      "reason": "微交互层 attachControlCenter：v2.1 交付的动作原语，宿主契约未落地 —— 它要挂的选择器（.rp-msg2 / .rp-bub / 控制中心手势层 / 锁屏拖拽层）属于 v3.7 外壳重写，当前 phone-shell 仍用旧 DOM 类名。盲接等于把监听器挂到不存在的节点上（无报错、也无效果），所以冻结在账本内带理由，而不是接一根假线充数；外壳重写落地后按此表逐条接线并移除条目。"
+    },
+    {
+      "file": "phone/ui/rp-interactions.js",
+      "name": "attachMomentActions",
+      "line": 286,
+      "reason": "微交互层 attachMomentActions：v2.1 交付的动作原语，宿主契约未落地 —— 它要挂的选择器（.rp-msg2 / .rp-bub / 控制中心手势层 / 锁屏拖拽层）属于 v3.7 外壳重写，当前 phone-shell 仍用旧 DOM 类名。盲接等于把监听器挂到不存在的节点上（无报错、也无效果），所以冻结在账本内带理由，而不是接一根假线充数；外壳重写落地后按此表逐条接线并移除条目。"
+    },
+    {
+      "file": "phone/ui/rp-interactions.js",
+      "name": "attachLockScreen",
+      "line": 313,
+      "reason": "微交互层 attachLockScreen：v2.1 交付的动作原语，宿主契约未落地 —— 它要挂的选择器（.rp-msg2 / .rp-bub / 控制中心手势层 / 锁屏拖拽层）属于 v3.7 外壳重写，当前 phone-shell 仍用旧 DOM 类名。盲接等于把监听器挂到不存在的节点上（无报错、也无效果），所以冻结在账本内带理由，而不是接一根假线充数；外壳重写落地后按此表逐条接线并移除条目。"
     }
   ]
 }

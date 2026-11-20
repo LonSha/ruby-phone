@@ -1235,7 +1235,7 @@ export class ChatView {
         if (button.dataset.mode === mode) return;
         button.dataset.mode = mode;
         button.innerHTML = this._renderChatSendButtonIcon(mode);
-        button.style.color = mode === 'stop' ? '#ff3b30' : (mode === 'send' ? '#07c160' : '#555');
+        button.style.color = mode === 'stop' ? 'var(--rp34-js-red, #ff3b30)' : (mode === 'send' ? 'var(--rp34-js-wx-green, #07c160)' : 'var(--rp34-js-label-2, #555)');
     }
 
     _insertTextIntoChatInput(text = '') {
@@ -6498,8 +6498,8 @@ renderChatRoom(chat) {
                 isSelected = Number.parseInt(option.dataset.value || '-1', 10) === nextParts.minute;
             }
 
-            option.style.background = isSelected ? 'rgba(31,122,255,0.1)' : 'transparent';
-            option.style.color = isSelected ? '#1f7aff' : '#aeb4bd';
+            option.style.background = isSelected ? 'var(--rp34-js-blue-soft, rgba(31,122,255,0.1))' : 'transparent';
+            option.style.color = isSelected ? 'var(--rp34-js-blue, #1f7aff)' : 'var(--rp34-js-label-3, #aeb4bd)';
             option.style.fontWeight = isSelected ? '700' : '500';
             option.dataset.selected = isSelected ? 'true' : 'false';
             option.setAttribute('aria-selected', isSelected ? 'true' : 'false');
@@ -11200,7 +11200,7 @@ renderChatRoom(chat) {
             if (sendBtn) {
                 sendBtn.dataset.mode = 'stop';
                 sendBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6"/></svg>';
-                sendBtn.style.color = '#ff3b30';
+                sendBtn.style.color = 'var(--rp34-js-red, #ff3b30)';
             }
         }
 
@@ -15734,7 +15734,7 @@ renderChatRoom(chat) {
                 const statusDiv = document.getElementById('call-status');
                 if (statusDiv) {
                     statusDiv.textContent = isGroupCall ? '群成员未接听' : '对方已拒绝';
-                    statusDiv.style.color = '#ff3b30';
+                    statusDiv.style.color = 'var(--rp34-js-red, #ff3b30)';
                 }
 
                 this.addCallRecord('video', 'rejected', '0分0秒');
@@ -16487,7 +16487,7 @@ ${groupParticipants.join('、') || '暂无成员'}
                 const statusDiv = document.getElementById('call-status');
                 if (statusDiv) {
                     statusDiv.textContent = isGroupCall ? '群成员未接听' : '对方已拒绝';
-                    statusDiv.style.color = '#ff3b30';
+                    statusDiv.style.color = 'var(--rp34-js-red, #ff3b30)';
                 }
 
                 this.addCallRecord('voice', 'rejected', '0分0秒');
@@ -16774,13 +16774,13 @@ ${callTranscript}`;
             });
 
             amountInput.addEventListener('focus', () => {
-                amountInput.style.color = '#000';
+                amountInput.style.color = 'var(--rp34-js-label, #000)';
                 if (amountInput.value === '0.00' || amountInput.value === '') amountInput.placeholder = '';
             });
 
             amountInput.addEventListener('blur', () => {
                 if (amountInput.value === '') {
-                    amountInput.style.color = '#ccc';
+                    amountInput.style.color = 'var(--rp34-js-label-3, #ccc)';
                     amountInput.placeholder = '0.00';
                 }
             });
@@ -16796,7 +16796,7 @@ ${callTranscript}`;
                     const mode = tab.dataset.redpacketMode;
                     tabs.forEach(item => {
                         const active = item.dataset.redpacketMode === mode;
-                        item.style.color = active ? '#fa5151' : '#888';
+                        item.style.color = active ? 'var(--rp34-js-red, #fa5151)' : 'var(--rp34-js-label-3, #888)';
                         item.style.fontWeight = active ? '600' : '400';
                         const label = item.querySelector('span');
                         if (label) label.style.borderBottomColor = active ? '#fa5151' : 'transparent';
@@ -18295,7 +18295,7 @@ ${callTranscript}`;
                 ${isRight ? 'right: 0;' : 'left: 0;'}
                 z-index: 1000;
                 display: flex;
-                background: rgba(255,255,255,0.95);
+                background:var(--rp34-js-surface, rgba(255,255,255,0.95));
                 backdrop-filter: blur(8px);
                 -webkit-backdrop-filter: blur(8px);
                 border-radius: 6px;

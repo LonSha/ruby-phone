@@ -8,7 +8,7 @@
   "requires": [],
   "optional": [],
   "js": "index.js",
-  "css": "phone.css",
+  "css": "phone/design/rp-entry.css",
   "homePage": "https://github.com/LonSha/ruby-phone",
   "source": "https://github.com/LonSha/ruby-phone.git",
   "auto_update": false

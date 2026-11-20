@@ -2137,6 +2137,46 @@ console.log(`🚀 虚拟手机 v${ST_PHONE_VERSION} 启动`);
          *   上游推送型桥的 snapshot 是对象字段，本板动作与它同名会让维护者
          *   把字段当函数 call（本仓 bridge-contract 门 J2 钉住的正是这个形态）。 */
         if (!window.VirtualPhone) window.VirtualPhone = {}; // [v4.00.0 · R3-O7] 防御式初始化（装配点早于主装配区）
+
+        /* [设计系统接线] 主题控制器 + App 皮肤运行时。
+         * 为什么放在这里：这是装配点里最早的「VirtualPhone 已可用」位置；用动态 import 不增加首屏阻塞，
+         * 失败只降级成旧外观（不阻断手机整体）。
+         * 依赖链（与 seam 台账同一条）：
+         *   theme-controller → 写 data-lonsha-theme / data-rp-ds / data-rp-ios（默认 v3）
+         *   style-skin-v3    → v3 打开时按 App 懒加载 apps/<id>/<id>.v3.css（公共层先加载一次）
+         * CSS 入口在 manifest：phone/design/rp-entry.css（层序 + 旧 phone.css 下沉到 rp.legacy）。 */
+        (() => {
+            const boot = async () => {
+                try {
+                    const themeMod = await bootTiming.instrumentImport(import('./phone/theme-controller.js'), './phone/theme-controller.js');
+                    const roots = () => ['phone-panel', 'phone-floating-entry-root', 'phone-sms-popup-root']
+                        .map((id) => document.getElementById(id))
+                        .filter(Boolean);
+                    const theme = themeMod.createThemeController({
+                        storage: window.VirtualPhone && window.VirtualPhone.storage,
+                        getRoots: roots,
+                    });
+                    theme.start();
+                    window.VirtualPhone.theme = theme;
+
+                    /* 皮肤加载只留一条链：index.js → theme.ensureAppSkin → rp-skin-runtime.ensure → style-skin-v3。
+                     * 这里**不再**自建 createSkinLoader —— 两条加载器会给同一个 App 注入两份 <link>（皮肤规则翻倍），
+                     * 而控制器那条链已经带 pendingSkins：运行时还没 attach 时先记账，attach 后补发，语义与自建加载器等价。 */
+                    const ensureApp = (appId) => {
+                        try { theme.ensureAppSkin(appId); } catch (_e) { /* 单 App 皮肤失败只缺皮 */ }
+                    };
+                    window.addEventListener('phone:openApp', (ev) => {
+                        const id = ev && ev.detail && (ev.detail.appId || ev.detail.id);
+                        if (id) ensureApp(id);
+                    });
+                } catch (e) {
+                    /* 设计系统缺席：手机照常以旧外观运行 */
+                    console.warn('[RubyPhone] 设计系统接线失败，外观回落旧样式：', e);
+                }
+            };
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
+            else boot();
+        })();
         const mediaTaskMap = new Map();
         /* 停滞判据需要「上一次有进展的时刻」：本板只在**状态或成果变化**时刷新它，
          *   重复上报同一状态不刷新（否则调用方每 tick 心跳一次就永远不告警）。 */

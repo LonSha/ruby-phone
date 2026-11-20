@@ -111,7 +111,7 @@
   "scale": {
     "app_dirs": 101,
     "apps_ids": 89,
-    "index_lines": 15543,
+    "index_lines": 15583,
     "css_bytes": 622770,
     "crossrepo": {
       "produced_faces": 30
@@ -158,7 +158,7 @@
       "manifest.json",
       "update-log.json"
     ],
-    "sha256_16": "579082b6ee206553"
+    "sha256_16": "b96bb23e5440e837"
   },
   "unknown": [],
   "unknown_count": 0

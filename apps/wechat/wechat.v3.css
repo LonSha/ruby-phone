@@ -1,0 +1,772 @@
+/* ============================================================
+   RubyPhone v3.4 · App 皮肤：微信（wechat）—— 家族：通讯
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   三个子层（右边赢左边，与特异性无关）：
+     rp.skins.remap   旧规则重映射：写死颜色 -> 语义 token（浅 / 深自动），字号吸附 iOS 阶梯（最小 11pt），
+                      间距吸附 4pt 栅格（8pt 栅格 + 半步），圆角吸附阶梯，霓虹投影 / 文字阴影去掉
+     rp.skins.roles   结构角色 -> v3 组件（导航栏 / 玻璃圆钮 / 分段 / 分组列表 / 卡片 / Sheet / 表单 / 按钮 / 徽标）
+     rp.skins.curated 手工精修（只有重点 App 有）
+   规矩：零 !important、零写死颜色、零字符图标；不改元素 ID / 类名 / 结构，不碰 display / position 以外的状态切换。
+   生成：v3.3 皮肤生成器（输入与角色表见 tools/app-skins-v33.manifest.json；角色 90 个类 / 35 种角色，重映射 475 / 715 条旧规则，
+         伪元素字符图标 0 处，扩大点击区 16 个类）。原生配色：light。
+   v3.4：done-partial -> done。层序多一个子层 rp.skins.inline（运行时逐站点内联映射写出的 data-rp34 令牌，样式在
+         phone/design/app-skins-inline-v3.4.css）；本文件末尾「v3.4 逐屏精修」一段是读完该 App 全部视图模板后手工写的，
+         所选类名全部在源码里核对过（verification/selector-audit.tsv）。改动说明见 README 第三节。
+   ============================================================ 
+ * v3.6：小字强调色 62 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 4 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.roles {
+    /* 作用域：强调色（brand:wechat）*/
+    #phone-panel[data-rp-ios="3"] :where([class^="wechat-"], [class*=" wechat-"]) { --rp33-accent: var(--rp33-brand-wechat); --rp36-accent-text: var(--rp36-text-brand-wechat); --rp33-accent-soft: color-mix(in srgb, var(--rp33-brand-wechat) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--rp33-brand-wechat) 40%, transparent); --rp33-bg: var(--rp33-bg-plain); }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-app, .wechat-content, .wechat-main-shell) { background-color: var(--rp33-bg); background-image: none; color: var(--rp33-label); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-header, .wechat-wallet-ledger-nav) { background-color: var(--rp33-bg); background-image: none; border: 0; box-shadow: none; color: var(--rp33-label); min-block-size: var(--rp3-nav-h); padding-inline: var(--rp33-sp-2); gap: var(--rp33-sp-2); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-header-title-text, .wechat-wallet-ledger-title) { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-back-btn, .wechat-header-btn, .wechat-image-prompt-editor-close, .wechat-moment-visibility-close, .wechat-wallet-eval-action) { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); min-inline-size: var(--rp3-glass-btn); flex: none; padding: 0; justify-content: center; align-items: center; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 19px; line-height: 1; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-back-btn, .wechat-header-btn, .wechat-image-prompt-editor-close, .wechat-moment-visibility-close, .wechat-wallet-eval-action):active { scale: 0.94; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-emoji-manage-trigger, .wechat-message-selection-action) { border: 0; box-shadow: none; color: var(--rp33-label-2); text-shadow: none; -webkit-tap-highlight-color: transparent; }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-filters { background: var(--rp33-seg-bg); border: 0; border-radius: 999px; box-shadow: none; padding: 2px; gap: 0; }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-filters:has(> :nth-child(5)) { background: transparent; padding: 0; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-filters:has(> :nth-child(5)) > :is(.wechat-emoji-custom-tab, .wechat-redpacket-group-tab, .wechat-tab) { background-color: var(--rp33-fill); color: var(--rp33-label); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-filters:has(> :nth-child(5)) > :is(.wechat-emoji-custom-tab, .wechat-redpacket-group-tab, .wechat-tab):is(.active, .is-active, .on, .selected, .is-selected, .current, .is-current, .checked, [aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) { background-color: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-emoji-custom-tab, .wechat-redpacket-group-tab, .wechat-tab) { min-block-size: var(--rp33-tab-h); padding-inline: var(--rp33-sp-3); border: 0; border-radius: 999px; background: transparent; box-shadow: none; color: var(--rp33-label-2); font-family: var(--lt-font-ios); font-size: var(--lt-ios-subhead-size); font-weight: 600; letter-spacing: var(--lt-ios-subhead-track); text-shadow: none; justify-content: center; align-items: center; text-align: center; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-emoji-custom-tab, .wechat-redpacket-group-tab, .wechat-tab):is(.active, .is-active, .on, .selected, .is-selected, .current, .is-current, .checked, [aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) { background-color: var(--rp33-seg-on); color: var(--rp33-label); box-shadow: var(--rp33-seg-shadow); }
+    #phone-panel[data-rp-ios="3"] .wechat-tabbar { margin-inline: var(--rp3-tabbar-inset); margin-block-end: var(--rp33-sp-3); min-block-size: var(--rp3-tabbar-h); padding: 4px; border: 0; border-radius: 999px; background: var(--lt-glass-fill-strong); box-shadow: var(--lt-glass-rim), var(--lt-glass-shadow); -webkit-backdrop-filter: var(--lt-glass-blur-strong); backdrop-filter: var(--lt-glass-blur-strong); }
+    #phone-panel[data-rp-ios="3"] .wechat-tabbar > * { border-radius: 999px; color: var(--rp33-label); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .wechat-tabbar > :is(.active, .is-active, .on, .selected, .is-selected, .current, .is-current, .checked, [aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) { background: var(--lt-glass-pill); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-chat-list, .wechat-emoji-manage-menu, .wechat-moment-visibility-list, .wechat-time-marker-menu, .wechat-wallet-ledger-list) { margin-inline: var(--rp33-margin); border: 0; border-radius: var(--rp3-row-radius); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-shadow-1); overflow: clip; }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-row { min-block-size: var(--rp3-row-h-min); border: 0; border-radius: var(--rp33-row-radius-single); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-shadow-1); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-call-transcript-panel, .wechat-chat-photo-box, .wechat-image-source-sheet, .wechat-redpacket-group-panel, .wechat-sticker-fallback-card, .wechat-undercover-preview-panel, .wechat-werewolf-preview-panel) { border: 0; border-radius: var(--rp33-card-radius); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-card-shadow); color: var(--rp33-label); }
+    :is(#phone-panel[data-rp-ios="3"] :is(.wechat-call-ai-bubble, .wechat-inner-os-bubble), #phone-panel[data-rp-ios="3"] :where([class^="wechat-"], [class*=" wechat-"]) :is(.call-msg-bubble, .system-message-bubble)) { border-radius: var(--rp3-bubble-radius); border: 0; box-shadow: none; font-family: var(--lt-font-ios); font-size: var(--lt-ios-body-size); line-height: 1.32; letter-spacing: var(--lt-ios-body-track); }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-image-prompt-editor-dialog, .wechat-moment-visibility-dialog) { border: 0; border-radius: var(--rp33-dialog-radius); background-color: var(--rp33-sheet-bg); background-image: none; box-shadow: var(--rp33-float-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-image-prompt-editor-header, .wechat-moment-visibility-header) { border: 0; background: transparent; box-shadow: none; min-block-size: 52px; padding-inline: var(--rp33-sp-4); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-image-prompt-editor-title, .wechat-inner-os-title, .wechat-moment-visibility-title) { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-call-transcript-overlay, .wechat-image-prompt-editor-overlay, .wechat-moment-visibility-overlay) { background: var(--rp33-scrim); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-contact-avatar-group-select, .wechat-image-prompt-editor-field, .wechat-image-prompt-editor-textarea) { border: 0; border-radius: var(--rp33-field-radius); background-color: var(--rp33-field-bg); background-image: none; box-shadow: none; color: var(--rp33-label); caret-color: var(--rp33-accent); font-family: var(--lt-font-ios); font-size: var(--lt-ios-body-size); line-height: var(--lt-ios-body-line); min-block-size: var(--rp33-hit); padding: 10px var(--rp33-sp-3); outline: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-contact-avatar-group-select, .wechat-image-prompt-editor-field, .wechat-image-prompt-editor-textarea)::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-contact-avatar-group-select, .wechat-image-prompt-editor-field, .wechat-image-prompt-editor-textarea):focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .wechat-moment-visibility-done { border: 0; border-radius: 999px; background-color: var(--rp33-accent); background-image: none; box-shadow: none; color: var(--rp33-on-accent); font-family: var(--lt-font-ios); font-weight: 600; letter-spacing: -0.2px; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .wechat-moment-visibility-done:active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] .wechat-moment-visibility-done:disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-moment-visibility-mode, .wechat-moment-visibility-trigger) { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; box-shadow: none; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-data-action-btn, .wechat-emoji-manage-action, .wechat-image-prompt-editor-button, .wechat-image-source-btn, .wechat-inner-os-fold, .wechat-load-earlier-entry) { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; box-shadow: none; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-data-action-btn, .wechat-emoji-manage-action, .wechat-image-prompt-editor-button, .wechat-image-source-btn, .wechat-inner-os-fold, .wechat-load-earlier-entry, .wechat-moment-visibility-mode, .wechat-moment-visibility-trigger):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-data-action-btn, .wechat-emoji-manage-action, .wechat-image-prompt-editor-button, .wechat-image-source-btn, .wechat-inner-os-fold, .wechat-load-earlier-entry, .wechat-moment-visibility-mode, .wechat-moment-visibility-trigger):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] .wechat-moment-text-image-trigger { border: 0; border-radius: 999px; background-color: var(--rp33-fill); background-image: none; box-shadow: none; color: var(--rp33-label); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .wechat-moment-text-image-trigger:active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] .wechat-moment-text-image-trigger:disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] .wechat-time-marker-delete { border: 0; border-radius: 999px; background-color: var(--rp33-danger-soft); background-image: none; box-shadow: none; color: var(--rp36-text-red); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .wechat-time-marker-delete:active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] .wechat-time-marker-delete:disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-avatar, .wechat-moment-visibility-avatar) { border-radius: 50%; box-shadow: 0 0 0 var(--lt-hairline) var(--rp33-avatar-ring); object-fit: cover; }
+    #phone-panel[data-rp-ios="3"] .wechat-moments-unread-dot { background-color: var(--rp33-badge-bg); background-image: none; color: var(--rp33-badge-fg); border: 0; border-radius: 999px; box-shadow: none; font-family: var(--lt-font-ios-rounded); font-weight: 600; font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .wechat-sticker-fallback-chip { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; color: var(--rp36-accent-text); box-shadow: none; font-family: var(--lt-font-ios); font-size: var(--lt-ios-caption1-size); line-height: var(--lt-ios-caption1-line); font-weight: 600; padding: 2px var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-chat-name, .wechat-contact-name, .wechat-moment-visibility-name, .wechat-wallet-ledger-name) { color: var(--rp33-label); font-weight: 600; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-chat-time, .wechat-emoji-selection-hint, .wechat-wallet-ledger-time) { color: var(--rp33-label-2); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-stat-label { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-wallet-ledger-amount, .wechat-wallet-ledger-stat-value) { font-family: var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-custom-emoji-empty, .wechat-empty, .wechat-moment-visibility-empty, .wechat-wallet-ledger-empty) { color: var(--rp33-label-2); font-family: var(--lt-font-ios); text-align: center; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .wechat-chat-photo { border-radius: var(--rp33-media-radius); object-fit: cover; }
+    #phone-panel[data-rp-ios="3"] .wechat-message-action-menu { border: 0; border-radius: 20px; background: var(--lt-glass-fill-strong); box-shadow: var(--lt-glass-rim), var(--rp33-float-shadow); -webkit-backdrop-filter: var(--lt-glass-blur-strong); backdrop-filter: var(--lt-glass-blur-strong); color: var(--rp33-label); }
+    /* 点击区不小于 44pt：视觉尺寸不变，用透明伪元素扩大命中区 */
+    #phone-panel[data-rp-ios="3"] :is(.wechat-data-action-btn, .wechat-emoji-manage-action, .wechat-image-prompt-editor-button, .wechat-image-source-btn, .wechat-load-earlier-entry, .wechat-message-selection-action, .wechat-moment-text-image-trigger, .wechat-moment-visibility-done, .wechat-moment-visibility-mode, .wechat-moment-visibility-trigger, .wechat-redpacket-group-tab, .wechat-sticker-fallback-chip, .wechat-time-marker-delete) { position: relative; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-data-action-btn, .wechat-emoji-custom-tab, .wechat-emoji-manage-action, .wechat-emoji-manage-trigger, .wechat-image-prompt-editor-button, .wechat-image-source-btn, .wechat-load-earlier-entry, .wechat-message-selection-action, .wechat-moment-text-image-trigger, .wechat-moment-visibility-done, .wechat-moment-visibility-mode, .wechat-moment-visibility-trigger, .wechat-redpacket-group-tab, .wechat-sticker-fallback-chip, .wechat-tab, .wechat-time-marker-delete)::after { content: ""; position: absolute; inset: min(0px, calc((100% - var(--rp33-hit)) / 2)); }
+}
+@layer rp.skins.remap {
+    #phone-panel[data-rp-ios="3"] .st-phone-honey-invite-backdrop.honey-live-collab-modal-backdrop, #phone-panel[data-rp-ios="3"] .st-phone-honey-invite-modal .honey-live-collab-modal-backdrop { background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .st-phone-honey-invite-panel.honey-live-collab-modal-panel, #phone-panel[data-rp-ios="3"] .st-phone-honey-invite-modal .honey-live-collab-modal-panel { border-radius: 10px; border: 1px solid color-mix(in srgb, var(--lt-sys-pink) 18%, transparent); background: linear-gradient(145deg, var(--rp33-scrim), color-mix(in srgb, var(--lt-sys-purple) 34%, transparent)); box-shadow: none; gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .st-phone-honey-invite-modal .honey-live-collab-modal-title { font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-pink); }
+    #phone-panel[data-rp-ios="3"] .st-phone-honey-invite-modal .honey-live-collab-modal-close { border: 1px solid color-mix(in srgb, var(--lt-sys-pink) 20%, transparent); background: transparent; color: var(--rp36-text-pink); }
+    #phone-panel[data-rp-ios="3"] .st-phone-honey-invite-modal .honey-live-collab-modal-close i { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .st-phone-honey-invite-text { font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-pink); }
+    #phone-panel[data-rp-ios="3"] .st-phone-honey-invite-actions { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .st-phone-honey-invite-action { border-radius: 8px; border: 1px solid color-mix(in srgb, var(--lt-sys-pink) 18%, transparent); font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-pink); background: transparent; }
+    #phone-panel[data-rp-ios="3"] .st-phone-honey-invite-action.is-accept { border-color: color-mix(in srgb, var(--lt-sys-pink) 28%, transparent); background: color-mix(in srgb, var(--lt-sys-pink) 20%, transparent); color: var(--rp36-text-pink); }
+    #phone-panel[data-rp-ios="3"] .st-phone-honey-invite-action.is-reject { color: var(--rp36-text-pink); }
+    #phone-panel[data-rp-ios="3"] .message-honey-invite { border: 1px solid color-mix(in srgb, var(--lt-sys-pink) 18%, transparent); border-radius: 10px; background: linear-gradient(145deg, var(--rp33-scrim), color-mix(in srgb, var(--lt-sys-purple) 36%, transparent)); box-shadow: none; padding: 8px 8px; color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .message-honey-invite-title { font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-pink); }
+    #phone-panel[data-rp-ios="3"] .message-honey-invite-badge { padding: 1px 4px; font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-pink); border: 1px solid color-mix(in srgb, var(--lt-sys-pink) 22%, transparent); background: color-mix(in srgb, var(--lt-sys-pink) 14%, transparent); }
+    #phone-panel[data-rp-ios="3"] .message-honey-invite-sub { margin-top: 4px; font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-pink); }
+    #phone-panel[data-rp-ios="3"] .message-honey-invite-foot { margin-top: 4px; font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-pink); }
+    #phone-panel[data-rp-ios="3"] .message-honey-invite.is-accepted .message-honey-invite-foot { color: var(--rp36-text-pink); }
+    #phone-panel[data-rp-ios="3"] .message-honey-invite.is-rejected { border-color: var(--rp33-sep); background: linear-gradient(145deg, var(--rp33-label), var(--rp33-scrim)); }
+    #phone-panel[data-rp-ios="3"] .message-honey-invite.is-rejected .message-honey-invite-badge, #phone-panel[data-rp-ios="3"] .message-honey-invite.is-rejected .message-honey-invite-foot { color: var(--rp36-text-pink); border-color: var(--rp33-sep); background: transparent; }
+    #phone-panel[data-rp-ios="3"] .chat-message .message-honey-invite-title { color: var(--rp36-text-pink); }
+    #phone-panel[data-rp-ios="3"] .chat-message .message-honey-invite-badge, #phone-panel[data-rp-ios="3"] .chat-message .message-honey-invite-foot { color: var(--rp36-text-pink); }
+    #phone-panel[data-rp-ios="3"] .chat-message .message-honey-invite-sub { color: var(--rp36-text-pink); }
+    #phone-panel[data-rp-ios="3"] .chat-message .message-honey-invite.is-rejected .message-honey-invite-badge, #phone-panel[data-rp-ios="3"] .chat-message .message-honey-invite.is-rejected .message-honey-invite-foot { color: var(--rp36-text-pink); }
+    #phone-panel[data-rp-ios="3"] .phone-body-panel .chat-input { background: var(--rp33-surface); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-body-panel .chat-input-area { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .phone-body-panel .input-btn { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-image-prompt-editor-overlay { padding: 16px; background: var(--rp33-scrim); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-image-prompt-editor-dialog { border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-bg); color: var(--rp33-label); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-image-prompt-editor-header { padding: 12px 12px; border-bottom: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-image-prompt-editor-title { color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen button.wechat-image-prompt-editor-close { color: var(--rp33-label-2); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-image-prompt-editor-body { padding: 16px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-image-prompt-editor-field { gap: 8px; color: var(--rp33-label); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen textarea.wechat-image-prompt-editor-textarea { padding: 12px; border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); color: var(--rp33-label); font-family: var(--lt-font-ios); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen textarea.wechat-image-prompt-editor-textarea:focus { border-color: var(--rp33-accent); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-image-prompt-editor-actions { padding: 12px 12px 12px; border-top: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen button.wechat-image-prompt-editor-button { padding: 8px 12px; font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen button.wechat-image-prompt-editor-button.is-secondary { border-color: var(--rp33-sep); background: var(--rp33-surface); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen button.wechat-image-prompt-editor-button.is-primary { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app .wechat-header button.wechat-back-btn, #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app .wechat-header button.wechat-header-btn { padding: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-worldbook-entry-origin.is-disabled { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-trigger { margin-top: 16px; padding: 0 16px; background: var(--rp33-bg); color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-value { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-value i { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-overlay { background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-dialog { margin-top: 40px; background: var(--rp33-bg); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-header { border-bottom: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-title { color: var(--rp33-label); font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-close, #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-done { font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-close { color: var(--rp33-label); font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-done { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-modes { margin-top: 12px; border-top: var(--lt-hairline) solid var(--rp33-sep); border-bottom: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-mode { border-bottom: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-mode i { color: var(--rp33-label-3); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-mode.is-active i { color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-picker { margin-top: 12px; border-top: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-selection-bar { border-bottom: var(--lt-hairline) solid var(--rp33-sep); color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-count { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-contact { gap: 12px; padding: 4px 16px; border-bottom: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-avatar { border-radius: 6px; background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-name { color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-check { border: var(--lt-hairline) solid var(--rp33-sep); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-contact input:checked ~ .wechat-moment-visibility-check { border-color: var(--rp33-accent); background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-moment-visibility-empty { color: var(--rp33-label-2); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .audience-preview-toggle { padding: 12px 16px; background: var(--rp33-surface); border-bottom: var(--lt-hairline) solid var(--rp33-sep); font-size: var(--lt-ios-subhead-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .audience-preview { margin: 0 16px; border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .audience-preview-head { padding: 12px 12px; background: var(--rp33-bg); font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .audience-preview-count { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .audience-preview-item { border-top: var(--lt-hairline) solid var(--rp33-sep); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .audience-preview-verdict { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .audience-preview-item.is-visible .audience-preview-verdict { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .audience-preview-item.is-hidden .audience-preview-verdict { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .audience-preview-name { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .audience-preview-reason { color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .audience-preview-empty { color: var(--rp33-label-2); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .audience-preview-note { background: var(--rp33-bg); color: var(--rp33-label-3); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app:has(.chat-room) .wechat-header { background: color-mix(in srgb, var(--lt-sys-cyan) 24%, transparent); border-bottom: var(--lt-hairline) solid var(--rp33-sep); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app:has(.chat-room) .wechat-header-title { font-size: var(--lt-ios-callout-size); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app:has(.chat-room) .wechat-header-btn { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app .chat-room .chat-messages { padding: 16px 12px 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app .chat-room .chat-message { margin-bottom: 12px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app .chat-room .message-text { padding: 8px 16px 12px; font-size: var(--lt-ios-subhead-size); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app .chat-room .message-left .message-text { background: linear-gradient(145deg, var(--rp33-surface), var(--rp33-bg)); border: var(--lt-hairline) solid var(--rp33-sep); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app .chat-room .message-left .message-text::before { background: linear-gradient(145deg, var(--rp33-surface), var(--rp33-bg)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app .chat-room .message-sender { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app .chat-room .message-time-divider { margin: 12px 0 16px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app .chat-room .time-divider-text { color: var(--rp33-label-2); background: var(--rp33-fill-2); text-shadow: none; }
+    @media (max-width: 380px) {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app .chat-room .message-text { padding: 8px 12px 12px; font-size: var(--lt-ios-footnote-size); }
+    }
+    #phone-panel[data-rp-ios="3"] .wechat-app { background: var(--rp33-surface-2); font-family: var(--lt-font-ios); font-size: var(--lt-ios-subhead-size); }
+    @media (max-width: 1024px) {
+    #phone-panel[data-rp-ios="3"] .wechat-app { font-size: var(--lt-ios-footnote-size); }
+    }
+    @media (max-width: 500px) {
+    #phone-panel[data-rp-ios="3"] .wechat-app { font-size: var(--lt-ios-caption1-size); }
+    }
+    #phone-panel[data-rp-ios="3"] .wechat-header { background: transparent; border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .wechat-header-chatlist-glass { background: linear-gradient(160deg, var(--rp33-surface) 0%, var(--rp33-surface) 58%, var(--rp33-surface) 100%),
+        linear-gradient(120deg, color-mix(in srgb, var(--lt-sys-cyan) 34%, transparent) 0%, color-mix(in srgb, var(--lt-sys-orange) 26%, transparent) 52%, color-mix(in srgb, var(--lt-sys-cyan) 30%, transparent) 100%); border-bottom: var(--lt-hairline) solid var(--rp33-sep); box-shadow: inset 0 -1px 0 var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .wechat-back-btn { font-size: var(--lt-ios-subhead-size); padding: 8px; }
+    #phone-panel[data-rp-ios="3"] .wechat-header-title { font-size: var(--lt-ios-subhead-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .wechat-header-title-text .wechat-music-listen-indicator { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .wechat-header-title-text .wechat-music-listen-indicator span { background: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .dot-green { background: var(--rp33-accent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .dot-yellow { background: var(--lt-sys-yellow); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .dot-red { background: var(--lt-sys-red); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .typing-status { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .header-badge { color: var(--rp33-label-2); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .wechat-header-btn { color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .wechat-content { background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .wechat-tabbar { padding-bottom: 4px; background: var(--rp33-bg); border-top: var(--lt-hairline) solid var(--rp33-sep); }
+    @media (max-width: 500px) {
+    #phone-panel[data-rp-ios="3"] .wechat-tabbar { padding-bottom: 4px; }
+    }
+    #phone-panel[data-rp-ios="3"] .wechat-tab { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .wechat-tab.active { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .wechat-tab i, #phone-panel[data-rp-ios="3"] .wechat-tab svg { font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"] .tab-badge { background: var(--lt-sys-red); color: var(--rp33-on-accent); font-size: var(--lt-ios-caption2-size); padding: 1px 4px; }
+    #phone-panel[data-rp-ios="3"] .wechat-tab .wechat-moments-unread-dot { border: var(--lt-hairline) solid var(--rp33-sep); background: var(--lt-sys-red); }
+    #phone-panel[data-rp-ios="3"] .wechat-chat-list { background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .chat-item { padding: 8px 12px 8px 12px; border-bottom: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .chat-item:active { background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .wechat-app.wechat-chatlist-bg-enabled .wechat-tabbar { background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .wechat-app.wechat-main-shell .wechat-tabbar { background: var(--rp33-fill-2); border-top: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .chat-avatar-wrapper { margin-right: 12px; }
+    #phone-panel[data-rp-ios="3"] .chat-avatar { background: var(--rp33-surface); border: var(--lt-hairline) solid var(--rp33-sep); box-shadow: var(--rp33-shadow-1); font-size: var(--lt-ios-title2-size); margin-right: 12px; }
+    #phone-panel[data-rp-ios="3"] .chat-name { font-size: var(--lt-ios-subhead-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .chat-pin-mark { margin-right: 4px; color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .group-count { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .chat-last-msg { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .chat-time { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); margin-bottom: 4px; }
+    #phone-panel[data-rp-ios="3"] .chat-badge { background: var(--lt-sys-red); color: var(--rp33-on-accent); font-size: var(--lt-ios-caption2-size); padding: 0 4px; }
+    #phone-panel[data-rp-ios="3"] .wechat-app .chat-messages { padding: 12px 8px 4px 8px; }
+    #phone-panel[data-rp-ios="3"] .message-time-divider { margin: 16px 0; }
+    #phone-panel[data-rp-ios="3"] .time-divider-text { padding: 3px 12px; color: var(--rp33-label-3); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .chat-message { margin-bottom: 16px; }
+    #phone-panel[data-rp-ios="3"] .message-avatar { background: var(--rp33-surface); font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"] .message-text { padding: 8px 12px; font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .message-left .message-text { background: var(--rp33-surface); color: var(--rp33-label); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .message-left .message-text::before { border-right-color: var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .message-right .message-text { background: var(--lt-sys-green); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-right .message-text::before { border-left-color: var(--lt-sys-green); }
+    #phone-panel[data-rp-ios="3"] .wechat-inner-os-bubble { padding-right: 24px; }
+    #phone-panel[data-rp-ios="3"] .wechat-inner-os-fold::after { border-color: var(--rp33-sep) var(--rp33-sep) transparent transparent; box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .wechat-inner-os-fold:hover::after { border-color: var(--rp33-sep) var(--rp33-sep) transparent transparent; box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .wechat-inner-os-popup { margin-top: 8px; padding: 8px 12px 12px; border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-label); box-shadow: var(--rp33-shadow-2); color: var(--rp33-on-accent); font-size: var(--lt-ios-caption1-size); gap: 4px; }
+    #phone-panel[data-rp-ios="3"] .wechat-inner-os-title { color: var(--rp36-text-red); font-size: var(--lt-ios-caption2-size); }
+    @media (max-width: 500px) {
+    #phone-panel[data-rp-ios="3"] .wechat-inner-os-popup { padding: 8px 12px 8px; font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 500px) {
+    #phone-panel[data-rp-ios="3"] .wechat-inner-os-title { font-size: var(--lt-ios-caption2-size); }
+    }
+    #phone-panel[data-rp-ios="3"] .message-music-listen-card { padding: 12px; background: var(--rp33-surface); border: var(--lt-hairline) solid var(--rp33-sep); box-shadow: var(--rp33-shadow-1); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-music-listen-avatars > span { background: var(--rp33-bg); border: 2px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .message-music-listen-title { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-music-listen-song { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .message-music-listen-sub { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .message-music-listen-cancel { margin-top: 8px; border-radius: 8px; background: var(--rp33-fill-2); color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .message-music-listen-card.is-cancelled .message-music-listen-title, #phone-panel[data-rp-ios="3"] .message-music-listen-card.is-cancelled .message-music-listen-song { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .message-music-listen-ended { margin-top: 8px; border-radius: 8px; background: var(--rp33-fill-2); color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .message-music-card { box-shadow: var(--rp33-shadow-2); border: var(--lt-hairline) solid var(--rp33-sep); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-music-card-overlay { background: linear-gradient(135deg, var(--rp33-scrim) 0%, var(--rp33-scrim) 100%); }
+    #phone-panel[data-rp-ios="3"] .message-music-card-content { padding: clamp(8px, 2.5vw, 12px); gap: clamp(8px, 2vw, 12px); }
+    #phone-panel[data-rp-ios="3"] .message-music-card-visual { margin-right: clamp(24px, 6vw, 28px); }
+    #phone-panel[data-rp-ios="3"] .message-music-card-cover { box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .message-music-card-vinyl { background: var(--rp33-label); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .message-music-card-vinyl::after { background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .message-music-card-status { gap: 4px; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .message-music-card-title { text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .message-music-card-artist { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-music-card-bottom { border-top: var(--lt-hairline) solid var(--rp33-sep); padding-top: clamp(8px, 1.8vw, 8px); gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .message-music-card-users { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .message-music-card-avatars > span { border: 1.5px solid var(--rp33-sep); background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .message-music-card-user-text { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .message-music-card-btn { font-size: var(--lt-ios-caption2-size); padding: 4px 12px; }
+    #phone-panel[data-rp-ios="3"] .message-music-card-btn.is-glass { background: transparent; color: var(--rp33-label); border: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .message-music-card-btn.is-primary { background: var(--rp33-accent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-music-listen-cancel.message-music-card-btn { color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .message-music-card-ended { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .message-group-vote { background: var(--rp33-surface); padding: 12px 12px 8px; box-shadow: var(--rp33-shadow-1); font-size: var(--lt-ios-caption1-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-left .message-group-vote { border-top-left-radius: 4px; }
+    #phone-panel[data-rp-ios="3"] .message-right .message-group-vote { border-top-right-radius: 4px; }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-head { margin-bottom: 8px; }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-title { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-badge { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); background: var(--rp33-fill-2); padding: 1px 8px; }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-question { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label); margin-bottom: 8px; }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-row { gap: 8px; padding: 8px 8px; border-radius: 8px; background: var(--rp33-fill-2); margin-bottom: 4px; }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-row.is-picked { background: color-mix(in srgb, var(--rp33-accent) 10%, transparent); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-row.is-tied { background: color-mix(in srgb, var(--lt-sys-orange) 12%, transparent); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-opt-name { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-opt-meta { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-pick { padding: 0 12px; background: var(--rp33-accent); color: var(--rp33-on-accent); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-pick.is-on { background: var(--rp33-fill-2); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-foot { margin-top: 8px; padding-top: 8px; border-top: var(--lt-hairline) solid var(--rp33-sep); font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-actions { gap: 8px; margin-top: 8px; }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-btn { border-radius: 8px; font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-btn.is-glass { background: var(--rp33-fill-2); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-btn.is-primary { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-line { margin-top: 8px; font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-statement { gap: 4px; background: var(--rp33-fill-2); padding: 3px 8px; font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-statement.is-support { background: color-mix(in srgb, var(--rp33-accent) 12%, transparent); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-statement.is-oppose { background: color-mix(in srgb, var(--lt-sys-red) 12%, transparent); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-statement.is-abstain { background: var(--rp33-fill-2); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .message-gather { background: var(--rp33-surface); padding: 12px 12px 8px; box-shadow: var(--rp33-shadow-1); font-size: var(--lt-ios-caption1-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-left .message-gather { border-top-left-radius: 4px; }
+    #phone-panel[data-rp-ios="3"] .message-right .message-gather { border-top-right-radius: 4px; }
+    #phone-panel[data-rp-ios="3"] .message-gather-head { gap: 4px; margin-bottom: 8px; }
+    #phone-panel[data-rp-ios="3"] .message-gather-title { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-gather-badge { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); background: var(--rp33-fill-2); padding: 1px 8px; }
+    #phone-panel[data-rp-ios="3"] .message-gather-badge.is-round { color: var(--rp33-label-2); background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] .message-gather-quest { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label); margin-bottom: 8px; }
+    #phone-panel[data-rp-ios="3"] .message-gather-line { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); margin-bottom: 8px; }
+    #phone-panel[data-rp-ios="3"] .message-gather-row { gap: 8px; padding: 4px 8px; border-radius: 8px; background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .message-gather-row.is-yes { background: color-mix(in srgb, var(--rp33-accent) 10%, transparent); }
+    #phone-panel[data-rp-ios="3"] .message-gather-row.is-no { background: color-mix(in srgb, var(--lt-sys-red) 9%, transparent); }
+    #phone-panel[data-rp-ios="3"] .message-gather-row.is-maybe { background: color-mix(in srgb, var(--lt-sys-yellow) 13%, transparent); }
+    #phone-panel[data-rp-ios="3"] .message-gather-row.is-stale { background: color-mix(in srgb, var(--lt-sys-orange) 12%, transparent); border-color: color-mix(in srgb, var(--lt-sys-orange) 35%, transparent); }
+    #phone-panel[data-rp-ios="3"] .message-gather-row.is-pending { border-color: var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .message-gather-who { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-gather-reply-text { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .message-gather-row.is-yes .message-gather-reply-text { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .message-gather-row.is-no .message-gather-reply-text { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .message-gather-row.is-maybe .message-gather-reply-text { color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .message-gather-row.is-stale .message-gather-reply-text { color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .message-gather-row.is-pending .message-gather-reply-text { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .message-gather-set { background: var(--rp33-fill-2); color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .message-gather-slots { gap: 4px; margin: 8px 0 2px; }
+    #phone-panel[data-rp-ios="3"] .message-gather-slot { padding: 0 12px; border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .message-gather-slot.is-on { background: color-mix(in srgb, var(--rp33-accent) 12%, transparent); border-color: color-mix(in srgb, var(--rp33-accent) 55%, transparent); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .message-gather-foot { margin-top: 8px; padding-top: 8px; border-top: var(--lt-hairline) solid var(--rp33-sep); font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .message-gather-actions { gap: 8px; margin-top: 8px; }
+    #phone-panel[data-rp-ios="3"] .message-gather-btn { border-radius: 8px; font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .message-gather-btn.is-glass { background: var(--rp33-fill-2); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-gather-btn.is-primary { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .message-gather-reply { gap: 4px; background: var(--rp33-fill-2); padding: 3px 8px; font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-gather-reply.is-yes { background: color-mix(in srgb, var(--rp33-accent) 12%, transparent); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .message-gather-reply.is-no { background: color-mix(in srgb, var(--lt-sys-red) 12%, transparent); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .message-gather-reply.is-maybe { background: color-mix(in srgb, var(--lt-sys-yellow) 16%, transparent); color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .message-music-card.state-invite .message-music-card-status { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .message-music-card.state-invite .message-music-card-vinyl::before { background: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .message-music-card.state-active .message-music-card-status { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-music-card.state-active .message-music-card-dot { background-color: var(--lt-sys-red); }
+    #phone-panel[data-rp-ios="3"] .message-music-card.state-active .message-music-card-vinyl::before { background: var(--lt-sys-red); }
+    #phone-panel[data-rp-ios="3"] .message-music-card.state-ended .message-music-card-overlay { background: linear-gradient(135deg, var(--rp33-scrim) 0%, var(--rp33-scrim) 100%); }
+    #phone-panel[data-rp-ios="3"] .message-music-card.state-ended .message-music-card-status, #phone-panel[data-rp-ios="3"] .message-music-card.state-ended .message-music-card-title { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-music-card.state-ended .message-music-card-artist { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-music-card.state-ended .message-music-card-vinyl::before { background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] .message-time { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .chat-message.is-selection-mode { margin-left: -8px; margin-right: -8px; padding: 4px 8px; }
+    #phone-panel[data-rp-ios="3"] .chat-message.is-selection-mode.is-selected { background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .chat-message.is-selection-mode .message-select-check { margin-right: 12px; border: 1.5px solid var(--rp33-sep); background: var(--rp33-surface); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .chat-message.is-selection-mode .message-select-check.checked { background: var(--rp33-accent); border-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .chat-message.is-selection-mode .message-select-check i { color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .wechat-message-selection-bar { gap: clamp(12px, 4vw, 28px); padding: 12px 12px 16px; border-top: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .wechat-message-selection-action { color: var(--rp33-label); gap: 8px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .wechat-message-selection-action i { font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"] .wechat-message-selection-action.is-muted, #phone-panel[data-rp-ios="3"] .wechat-message-selection-action.is-disabled { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .wechat-message-selection-action.is-danger { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .wechat-message-selection-action.is-close { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .wechat-message-selection-action.is-close i { font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"] .message-image { box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .message-location.style-compact { background: var(--rp33-surface); padding: 12px 12px; box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .message-location.style-compact .icon-area { background: color-mix(in srgb, var(--lt-sys-cyan) 12%, var(--rp33-surface)); color: var(--lt-sys-cyan); font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"] .message-location.style-compact .title { font-size: var(--lt-ios-subhead-size); color: var(--rp36-text-cyan); }
+    #phone-panel[data-rp-ios="3"] .message-location.style-compact .detail { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    @media (max-width: 500px) {
+    #phone-panel[data-rp-ios="3"] .message-location.style-compact { padding: 8px 12px; gap: 12px; }
+    }
+    @media (max-width: 500px) {
+    #phone-panel[data-rp-ios="3"] .message-location.style-compact .icon-area { font-size: var(--lt-ios-subhead-size); }
+    }
+    @media (max-width: 500px) {
+    #phone-panel[data-rp-ios="3"] .message-location.style-compact .title { font-size: var(--lt-ios-footnote-size); }
+    }
+    @media (max-width: 500px) {
+    #phone-panel[data-rp-ios="3"] .message-location.style-compact .detail { font-size: var(--lt-ios-caption2-size); }
+    }
+    #phone-panel[data-rp-ios="3"] .message-voice { padding: 12px 16px; font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .message-left .message-voice { background: var(--rp33-surface); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .message-right .message-voice { background: var(--lt-sys-green); }
+    #phone-panel[data-rp-ios="3"] .message-redpacket, #phone-panel[data-rp-ios="3"] .message-transfer { background-color: var(--lt-sys-orange); }
+    #phone-panel[data-rp-ios="3"] .message-transfer:active, #phone-panel[data-rp-ios="3"] .message-redpacket:active { background-color: var(--lt-sys-orange); }
+    #phone-panel[data-rp-ios="3"] .message-transfer.opened, #phone-panel[data-rp-ios="3"] .message-redpacket.opened { background-color: var(--lt-sys-orange); }
+    #phone-panel[data-rp-ios="3"] .message-left .message-transfer::before, #phone-panel[data-rp-ios="3"] .message-left .message-redpacket::before { border-right-color: var(--lt-sys-orange); }
+    #phone-panel[data-rp-ios="3"] .message-right .message-transfer::before, #phone-panel[data-rp-ios="3"] .message-right .message-redpacket::before { border-left-color: var(--lt-sys-orange); }
+    #phone-panel[data-rp-ios="3"] .message-left .message-redpacket.opened::before, #phone-panel[data-rp-ios="3"] .message-left .message-transfer.opened::before { border-right-color: var(--lt-sys-orange); }
+    #phone-panel[data-rp-ios="3"] .message-right .message-redpacket.opened::before, #phone-panel[data-rp-ios="3"] .message-right .message-transfer.opened::before { border-left-color: var(--lt-sys-orange); }
+    #phone-panel[data-rp-ios="3"] .rp-main { padding: 8px 12px; }
+    #phone-panel[data-rp-ios="3"] .rp-title { color: var(--rp33-label); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .rp-subtitle { color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .message-gift { background: color-mix(in srgb, var(--lt-sys-orange) 12%, var(--rp33-surface)); border: 1px solid color-mix(in srgb, var(--lt-sys-orange) 35%, transparent); }
+    #phone-panel[data-rp-ios="3"] .gift-main { padding: 8px 12px; }
+    #phone-panel[data-rp-ios="3"] .gift-title { font-size: var(--lt-ios-footnote-size); color: var(--rp36-text-brown); }
+    #phone-panel[data-rp-ios="3"] .gift-subtitle { font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-brown); }
+    #phone-panel[data-rp-ios="3"] .gift-footer { font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-orange); padding: 4px 12px 8px; border-top: 1px solid color-mix(in srgb, var(--lt-sys-orange) 25%, transparent); }
+    #phone-panel[data-rp-ios="3"] .gift-sec-title { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .gift-pick { border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .gift-pick strong { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .gift-pick span { font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .rp-footer { color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); margin: 0 12px; border-top: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .chat-input-area { background: transparent; border-top: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .chat-input { background: var(--rp33-surface); color: var(--rp33-label); border: var(--lt-hairline) solid var(--rp33-sep); padding: 8px 12px; }
+    #phone-panel[data-rp-ios="3"] .wechat-app .chat-input-bar { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .wechat-app .chat-input { background: var(--rp33-surface); color: var(--rp33-label); border: var(--lt-hairline) solid var(--rp33-sep); padding: 8px 12px; }
+    #phone-panel[data-rp-ios="3"] .wechat-app .chat-input:focus { border-color: var(--rp33-accent); background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .input-btn { font-size: var(--lt-ios-body-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .chat-input-bar #regenerate-btn { font-size: var(--lt-ios-subhead-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .input-btn:hover { color: var(--rp36-accent-text); }
+    @media (max-width: 500px) {
+    #phone-panel[data-rp-ios="3"] .wechat-app .chat-input-bar { padding: 8px 8px; }
+    }
+    #phone-panel[data-rp-ios="3"] .wechat-app .send-btn { background: var(--rp33-accent); color: var(--rp33-on-accent); padding: 8px 12px; }
+    #phone-panel[data-rp-ios="3"] .wechat-app .send-btn:hover { background: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .emoji-panel { padding: 8px 12px 8px; border-top: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .emoji-item { font-size: var(--lt-ios-title3-size); }
+    #phone-panel[data-rp-ios="3"] .emoji-tabs { border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .emoji-tab { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .emoji-tab.active { color: var(--rp36-accent-text); border-bottom-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .emoji-tab:hover { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .wechat-emoji-manage-trigger { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .wechat-emoji-manage-trigger:hover, #phone-panel[data-rp-ios="3"] .wechat-app .wechat-emoji-manage-trigger:focus-visible { background: color-mix(in srgb, var(--rp33-accent) 12%, transparent); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .wechat-emoji-manage-menu { gap: 8px; padding: 8px 12px 8px; border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .wechat-emoji-manage-action { padding: 8px 4px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 22%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--rp33-accent) 10%, transparent); color: var(--rp36-accent-text); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .wechat-emoji-manage-action.is-danger { border-color: color-mix(in srgb, var(--lt-sys-red) 20%, transparent); background: color-mix(in srgb, var(--lt-sys-red) 8%, transparent); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .wechat-emoji-manage-action:disabled { border-color: var(--rp33-sep); background: var(--rp33-fill-2); color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .wechat-emoji-selection-hint { padding: 0 12px 8px; color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .wechat-emoji-selection-hint button { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app .wechat-custom-emoji-grid { gap: 12px 12px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app .wechat-custom-emoji-empty { color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app .wechat-custom-emoji-empty small { color: var(--rp33-label-3); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .custom-emoji-item.is-broken { border: var(--lt-hairline) dashed var(--rp33-sep); background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .custom-emoji-broken-placeholder { color: var(--rp33-label-2); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .emoji-add { border: 2px dashed var(--rp33-sep); color: var(--rp33-label-2); font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"] .emoji-add:hover { border-color: var(--rp33-accent); color: var(--rp36-accent-text); background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .emoji-item { font-size: var(--lt-ios-title3-size); }
+    #phone-panel[data-rp-ios="3"] .emoji-item:hover { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .emoji-item:active { background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .more-panel { padding: 12px 0 8px 0; border-top: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .more-grid { padding: 0 12px; }
+    #phone-panel[data-rp-ios="3"] .more-item { margin-bottom: 12px; }
+    #phone-panel[data-rp-ios="3"] .more-icon { background: var(--rp33-surface); border: var(--lt-hairline) solid var(--rp33-sep); color: var(--rp33-label); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .more-item:hover .more-icon { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .more-item:active .more-icon { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .more-name { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .avatar-settings-modal { background: var(--rp33-scrim); }
+    #phone-panel[data-rp-ios="3"] .avatar-settings-content { background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .avatar-settings-title { font-size: var(--lt-ios-body-size); margin-bottom: 16px; }
+    #phone-panel[data-rp-ios="3"] .avatar-preview { background: var(--rp33-bg); margin: 0 auto 16px; }
+    #phone-panel[data-rp-ios="3"] .avatar-upload-btn { padding: 12px; background: var(--rp33-bg); font-size: var(--lt-ios-subhead-size); margin-bottom: 12px; }
+    #phone-panel[data-rp-ios="3"] .remark-input { padding: 12px; border: var(--lt-hairline) solid var(--rp33-sep); font-size: var(--lt-ios-subhead-size); margin-bottom: 16px; }
+    #phone-panel[data-rp-ios="3"] .remark-input:focus { border-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .avatar-settings-buttons { gap: 12px; }
+    #phone-panel[data-rp-ios="3"] .avatar-settings-buttons button { padding: 12px; font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .save-avatar-btn { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .cancel-avatar-btn { background: var(--rp33-bg); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .wechat-empty { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .wechat-empty i { color: var(--rp33-label-3); margin-bottom: 16px; }
+    #phone-panel[data-rp-ios="3"] .wechat-profile { background: linear-gradient(to bottom, var(--rp33-surface-2) 0%, var(--rp33-bg) 100%); padding-bottom: 12px; }
+    #phone-panel[data-rp-ios="3"] .profile-card { background: var(--rp33-surface); padding: 16px 12px; }
+    #phone-panel[data-rp-ios="3"] .profile-avatar-large { background: var(--rp33-surface); border: var(--lt-hairline) solid var(--rp33-sep); font-size: var(--lt-ios-title1-size); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .profile-avatar-large:hover { box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .avatar-edit-hint { background: var(--rp33-scrim); color: var(--rp33-on-accent); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .profile-username { font-size: var(--lt-ios-subhead-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .profile-signature { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .profile-functions { background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .profile-function-item { padding: 12px 12px; border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .profile-function-item:active { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .function-icon-wrapper { color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); margin-right: 12px; box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .function-title { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .function-desc { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .function-arrow { color: var(--rp33-label-3); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .profile-stats { background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .stat-number { font-size: var(--lt-ios-subhead-size); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .stat-label { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .profile-edit-modal { background: var(--rp33-scrim); }
+    #phone-panel[data-rp-ios="3"] .profile-edit-content { background: var(--rp33-surface); padding: 24px; box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .profile-edit-title { font-size: var(--lt-ios-title3-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .profile-edit-avatar { background: linear-gradient(135deg, var(--lt-sys-blue) 0%, var(--lt-sys-purple) 100%); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .profile-edit-input { padding: 12px 16px; border: 1.5px solid var(--rp33-sep); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .profile-edit-input:focus { border-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .profile-edit-upload-btn { background: linear-gradient(135deg, var(--lt-sys-blue) 0%, var(--lt-sys-purple) 100%); color: var(--rp33-on-accent); font-size: var(--lt-ios-subhead-size); margin-bottom: 16px; box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .profile-edit-upload-btn:hover { box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .profile-save-btn { font-size: var(--lt-ios-subhead-size); background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .profile-save-btn:hover { background: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .profile-cancel-btn { border: 1.5px solid var(--rp33-sep); font-size: var(--lt-ios-subhead-size); background: var(--rp33-surface); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .profile-cancel-btn:hover { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .wechat-contacts { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .contacts-search { padding: 12px 16px; background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .search-input { background: var(--rp33-surface); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .contacts-functions { background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .function-item { border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .function-item:active { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .function-icon { color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); margin-right: 12px; }
+    #phone-panel[data-rp-ios="3"] .function-name { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .contacts-list { background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .group-letter { background: var(--rp33-bg); padding: 4px 16px; font-size: var(--lt-ios-footnote-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .contacts-group-title { gap: 4px; }
+    #phone-panel[data-rp-ios="3"] .contacts-group-create-btn { color: var(--rp33-label-2); font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"] .contact-item, #phone-panel[data-rp-ios="3"] .contact-group-item { padding: 8px 16px; border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .contact-item:active, #phone-panel[data-rp-ios="3"] .contact-group-item:active { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .contacts-empty-row { padding: 12px 16px; color: var(--rp33-label-2); font-size: var(--lt-ios-footnote-size); background: var(--rp33-surface); border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .contact-avatar { background: var(--rp33-surface); border: var(--lt-hairline) solid var(--rp33-sep); box-shadow: var(--rp33-shadow-1); font-size: var(--lt-ios-body-size); margin-right: 12px; }
+    #phone-panel[data-rp-ios="3"] .contact-name { font-size: var(--lt-ios-subhead-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .letter-item { font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-blue); }
+    #phone-panel[data-rp-ios="3"] .letter-item:active { background: var(--lt-sys-blue); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .toggle-slider { background-color: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] .toggle-slider:before { background-color: var(--rp33-surface); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .toggle-switch input:checked + .toggle-slider { background-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .moments-header-style .wechat-header-btn { font-size: var(--lt-ios-footnote-size); padding: 8px; }
+    #phone-panel[data-rp-ios="3"] .moments-pull-refresh-indicator { color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .moments-pull-refresh-inner { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .moments-pull-refresh-indicator.ready .moments-pull-refresh-inner { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .moments-pull-refresh-indicator.loading .moments-pull-refresh-inner { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .moments-pull-refresh-indicator.success .moments-pull-refresh-inner { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .moments-pull-refresh-indicator.error .moments-pull-refresh-inner { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .moments-empty-tip { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .moments-empty-tip .tip-sub { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .moment-item { padding: 12px 16px; border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .moment-delete-btn { color: var(--rp36-text-red); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .moment-avatar-col { margin-right: 12px; background: linear-gradient(135deg, var(--lt-sys-blue) 0%, var(--lt-sys-purple) 100%); font-size: var(--lt-ios-title2-size); }
+    #phone-panel[data-rp-ios="3"] .moment-avatar-emoji { background: linear-gradient(135deg, var(--lt-sys-blue) 0%, var(--lt-sys-purple) 100%); font-size: var(--lt-ios-title2-size); }
+    #phone-panel[data-rp-ios="3"] .moment-image-prompt-box, #phone-panel[data-rp-ios="3"] .moment-image-generated-box { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .moment-image-prompt-mask { background: linear-gradient(180deg, var(--rp33-fill-2), var(--rp33-scrim)); }
+    #phone-panel[data-rp-ios="3"] .moment-image-prompt-generate { gap: 8px; padding: 12px; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .moment-image-prompt-icon { border-radius: 10px; background: var(--rp33-fill-2); border: var(--lt-hairline) solid var(--rp33-sep); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .moment-image-prompt-text { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .moment-image-prompt-error { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .moment-image-show-desc, #phone-panel[data-rp-ios="3"] .moment-image-regenerate, #phone-panel[data-rp-ios="3"] .moment-image-restore { font-family: var(--lt-font-ios); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .moment-image-show-desc { padding: 4px 8px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .moment-image-regenerate { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .moment-image-desc-panel { padding-bottom: 32px; background: var(--rp33-bg); border: var(--lt-hairline) dashed var(--rp33-sep); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .moment-image-desc-text { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .moment-image-restore { padding: 4px 8px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .moment-author { font-size: var(--lt-ios-subhead-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .moment-text { font-size: var(--lt-ios-subhead-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .moment-img-wrapper { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .moment-images.double .moment-image-prompt-generate, #phone-panel[data-rp-ios="3"] .moment-images.quad .moment-image-prompt-generate, #phone-panel[data-rp-ios="3"] .moment-images.grid .moment-image-prompt-generate { padding: 4px; }
+    #phone-panel[data-rp-ios="3"] .moment-images.double .moment-image-show-desc, #phone-panel[data-rp-ios="3"] .moment-images.quad .moment-image-show-desc, #phone-panel[data-rp-ios="3"] .moment-images.grid .moment-image-show-desc, #phone-panel[data-rp-ios="3"] .moment-images.double .moment-image-restore, #phone-panel[data-rp-ios="3"] .moment-images.quad .moment-image-restore, #phone-panel[data-rp-ios="3"] .moment-images.grid .moment-image-restore { padding: 3px 4px; border-radius: 4px; }
+    #phone-panel[data-rp-ios="3"] .moment-img-placeholder { background: var(--rp33-surface-2); color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .moment-time { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .moment-action-btn { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .moment-action-btn i { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .action-popup { background: var(--rp33-surface); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .action-popup-btn { padding: 4px 12px; color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .action-popup-btn:first-child { border-right: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .action-popup-btn i { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .action-popup-btn:active { background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .moment-interactions { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .interaction-likes { padding: 8px 12px; gap: 8px; border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .interaction-likes i { color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .like-names { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .interaction-comments { padding: 8px 12px; }
+    #phone-panel[data-rp-ios="3"] .comment-row { font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .comment-row:hover { background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .comment-row:active { background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] .comment-author { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .comment-reply { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .comment-colon { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .comment-content { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .inline-comment-box { gap: 8px; padding: 8px 8px; background: var(--rp33-surface); border-top: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .inline-comment-input { padding: 8px 12px; border: var(--lt-hairline) solid var(--rp33-sep); font-size: var(--lt-ios-footnote-size); background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .inline-comment-input:focus { border-color: var(--rp33-sep); background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .inline-comment-send { color: var(--rp33-label-2); font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"] .inline-comment-send:active { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-app.wechat-wallet-ledger-page { background: var(--rp33-bg); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-hero { background: linear-gradient(145deg, var(--rp33-accent) 0%, var(--rp33-accent) 58%, var(--rp33-accent) 100%); color: var(--rp33-on-accent); padding: 32px 16px 24px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-nav button { color: var(--rp33-label); font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-nav button:active { background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-title { font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-brand { gap: 8px; margin-top: 20px; color: var(--rp33-label); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-stats { margin-top: 28px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-stat { padding: 0 8px; border-right: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-stat-label { color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-stat-value { margin-top: 8px; color: var(--rp33-label); font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-stat-value.is-compact { font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-stat-value.is-tight { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-filters { gap: 12px; background: var(--rp33-surface); border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-filter select { padding: 0 24px 0 2px; color: var(--rp33-label); font-family: var(--lt-font-ios); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-filter:last-child select { padding-right: 24px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-filter i { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-day { padding: 0 16px; background: var(--rp33-bg); color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-row { gap: 12px; padding: 8px 16px; background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-icon { color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-icon.is-transfer { background: var(--lt-sys-cyan); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-icon.is-redpacket { background: var(--lt-sys-red); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-icon.is-honey { background: var(--lt-sys-pink); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-icon.is-shopping { background: var(--lt-sys-orange); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-icon.is-other { background: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-copy, #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-money { border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-name { color: var(--rp33-label); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-detail { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-amount { color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-amount.is-income { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-time { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-empty { gap: 12px; color: var(--rp33-label-2); background: var(--rp33-surface); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-empty i { font-size: var(--lt-ios-title1-size); color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .wechat-wallet-ledger-footer { padding: 16px 0 24px; color: var(--rp33-label-3); font-size: var(--lt-ios-caption2-size); background: var(--rp33-surface); }
+}
+@layer rp.skins.curated {
+    /* ---- 微信：保留微信自己的扁平语言（v3 第 10 节），只有底部 Tab 栏用玻璃胶囊 ---- */
+    #phone-panel[data-rp-ios="3"] .wechat-app { --rp33-accent: var(--rp33-brand-wechat); --rp36-accent-text: var(--rp36-text-brand-wechat); background: var(--rp3-wx-bg); color: var(--lt-sys-label); font-family: var(--lt-font-ios); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .wechat-header { background: var(--rp3-wx-bar); -webkit-backdrop-filter: none; backdrop-filter: none; border: 0; box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-header-title, .wechat-header-title-text) { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--lt-sys-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-header-btn, .wechat-back-btn) { min-inline-size: var(--rp33-hit); min-block-size: var(--rp33-hit); border: 0; background: transparent; box-shadow: none; color: var(--rp3-wx-icon); font-size: 20px; }
+    #phone-panel[data-rp-ios="3"] .wechat-content { background: var(--rp3-wx-bg); }
+    #phone-panel[data-rp-ios="3"] .wechat-chat-list { background: var(--rp3-wx-them); }
+    #phone-panel[data-rp-ios="3"] .chat-item { position: relative; min-block-size: var(--rp33-wx-row-h); padding: var(--rp33-sp-3) var(--rp33-sp-4); gap: var(--rp33-sp-3); border: 0; background: var(--rp3-wx-them); }
+    #phone-panel[data-rp-ios="3"] .chat-item::after { content: ""; position: absolute; inset-inline: calc(var(--rp33-sp-4) + var(--rp33-wx-avatar) + var(--rp33-sp-3)) 0; inset-block-end: 0; block-size: var(--lt-hairline); background: var(--rp3-wx-line); }
+    #phone-panel[data-rp-ios="3"] .chat-item:active { background: var(--rp33-highlight); }
+    #phone-panel[data-rp-ios="3"] .chat-avatar { inline-size: var(--rp33-wx-avatar); block-size: var(--rp33-wx-avatar); flex: none; border: 0; border-radius: 6px; box-shadow: none; background: var(--rp3-avatar-bg); }
+    #phone-panel[data-rp-ios="3"] .chat-name { font: var(--lt-type-body); letter-spacing: var(--lt-ios-body-track); color: var(--lt-sys-label); margin-block-end: 2px; }
+    #phone-panel[data-rp-ios="3"] .chat-last-msg { font: var(--lt-type-subhead); color: var(--rp3-wx-time); }
+    #phone-panel[data-rp-ios="3"] .chat-time { font: var(--lt-type-caption1); color: var(--rp3-wx-time); }
+    #phone-panel[data-rp-ios="3"] :is(.chat-badge, .tab-badge, .header-badge) { min-inline-size: 18px; block-size: 18px; padding-inline: 5px; border-radius: 999px; background: var(--rp33-badge-bg); color: var(--rp33-badge-fg); font: 600 var(--lt-ios-caption1-size) / 18px var(--lt-font-ios-rounded); box-shadow: none; }
+    /* 底部 Tab 栏：玻璃胶囊（内缩 20，高 62，圆角胶囊），选中项浅色玻璃胶囊 + 微信绿 */
+    #phone-panel[data-rp-ios="3"] .wechat-tabbar { block-size: var(--rp3-tabbar-h); margin: 0 var(--rp3-tabbar-inset) var(--rp33-sp-3); padding: 4px; border: 0; border-radius: 999px; background: var(--lt-glass-fill-strong); box-shadow: var(--lt-glass-rim), var(--lt-glass-shadow); -webkit-backdrop-filter: var(--lt-glass-blur-strong); backdrop-filter: var(--lt-glass-blur-strong); align-items: stretch; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .wechat-tab { justify-content: center; gap: 1px; padding: 0; border-radius: 999px; color: var(--rp3-wx-tab-off); font: var(--lt-type-tablabel); letter-spacing: var(--lt-ios-tablabel-track); }
+    #phone-panel[data-rp-ios="3"] .wechat-tab :is(i, svg) { font-size: 22px; inline-size: 24px; block-size: 24px; flex-basis: 24px; margin: 0; }
+    #phone-panel[data-rp-ios="3"] .wechat-tab.active { background: var(--lt-glass-pill); color: var(--rp3-wx-green); }
+    /* 聊天室 */
+    #phone-panel[data-rp-ios="3"] .wechat-app .chat-messages { background: var(--rp3-wx-bg); padding: var(--rp33-sp-3) var(--rp33-sp-3) var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .chat-message .message-text { padding: 10px var(--rp33-sp-3); font: 400 var(--lt-ios-body-size) / 1.35 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .chat-message .message-avatar { inline-size: 40px; block-size: 40px; border-radius: 6px; }
+    #phone-panel[data-rp-ios="3"] .time-divider-text { padding: 2px var(--rp33-sp-2); font: var(--lt-type-caption1); color: var(--rp3-wx-time); }
+    #phone-panel[data-rp-ios="3"] .message-system { font: var(--lt-type-caption1); color: var(--rp3-wx-time); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .chat-input-area { background: var(--rp3-wx-input-bar); -webkit-backdrop-filter: none; backdrop-filter: none; border-top: var(--lt-hairline) solid var(--rp3-wx-line); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .chat-input-bar { padding: var(--rp33-sp-2); gap: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .chat-input { min-block-size: 40px; padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: 8px; background: var(--rp3-wx-field); color: var(--lt-sys-label); font: var(--lt-type-body); letter-spacing: var(--lt-ios-body-track); caret-color: var(--rp3-wx-green); }
+    #phone-panel[data-rp-ios="3"] .wechat-app .input-btn { inline-size: var(--rp33-hit); block-size: var(--rp33-hit); color: var(--rp3-wx-icon); font-size: 24px; }
+    #phone-panel[data-rp-ios="3"] .wechat-app .input-btn svg { inline-size: 28px; block-size: 28px; }
+    #phone-panel[data-rp-ios="3"] .wechat-app .send-btn { min-block-size: 36px; padding-inline: var(--rp33-sp-4); border: 0; border-radius: 6px; background: var(--rp3-wx-green); color: var(--rp33-on-accent); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] :is(.emoji-panel, .more-panel) { background: var(--rp3-wx-input-bar); border-top: var(--lt-hairline) solid var(--rp3-wx-line); }
+    #phone-panel[data-rp-ios="3"] .more-item { gap: var(--rp33-sp-2); font: var(--lt-type-caption1); color: var(--lt-sys-label-2); }
+    #phone-panel[data-rp-ios="3"] .more-icon { inline-size: 60px; block-size: 60px; border-radius: 16px; background: var(--rp3-wx-them); color: var(--rp3-wx-icon); font-size: 26px; box-shadow: none; }
+    /* 通讯录 / 发现 / 我 */
+    #phone-panel[data-rp-ios="3"] :is(.contact-item, .contact-group-item) { min-block-size: 56px; padding: var(--rp33-sp-2) var(--rp33-sp-4); gap: var(--rp33-sp-3); background: var(--rp3-wx-them); border-bottom: var(--lt-hairline) solid var(--rp3-wx-line); }
+    #phone-panel[data-rp-ios="3"] .contact-avatar { inline-size: 40px; block-size: 40px; border-radius: 6px; }
+    #phone-panel[data-rp-ios="3"] .contact-name { font: var(--lt-type-body); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] :is(.group-letter, .contacts-group-title) { font: var(--lt-type-footnote); color: var(--lt-sys-label-2); }
+    #phone-panel[data-rp-ios="3"] .function-item { min-block-size: 56px; padding: var(--rp33-sp-2) var(--rp33-sp-4); gap: var(--rp33-sp-4); background: var(--rp3-wx-them); border-bottom: var(--lt-hairline) solid var(--rp3-wx-line); }
+    #phone-panel[data-rp-ios="3"] .function-name { font: var(--lt-type-body); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] :is(.function-desc, .function-arrow) { font: var(--lt-type-subhead); color: var(--lt-sys-label-3); }
+    #phone-panel[data-rp-ios="3"] .function-icon { font-size: 22px; }
+    #phone-panel[data-rp-ios="3"] .profile-card { min-block-size: 112px; padding: var(--rp33-sp-6) var(--rp33-sp-5); gap: var(--rp33-sp-4); background: var(--rp3-wx-them); }
+    #phone-panel[data-rp-ios="3"] .profile-avatar-large { inline-size: 64px; block-size: 64px; border-radius: 8px; }
+    #phone-panel[data-rp-ios="3"] .profile-username { font: var(--lt-type-title3); letter-spacing: var(--lt-ios-title3-track); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] .profile-signature { font: var(--lt-type-subhead); color: var(--lt-sys-label-2); }
+    #phone-panel[data-rp-ios="3"] :is(.message-action-menu, .wechat-message-action-menu, .contact-action-menu, .call-action-menu, .action-popup) { border: 0; border-radius: 16px; background: var(--lt-glass-fill-strong); box-shadow: var(--lt-glass-rim), var(--rp33-float-shadow); -webkit-backdrop-filter: var(--lt-glass-blur-strong); backdrop-filter: var(--lt-glass-blur-strong); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] :is(.msg-action-btn, .action-popup-btn, .contact-menu-item) { min-block-size: var(--rp33-hit); font: var(--lt-type-subhead); color: var(--lt-sys-label); }
+}
+@layer rp.skins.curated {
+    /* ===================== v3.4 逐屏精修 ===================== */
+    /* ---- 微信 v3.4：在 v3.3（主页 / 聊天 / 通讯录 / 发现 / 我）之上，逐屏补完消息卡片、面板、通话与钱包；
+            语言仍是微信自己的扁平风（v3 第 10 节），内联样式交给逐站点映射（data-rp34），这里只做按场景的精修。---- */
+    #phone-panel[data-rp-ios="3"] .wechat-app { --rp34-link: var(--rp33-wx-name); }
+
+    /* 红包 / 转账：微信橙卡（已领取变浅），保留气泡尖角；字号最小 11、金额 title3 圆体等宽 */
+    #phone-panel[data-rp-ios="3"] :is(.message-redpacket, .message-transfer) { inline-size: 232px; border: 0; border-radius: 10px; background-color: var(--rp34-wx-redpacket); box-shadow: none; overflow: visible; }
+    #phone-panel[data-rp-ios="3"] :is(.message-redpacket, .message-transfer):active { background-color: var(--rp34-wx-redpacket-pressed); }
+    #phone-panel[data-rp-ios="3"] :is(.message-redpacket, .message-transfer).opened { background-color: var(--rp34-wx-redpacket-opened); }
+    #phone-panel[data-rp-ios="3"] .message-left :is(.message-redpacket, .message-transfer)::before { border-right-color: var(--rp34-wx-redpacket); }
+    #phone-panel[data-rp-ios="3"] .message-right :is(.message-redpacket, .message-transfer)::before { border-left-color: var(--rp34-wx-redpacket); }
+    #phone-panel[data-rp-ios="3"] .message-left :is(.message-redpacket, .message-transfer).opened::before { border-right-color: var(--rp34-wx-redpacket-opened); }
+    #phone-panel[data-rp-ios="3"] .message-right :is(.message-redpacket, .message-transfer).opened::before { border-left-color: var(--rp34-wx-redpacket-opened); }
+    #phone-panel[data-rp-ios="3"] .rp-main { gap: var(--rp33-sp-3); padding: var(--rp33-sp-3) var(--rp33-sp-3) var(--rp33-sp-3); background: transparent; align-items: center; }
+    #phone-panel[data-rp-ios="3"] .rp-icon { inline-size: 36px; block-size: 36px; flex: none; }
+    #phone-panel[data-rp-ios="3"] .rp-icon svg { inline-size: 100%; block-size: 100%; }
+    #phone-panel[data-rp-ios="3"] .rp-title { font: 500 var(--lt-ios-callout-size) / 1.25 var(--lt-font-ios); color: var(--rp34-wx-redpacket-fg); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .message-transfer .rp-title { font: 600 var(--lt-ios-title3-size) / 1.15 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .rp-subtitle { margin-block-start: 2px; font: var(--lt-type-caption1); color: var(--rp34-wx-redpacket-foot); }
+    #phone-panel[data-rp-ios="3"] .rp-footer { margin: 0 var(--rp33-sp-3); padding: 6px 0 var(--rp33-sp-2); border-top: 0.5px solid var(--rp34-wx-redpacket-rule); background: transparent; color: var(--rp34-wx-redpacket-foot); font: var(--lt-type-caption2); }
+
+    /* 礼物卡：暖色浅底卡（深色下转成卡片面），缩略图 44 圆角 10 */
+    #phone-panel[data-rp-ios="3"] .message-gift { inline-size: 232px; border: 0; border-radius: 12px; background: var(--rp34-wx-card); box-shadow: inset 0 0 0 0.5px var(--rp34-wx-card-line); overflow: clip; padding: 0; }
+    #phone-panel[data-rp-ios="3"] .gift-main { gap: var(--rp33-sp-3); padding: var(--rp33-sp-3); align-items: center; }
+    #phone-panel[data-rp-ios="3"] :is(.gift-icon, .gift-thumb) { inline-size: 44px; block-size: 44px; flex: none; border-radius: 10px; background: color-mix(in srgb, var(--rp34-wx-redpacket) 16%, transparent); color: var(--rp34-wx-redpacket); display: grid; place-items: center; overflow: clip; }
+    #phone-panel[data-rp-ios="3"] .gift-title { font: 600 var(--lt-ios-subhead-size) / 1.3 var(--lt-font-ios); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .gift-subtitle { font: var(--lt-type-caption1); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .gift-footer { padding: 6px var(--rp33-sp-3) var(--rp33-sp-2); border-top: 0.5px solid var(--rp34-wx-card-line); background: var(--rp34-wx-card-foot); color: var(--rp33-label-2); font: var(--lt-type-caption2); }
+    #phone-panel[data-rp-ios="3"] :is(.gift-grid) { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .gift-pick { min-block-size: 88px; border: 0; border-radius: 14px; background: var(--rp33-surface-2); color: var(--rp33-label); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .gift-sec-title { padding: var(--rp33-sp-3) 0 var(--rp33-sp-1); font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); color: var(--rp33-label-2); }
+
+    /* 位置卡：上下两段（地点 + 详情），图标位系统蓝浅底 */
+    #phone-panel[data-rp-ios="3"] .message-location.style-compact { inline-size: 232px; gap: var(--rp33-sp-3); padding: var(--rp33-sp-3); border: 0; border-radius: 12px; background: var(--rp34-wx-card); box-shadow: inset 0 0 0 0.5px var(--rp34-wx-card-line); }
+    #phone-panel[data-rp-ios="3"] .message-location.style-compact .icon-area { inline-size: 40px; block-size: 40px; border-radius: 999px; background: var(--rp34-wx-location-icon-bg); color: var(--lt-sys-blue); font-size: 17px; }
+    #phone-panel[data-rp-ios="3"] .message-location.style-compact .title { font: 600 var(--lt-ios-subhead-size) / 1.3 var(--lt-font-ios); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-location.style-compact .detail { font: var(--lt-type-caption1); color: var(--rp33-label-2); }
+
+    /* 一起听卡：封面画面上的卡片 = 媒体语境（白字 + 玻璃钮） */
+    #phone-panel[data-rp-ios="3"] .message-music-card { border: 0; box-shadow: var(--rp34-media-rim); color: var(--rp34-media-fg); }
+    #phone-panel[data-rp-ios="3"] .message-music-card-status { font: 600 var(--lt-ios-caption2-size) / 1.2 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .message-music-card-title { font: 600 var(--lt-ios-subhead-size) / 1.25 var(--lt-font-ios); color: var(--rp34-media-fg); }
+    #phone-panel[data-rp-ios="3"] :is(.message-music-card-artist, .message-music-card-user-text, .message-music-card-ended) { font: var(--lt-type-caption1); color: var(--rp34-media-fg-2); }
+    #phone-panel[data-rp-ios="3"] .message-music-card-btn { min-block-size: 30px; padding: 0 var(--rp33-sp-3); border-radius: 999px; font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .message-music-card-btn.is-glass { border: 0; background: var(--rp34-media-fill); box-shadow: var(--rp34-media-rim); color: var(--rp34-media-fg); }
+    #phone-panel[data-rp-ios="3"] .message-music-card-btn.is-primary { background: var(--rp34-wx-music-on); color: var(--lt-sys-black); }
+    #phone-panel[data-rp-ios="3"] .message-music-card.state-invite .message-music-card-status { color: var(--rp34-wx-music-on); }
+
+    /* 群投票卡：卡片面 + 选项行 12 圆角；选中 = 微信绿浅底；按钮胶囊 */
+    #phone-panel[data-rp-ios="3"] .message-group-vote { inline-size: 260px; padding: var(--rp33-sp-3); border: 0; border-radius: 12px; background: var(--rp34-wx-card); box-shadow: inset 0 0 0 0.5px var(--rp34-wx-card-line); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.message-group-vote-title, .message-group-vote-question) { font: 600 var(--lt-ios-subhead-size) / 1.3 var(--lt-font-ios); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.message-group-vote-badge, .message-group-vote-statement) { padding: 2px var(--rp33-sp-2); border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label-2); font: 500 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-statement.is-support { background: var(--rp33-accent-soft); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-statement.is-oppose { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-row { min-block-size: 40px; padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: 10px; background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-row.is-picked { background: var(--rp33-accent-soft); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-row.is-tied { background: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-opt-name { font: var(--lt-type-subhead); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.message-group-vote-opt-meta, .message-group-vote-foot, .message-group-vote-line) { font: var(--lt-type-caption1); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-pick { block-size: 28px; padding: 0 var(--rp33-sp-3); border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-pick.is-on { background: var(--rp33-fill); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-btn { block-size: 36px; border-radius: 999px; font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-btn.is-glass { background: var(--rp33-fill); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .message-group-vote-btn.is-primary { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+
+    /* 系统消息与时间分隔：胶囊、caption1（旧 10px 抬到 12） */
+    #phone-panel[data-rp-ios="3"] :is(.time-divider-text, .chat-time) { padding: 3px var(--rp33-sp-2); border-radius: 999px; background: transparent; color: var(--rp3-wx-time); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .system-message-bubble { padding: 4px var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill-2); color: var(--rp33-label-2); font: var(--lt-type-caption1); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .active-quote-bar { margin: 0 var(--rp33-sp-3) var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: 10px; background: var(--rp33-fill-2); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .voice-wave-icon { color: currentColor; }
+    #phone-panel[data-rp-ios="3"] .wechat-inner-os-bubble { border: 0; border-radius: 14px; background: var(--rp33-fill-2); color: var(--rp33-label-2); font: italic var(--lt-type-footnote); box-shadow: none; }
+
+    /* 「+」功能面板：iOS 26 附件栅格（56 方圆块 + caption 标签），表情面板页签 = 分段 */
+    #phone-panel[data-rp-ios="3"] .more-panel { padding: var(--rp33-sp-4) var(--rp33-sp-2) var(--rp33-sp-2); background: var(--rp3-wx-input-bar); }
+    #phone-panel[data-rp-ios="3"] .more-item { gap: 6px; min-block-size: 84px; color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .more-icon { inline-size: 56px; block-size: 56px; border: 0; border-radius: 16px; background: var(--rp34-wx-card); box-shadow: inset 0 0 0 0.5px var(--rp34-wx-card-line); color: var(--rp33-label); font-size: 22px; }
+    #phone-panel[data-rp-ios="3"] .more-item:active .more-icon { background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .emoji-tabs { gap: var(--rp33-sp-1); padding: var(--rp33-sp-1) var(--rp33-sp-2); border-top: 0.5px solid var(--rp33-sep); background: var(--rp3-wx-input-bar); }
+    #phone-panel[data-rp-ios="3"] :is(.emoji-tab, .wechat-emoji-custom-tab) { min-inline-size: 40px; min-block-size: 32px; border: 0; border-radius: 10px; background: transparent; }
+    #phone-panel[data-rp-ios="3"] :is(.emoji-tab, .wechat-emoji-custom-tab):is(.active, .is-active) { background: var(--rp33-fill); }
+
+    /* 发红包表单：分组卡 + 大号金额 + 红包橙主按钮 */
+    #phone-panel[data-rp-ios="3"] :is(.wechat-redpacket-single-form, .wechat-redpacket-group-forms) { gap: var(--rp33-sp-3); padding: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .wechat-redpacket-group-panel { border: 0; border-radius: var(--rp3-row-radius); background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .wechat-redpacket-group-tab { min-block-size: var(--rp33-tab-h); border: 0; border-radius: 999px; background: transparent; color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .wechat-redpacket-group-tab:is(.active, .is-active) { background: var(--rp33-seg-on); box-shadow: var(--rp33-seg-shadow); font-weight: 600; }
+
+    /* 钱包账单页：iOS 钱包式大数字 + 分组列表 */
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-page { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-hero { margin: var(--rp33-sp-2) var(--rp33-sp-4); padding: var(--rp33-sp-5); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-money { font: 700 var(--lt-ios-largetitle-size) / 1.1 var(--lt-font-ios-rounded); color: var(--rp33-label); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-wallet-ledger-stat-value) { font: 600 var(--lt-ios-headline-size) / 1.2 var(--lt-font-ios-rounded); color: var(--rp33-label); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-wallet-ledger-stat-label, .wechat-wallet-ledger-copy, .wechat-wallet-ledger-brand, .wechat-wallet-ledger-day) { font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-list { margin: 0 var(--rp33-sp-4); border: 0; border-radius: var(--rp3-row-radius); background: var(--rp33-surface); overflow: clip; }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-row { min-block-size: 60px; padding: var(--rp33-sp-3) var(--rp33-sp-4); gap: var(--rp33-sp-3); border: 0; background: transparent; position: relative; }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-row + .wechat-wallet-ledger-row { box-shadow: inset 0 0.5px 0 var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-icon { inline-size: 36px; block-size: 36px; border-radius: 10px; background: var(--rp33-accent-soft); color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-name { font: var(--lt-type-body); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-wallet-ledger-detail, .wechat-wallet-ledger-time) { font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-amount { font: 600 var(--lt-ios-body-size) / 1.2 var(--lt-font-ios-rounded); color: var(--rp33-label); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-filter { min-block-size: var(--rp33-tab-h); padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: transparent; color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-filter:is(.active, .is-active) { background: var(--rp33-seg-on); box-shadow: var(--rp33-seg-shadow); }
+    #phone-panel[data-rp-ios="3"] .wechat-wallet-ledger-empty { padding: var(--rp33-sp-8) var(--rp33-sp-6); color: var(--rp33-label-2); font: var(--lt-type-subhead); text-align: center; }
+    #phone-panel[data-rp-ios="3"] .wallet-eval-modal-panel { border: 0; border-radius: var(--rp33-dialog-radius); background: var(--rp33-sheet-bg); box-shadow: var(--rp33-float-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .wallet-eval-reasoning { font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+
+    /* 通话：整屏深色（与系统通话一致），通话字幕面板 = 深色玻璃 Sheet；挂断 / 功能键交给 data-rp34 令牌 */
+    #phone-panel[data-rp-ios="3"] .call-fullscreen { color: var(--rp34-media-fg); }
+    #phone-panel[data-rp-ios="3"] .call-action-btn { min-inline-size: 64px; min-block-size: 64px; border: 0; border-radius: 999px; background: var(--rp34-media-fill); color: var(--rp34-media-fg); -webkit-backdrop-filter: var(--rp34-media-glass-blur); backdrop-filter: var(--rp34-media-glass-blur); }
+    #phone-panel[data-rp-ios="3"] .call-avatar-fix { box-shadow: 0 0 0 0.5px var(--rp34-media-line); }
+    #phone-panel[data-rp-ios="3"] .wechat-call-transcript-overlay { background: var(--rp33-scrim); }
+    #phone-panel[data-rp-ios="3"] .wechat-call-transcript-panel { border: 0; border-radius: var(--rp33-sheet-radius) var(--rp33-sheet-radius) 0 0; background: var(--rp34-media-glass-strong); box-shadow: var(--rp34-media-rim); -webkit-backdrop-filter: var(--rp34-media-glass-blur); backdrop-filter: var(--rp34-media-glass-blur); color: var(--rp34-media-fg); }
+    #phone-panel[data-rp-ios="3"] .wechat-call-transcript-body { font: var(--lt-type-subhead); color: var(--rp34-media-fg); }
+    #phone-panel[data-rp-ios="3"] :is(.call-msg-bubble, .wechat-call-ai-bubble) { border: 0; border-radius: 18px; box-shadow: none; font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .call-msg-sender-label { font: var(--lt-type-caption1); color: var(--rp34-media-fg-2); }
+    #phone-panel[data-rp-ios="3"] :is(.call-edit-save) { min-block-size: 34px; border: 0; border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] :is(.call-edit-cancel) { min-block-size: 34px; border: 0; border-radius: 999px; background: var(--rp34-media-fill); color: var(--rp34-media-fg); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .call-inline-edit { border: 0; border-radius: var(--rp33-field-radius); background: var(--rp34-media-fill); color: var(--rp34-media-fg); font: var(--lt-type-subhead); }
+
+    /* 图片消息的生成提示框：正面 / 背面面板 = 卡片面，操作键胶囊 */
+    #phone-panel[data-rp-ios="3"] :is(.message-image-prompt-box, .message-image-prompt-front-panel, .message-image-prompt-back-panel) { border: 0; border-radius: 12px; background: var(--rp34-wx-card); box-shadow: inset 0 0 0 0.5px var(--rp34-wx-card-line); color: var(--rp33-label); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] :is(.message-image-prompt-generate, .message-image-prompt-regenerate, .message-image-prompt-edit, .message-image-prompt-restore, .message-image-prompt-show-back, .message-image-prompt-cancel) { min-block-size: 28px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; font: 600 var(--lt-ios-caption1-size) / 1 var(--lt-font-ios); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.wechat-image-prompt-editor-dialog, .wechat-image-source-sheet) { border: 0; border-radius: var(--rp33-dialog-radius); background: var(--rp33-sheet-bg); box-shadow: var(--rp33-float-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .wechat-image-prompt-editor-title { font: var(--lt-type-headline); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .wechat-image-prompt-editor-textarea { border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); font: var(--lt-type-body); }
+    #phone-panel[data-rp-ios="3"] .wechat-image-prompt-editor-button { min-block-size: var(--rp33-hit); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-body-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .wechat-image-source-btn { min-block-size: 56px; border: 0; border-bottom: 0.5px solid var(--rp33-sep); background: transparent; color: var(--rp36-text-blue); font: var(--lt-type-body); }
+
+    /* 通讯录功能入口 / 「我」页功能列表：iOS 分组行（图标方块 30、行高 52、发丝线从文字处起） */
+    #phone-panel[data-rp-ios="3"] :is(.function-item, .profile-function-item) { min-block-size: 52px; padding: 0 var(--rp33-sp-4); gap: var(--rp33-sp-3); border: 0; background: var(--rp3-wx-them); position: relative; }
+    #phone-panel[data-rp-ios="3"] :is(.function-item, .profile-function-item) + :is(.function-item, .profile-function-item)::before { content: ""; position: absolute; inset-inline: calc(var(--rp33-sp-4) + 30px + var(--rp33-sp-3)) 0; inset-block-start: 0; border-top: 0.5px solid var(--rp3-wx-line); }
+    #phone-panel[data-rp-ios="3"] :is(.function-icon, .function-icon-wrapper) { inline-size: 30px; block-size: 30px; border-radius: 8px; font-size: 16px; }
+    #phone-panel[data-rp-ios="3"] :is(.function-name, .function-title) { font: var(--lt-type-body); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .function-desc { font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .function-arrow { color: var(--rp33-label-3); font-size: 13px; }
+    #phone-panel[data-rp-ios="3"] .profile-card { padding: var(--rp33-sp-5) var(--rp33-sp-4); gap: var(--rp33-sp-4); border: 0; background: var(--rp3-wx-them); }
+    #phone-panel[data-rp-ios="3"] .profile-avatar-large { inline-size: 64px; block-size: 64px; border-radius: var(--rp3-wx-avatar-radius); }
+    #phone-panel[data-rp-ios="3"] .profile-username { font: 600 var(--lt-ios-title3-size) / 1.2 var(--lt-font-ios); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .profile-signature { font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .profile-divider { block-size: var(--rp33-sp-2); background: var(--rp3-wx-bg); border: 0; }
+
+    /* 深色岛：通话整屏 */
+    #phone-panel[data-rp-ios="3"] .call-fullscreen { --rp33-label: var(--rp34-dk-label); --rp33-label-2: var(--rp34-dk-label-2); --rp33-label-3: var(--rp34-dk-label-3); --rp33-surface: var(--rp34-dk-surface); --rp33-surface-2: var(--rp34-dk-surface-2); --rp33-fill: var(--rp34-dk-fill); --rp33-fill-2: var(--rp34-dk-fill-2); --rp33-field-bg: var(--rp34-dk-fill); --rp33-sep: var(--rp34-dk-sep); --rp33-seg-bg: var(--rp34-dk-fill); --rp33-seg-on: var(--rp34-dk-seg-on); --rp33-glassbtn-bg: var(--rp34-dk-glassbtn-bg); --rp33-glassbtn-rim: var(--rp34-dk-glassbtn-rim); --rp33-sheet-bg: var(--rp34-dk-surface); --rp33-card-shadow: var(--rp34-dk-shadow); --rp33-shadow-1: none; --lt-sys-label: var(--rp34-dk-label); --lt-sys-label-2: var(--rp34-dk-label-2); --lt-sys-label-3: var(--rp34-dk-label-3); --lt-sys-separator: var(--rp34-dk-sep); --lt-sys-fill-3: var(--rp34-dk-fill); --lt-sys-grouped-bg-2: var(--rp34-dk-surface); --lt-sys-grouped-bg-3: var(--rp34-dk-surface-2); color-scheme: dark; }
+}

@@ -1,0 +1,164 @@
+/* ============================================================
+   RubyPhone v3.3 · App 皮肤：日历（calendar）—— 家族：系统 / 工具
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   三个子层（右边赢左边，与特异性无关）：
+     rp.skins.remap   旧规则重映射：写死颜色 -> 语义 token（浅 / 深自动），字号吸附 iOS 阶梯（最小 11pt），
+                      间距吸附 4pt 栅格（8pt 栅格 + 半步），圆角吸附阶梯，霓虹投影 / 文字阴影去掉
+     rp.skins.roles   结构角色 -> v3 组件（导航栏 / 玻璃圆钮 / 分段 / 分组列表 / 卡片 / Sheet / 表单 / 按钮 / 徽标）
+     rp.skins.curated 手工精修（只有重点 App 有）
+   规矩：零 !important、零写死颜色、零字符图标；不改元素 ID / 类名 / 结构，不碰 display / position 以外的状态切换。
+   生成：v3.3 皮肤生成器（输入与角色表见 tools/app-skins-v33.manifest.json；角色 70 个类 / 25 种角色，重映射 91 / 160 条旧规则，
+         伪元素字符图标 0 处，扩大点击区 14 个类）。原生配色：light。
+   ============================================================ 
+ * v3.6：小字强调色 9 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 1 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.curated;
+@layer rp.skins.roles {
+    /* 作用域：强调色（sys:red）*/
+    #phone-panel[data-rp-ios="3"] :where(.yzp-calendar-add-date, .yzp-calendar-add-head, .yzp-calendar-add-overlay, .yzp-calendar-add-sheet) { --rp33-accent: var(--lt-sys-red); --rp36-accent-text: var(--rp36-text-red); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-red) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-red) 40%, transparent); }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-header, .yzp-calendar-settings-header, .yzp-calendar-vote-handoff-head) { background-color: var(--rp33-bg); background-image: none; border: 0; box-shadow: none; color: var(--rp33-label); min-block-size: var(--rp3-nav-h); padding-inline: var(--rp33-sp-2); gap: var(--rp33-sp-2); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-settings-title { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-month-btn { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); min-inline-size: var(--rp3-glass-btn); flex: none; padding: 0; justify-content: center; align-items: center; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 19px; line-height: 1; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-month-btn:active { scale: 0.94; }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-add-title-icon, .yzp-calendar-delete-btn, .yzp-calendar-global-reminder-btn, .yzp-calendar-holiday-alarm, .yzp-calendar-holiday-delete, .yzp-calendar-holiday-save, .yzp-calendar-icon-btn, .yzp-calendar-small-btn) { border: 0; box-shadow: none; color: var(--rp33-label-2); text-shadow: none; -webkit-tap-highlight-color: transparent; }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-edit-type-menu, .yzp-calendar-holiday-list, .yzp-calendar-memo-list, .yzp-calendar-recur-rows, .yzp-calendar-type-menu) { margin-inline: var(--rp33-margin); border: 0; border-radius: var(--rp3-row-radius); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-shadow-1); overflow: clip; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-setting-row { min-block-size: var(--rp3-row-h-min); padding-inline: var(--rp33-sp-4); border: 0; border-block-end: var(--lt-hairline) solid var(--rp33-sep); border-radius: 0; background-color: var(--rp33-surface); background-image: none; box-shadow: none; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-setting-row:last-child { border-block-end: 0; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-setting-row:active { background-color: var(--rp33-highlight); }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-holiday-row, .yzp-calendar-memo-item, .yzp-calendar-recur-row, .yzp-calendar-type-option, .yzp-calendar-week-row) { min-block-size: var(--rp3-row-h-min); border: 0; border-radius: var(--rp33-row-radius-single); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-shadow-1); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-add-sheet, .yzp-calendar-commitment-box, .yzp-calendar-detail-sheet, .yzp-calendar-memo-panel, .yzp-calendar-month-sheet, .yzp-calendar-recur-block) { border: 0; border-radius: var(--rp33-card-radius); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-card-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-add-head, .yzp-calendar-detail-head, .yzp-calendar-month-head) { border: 0; background: transparent; box-shadow: none; min-block-size: 52px; padding-inline: var(--rp33-sp-4); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-add-overlay, .yzp-calendar-detail-overlay, .yzp-calendar-month-overlay) { background: var(--rp33-scrim); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-commitment-field, .yzp-calendar-edit-input, .yzp-calendar-holiday-day, .yzp-calendar-holiday-month, .yzp-calendar-holiday-title, .yzp-calendar-memo-input, .yzp-calendar-prompt-editor, .yzp-calendar-reminder-advance-input, .yzp-calendar-time-input) { border: 0; border-radius: var(--rp33-field-radius); background-color: var(--rp33-field-bg); background-image: none; box-shadow: none; color: var(--rp33-label); caret-color: var(--rp33-accent); font-family: var(--lt-font-ios); font-size: var(--lt-ios-body-size); line-height: var(--lt-ios-body-line); min-block-size: var(--rp33-hit); padding: 10px var(--rp33-sp-3); outline: none; }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-commitment-field, .yzp-calendar-edit-input, .yzp-calendar-holiday-day, .yzp-calendar-holiday-month, .yzp-calendar-holiday-title, .yzp-calendar-memo-input, .yzp-calendar-prompt-editor, .yzp-calendar-reminder-advance-input, .yzp-calendar-time-input)::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-commitment-field, .yzp-calendar-edit-input, .yzp-calendar-holiday-day, .yzp-calendar-holiday-month, .yzp-calendar-holiday-title, .yzp-calendar-memo-input, .yzp-calendar-prompt-editor, .yzp-calendar-reminder-advance-input, .yzp-calendar-time-input):focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-generate-btn { border: 0; border-radius: 999px; background-color: var(--rp33-accent); background-image: none; box-shadow: none; color: var(--rp33-on-accent); font-family: var(--lt-font-ios); font-weight: 600; letter-spacing: -0.2px; text-shadow: none; min-block-size: var(--rp33-btn-h); font-size: var(--lt-ios-headline-size); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-submit-btn { border: 0; border-radius: 999px; background-color: var(--rp33-accent); background-image: none; box-shadow: none; color: var(--rp33-on-accent); font-family: var(--lt-font-ios); font-weight: 600; letter-spacing: -0.2px; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-generate-btn, .yzp-calendar-submit-btn):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-generate-btn, .yzp-calendar-submit-btn):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-type-select { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; box-shadow: none; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-recur-btn { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; box-shadow: none; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-recur-btn, .yzp-calendar-type-select):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-recur-btn, .yzp-calendar-type-select):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-cancel-btn { border: 0; border-radius: 999px; background-color: var(--rp33-fill); background-image: none; box-shadow: none; color: var(--rp33-label); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-cancel-btn:active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-cancel-btn:disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-memo-dot { background-color: var(--rp33-badge-bg); background-image: none; color: var(--rp33-badge-fg); border: 0; border-radius: 999px; box-shadow: none; font-family: var(--lt-font-ios-rounded); font-weight: 600; font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-memo-dot-mark { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; color: var(--rp33-accent); box-shadow: none; font-family: var(--lt-font-ios); font-size: var(--lt-ios-caption1-size); line-height: var(--lt-ios-caption1-line); font-weight: 600; padding: 2px var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-recur-title { color: var(--rp33-label); font-weight: 600; letter-spacing: -0.2px; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-add-date, .yzp-calendar-commitment-status, .yzp-calendar-detail-date, .yzp-calendar-recur-hint, .yzp-calendar-settings-desc) { color: var(--rp33-label-2); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-settings-label { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-day-number { font-family: var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-day-empty { color: var(--rp33-label-2); font-family: var(--lt-font-ios); text-align: center; text-shadow: none; }
+    /* 点击区不小于 44pt：视觉尺寸不变，用透明伪元素扩大命中区 */
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-cancel-btn, .yzp-calendar-generate-btn, .yzp-calendar-holiday-alarm, .yzp-calendar-holiday-delete, .yzp-calendar-holiday-save, .yzp-calendar-icon-btn, .yzp-calendar-recur-btn, .yzp-calendar-small-btn, .yzp-calendar-submit-btn, .yzp-calendar-type-select) { position: relative; }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-add-title-icon, .yzp-calendar-cancel-btn, .yzp-calendar-delete-btn, .yzp-calendar-generate-btn, .yzp-calendar-global-reminder-btn, .yzp-calendar-holiday-alarm, .yzp-calendar-holiday-delete, .yzp-calendar-holiday-save, .yzp-calendar-icon-btn, .yzp-calendar-memo-dot-mark, .yzp-calendar-recur-btn, .yzp-calendar-small-btn, .yzp-calendar-submit-btn, .yzp-calendar-type-select)::after { content: ""; position: absolute; inset: min(0px, calc((100% - var(--rp33-hit)) / 2)); }
+}
+@layer rp.skins.remap {
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-app { background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--lt-sys-yellow) 12%, var(--rp33-surface)), transparent 34%),
+        var(--yzp-cal-bg); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-header { padding: 32px 12px 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-icon-btn, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-small-btn { font-size: var(--lt-ios-footnote-size); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-month-btn { gap: 4px; font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-app.yzp-calendar-theme-dark .yzp-calendar-month-btn, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-app.yzp-calendar-theme-dark .yzp-calendar-month-btn span, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-app.yzp-calendar-theme-dark .yzp-calendar-month-btn i { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-settings-header { padding: 32px 12px 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-settings-title { font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-main { padding: 0 20px 16px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-settings-body { gap: 12px; padding: 12px 16px 20px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-settings-section { gap: 8px; box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-app .phone-prompt-fold-header { padding: 12px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-app .phone-prompt-fold-title { font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-app .phone-prompt-fold-desc { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-app .phone-prompt-fold-arrow { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-app .phone-prompt-fold-content { padding: 0 12px 12px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-setting-row { gap: 12px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-switch span { background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-switch span::before { background: var(--rp33-surface); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-settings-label { font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-settings-desc { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-reminder-advance-input { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-prompt-editor { padding: 12px; font-size: var(--lt-ios-caption2-size); font-family: var(--lt-font-ios-mono); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-holiday-list { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-holiday-row, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-holiday-add { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-holiday-title, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-holiday-month, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-holiday-day { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-holiday-alarm, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-holiday-save, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-holiday-delete { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-holiday-delete { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-generate-btn { gap: 8px; color: var(--rp33-label); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-board { padding: 0 0 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-week-row { background: color-mix(in srgb, var(--lt-sys-green) 12%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-week-row { background: color-mix(in srgb, var(--lt-sys-yellow) 14%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-weekday { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-day-number { font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-memo-dot-mark { background: var(--lt-sys-green); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-memo-dot-mark { background: var(--lt-sys-yellow); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-weekday.is-weekend, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-day.is-weekend .yzp-calendar-day-number, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-day.is-weekend.is-future .yzp-calendar-day-number, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-day.is-weekend.is-today .yzp-calendar-day-number { color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-day.is-weekend.is-past .yzp-calendar-day-number { color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-weekday.is-weekend, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-day.is-weekend .yzp-calendar-day-number, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-day.is-weekend.is-future .yzp-calendar-day-number, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-day.is-weekend.is-today .yzp-calendar-day-number { color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-day.is-weekend.is-past .yzp-calendar-day-number { color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-day.is-featured-day .yzp-calendar-day-number { font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-day.is-featured-day .yzp-calendar-day-number { color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-day.is-selected .yzp-calendar-day-number { border: 1.5px solid var(--lt-sys-green); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-day.is-selected .yzp-calendar-day-number { border-color: var(--rp33-sep); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-add-form { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-memo-input, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-time-input { padding: 0 12px; font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-memo-input { padding: 12px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-type-select { padding: 0 12px; font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-type-menu { background: var(--rp33-surface); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-type-menu { background: var(--lt-sys-gray); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-type-option { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-type-option.is-active { background: color-mix(in srgb, var(--lt-sys-cyan) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-submit-btn { padding: 0 12px; color: var(--rp33-label); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-add-overlay, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-month-overlay { background: color-mix(in srgb, var(--lt-sys-cyan) 34%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-add-sheet, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-month-sheet { padding: 16px; box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-picker-year { font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-month-choice { font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-month-choice.is-active { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-add-title { gap: 8px; font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-add-title-icon i { font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-add-title-icon b { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-add-date { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-cancel-btn { padding: 0 12px; font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-memo-list { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-memo-item { gap: 8px; padding: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-memo-type-icon, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-delete-btn, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-global-reminder-btn { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-delete-btn { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-memo-text { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-detail-overlay { background: color-mix(in srgb, var(--lt-sys-cyan) 34%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-detail-sheet { padding: 16px; box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-detail-actions { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-detail-type { font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-detail-date { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-detail-body { font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-settings-desc, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-add-date, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-memo-time-inline, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-memo-dot, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-detail-date, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .phone-prompt-fold-desc { color: var(--rp33-label-3); -webkit-text-fill-color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-memo-input::placeholder, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-time-input::placeholder, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-holiday-title::placeholder, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-holiday-month::placeholder, #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-theme-dark .yzp-calendar-holiday-day::placeholder { color: var(--rp33-label-2); -webkit-text-fill-color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-commitment-box { padding-top: 12px; border-top: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-commitment-status { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-commitment-field { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-commitment-actions { gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-commitment-actions button { background: color-mix(in srgb, var(--lt-sys-cyan) 16%, transparent); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-recur-block { margin-top: 12px; padding: 8px 12px; background: color-mix(in srgb, var(--lt-sys-cyan) 10%, transparent); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-recur-title { font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-recur-hint { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); margin: 3px 0 8px; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-recur-row { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-recur-actions { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-recur-btn { border: 1px solid color-mix(in srgb, var(--lt-sys-cyan) 45%, transparent); padding: 3px 12px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-vote-handoff, #phone-panel[data-rp-ios="3"] .yzp-calendar-vote-handoff { margin: 0 0 12px; padding: 8px 12px; border: 1px dashed color-mix(in srgb, var(--lt-sys-cyan) 55%, transparent); background: color-mix(in srgb, var(--lt-sys-cyan) 10%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-vote-handoff-head, #phone-panel[data-rp-ios="3"] .yzp-calendar-vote-handoff-head { font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-cyan); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-vote-handoff-body, #phone-panel[data-rp-ios="3"] .yzp-calendar-vote-handoff-body { font-size: var(--lt-ios-footnote-size); color: var(--lt-sys-gray); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .yzp-calendar-vote-handoff-foot, #phone-panel[data-rp-ios="3"] .yzp-calendar-vote-handoff-foot { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-lifeclock { gap: 8px; margin: 8px 12px 2px; padding: 8px 8px; font-size: var(--lt-ios-caption2-size); background: var(--rp33-fill); }
+}
+@layer rp.skins.curated {
+    /* ---- 日历：iOS 日历的月视图（今天红圆、周末灰、发丝线分周）---- */
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-app { background: var(--lt-sys-bg); color: var(--lt-sys-label); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-header { background: var(--lt-sys-bg); border: 0; box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-weekday { font: 600 var(--lt-ios-caption2-size) / var(--lt-ios-caption2-line) var(--lt-font-ios); color: var(--lt-sys-label-2); text-align: center; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-week-row { border-block-start: var(--lt-hairline) solid var(--lt-sys-separator); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-day { min-block-size: var(--rp33-hit); border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-day-number { inline-size: 34px; block-size: 34px; display: inline-grid; place-items: center; border-radius: 50%; font: 400 var(--lt-ios-title3-size) / 1 var(--lt-font-ios); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-day:is(.today, .is-today) .yzp-calendar-day-number { background: var(--lt-sys-red); color: var(--rp33-on-accent); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-day:is(.selected, .is-selected, .active) .yzp-calendar-day-number { background: var(--lt-sys-label); color: var(--lt-sys-bg); }
+    #phone-panel[data-rp-ios="3"] :is(.yzp-calendar-detail-sheet, .yzp-calendar-add-sheet, .yzp-calendar-month-sheet) { border: 0; border-start-start-radius: var(--rp33-sheet-radius); border-start-end-radius: var(--rp33-sheet-radius); background: var(--rp33-sheet-bg); box-shadow: var(--rp33-float-shadow); }
+    #phone-panel[data-rp-ios="3"] .yzp-calendar-memo-item { min-block-size: 52px; padding: var(--rp33-sp-2) var(--rp33-sp-4); border: 0; border-block-end: var(--lt-hairline) solid var(--lt-sys-separator); border-radius: 0; background: transparent; }
+}

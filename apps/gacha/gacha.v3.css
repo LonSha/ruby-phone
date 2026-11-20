@@ -1,0 +1,66 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：幸运转盘（gacha）—— 家族：角色扮演专属 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/gacha/gacha-view.js（render 模板 + <style>、_renderBody 抽取 / 背包 / 记录三个页签、_renderBag、_renderHistory）；gacha-data.js 是卡池，gacha-app.js 无 DOM。
+   屏幕与状态：导航（标题 + 余额胶囊）· 三段页签（.on）· 抽取页（卡池 2 列格 .on、单抽 / 十连按钮、余额不足 :disabled、结果 3 列卡 / 空态）·
+               背包页（品质徽标 + 名称 + 数量；空态）· 记录页（时间 · 花费 · 获得；空态）。
+   设计：原生是紫色渐变「赌场」底。抽卡是界面功能而不是暗场景，v3.5 跟随系统浅深色，强调色系统橙（余额 / 选中池 / 十连）。
+         页签改成 iOS 分段控件；两个抽取按钮：单抽 = 次级胶囊、十连 = 强调色主胶囊（旧版两条渐变去掉）。
+         **品质色不动**：品质徽标的底色和结果卡描边是数据（内联 q.color），保留。
+   规矩：零 !important、零写死颜色、零字符图标；类名 / ID / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 2 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    /* 渲染自查（v3.5）：白字在本强调色上只有 2.2:1（浅）/ 2.06:1（深），不到 4.5:1；填充按钮 / 选中胶囊的文字改用带一点强调色相的近黑墨（8.36:1 / 8.87:1）。 */
+    #phone-panel[data-rp-ios="3"] .ga-root { --rp33-accent: var(--lt-sys-orange); --rp36-accent-text: var(--rp36-text-orange); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-orange) 40%, transparent); --rp33-on-accent: color-mix(in srgb, var(--lt-sys-black) 88%, var(--rp33-accent)); }
+
+    /* ===== 屏：页面底 + 导航栏（标题 + 余额） ===== */
+    #phone-panel[data-rp-ios="3"] .ga-root { background: var(--rp33-bg); background-image: none; color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .ga-head { align-items: center; min-block-size: var(--rp3-nav-h); padding: var(--rp33-sp-2) var(--rp33-margin); border: 0; background: transparent; }
+    #phone-panel[data-rp-ios="3"] .ga-head h2 { margin: 0; font: var(--lt-type-title2); letter-spacing: var(--lt-ios-title2-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .ga-coins { padding: var(--rp33-sp-1) var(--rp33-sp-3); border-radius: 999px; background: var(--rp33-accent-soft); color: var(--rp36-accent-text); font: 600 var(--lt-ios-subhead-size) / 1.2 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+
+    /* ===== 组件：三段页签（分段控件） ===== */
+    #phone-panel[data-rp-ios="3"] .ga-tabs { gap: 0; margin: 0 var(--rp33-margin) var(--rp33-sp-3); padding: 2px; border-radius: 999px; background: var(--rp33-seg-bg); }
+    #phone-panel[data-rp-ios="3"] .ga-tab { flex: 1 1 0; min-block-size: var(--rp33-tab-h); padding: 0 var(--rp33-sp-2); border: 0; border-radius: 999px; background: transparent; color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; position: relative; }
+    #phone-panel[data-rp-ios="3"] .ga-tab::after { content: ""; position: absolute; inset: -6px 0; }
+    #phone-panel[data-rp-ios="3"] .ga-tab.on { background: var(--rp33-seg-on); box-shadow: var(--rp33-seg-shadow); color: var(--rp33-label); font-weight: 600; }
+
+    /* ===== 屏：抽取 · 卡池 + 按钮 ===== */
+    #phone-panel[data-rp-ios="3"] .ga-body { padding: 0 var(--rp33-margin) var(--rp33-sp-8); }
+    #phone-panel[data-rp-ios="3"] .ga-pools { gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .ga-pool { min-block-size: 56px; padding: var(--rp33-sp-3); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); cursor: pointer; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .ga-pool.on { background: var(--rp33-accent-soft); box-shadow: inset 0 0 0 1.5px var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .ga-pool b { color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .ga-pool span { margin-block-start: 2px; color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .ga-actions { gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .ga-btn { min-block-size: var(--rp33-btn-h); border: 0; border-radius: 999px; color: var(--rp33-label); font: 600 var(--lt-ios-body-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .ga-btn-one { background: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-card-shadow); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .ga-btn-ten { background: var(--rp33-accent); background-image: none; color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .ga-btn:active { filter: brightness(0.92); scale: 0.98; }
+    #phone-panel[data-rp-ios="3"] .ga-btn:disabled { background: var(--rp33-fill); box-shadow: none; color: var(--rp33-label-3); opacity: 1; filter: none; scale: 1; }
+
+    /* ===== 屏：抽取结果（3 列卡；品质徽标底色 = 数据） ===== */
+    #phone-panel[data-rp-ios="3"] .ga-grid { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .ga-card { padding: var(--rp33-sp-3) var(--rp33-sp-2); border: 1px solid var(--rp33-sep); border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .ga-card .ga-q { padding: 2px var(--rp33-sp-2); border-radius: 999px; color: var(--rp34-media-fg); font: 700 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .ga-card .ga-n { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label); font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .ga-card .ga-t { color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+
+    /* ===== 屏：背包 / 记录（分组列表行） ===== */
+    #phone-panel[data-rp-ios="3"] :is(.ga-bag-item, .ga-hist) { min-block-size: var(--rp33-hit); margin-block-end: 2px; padding: var(--rp33-sp-2) var(--rp33-sp-4); border-radius: var(--rp33-sp-1); background: var(--rp33-surface); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] :is(.ga-bag-item, .ga-hist):first-child { border-start-start-radius: var(--rp33-feed-radius); border-start-end-radius: var(--rp33-feed-radius); }
+    #phone-panel[data-rp-ios="3"] :is(.ga-bag-item, .ga-hist):last-child { border-end-start-radius: var(--rp33-feed-radius); border-end-end-radius: var(--rp33-feed-radius); }
+    #phone-panel[data-rp-ios="3"] .ga-bag-item { align-items: center; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .ga-bag-item .q { padding: 2px var(--rp33-sp-2); border-radius: 999px; color: var(--rp34-media-fg); font: 700 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .ga-bag-count { color: var(--rp33-label-2); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .ga-hist { display: flex; align-items: center; color: var(--rp33-label-2); font: var(--lt-type-footnote); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .ga-hist b { color: var(--rp33-label); font-weight: 600; }
+
+    /* ===== 状态：空（选择卡池 / 背包空 / 没有记录） ===== */
+    #phone-panel[data-rp-ios="3"] .ga-empty { padding: var(--rp33-sp-8) var(--rp33-sp-4); color: var(--rp33-label-2); font: var(--lt-type-subhead); text-align: center; }
+}

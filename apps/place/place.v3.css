@@ -1,0 +1,139 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：地点图景（place）—— 家族：系统 / 工具 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/place/place-view.js（_draw 以及 _reasonCard / _sourceCard / _summaryCard / _currentCard / _headerCard / _treeCard / _visitHistoryCard /
+               _presenceCard / _coPresenceCard / _presenceBandCard / _roamCard / _districtCard / _showRoamDetail / _settingsCard / _diagCards）；
+               place-app.js、place-data.js 是地点图谱逻辑，无 DOM（跳过）。
+   屏幕与状态：导航（返回 / 刷新圆钮）· 原因卡（.pl-reason-<tone>）· 来源卡（.pl-src-<tone>）· 汇总 4 格读数 · 当前位置链（chip ›）·
+               地点树（节点名 / 描述 / 标记）· 到访历史（.pl-visit-bad）· 在场 / 同场分组（地点 / 楼层 / 成员胶囊）· 在场带（时段 chip .on、事件按钮）·
+               漫游（选点按钮：已到 / 可进 / 待探 / 未知四种状态徽标、当前 · 就在这儿、前往、展开详情卡）· 街区事件（进行中 / 已完成 / 错过、前往、新建表单 #pl-district-form）·
+               设置（文字开关 .on / 滑杆）· 诊断（.pl-diag-warn / -bad、.pl-iv-ok / -warn / -bad）· 空态。
+   设计：原生深蓝黑。v3.5 = iOS「地图 · 指南」风格的分组卡：跟随系统，强调色系统薄荷绿；
+         所有状态徽标统一成 caption 胶囊（已到 = 薄荷、可进 = 蓝、待探 = 中性、未知 = 橙），旧版的 3px / 2px 左色条全部换成状态徽标或浅底。
+         #pl-district-form 的显隐（style display:none）由 App 切，皮肤不碰。
+   audit-allow: pl-reason-ok pl-reason-warn pl-reason-off pl-src-ok pl-src-warn pl-src-off —— 'pl-reason-' / 'pl-src-' + tone 拼出来的
+   规矩：零 !important、零写死颜色、零字符图标；类名 / ID / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 6 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    /* 渲染自查（v3.5）：白字在本强调色上只有 2.12:1（浅）/ 1.51:1（深），不到 4.5:1；填充按钮 / 选中胶囊的文字改用带一点强调色相的近黑墨（8.68:1 / 11.68:1）。 */
+    #phone-panel[data-rp-ios="3"] .pl-root { --rp33-accent: var(--lt-sys-mint); --rp36-accent-text: var(--rp36-text-mint); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-mint) 16%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-mint) 45%, transparent); --rp33-on-accent: color-mix(in srgb, var(--lt-sys-black) 88%, var(--rp33-accent)); }
+
+    /* ===== 屏：外壳（页面底 / 导航栏） ===== */
+    #phone-panel[data-rp-ios="3"] .pl-root { background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .pl-header { align-items: center; gap: var(--rp33-sp-3); min-block-size: var(--rp3-nav-h); padding: var(--rp33-sp-2) var(--rp33-margin); }
+    #phone-panel[data-rp-ios="3"] .pl-header h2 { margin: 0; flex: 1 1 auto; font: var(--lt-type-title2); letter-spacing: var(--lt-ios-title2-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .pl-nav { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); flex: none; padding: 0; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 17px; cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pl-nav:active { scale: 0.94; }
+    #phone-panel[data-rp-ios="3"] .pl-body { gap: var(--rp33-sp-4); padding: 0 var(--rp33-margin) var(--rp33-sp-8); }
+
+    /* ===== 组件：分组卡 / 卡标题 / 说明 ===== */
+    #phone-panel[data-rp-ios="3"] .pl-card { padding: var(--rp33-sp-3) var(--rp33-sp-4) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .pl-card-title { align-items: baseline; gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .pl-count { color: var(--rp33-label-2); font: var(--lt-type-footnote); font-weight: 400; font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .pl-hint { color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pl-empty { padding: var(--rp33-sp-2) 0; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：原因卡 / 来源卡 ===== */
+    #phone-panel[data-rp-ios="3"] .pl-reason { border: 0; background: var(--rp33-accent-soft); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .pl-reason-ok { border: 0; background: var(--rp33-accent-soft); }
+    #phone-panel[data-rp-ios="3"] .pl-reason-warn { border: 0; background: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); }
+    #phone-panel[data-rp-ios="3"] .pl-reason-off { border: 0; background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] .pl-reason-head { color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .pl-reason-hint { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pl-src-line { padding: var(--rp33-sp-1) 0; color: var(--rp33-label); font: var(--lt-type-subhead); }
+
+    /* ===== 屏：汇总 4 格 + 当前位置链 ===== */
+    #phone-panel[data-rp-ios="3"] .pl-stats { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .pl-stat { flex: 1 1 0; padding: var(--rp33-sp-3) var(--rp33-sp-2); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-surface-2); text-align: center; }
+    #phone-panel[data-rp-ios="3"] .pl-stat b { color: var(--rp33-label); font: 600 var(--lt-ios-title3-size) / 1.2 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .pl-stat span { color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .pl-chain { flex-wrap: wrap; align-items: center; gap: var(--rp33-sp-1) var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .pl-chip { padding: var(--rp33-sp-1) var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-accent-soft); color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .pl-chain-sep { color: var(--rp33-label-3); font-size: 13px; }
+
+    /* ===== 屏：地点树 / 到访历史 ===== */
+    #phone-panel[data-rp-ios="3"] .pl-node { align-items: baseline; gap: var(--rp33-sp-2); min-block-size: 36px; padding: var(--rp33-sp-1) 0; color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .pl-node + .pl-node { border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .pl-node-name { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .pl-node-desc { color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pl-node-mark { color: var(--rp36-accent-text); font: 600 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .pl-visit { align-items: baseline; gap: var(--rp33-sp-2); min-block-size: 36px; padding: var(--rp33-sp-1) 0; font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .pl-visit + .pl-visit { border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .pl-visit-place { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .pl-visit-mark { color: var(--rp33-label-2); font: var(--lt-type-caption1); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .pl-visit-bad { color: var(--rp36-text-red); }
+
+    /* ===== 屏：在场 / 同场分组 + 在场带 ===== */
+    #phone-panel[data-rp-ios="3"] .pl-group { padding: var(--rp33-sp-2) 0; border: 0; border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .pl-group:first-of-type { border-block-start: 0; }
+    #phone-panel[data-rp-ios="3"] .pl-group-head { align-items: baseline; gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .pl-group-place { color: var(--rp33-label); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .pl-group-floor { color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .pl-group-members { flex-wrap: wrap; gap: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .pl-member { padding: 2px var(--rp33-sp-2); border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1.4 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] :is(.pl-band-chips, .pl-band-actions) { flex-wrap: wrap; gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(.pl-band-chip, .pl-band-ev) { position: relative; min-block-size: var(--rp33-tab-h); padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] :is(.pl-band-chip, .pl-band-ev)::after { content: ""; position: absolute; inset: -6px -2px; }
+    #phone-panel[data-rp-ios="3"] .pl-band-chip.on { background: var(--rp33-accent); color: var(--rp33-on-accent); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .pl-band-ev { background: var(--rp33-accent-soft); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .pl-band-row { padding: var(--rp33-sp-1) 0; color: var(--rp33-label); font: var(--lt-type-subhead); }
+
+    /* ===== 屏：漫游（选点 + 状态徽标 + 前往 + 详情） ===== */
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-row { align-items: stretch; gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-pick { flex: 1 1 auto; align-items: center; gap: var(--rp33-sp-2); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-surface-2); color: var(--rp33-label); font: var(--lt-type-subhead); text-align: start; cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-pick:active { background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-visited .pl-roam-pick { background: var(--rp33-accent-soft); }
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-state { padding: 2px var(--rp33-sp-2); border-radius: 999px; font: 600 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-visited .pl-roam-state { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-enterable .pl-roam-state { background: var(--lt-sys-blue); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-to-explore .pl-roam-state { background: var(--rp33-fill); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-unknown .pl-roam-state { background: color-mix(in srgb, var(--lt-sys-orange) 18%, transparent); color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-mark { color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-cur .pl-roam-name { font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-cur .pl-roam-name::after { color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-go { flex: none; min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-accent-soft); color: var(--rp33-label); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-go:active { background: var(--rp33-accent-soft); filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-card { margin-block-start: var(--rp33-sp-2); padding: var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-line { padding: 2px 0; color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .pl-roam .pl-roam-reg { color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：街区事件（行 + 状态徽标 + 前往 + 新建表单） ===== */
+    #phone-panel[data-rp-ios="3"] .pl-district .pl-district-row { align-items: center; gap: var(--rp33-sp-2); min-block-size: var(--rp33-hit); margin-block-end: var(--rp33-sp-1); padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .pl-district .pl-district-place { color: var(--rp33-label); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .pl-district .pl-district-ev { flex: 1 1 auto; min-inline-size: 0; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pl-district .pl-district-st { padding: 2px var(--rp33-sp-2); border-radius: 999px; font: 600 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .pl-district-active .pl-district-st { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .pl-district-done .pl-district-st { border: 0; background: var(--rp33-accent-soft); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .pl-district-missed .pl-district-st { background: var(--rp33-fill); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .pl-district-go { position: relative; min-block-size: 28px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-accent-soft); color: var(--rp33-label); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pl-district-go::after { content: ""; position: absolute; inset: -8px -2px; }
+    #phone-panel[data-rp-ios="3"] .pl-district-go:active { background: var(--rp33-accent-soft); filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.pl-district .pl-in, #pl-district-form .pl-in) { min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] :is(.pl-district .pl-in, #pl-district-form .pl-in)::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] :is(.pl-district .pl-in, #pl-district-form .pl-in):focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] #pl-district-form { gap: var(--rp33-sp-2); margin-block-start: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(#pl-district-form .pl-btn, .pl-district > .pl-btn) { min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] :is(#pl-district-form .pl-btn, .pl-district > .pl-btn):active { background: var(--rp33-accent); filter: brightness(0.92); }
+
+    /* ===== 屏：设置（文字开关 + 滑杆） ===== */
+    #phone-panel[data-rp-ios="3"] .pl-row { align-items: center; justify-content: space-between; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-1) 0; border-block-start: 0.5px solid var(--rp33-sep); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .pl-card-title + .pl-row { border-block-start: 0; }
+    #phone-panel[data-rp-ios="3"] .pl-label { color: var(--rp33-label); font: var(--lt-type-body); }
+    #phone-panel[data-rp-ios="3"] .pl-switch { position: relative; min-inline-size: 56px; min-block-size: 32px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label-2); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pl-switch::after { content: ""; position: absolute; inset: -6px 0; }
+    #phone-panel[data-rp-ios="3"] .pl-switch.on { background: color-mix(in srgb, var(--lt-sys-green) 18%, transparent); color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"] .pl-range { accent-color: var(--rp33-accent); }
+
+    /* ===== 状态：诊断卡 ===== */
+    #phone-panel[data-rp-ios="3"] .pl-diag .pl-diag-line { padding: 2px 0; color: var(--rp33-label-2); font: 400 var(--lt-ios-caption1-size) / 1.5 var(--lt-font-ios-mono); }
+    #phone-panel[data-rp-ios="3"] .pl-diag-warn { color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .pl-diag-bad { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .pl-iv-ok { border: 0; box-shadow: var(--rp33-card-shadow), inset 0 0 0 1.5px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .pl-iv-warn { border: 0; box-shadow: var(--rp33-card-shadow), inset 0 0 0 1.5px color-mix(in srgb, var(--lt-sys-orange) 45%, transparent); }
+    #phone-panel[data-rp-ios="3"] .pl-iv-bad { border: 0; box-shadow: var(--rp33-card-shadow), inset 0 0 0 1.5px color-mix(in srgb, var(--lt-sys-red) 45%, transparent); }
+}

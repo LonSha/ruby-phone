@@ -1,0 +1,69 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：账本（ledger）—— 家族：财务 / 购物 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/ledger/ledger-view.js（_buildHTML / _tile / _bar）；ledger-app.js、ledger-data.js 只算账，无 DOM。
+   屏幕与状态：页头 · 状态条（ok / warn / err）· 说明 · 四格数字（.lg-tile-cur 当前 / -fac 工厂 / -pee 同辈 / -opp 对手：大数字 + 标签）·
+               差距行（.lg-gap-ok / -warn）· 对账卡（柱：.lg-bar-ok / -warn / -dim 数值 + 标签；差异行：世界 / 本地标签、chip）· 副注 · 设置（开关行）。
+   设计：iOS「健康 · 摘要」的读数语法：四格数字是 title1 圆体等宽，四个口径用四个系统色区分（分类色，不是装饰——旧版也是四色）；
+         跟随系统，强调色系统紫。差距与对账状态只用绿 / 橙。
+   audit-allow: lg-face-ok lg-face-warn lg-face-err —— 'lg-face-' + meta.tone 拼出来的
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 9 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    #phone-panel[data-rp-ios="3"] .lg-root { --rp33-accent: var(--lt-sys-purple); --rp36-accent-text: var(--rp36-text-purple); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-purple) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-purple) 40%, transparent); }
+
+    /* ===== 屏：外壳（页面底 / 页头 / 状态条 / 说明） ===== */
+    #phone-panel[data-rp-ios="3"] .lg-root { gap: var(--rp33-sp-3); min-block-size: 100%; box-sizing: border-box; padding: var(--rp33-sp-2) var(--rp33-margin) var(--rp33-sp-8); background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .lg-header { padding: var(--rp33-sp-2) var(--rp33-sp-1) 0; }
+    #phone-panel[data-rp-ios="3"] .lg-header h2 { margin: 0; font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .lg-face { align-items: center; gap: var(--rp33-sp-2); padding: var(--rp33-sp-3) var(--rp33-sp-4); border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .lg-face-ok { background: color-mix(in srgb, var(--lt-sys-green) 14%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .lg-face-warn { background: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .lg-face-err { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .lg-face-icon { font-size: 17px; line-height: 1; }
+    #phone-panel[data-rp-ios="3"] .lg-face-label { font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .lg-desc { padding: var(--rp33-sp-3) var(--rp33-sp-4); border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：四格数字 ===== */
+    #phone-panel[data-rp-ios="3"] .lg-grid { gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .lg-tile { gap: var(--rp33-sp-1); padding: var(--rp33-sp-4); border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .lg-tile-num { color: var(--rp33-label); font: 600 var(--lt-ios-title1-size) / 1.1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .lg-tile-label { color: var(--rp33-label-2); font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .lg-tile-cur .lg-tile-num { color: var(--rp36-text-purple); }
+    #phone-panel[data-rp-ios="3"] .lg-tile-fac .lg-tile-num { color: var(--rp36-text-blue); }
+    #phone-panel[data-rp-ios="3"] .lg-tile-pee .lg-tile-num { color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .lg-tile-opp .lg-tile-num { color: var(--rp36-text-green); }
+
+    /* ===== 状态：差距行 ===== */
+    #phone-panel[data-rp-ios="3"] .lg-gap { padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: var(--rp33-fill); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .lg-gap-warn { background: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .lg-gap-ok { background: color-mix(in srgb, var(--lt-sys-green) 14%, transparent); color: var(--rp33-label); }
+
+    /* ===== 屏：对账卡（柱 + 差异行） ===== */
+    #phone-panel[data-rp-ios="3"] .lg-card { padding: var(--rp33-sp-3) var(--rp33-sp-4) var(--rp33-sp-4); border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .lg-card-title { margin-block-end: var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .lg-bars { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .lg-bar { flex: 1 1 0; align-items: center; gap: 2px; padding: var(--rp33-sp-3) var(--rp33-sp-1); border-radius: var(--rp33-field-radius); background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .lg-bar-val { color: var(--rp33-label); font: 600 var(--lt-ios-title3-size) / 1.2 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .lg-bar-label { color: var(--rp33-label-2); font: var(--lt-type-caption1); text-align: center; }
+    #phone-panel[data-rp-ios="3"] .lg-bar-ok .lg-bar-val { color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"] .lg-bar-warn .lg-bar-val { color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .lg-bar-dim .lg-bar-val { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .lg-diff-row { align-items: center; flex-wrap: wrap; gap: var(--rp33-sp-2); min-block-size: 36px; padding-block: var(--rp33-sp-1); border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .lg-diff-tag { padding: 2px var(--rp33-sp-2); border-radius: 999px; font: 600 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .lg-diff-world { background: color-mix(in srgb, var(--lt-sys-blue) 14%, transparent); color: var(--rp36-text-blue); }
+    #phone-panel[data-rp-ios="3"] .lg-diff-local { background: color-mix(in srgb, var(--lt-sys-orange) 16%, transparent); color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .lg-chipx { padding: 2px var(--rp33-sp-2); border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label); font: 500 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .lg-sub { margin-block-start: var(--rp33-sp-2); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：设置 ===== */
+    #phone-panel[data-rp-ios="3"] .lg-settings { padding: var(--rp33-sp-3) var(--rp33-sp-4); border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .lg-settings h3 { margin: 0 0 var(--rp33-sp-1); color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .lg-toggle { align-items: center; justify-content: space-between; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-1) 0; border-block-start: 0.5px solid var(--rp33-sep); color: var(--rp33-label); font: var(--lt-type-body); accent-color: var(--lt-sys-green); cursor: pointer; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .lg-toggle input { accent-color: var(--lt-sys-green); }
+}

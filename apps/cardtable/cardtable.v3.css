@@ -1,0 +1,58 @@
+/* ============================================================
+   RubyPhone v3.4 · App 皮肤：牌桌案头（cardtable）—— 家族：游戏
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   三个子层（右边赢左边，与特异性无关）：
+     rp.skins.remap   旧规则重映射：写死颜色 -> 语义 token（浅 / 深自动），字号吸附 iOS 阶梯（最小 11pt），
+                      间距吸附 4pt 栅格（8pt 栅格 + 半步），圆角吸附阶梯，霓虹投影 / 文字阴影去掉
+     rp.skins.roles   结构角色 -> v3 组件（导航栏 / 玻璃圆钮 / 分段 / 分组列表 / 卡片 / Sheet / 表单 / 按钮 / 徽标）
+     rp.skins.curated 手工精修（只有重点 App 有）
+   规矩：零 !important、零写死颜色、零字符图标；不改元素 ID / 类名 / 结构，不碰 display / position 以外的状态切换。
+   生成：v3.3 皮肤生成器（输入与角色表见 tools/app-skins-v33.manifest.json；角色 3 个类 / 3 种角色，重映射 6 / 6 条旧规则，
+         伪元素字符图标 0 处，扩大点击区 1 个类）。原生配色：light。
+   v3.4：done-partial -> done。层序多一个子层 rp.skins.inline（运行时逐站点内联映射写出的 data-rp34 令牌，样式在
+         phone/design/app-skins-inline-v3.4.css）；本文件末尾「v3.4 逐屏精修」一段是读完该 App 全部视图模板后手工写的，
+         所选类名全部在源码里核对过（verification/selector-audit.tsv）。改动说明见 README 第三节。
+   ============================================================ 
+ * v3.6：小字强调色 3 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.roles {
+    /* 作用域：强调色（sys:purple）*/
+    #phone-panel[data-rp-ios="3"] :where([class^="ct-"], [class*=" ct-"]) { --rp33-accent: var(--lt-sys-purple); --rp36-accent-text: var(--rp36-text-purple); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-purple) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-purple) 40%, transparent); }
+    #phone-panel[data-rp-ios="3"] .ct-head { background-color: var(--rp33-bg); background-image: none; border: 0; box-shadow: none; color: var(--rp33-label); min-block-size: var(--rp3-nav-h); padding-inline: var(--rp33-sp-2); gap: var(--rp33-sp-2); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] .ct-btn { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; box-shadow: none; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .ct-btn:active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] .ct-btn:disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] .ct-empty { color: var(--rp33-label-2); font-family: var(--lt-font-ios); text-align: center; text-shadow: none; }
+    /* 点击区不小于 44pt：视觉尺寸不变，用透明伪元素扩大命中区 */
+    #phone-panel[data-rp-ios="3"] .ct-btn { position: relative; }
+    #phone-panel[data-rp-ios="3"] .ct-btn::after { content: ""; position: absolute; inset: min(0px, calc((100% - var(--rp33-hit)) / 2)); }
+}
+@layer rp.skins.remap {
+    #phone-panel[data-rp-ios="3"] .ct-head { border-bottom: var(--lt-hairline) solid var(--rp33-sep); font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .ct-btn { padding: 3px 12px; border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .ct-empty { color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); padding: 8px 0; }
+    #phone-panel[data-rp-ios="3"] .ct-head { border-bottom: var(--lt-hairline) solid var(--rp33-sep); font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .ct-btn { padding: 3px 12px; border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-surface); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .ct-empty { color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); padding: 8px 0; }
+}
+@layer rp.skins.curated {
+    /* ===================== v3.4 逐屏精修 ===================== */
+    /* ---- 牌桌案头 v3.4：塔罗 / 雷诺曼牌组的选牌案头，不是对局桌面 —— 源码里只有 ct-* 一族 12 条规则、零内联样式，
+            v3.3 当成「牌面保留原样」是误判。改成作者案头的 dashboard：分组卡 + 小牌格（64x36 放大到 72x44）+ 胶囊按钮，紫色强调。---- */
+    #phone-panel[data-rp-ios="3"] .ct-root { --rp33-accent: var(--lt-sys-purple); --rp36-accent-text: var(--rp36-text-purple); background: var(--rp33-bg); color: var(--rp33-label); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .ct-wrap { padding: var(--rp33-sp-3) var(--rp33-sp-4) var(--rp33-sp-8); color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .ct-head { padding: var(--rp33-sp-1) var(--rp33-sp-1) var(--rp33-sp-3); font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .ct-sec { margin-block-end: var(--rp33-sp-3); padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .ct-sec h3 { margin: 0 0 var(--rp33-sp-2); font: var(--lt-type-headline); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .ct-btn { min-block-size: 32px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); position: relative; }
+    #phone-panel[data-rp-ios="3"] .ct-btn::after { content: ""; position: absolute; inset: -6px -2px; }
+    #phone-panel[data-rp-ios="3"] .ct-why { font: var(--lt-type-footnote); color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .ct-grid { gap: var(--rp33-sp-2); flex-wrap: wrap; }
+    #phone-panel[data-rp-ios="3"] .ct-card { inline-size: 72px; block-size: 44px; border: 0; border-radius: 10px; background: var(--rp33-surface-2); box-shadow: inset 0 0 0 0.5px var(--rp33-sep); color: var(--rp33-label); font: 500 var(--lt-ios-caption1-size) / 1.2 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .ct-sel { background: var(--rp33-accent); box-shadow: none; color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .ct-row { min-block-size: var(--rp3-row-h-min); padding: var(--rp33-sp-1) 0; gap: var(--rp33-sp-2); border-bottom: 0.5px solid var(--rp33-sep); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .ct-row:last-child { border-bottom: 0; }
+    #phone-panel[data-rp-ios="3"] .ct-empty { padding: var(--rp33-sp-2) 0; font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+}

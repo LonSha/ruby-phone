@@ -1,0 +1,187 @@
+/* ============================================================
+   RubyPhone · 设计 token v2（rp.tokens 层）—— 在 phone-tokens.css（v1）之后加载
+   ------------------------------------------------------------
+   只新增变量，不改 v1 任何取值；没开 v2 外观（data-rp-ui="2"）时这些变量无人使用。
+   来源（只借鉴模式，不含任何系统资产 / 商标 / 图标）：
+     iOS 18      锁屏大时钟、主屏小组件、灵动岛（紧凑 / 展开 / 横幅）、控制中心模块、
+                 「信息」气泡尾巴与 Tapback、设置的 inset grouped 列表与彩色图标块
+     Telegram    聊天壁纸（细纹理 + 柔和渐变）、滑动回复、气泡分组圆角
+     微信         方形头像、绿色我方气泡 + 小三角、朋友圈封面 / 九宫格 / 点赞评论区
+     Arc / Things 按压回弹、错峰入场、App 打开时从图标放大的「缩放」过渡
+     Material You 主题包「material-you」：壁纸取色 -> 动态色阶（见 themes/material-you.css）
+   ============================================================ */
+@layer rp.tokens {
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope),
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope) [data-lonsha-theme] {
+    /* ---------- 通道值（组件里写 rgb(var(--rp-white-rgb) / .16)，不出现颜色字面量） ---------- */
+    --rp-white-rgb: 255 255 255;
+    --rp-black-rgb: 0 0 0;
+
+    /* ---------- 材质（来自 --lt-mat-*） ---------- */
+    --rp-mat-chrome-bg: var(--lt-mat-chrome-bg);
+    --rp-mat-chrome-blur: var(--lt-mat-chrome-blur);
+    --rp-mat-regular-bg: var(--lt-mat-regular-bg);
+    --rp-mat-regular-blur: var(--lt-mat-regular-blur);
+    --rp-mat-thin-bg: var(--lt-mat-thin-bg);
+    --rp-mat-thin-blur: var(--lt-mat-thin-blur);
+    --rp-mat-dark-bg: var(--lt-mat-dark-bg);           /* 壁纸上的深色玻璃（不随明暗翻转） */
+    --rp-mat-dark-border: var(--lt-mat-dark-border);
+    --rp-mat-highlight: var(--lt-mat-highlight);
+    --rp-elev-1: var(--lt-elev-1);
+    --rp-elev-2: var(--lt-elev-2);
+    --rp-elev-3: var(--lt-elev-3);
+    --rp-elev-4: var(--lt-elev-4);
+
+    /* ---------- 动效（弹簧） ---------- */
+    --rp-spring-snappy: var(--lt-spring-snappy);
+    --rp-spring-smooth: var(--lt-spring-smooth);
+    --rp-spring-bouncy: var(--lt-spring-bouncy);
+    --rp-dur-spring: var(--lt-dur-spring);
+    --rp-dur-spring-long: var(--lt-dur-spring-long);
+    --rp-press-scale: 0.94;                           /* 图标 / 模块按压（比面板更明显） */
+    --rp-stagger: var(--lt-stagger);
+
+    /* ---------- 壁纸 ---------- */
+    --rp-wallpaper: radial-gradient(120% 80% at 15% 10%, rgb(255 179 140 / 0.95), transparent 55%),
+                    radial-gradient(110% 90% at 90% 30%, rgb(122 92 255 / 0.9), transparent 60%),
+                    radial-gradient(120% 90% at 40% 100%, rgb(14 165 233 / 0.95), transparent 60%),
+                    linear-gradient(160deg, rgb(40 32 80), rgb(16 24 48));
+    --rp-wallpaper-dim: 0;                            /* 深色模式壁纸压暗（iOS 「深色外观使壁纸变暗」） */
+    --rp-on-wallpaper: var(--rp-static-white);
+    --rp-on-wallpaper-2: rgb(255 255 255 / 0.78);
+
+    /* ---------- 锁屏 ---------- */
+    --rp-lock-font: ui-rounded, "SF Pro Rounded", var(--rp-font);
+    --rp-lock-time-size: 88px;
+    --rp-lock-time-weight: 600;
+    --rp-lock-time-tracking: -0.04em;
+    --rp-lock-date-size: var(--rp-fs-body);
+    --rp-lock-btn: 50px;                              /* 手电筒 / 相机圆钮 */
+
+    /* ---------- 灵动岛 ---------- */
+    --rp-island-bg: var(--rp-static-black);
+    --rp-island-fg: var(--rp-static-white);
+    --rp-island-compact-w: 126px;
+    --rp-island-compact-h: 37px;
+    --rp-island-expanded-h: 84px;
+    --rp-island-banner-h: 72px;
+    --rp-island-expanded-r: 38px;
+    --rp-island-top: 11px;
+
+    /* ---------- 主屏 / 小组件 ---------- */
+    --rp-home-cols: 4;
+    --rp-home-gap-x: 18px;
+    --rp-home-gap-y: 22px;
+    --rp-home-pad: 22px;
+    --rp-widget-radius: 22px;
+    --rp-widget-bg: var(--rp-mat-regular-bg);
+    --rp-widget-blur: var(--rp-mat-regular-blur);
+    --rp-widget-fg: var(--rp-text-1);
+    --rp-widget-fg-2: var(--rp-text-2);
+    --rp-search-pill-bg: rgb(255 255 255 / 0.22);
+
+    /* ---------- 控制中心 ---------- */
+    --rp-cc-scrim: rgb(0 0 0 / 0.28);
+    --rp-cc-blur: saturate(140%) blur(36px);
+    --rp-cc-module-bg: rgb(28 28 30 / 0.46);
+    --rp-cc-module-radius: 22px;
+    --rp-cc-tile: 62px;
+    --rp-cc-tile-on: var(--rp-static-white);
+    --rp-cc-tile-on-fg: var(--rp-static-black);
+    --rp-cc-tile-accent: var(--app-accent);
+    --rp-cc-fg: var(--rp-static-white);
+
+    /* ---------- 聊天（信息 / 微信 / Telegram 融合） ---------- */
+    --rp-chat-wallpaper: radial-gradient(circle at 20% 20%, rgb(var(--lt-ink-rgb) / 0.035) 0 1.5px, transparent 2px) 0 0 / 22px 22px,
+                         radial-gradient(circle at 70% 60%, rgb(var(--lt-ink-rgb) / 0.03) 0 1px, transparent 1.5px) 0 0 / 30px 30px,
+                         linear-gradient(180deg, var(--rp-bg), var(--rp-bg-sunken));
+    --rp-bubble-pad-y: 7px;
+    --rp-bubble-pad-x: 12px;
+    --rp-bubble-tail: 1;                              /* 0 = 关闭尾巴（像素包） */
+    --rp-bubble-radius-tight: 6px;                    /* 同一组连续消息的贴合角 */
+    --rp-bubble-gap: 2px;
+    --rp-bubble-group-gap: 10px;
+    --rp-avatar-radius: 50%;
+    --rp-tapback-bg: var(--rp-surface-1);
+    --rp-tapback-ring: var(--rp-bg);
+    --rp-typing-dot: var(--rp-text-3);
+    --rp-swipe-reply-max: 72px;
+    --rp-reply-bar: var(--app-accent);
+    --rp-composer-h: 36px;
+    --rp-read-fg: var(--rp-text-3);
+
+    /* ---------- 朋友圈 ---------- */
+    --rp-moments-cover-h: 280px;
+    --rp-moments-name: color-mix(in srgb, var(--app-accent) 55%, var(--rp-text-1));   /* 昵称链接色 */
+    --rp-moments-social-bg: var(--rp-surface-2);
+    --rp-moments-img-gap: 4px;
+    --rp-moments-avatar: 42px;
+    --rp-moments-avatar-radius: 6px;
+
+    /* ---------- 设置 ---------- */
+    --rp-group-radius: 12px;
+    --rp-row-icon: 29px;
+    --rp-row-icon-radius: 7px;
+    --rp-row-min-h: 44px;
+    --rp-row-inset: calc(var(--rp-cell-inset) + var(--rp-row-icon) + 12px);   /* 分隔线从文字处开始 */
+
+    /* ---------- App 打开缩放过渡 ---------- */
+    --rp-app-open-dur: 460ms;
+    --rp-app-close-dur: 380ms;
+    --rp-app-open-ease: var(--rp-spring-bouncy);
+    --rp-app-close-ease: var(--rp-spring-smooth);
+}
+
+/* 深色外观：壁纸压暗、控制中心模块更深、Tapback 底跟随 */
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-lonsha-theme="dark"],
+[data-lonsha-theme="dark"] :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope):not([data-lonsha-theme="light"]) {
+    --rp-wallpaper-dim: 0.28;
+    --rp-cc-scrim: rgb(0 0 0 / 0.42);
+    --rp-cc-module-bg: rgb(16 16 18 / 0.56);
+    --rp-search-pill-bg: rgb(255 255 255 / 0.16);
+}
+}
+
+/* ---------- 品牌 / 内容色（只在 token 文件里出现字面量） ---------- */
+@layer rp.tokens {
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope),
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope) [data-lonsha-theme] {
+    /* 设置图标块（iOS 系统色的同类近似，白字对比度 ≥ 3:1 —— 图标属于非文本图形） */
+    --rp-chip-blue: #0a84ff;
+    --rp-chip-green: #30b158;
+    --rp-chip-orange: #f08a00;
+    --rp-chip-red: #f2453d;
+    --rp-chip-purple: #a550d6;
+    --rp-chip-indigo: #5b5bd6;
+    --rp-chip-teal: #1f9fb8;
+    --rp-chip-pink: #e9417a;
+    --rp-chip-yellow: #e0a800;
+    --rp-chip-gray: #8e8e93;
+    --rp-chip-fg: var(--rp-static-white);
+    /* 天气小组件天空 */
+    --rp-sky-day: linear-gradient(180deg, #3f8ee8 0%, #6db3f2 100%);
+    --rp-sky-dusk: linear-gradient(180deg, #4b4f9e 0%, #d97b6c 100%);
+    --rp-sky-night: linear-gradient(180deg, #0f1b3d 0%, #2a3a6b 100%);
+    /* 微信：我方气泡浅绿 + 黑字（14:1）；深色下用深一档绿 + 黑字 */
+    --rp-wechat-me-bg: #95ec69;
+    --rp-wechat-me-fg: #000000;
+    --rp-wechat-accent: #057a43;
+    --rp-wechat-chat-bg: #ededed;
+    --rp-wechat-name: #576b95;
+    /* 「信息」：我方蓝气泡 + 白字（≥ 4.5:1，比系统蓝略深一档） */
+    --rp-imsg-me-bg: #0a6cde;
+    --rp-imsg-me-fg: #ffffff;
+    --rp-imsg-sms-bg: #2e9e48;
+    --rp-heart: #ff375f;
+}
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-lonsha-theme="dark"],
+[data-lonsha-theme="dark"] :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope):not([data-lonsha-theme="light"]),
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope) [data-lonsha-theme="dark"] {
+    --rp-wechat-me-bg: #3eb575;
+    --rp-wechat-me-fg: #000000;
+    --rp-wechat-accent: #2ac56f;
+    --rp-wechat-chat-bg: #111111;
+    --rp-wechat-name: #7d90a9;
+    --rp-imsg-me-bg: #1a73e8;
+}
+}

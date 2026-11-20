@@ -1,0 +1,77 @@
+/* ============================================================
+   RubyPhone 主题包 · HarmonyOS 风格（rp.themes 层，只覆盖 token，不写任何结构样式）
+   华为 / 鸿蒙桌面观感：鸿蒙蓝、更圆的图标、略小的图标尺寸、HarmonyOS Sans 优先；状态栏左时间右信号保持一致。
+   启用：手机根节点 data-rp-pack="huawei"（theme-controller.js -> setPack('huawei')）
+   ============================================================ */
+@layer rp.themes {
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="huawei"] {
+    --rp-font: "HarmonyOS Sans SC", "HarmonyOS Sans", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    --rp-icon-size: 56px;
+    --rp-icon-radius: calc(var(--rp-icon-size) * 0.3);
+    --rp-dock-radius: 26px;
+    --rp-r-md: 12px;
+    --rp-r-lg: 16px;
+    --rp-card-radius: 20px;
+    --rp-btn-radius: var(--rp-r-pill);
+    --rp-bubble-radius: 14px;
+    --rp-sheet-radius: 24px;
+    --rp-island-w: 14px;
+    --rp-island-h: 14px;
+    --rp-island-r: 50%;
+}
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="huawei"] {
+    --rp-bg: #f1f3f5;
+    --rp-surface-1: #ffffff;
+    --rp-surface-2: #f1f3f5;
+    --rp-surface-3: #e5e8ec;
+    --rp-text-1: #182431;
+    --rp-text-2: #424e5c;
+    --rp-text-3: #5c6876;
+    --rp-accent: #0a59f7;
+    --rp-accent-soft: rgb(10 89 247 / 0.1);
+    --rp-toggle-on: #0a59f7;
+}
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="huawei"][data-lonsha-theme="dark"],
+[data-lonsha-theme="dark"] :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="huawei"]:not([data-lonsha-theme="light"]) {
+    --rp-bg: #000000;
+    --rp-surface-1: #1f1f1f;
+    --rp-surface-2: #2a2a2a;
+    --rp-surface-3: #363636;
+    --rp-text-1: #e5e5e5;
+    --rp-text-2: #b3b3b3;
+    --rp-text-3: #999999;
+    --rp-accent: #5291ff;
+    --rp-accent-soft: rgb(82 145 255 / 0.16);
+    --rp-toggle-on: #317af7;
+    --rp-on-accent: #000000;
+    --app-on-accent: #000000;
+}
+}
+
+/* ---------- v2 追加：新组件 token（锁屏 / 灵动岛 / 小组件 / 控制中心 / 聊天 / 设置） ---------- */
+@layer rp.themes {
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="huawei"] {
+    --rp-lock-font: "HarmonyOS Sans SC", var(--rp-font);
+    --rp-lock-time-weight: 300;
+    --rp-lock-time-size: 92px;
+    /* 打孔屏：灵动岛退化为左上「胶囊」实况窗的近似 —— 紧凑态是小圆点，横幅态仍可展开 */
+    --rp-island-compact-w: 14px;
+    --rp-island-compact-h: 14px;
+    --rp-island-top: 14px;
+    --rp-widget-radius: 24px;
+    --rp-cc-module-radius: 24px;
+    --rp-group-radius: 20px;
+    --rp-row-icon-radius: 50%;
+    --rp-bubble-radius: 20px;
+    --rp-imsg-me-bg: #0a59f7;
+    --rp-cc-tile-accent: #0a59f7;
+    --rp-wallpaper: radial-gradient(100% 70% at 80% 0%, rgb(10 89 247 / 0.75), transparent 60%),
+                    radial-gradient(90% 70% at 0% 100%, rgb(0 200 180 / 0.6), transparent 60%),
+                    linear-gradient(180deg, #0b1f4a, #071230);
+}
+:is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="huawei"][data-lonsha-theme="dark"],
+[data-lonsha-theme="dark"] :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root, .rp-scope)[data-rp-pack="huawei"]:not([data-lonsha-theme="light"]) {
+    --rp-imsg-me-bg: #317af7;
+    --rp-cc-tile-accent: #317af7;
+}
+}

@@ -1,0 +1,660 @@
+/* ============================================================
+   RubyPhone · UI Kit v3「iOS 26 液态玻璃 · iPhone 18 Pro Max」（rp.components 层）
+   在 phone-components-v2.css 之后加载。
+   ------------------------------------------------------------
+   A. 新组件 .rp3-* / .lt-appicon / .lt-icon（新类名，旧 DOM 里没有，无需门控）
+        0 基础与文字样式 · 1 液态玻璃材质 · 2 屏幕 / 壁纸 / 状态栏 / 灵动岛 · 3 App 图标（默认 / 深色 / 透明三种）
+        4 锁屏（自适应大时钟）· 5 主屏（玻璃小组件 / 网格 / 页点 / 玻璃 Dock）
+        6 App 窗口与导航（缩放打开、push、玻璃圆钮、大标题、滚动边缘渐隐）· 7 分组列表 / 玻璃开关
+        8 悬浮胶囊 Tab 栏 / 底部搜索 / Home 指示条 · 9 信息（iMessage 风格）· 10 微信风格 · 11 控制中心 · 12 减少动效
+   B. 旧 DOM 桥接：只在 #phone-panel[data-rp-ds="2"][data-rp-ui="2"][data-rp-ios="3"] 下生效（默认关）。
+   规矩：零 !important、零写死颜色（字面量只在 phone-tokens-v3.css / lonsha-tokens-v3.css）、
+   图标全部来自 shared/icons.js（SVG），本文件不含任何字符图标。
+   液态玻璃是「原创近似」：半透明填充 + backdrop 模糊 / 饱和 + 1px 镜面内高光 + 顶部高光渐变 + 柔和投影；
+   真实的折射位移浏览器做不到通用实现，这里不模拟（见 README）。
+   ============================================================ */
+
+@layer rp.components {
+
+    /* ============================================================
+       0. 基础
+       ============================================================ */
+    .rp3 {
+        font-family: var(--lt-font-ios);
+        font-size: var(--lt-ios-body-size);
+        line-height: var(--lt-ios-body-line);
+        letter-spacing: var(--lt-ios-body-track);
+        color: var(--lt-sys-label);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-text-size-adjust: 100%;
+    }
+    .rp3 *, .rp3 *::before, .rp3 *::after { box-sizing: border-box; }
+    .rp3 button { appearance: none; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-align: inherit; cursor: pointer; }
+    .rp3 input { font: inherit; letter-spacing: inherit; color: inherit; }
+    .rp3 :focus-visible { outline: 2px solid var(--lt-sys-blue); outline-offset: 2px; }
+    .lt-icon { display: inline-block; flex: none; width: 1em; height: 1em; vertical-align: -0.125em; overflow: visible; }
+
+    .rp3-t-largetitle { font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); }
+    .rp3-t-title2 { font: var(--lt-type-title2); letter-spacing: var(--lt-ios-title2-track); }
+    .rp3-t-title3 { font: var(--lt-type-title3); letter-spacing: var(--lt-ios-title3-track); }
+    .rp3-t-headline { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); }
+    .rp3-t-body { font: var(--lt-type-body); letter-spacing: var(--lt-ios-body-track); }
+    .rp3-t-subhead { font: var(--lt-type-subhead); letter-spacing: var(--lt-ios-subhead-track); }
+    .rp3-t-footnote { font: var(--lt-type-footnote); letter-spacing: var(--lt-ios-footnote-track); }
+    .rp3-t-caption1 { font: var(--lt-type-caption1); letter-spacing: var(--lt-ios-caption1-track); }
+    .rp3-t-2 { color: var(--lt-sys-label-2); }
+
+    @keyframes rp3-rise { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
+    @keyframes rp3-zoom-in {
+        from { transform: translate(var(--rp3-zx, 0px), var(--rp3-zy, 0px)) scale(var(--rp3-zs, 0.2), var(--rp3-zsy, var(--rp3-zs, 0.2))); border-radius: var(--rp3-zr, 64px); }
+        to { transform: none; border-radius: var(--rp3-screen-radius); }
+    }
+    @keyframes rp3-zoom-out {
+        from { transform: none; border-radius: var(--rp3-screen-radius); }
+        to { transform: translate(var(--rp3-zx, 0px), var(--rp3-zy, 0px)) scale(var(--rp3-zs, 0.2), var(--rp3-zsy, var(--rp3-zs, 0.2))); border-radius: var(--rp3-zr, 64px); }
+    }
+    @keyframes rp3-content-in { from { opacity: 0; } 35% { opacity: 0; } to { opacity: 1; } }
+    @keyframes rp3-push-in { from { transform: translateX(100%); } to { transform: none; } }
+    @keyframes rp3-push-under { from { transform: none; } to { transform: translateX(-30%); } }
+    @keyframes rp3-pop-out { from { transform: none; } to { transform: translateX(100%); } }
+    @keyframes rp3-pop-over { from { transform: translateX(-30%); } to { transform: none; } }
+    @keyframes rp3-dots { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 0.9; } }
+    @keyframes rp3-bubble-in { from { opacity: 0; transform: translateY(10px) scale(0.92); } to { opacity: 1; transform: none; } }
+
+    /* ============================================================
+       1. 液态玻璃材质（.rp3-glass = 常规；[data-glass="strong"] 压在浅色内容上；[data-glass="clear"] 压在照片 / 壁纸上）
+       ============================================================ */
+    .rp3-glass {
+        position: relative; isolation: isolate;
+        background: var(--lt-glass-fill);
+        backdrop-filter: var(--lt-glass-blur); -webkit-backdrop-filter: var(--lt-glass-blur);
+        box-shadow: var(--lt-glass-rim), var(--lt-glass-shadow);
+    }
+    .rp3-glass::after {
+        content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+        background: var(--lt-glass-specular);
+    }
+    .rp3-glass[data-glass="strong"] { background: var(--lt-glass-fill-strong); backdrop-filter: var(--lt-glass-blur-strong); -webkit-backdrop-filter: var(--lt-glass-blur-strong); box-shadow: var(--lt-glass-rim-on-light), var(--lt-glass-shadow); }
+    .rp3-glass[data-glass="clear"] { background: var(--lt-glass-fill-clear); }
+    .rp3-glass-btn {
+        display: grid; place-items: center; width: var(--rp3-glass-btn); height: var(--rp3-glass-btn); border-radius: 50%;
+        color: var(--lt-glass-on); transition: transform var(--lt-ios-dur-fast) var(--lt-ios-spring-bouncy);
+    }
+    .rp3-glass-btn .lt-icon { width: 22px; height: 22px; }
+    .rp3-glass-btn:active { transform: scale(1.08); }
+    .rp3-glass-capsule { display: inline-flex; align-items: center; height: var(--rp3-glass-btn); padding: 0 6px; border-radius: 999px; color: var(--lt-glass-on); }
+    .rp3-glass-capsule > button { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; }
+    .rp3-glass-capsule .lt-icon { width: 22px; height: 22px; }
+
+    /* ============================================================
+       2. 屏幕 / 壁纸 / 状态栏 / 灵动岛
+       ============================================================ */
+    .rp3-screen {
+        position: relative; width: var(--rp3-screen-w); height: var(--rp3-screen-h); overflow: hidden; isolation: isolate;
+        border-radius: var(--rp3-screen-radius); background: var(--lt-sys-black); contain: layout paint;
+    }
+    .rp3-wall { position: absolute; inset: 0; z-index: 0; background: var(--rp3-wall-light); transition: transform var(--lt-ios-dur) var(--lt-ios-spring), filter var(--lt-ios-dur) var(--lt-ios-spring); }
+    .rp3-wall::after { content: ""; position: absolute; inset: 0; background-image: var(--rp3-wall-grain); background-size: 3px 3px; mix-blend-mode: overlay; }
+    [data-lonsha-theme="dark"] .rp3-wall { background: var(--rp3-wall-dark); }
+    .rp3-screen[data-app-open] .rp3-wall { transform: scale(1.06); filter: blur(6px) brightness(0.9); }
+
+    .rp3-status {
+        position: absolute; top: 0; left: 0; right: 0; z-index: 60; height: var(--rp3-status-h); padding: 0 8px;
+        display: grid; grid-template-columns: 1fr var(--rp3-island-w) 1fr; align-items: center; pointer-events: none;
+        color: var(--lt-sys-label); transition: color var(--lt-ios-dur-fast) ease;
+    }
+    .rp3-status[data-on="wall"] { color: var(--rp3-on-wall); }
+    .rp3-status-time { justify-self: center; padding: 6px 0 0 18px; font: 600 var(--rp3-status-time-size) / 22px var(--lt-font-ios); letter-spacing: -0.4px; font-variant-numeric: tabular-nums; }
+    .rp3-status-icons { justify-self: center; display: inline-flex; align-items: center; gap: 6px; padding: 6px 18px 0 0; }
+    .rp3-status-icons .lt-icon { width: 18px; height: 18px; }
+    .rp3-batt { display: inline-flex; align-items: center; gap: 1px; }
+    .rp3-batt-body { position: relative; width: 26px; height: 12.5px; border-radius: 4.2px; }
+    .rp3-batt-body::before { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px currentColor; opacity: 0.35; }
+    .rp3-batt-level { position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc((100% - 4px) * var(--rp3-batt, 0.8)); border-radius: 2.2px; background: currentColor; }
+    .rp3-batt-nub { width: 1.5px; height: 4px; border-radius: 0 1px 1px 0; background: currentColor; opacity: 0.4; }
+
+    .rp3-island {
+        position: absolute; z-index: 70; top: var(--rp3-island-top); left: 50%; width: var(--rp3-island-w); height: var(--rp3-island-h);
+        transform: translateX(-50%); border-radius: calc(var(--rp3-island-h) / 2); background: var(--rp3-island-bg); color: var(--lt-sys-white);
+        display: flex; align-items: center; gap: 12px; padding: 0 14px; overflow: hidden;
+        transition: width var(--lt-ios-dur) var(--lt-ios-spring-bouncy), height var(--lt-ios-dur) var(--lt-ios-spring-bouncy), border-radius var(--lt-ios-dur) var(--lt-ios-spring-bouncy);
+    }
+    .rp3-island > * { opacity: 0; transition: opacity var(--lt-ios-dur-fast) ease; }
+    .rp3-island[data-state="banner"] { width: calc(var(--rp3-screen-w) - 24px); height: 80px; border-radius: 40px; padding: 0 18px 0 16px; }
+    .rp3-island[data-state="banner"] > * { opacity: 1; transition-delay: 120ms; }
+    .rp3-island-icon { flex: none; --rp3-icon: 46px; }
+    .rp3-island-text { flex: 1; min-width: 0; display: grid; }
+    .rp3-island-title { font: var(--lt-type-subhead); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rp3-island-sub { font: var(--lt-type-subhead); color: var(--rp3-cc-fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ============================================================
+       3. App 图标：连续曲率圆角 + 渐变底 + 顶部高光 + 0.5px 镜面边 + 带层次的玻璃感字形（58%）
+          模式：默认 / [data-rp3-icons="dark"] 深色 / [data-rp3-icons="clear"] 透明玻璃
+       ============================================================ */
+    .lt-appicon { position: relative; display: inline-grid; justify-items: center; align-content: start; gap: var(--rp3-label-gap); width: var(--rp3-icon); }
+    .lt-appicon-tile { position: relative; display: grid; place-items: center; width: var(--rp3-icon); height: var(--rp3-icon); color: var(--rp3-glyph, var(--rp3-on-chip)); filter: var(--rp3-icon-shadow); }
+    .lt-appicon-tile::before, .lt-appicon-tile::after {
+        content: ""; position: absolute; inset: 0;
+        -webkit-mask: var(--rp3-squircle) center / 100% 100% no-repeat; mask: var(--rp3-squircle) center / 100% 100% no-repeat;
+    }
+    .lt-appicon-tile::before { background: var(--rp3-tile-gloss), var(--rp3-tile, var(--rp3-tile-gray)); }
+    .lt-appicon-tile::after { background: var(--rp3-squircle-rim) center / 100% 100% no-repeat; pointer-events: none; }
+    .lt-appicon-glyph {
+        position: relative; z-index: 1; width: 58%; height: 58%; filter: var(--rp3-glyph-depth);
+        -webkit-mask-image: var(--rp3-glyph-gloss); mask-image: var(--rp3-glyph-gloss);
+    }
+    .lt-appicon-art { position: relative; z-index: 1; width: 100%; height: 100%; }
+    .lt-appicon-label {
+        max-width: calc(var(--rp3-icon) + 14px); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+        font: var(--lt-type-caption1); letter-spacing: var(--lt-ios-caption1-track); color: var(--rp3-label-fg); text-shadow: var(--rp3-label-shadow);
+    }
+    .lt-appicon-badge {
+        position: absolute; z-index: 2; top: -6px; right: -7px; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 12px;
+        display: grid; place-items: center; background: var(--rp3-badge-bg); color: var(--rp3-badge-fg);
+        font: 400 var(--lt-ios-callout-size) / 24px var(--lt-font-ios); font-variant-numeric: tabular-nums;
+    }
+    .lt-appicon[data-tile="green"] { --lt-icon-knock: var(--rp3-knock-green); --rp3-tile: var(--rp3-tile-green); --rp3-tint: var(--rp3-tint-green); }
+    .lt-appicon[data-tile="leaf"] { --lt-icon-knock: var(--rp3-knock-leaf); --rp3-tile: var(--rp3-tile-leaf); --rp3-tint: var(--rp3-tint-leaf); }
+    .lt-appicon[data-tile="blue"] { --lt-icon-knock: var(--rp3-knock-blue); --rp3-tile: var(--rp3-tile-blue); --rp3-tint: var(--rp3-tint-blue); }
+    .lt-appicon[data-tile="sky"] { --lt-icon-knock: var(--rp3-knock-sky); --rp3-tile: var(--rp3-tile-sky); --rp3-tint: var(--rp3-tint-sky); }
+    .lt-appicon[data-tile="gray"] { --lt-icon-knock: var(--rp3-knock-gray); --rp3-tile: var(--rp3-tile-gray); --rp3-tint: var(--rp3-tint-gray); }
+    .lt-appicon[data-tile="red"] { --lt-icon-knock: var(--rp3-knock-red); --rp3-tile: var(--rp3-tile-red); --rp3-tint: var(--rp3-tint-red); }
+    .lt-appicon[data-tile="pink"] { --lt-icon-knock: var(--rp3-knock-pink); --rp3-tile: var(--rp3-tile-pink); --rp3-tint: var(--rp3-tint-pink); }
+    .lt-appicon[data-tile="orange"] { --lt-icon-knock: var(--rp3-knock-orange); --rp3-tile: var(--rp3-tile-orange); --rp3-tint: var(--rp3-tint-orange); }
+    .lt-appicon[data-tile="yellow"] { --lt-icon-knock: var(--rp3-knock-yellow); --rp3-tile: var(--rp3-tile-yellow); --rp3-tint: var(--rp3-tint-yellow); }
+    .lt-appicon[data-tile="purple"] { --lt-icon-knock: var(--rp3-knock-purple); --rp3-tile: var(--rp3-tile-purple); --rp3-tint: var(--rp3-tint-purple); }
+    .lt-appicon[data-tile="indigo"] { --lt-icon-knock: var(--rp3-knock-indigo); --rp3-tile: var(--rp3-tile-indigo); --rp3-tint: var(--rp3-tint-indigo); }
+    .lt-appicon[data-tile="teal"] { --lt-icon-knock: var(--rp3-knock-teal); --rp3-tile: var(--rp3-tile-teal); --rp3-tint: var(--rp3-tint-teal); }
+    .lt-appicon[data-tile="graphite"] { --lt-icon-knock: var(--rp3-knock-graphite); --rp3-tile: var(--rp3-tile-graphite); --rp3-tint: var(--rp3-tint-graphite); }
+    .lt-appicon[data-tile="white"] { --lt-icon-knock: var(--rp3-knock-white); --rp3-tile: var(--rp3-tile-white); --rp3-tint: var(--rp3-tint-white); --rp3-glyph: var(--rp3-cal-red); }
+    .lt-appicon[data-tile="brown"] { --lt-icon-knock: var(--rp3-knock-brown); --rp3-tile: var(--rp3-tile-brown); --rp3-tint: var(--rp3-tint-brown); }
+    .lt-appicon[data-tile="mint"] { --lt-icon-knock: var(--rp3-knock-mint); --rp3-tile: var(--rp3-tile-mint); --rp3-tint: var(--rp3-tint-mint); }
+    .lt-appicon[data-tile="coral"] { --lt-icon-knock: var(--rp3-knock-coral); --rp3-tile: var(--rp3-tile-coral); --rp3-tint: var(--rp3-tint-coral); }
+    .lt-appicon[data-tile="navy"] { --lt-icon-knock: var(--rp3-knock-navy); --rp3-tile: var(--rp3-tile-navy); --rp3-tint: var(--rp3-tint-navy); }
+    /* 深色：深底 + 彩色字形 */
+    [data-rp3-icons="dark"] .lt-appicon { --rp3-tile: var(--rp3-tile-dark); --rp3-glyph: var(--rp3-tint); --lt-icon-knock: var(--rp3-knock-dark); }
+    [data-rp3-icons="dark"] .lt-appicon-tile::before { background: var(--rp3-tile-dark); }
+    /* 透明：磨砂玻璃底 + 半透明白色字形 */
+    [data-rp3-icons="clear"] .lt-appicon { --rp3-glyph: var(--rp3-glyph-clear); --lt-icon-knock: var(--rp3-knock-clear); }
+    [data-rp3-icons="clear"] .lt-appicon-tile::before { background: var(--rp3-tile-gloss), var(--rp3-tile-clear); backdrop-filter: var(--rp3-tile-clear-blur); -webkit-backdrop-filter: var(--rp3-tile-clear-blur); }
+    [data-rp3-icons="clear"] .lt-clock-face { opacity: 0.85; }
+    /* 日历 / 时钟 */
+    .lt-appicon-cal { position: relative; z-index: 1; display: grid; justify-items: center; margin-top: -2px; color: var(--rp3-cal-fg); line-height: 1; }
+    .lt-appicon-cal b { font: 600 var(--rp3-cal-weekday-size) / 1.3 var(--lt-font-ios); color: var(--rp3-cal-red); letter-spacing: 0; }
+    .lt-appicon-cal i { font: 300 var(--rp3-cal-day-size) / 1 var(--lt-font-ios-display); font-style: normal; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+    :is([data-rp3-icons="dark"], [data-rp3-icons="clear"]) .lt-appicon-cal { color: var(--lt-sys-white); }
+    .lt-clock-face { fill: var(--rp3-clock-face); }
+    .lt-clock-ticks { stroke: var(--rp3-clock-ink); stroke-width: 1.3; }
+    .lt-clock-hand { stroke: var(--rp3-clock-ink); stroke-width: 2.2; stroke-linecap: round; fill: none; }
+    .lt-clock-sec { stroke: var(--rp3-clock-sec); stroke-width: 0.9; stroke-linecap: round; }
+    .lt-clock-pin { fill: var(--rp3-clock-sec); }
+
+    /* ============================================================
+       4. 锁屏：自适应大时钟（通知展开时自动缩小）+ 玻璃通知 + 玻璃圆钮
+       ============================================================ */
+    .rp3-lock {
+        --rp3-clock-size: 132px;
+        position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center;
+        padding-top: var(--rp3-status-h); color: var(--rp3-on-wall); touch-action: none; user-select: none;
+        transition: transform var(--lt-ios-dur) var(--lt-ios-spring), opacity var(--lt-ios-dur) var(--lt-ios-spring);
+    }
+    .rp3-lock::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--rp3-wall-light); }
+    [data-lonsha-theme="dark"] .rp3-lock::before { background: var(--rp3-wall-dark); }
+    .rp3-lock[data-compact] { --rp3-clock-size: 92px; }
+    .rp3-lock[data-dragging] { transition: none; }
+    .rp3-lock[data-state="unlocked"] { transform: translateY(-100%); opacity: 0; pointer-events: none; }
+    .rp3-lock-glyph { width: 16px; height: 16px; margin-top: 2px; opacity: 0.9; }
+    .rp3-lock-date { margin-top: 12px; display: inline-flex; align-items: center; gap: 8px; font: 600 22px / 26px var(--lt-font-ios-display); letter-spacing: -0.3px; color: var(--rp3-on-wall-2); text-shadow: var(--rp3-lock-shadow); }
+    .rp3-lock-date .lt-icon { width: 21px; height: 21px; }
+    .rp3-lock-time {
+        margin-top: -4px; font-family: var(--lt-font-ios-rounded); font-weight: 700; font-size: var(--rp3-clock-size); line-height: 1;
+        letter-spacing: calc(var(--rp3-clock-size) * -0.035); font-variant-numeric: proportional-nums;
+        color: transparent; background: var(--rp3-lock-clock-fill); -webkit-background-clip: text; background-clip: text;
+        filter: drop-shadow(0 2px 16px rgb(0 0 0 / 0.14));
+        transition: font-size var(--lt-ios-dur) var(--lt-ios-spring), letter-spacing var(--lt-ios-dur) var(--lt-ios-spring);
+    }
+    .rp3-lock-notifs { position: absolute; left: 12px; right: 12px; bottom: 140px; display: grid; gap: 8px; }
+    .rp3-notif {
+        display: grid; grid-template-columns: 40px 1fr auto; column-gap: 12px; align-items: start; padding: 14px 16px 15px 14px;
+        border-radius: 28px; color: var(--rp3-notif-fg); text-align: left; width: 100%;
+        animation: rp3-rise var(--lt-ios-dur) var(--lt-ios-spring) both;
+    }
+    .rp3-notif .lt-appicon { --rp3-icon: 40px; }
+    .rp3-notif .lt-appicon-tile { filter: none; }
+    .rp3-notif-icon { grid-row: 1 / 3; }
+    .rp3-notif-title { font: var(--lt-type-subhead); font-weight: 600; letter-spacing: var(--lt-ios-subhead-track); }
+    .rp3-notif-body { grid-column: 2 / 4; font: var(--lt-type-subhead); letter-spacing: var(--lt-ios-subhead-track); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+    .rp3-notif-time { font: var(--lt-type-footnote); color: var(--rp3-notif-fg-2); }
+    .rp3-notif-stack { position: relative; margin-bottom: 20px; }
+    .rp3-notif-stack > .rp3-notif + .rp3-notif { position: absolute; left: 0; right: 0; top: 0; z-index: -1; }
+    .rp3-notif-stack > .rp3-notif:nth-child(2) { transform: translateY(11px) scale(0.94); opacity: 0.8; }
+    .rp3-notif-stack > .rp3-notif:nth-child(3) { transform: translateY(21px) scale(0.88); opacity: 0.5; z-index: -2; }
+    .rp3-notif-stack > .rp3-notif:nth-child(n+2) > * { visibility: hidden; }
+    .rp3-notif-stack[data-open] > .rp3-notif + .rp3-notif { position: relative; transform: none; opacity: 1; z-index: auto; margin-top: 8px; }
+    .rp3-notif-stack[data-open] > .rp3-notif > * { visibility: visible; }
+    .rp3-lock[data-masked] .rp3-notif-body { filter: blur(5px); }
+    .rp3-lock-btn { position: absolute; bottom: 46px; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; color: var(--rp3-on-wall); transition: transform var(--lt-ios-dur-fast) var(--lt-ios-spring-bouncy); }
+    .rp3-lock-btn .lt-icon { width: 22px; height: 22px; }
+    .rp3-lock-btn:active { transform: scale(1.14); }
+    .rp3-lock-btn[aria-pressed="true"] { background: var(--rp3-on-wall); color: var(--lt-sys-black); }
+    .rp3-lock-btn[data-side="left"] { left: 50px; }
+    .rp3-lock-btn[data-side="right"] { right: 50px; }
+
+    /* ============================================================
+       5. 主屏
+       ============================================================ */
+    .rp3-home { position: absolute; inset: 0; z-index: 10; padding-top: var(--rp3-safe-top); transition: transform var(--lt-ios-dur) var(--lt-ios-spring), opacity var(--lt-ios-dur) var(--lt-ios-spring); }
+    .rp3-screen[data-app-open] .rp3-home { transform: scale(0.92); opacity: 0; }
+    .rp3-widgets { display: grid; grid-template-columns: repeat(2, var(--rp3-widget-small)); column-gap: var(--rp3-widget-gap); justify-content: center; padding-top: 6px; }
+    .rp3-widget-cell { display: grid; justify-items: center; gap: 6px; }
+    .rp3-widget {
+        position: relative; overflow: hidden; width: var(--rp3-widget-small); height: var(--rp3-widget-small); padding: 16px 17px;
+        border-radius: var(--rp3-widget-radius); color: var(--rp3-on-wall); text-align: left; transition: transform var(--lt-ios-dur-fast) var(--lt-ios-spring);
+    }
+    .rp3-widget:active { transform: scale(0.96); }
+    .rp3-widget-label { font: var(--lt-type-caption1); letter-spacing: var(--lt-ios-caption1-track); color: var(--rp3-label-fg); text-shadow: var(--rp3-label-shadow); }
+    .rp3-widget[data-kind="weather"] { display: flex; flex-direction: column; background: var(--rp3-weather-glass); }
+    .rp3-wx-city { display: flex; align-items: center; gap: 4px; font: var(--lt-type-subhead); font-weight: 600; }
+    .rp3-wx-city .lt-icon { width: 11px; height: 11px; }
+    .rp3-wx-temp { font: 300 46px / 50px var(--lt-font-ios-display); letter-spacing: -1px; }
+    .rp3-wx-foot { margin-top: auto; display: grid; gap: 1px; font: var(--lt-type-footnote); font-weight: 600; }
+    .rp3-wx-foot .lt-icon { width: 18px; height: 18px; margin-bottom: 3px; color: var(--rp3-sun); }
+    .rp3-wx-foot span + span { font-weight: 500; opacity: 0.9; }
+    .rp3-widget[data-kind="calendar"] { display: flex; flex-direction: column; gap: 2px; }
+    .rp3-cal-wd { font: var(--lt-type-caption1); font-weight: 700; color: var(--rp3-widget-red-on-glass); letter-spacing: 0.2px; }
+    .rp3-cal-day { font: 400 40px / 42px var(--lt-font-ios-display); letter-spacing: -0.6px; margin-bottom: 8px; }
+    .rp3-cal-ev { position: relative; padding-left: 9px; font: var(--lt-type-caption1); letter-spacing: 0; }
+    .rp3-cal-ev::before { content: ""; position: absolute; left: 0; top: 1px; bottom: 1px; width: 3px; border-radius: 2px; background: var(--rp3-ev, var(--lt-sys-purple)); }
+    .rp3-cal-ev b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rp3-cal-ev span { opacity: 0.75; }
+    .rp3-cal-ev + .rp3-cal-ev { margin-top: 6px; }
+    .rp3-grid { display: grid; grid-template-columns: repeat(var(--rp3-grid-cols), var(--rp3-icon)); justify-content: space-between; row-gap: var(--rp3-grid-row-gap); padding: 28px var(--rp3-grid-inset) 0; }
+    .rp3-app { display: grid; justify-items: center; transition: transform var(--lt-ios-dur-fast) var(--lt-ios-spring); }
+    .rp3-app:active { transform: scale(0.9); transition-duration: 90ms; }
+    .rp3-pagedots {
+        position: absolute; left: 50%; bottom: calc(var(--rp3-dock-bottom) + var(--rp3-dock-h) + 14px); transform: translateX(-50%);
+        display: flex; gap: 9px; padding: 8px 12px; border-radius: 999px;
+    }
+    .rp3-pagedots i { width: 7px; height: 7px; border-radius: 50%; background: var(--rp3-on-wall); opacity: 0.4; }
+    .rp3-pagedots i[aria-current="true"] { opacity: 1; }
+    .rp3-dock {
+        position: absolute; left: var(--rp3-dock-inset); right: var(--rp3-dock-inset); bottom: var(--rp3-dock-bottom);
+        height: var(--rp3-dock-h); border-radius: var(--rp3-dock-radius);
+        display: grid; grid-template-columns: repeat(4, var(--rp3-icon)); justify-content: space-between; align-items: center;
+        padding: 0 calc(var(--rp3-grid-inset) - var(--rp3-dock-inset));
+    }
+    .rp3-dock .lt-appicon-label { display: none; }
+
+    /* ============================================================
+       6. App 窗口 / 视图栈 / 导航（玻璃圆钮 + 滚动边缘渐隐；内容从栏下流过）
+       ============================================================ */
+    .rp3-appwin { position: absolute; inset: 0; z-index: 30; overflow: hidden; border-radius: var(--rp3-screen-radius); background: var(--lt-sys-bg); color: var(--lt-sys-label); transform-origin: 0 0; }
+    .rp3-appwin[hidden] { display: none; }
+    .rp3-appwin[data-anim="open"] { animation: rp3-zoom-in var(--lt-ios-dur) var(--lt-ios-spring) both; }
+    .rp3-appwin[data-anim="open"] > * { animation: rp3-content-in var(--lt-ios-dur) ease both; }
+    .rp3-appwin[data-anim="close"] { animation: rp3-zoom-out calc(var(--lt-ios-dur) * 0.8) var(--lt-ios-spring) both; }
+    .rp3-appwin[data-anim="close"] > * { opacity: 0; transition: opacity 120ms ease; }
+    .rp3-view { position: absolute; inset: 0; overflow: hidden; background: var(--rp3-view-bg, var(--lt-sys-bg)); }
+    .rp3-view[data-push="in"] { z-index: 2; animation: rp3-push-in var(--lt-ios-dur) var(--lt-ios-spring) both; box-shadow: -10px 0 30px -10px rgb(var(--lt-sys-shadow-rgb) / 0.25); }
+    .rp3-view[data-push="under"] { animation: rp3-push-under var(--lt-ios-dur) var(--lt-ios-spring) both; }
+    .rp3-view[data-push="out"] { z-index: 2; animation: rp3-pop-out var(--lt-ios-dur) var(--lt-ios-spring) both; }
+    .rp3-view[data-push="over"] { animation: rp3-pop-over var(--lt-ios-dur) var(--lt-ios-spring) both; }
+    .rp3-scroll {
+        position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
+        padding-top: calc(var(--rp3-status-h) + var(--rp3-nav-h)); padding-bottom: calc(var(--rp3-tabbar-h) + var(--rp3-tabbar-bottom) + 24px);
+    }
+    .rp3-scroll::-webkit-scrollbar { display: none; }
+    /* 滚动边缘效果：顶部一条随内容模糊渐隐的带（不是实心栏） */
+    .rp3-edge {
+        position: absolute; z-index: 4; left: 0; right: 0; top: 0; height: calc(var(--rp3-status-h) + var(--rp3-nav-h) + 12px); pointer-events: none;
+        backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+        -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent); mask-image: linear-gradient(180deg, #000 55%, transparent);
+        background: var(--rp3-edge-fade, var(--lt-glass-edge-fade)); opacity: 0; transition: opacity var(--lt-ios-dur-fast);
+    }
+    .rp3-view[data-scrolled] .rp3-edge { opacity: 1; }
+    .rp3-nav {
+        position: absolute; z-index: 5; left: 0; right: 0; top: 0; height: calc(var(--rp3-status-h) + var(--rp3-nav-h)); padding: var(--rp3-status-h) 16px 0;
+        display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; pointer-events: none;
+    }
+    .rp3-nav > * { pointer-events: auto; }
+    .rp3-nav > :first-child { justify-self: start; }
+    .rp3-nav-title { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); opacity: 0; transition: opacity var(--lt-ios-dur-fast); white-space: nowrap; }
+    .rp3-view[data-scrolled] .rp3-nav-title, .rp3-nav[data-inline] .rp3-nav-title { opacity: 1; }
+    .rp3-nav-end { justify-self: end; display: inline-flex; gap: 10px; }
+    .rp3-back .lt-icon { width: 24px; height: 24px; stroke-width: 2.1; margin-left: -2px; }
+    .rp3-largetitle { padding: var(--rp3-largetitle-pad-top) var(--rp3-margin) 14px; font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); }
+
+    /* ============================================================
+       7. 分组列表 / 玻璃开关
+       ============================================================ */
+    .rp3-grouped { --rp3-view-bg: var(--lt-sys-grouped-bg); --rp3-edge-fade: linear-gradient(180deg, var(--lt-sys-grouped-bg) 0%, transparent 100%); background: var(--lt-sys-grouped-bg); }
+    .rp3-section { margin: 0 var(--rp3-margin) 28px; }
+    .rp3-section-head { padding: 0 var(--rp3-margin) 8px; font: var(--lt-type-footnote); font-weight: 600; letter-spacing: var(--lt-ios-footnote-track); color: var(--lt-sys-label-2); }
+    .rp3-section-foot { padding: 8px var(--rp3-margin) 0; font: var(--lt-type-footnote); letter-spacing: var(--lt-ios-footnote-track); color: var(--lt-sys-label-2); }
+    .rp3-list { --rp3-sep-inset: var(--rp3-margin); overflow: hidden; border-radius: var(--rp3-row-radius); background: var(--lt-sys-grouped-bg-2); }
+    .rp3-list[data-icons] { --rp3-sep-inset: calc(var(--rp3-margin) + var(--rp3-row-icon) + var(--rp3-row-icon-gap)); }
+    .rp3-row {
+        position: relative; display: flex; align-items: center; gap: var(--rp3-row-icon-gap); width: 100%; min-height: var(--rp3-row-h-min);
+        padding: 0 var(--rp3-margin); font: var(--lt-type-body); letter-spacing: var(--lt-ios-body-track); color: var(--lt-sys-label); transition: background-color 180ms ease;
+    }
+    .rp3-list[data-icons] .rp3-row { min-height: var(--rp3-row-h); }
+    .rp3-row:active { background: var(--lt-sys-gray4); transition-duration: 0ms; }
+    .rp3-row + .rp3-row::before { content: ""; position: absolute; top: 0; right: 0; left: var(--rp3-sep-inset); height: var(--lt-hairline); background: var(--lt-sys-separator); }
+    .rp3-row-label { flex: 1; min-width: 0; padding: 11px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rp3-row-value { color: var(--lt-sys-label-2); white-space: nowrap; }
+    .rp3-row-check { width: 20px; height: 20px; color: var(--lt-sys-tint); stroke-width: 2.4; }
+    .rp3-row-chev { width: 17px; height: 17px; margin: 0 -4px 0 -8px; color: var(--lt-sys-label-3); stroke-width: 2.6; }
+    .rp3-tile { position: relative; flex: none; display: grid; place-items: center; width: var(--rp3-row-icon); height: var(--rp3-row-icon); color: var(--rp3-on-chip); }
+    .rp3-tile::before { content: ""; position: absolute; inset: 0; background: var(--rp3-tile-gloss), var(--rp3-chip, var(--rp3-chip-gray)); -webkit-mask: var(--rp3-squircle) center / 100% 100% no-repeat; mask: var(--rp3-squircle) center / 100% 100% no-repeat; }
+    .rp3-tile .lt-icon { position: relative; width: 19px; height: 19px; filter: var(--rp3-glyph-depth); }
+    .rp3-tile[data-chip="orange"] { --rp3-chip: var(--rp3-chip-orange); } .rp3-tile[data-chip="blue"] { --rp3-chip: var(--rp3-chip-blue); }
+    .rp3-tile[data-chip="green"] { --rp3-chip: var(--rp3-chip-green); }   .rp3-tile[data-chip="red"] { --rp3-chip: var(--rp3-chip-red); }
+    .rp3-tile[data-chip="pink"] { --rp3-chip: var(--rp3-chip-pink); }     .rp3-tile[data-chip="indigo"] { --rp3-chip: var(--rp3-chip-indigo); }
+    .rp3-tile[data-chip="purple"] { --rp3-chip: var(--rp3-chip-purple); } .rp3-tile[data-chip="gray"] { --rp3-chip: var(--rp3-chip-gray); }
+    .rp3-tile[data-chip="teal"] { --rp3-chip: var(--rp3-chip-teal); }     .rp3-tile[data-chip="cyan"] { --rp3-chip: var(--rp3-chip-cyan); }
+    .rp3-tile[data-chip="yellow"] { --rp3-chip: var(--rp3-chip-yellow); } .rp3-tile[data-chip="mint"] { --rp3-chip: var(--rp3-chip-mint); }
+    .rp3-account { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 84px; padding: 12px var(--rp3-margin); text-align: left; }
+    .rp3-avatar {
+        flex: none; display: grid; place-items: center; width: var(--rp3-ava, 60px); height: var(--rp3-ava, 60px); border-radius: 50%;
+        background: var(--rp3-avatar-bg); color: var(--rp3-avatar-fg); font: 600 calc(var(--rp3-ava, 60px) * 0.4) / 1 var(--lt-font-ios-rounded); letter-spacing: 0;
+    }
+    .rp3-account-name { font: 600 20px / 25px var(--lt-font-ios-display); letter-spacing: -0.45px; }
+    .rp3-account-sub { font: var(--lt-type-footnote); color: var(--lt-sys-label-2); }
+    /* iOS 26 开关：更宽的胶囊 + 胶囊形滑块，按住时滑块变成玻璃并放大 */
+    .rp3-switch {
+        appearance: none; -webkit-appearance: none; position: relative; flex: none; width: var(--rp3-toggle-w); height: var(--rp3-toggle-h); margin: 0;
+        border-radius: 999px; background: var(--lt-sys-fill); cursor: pointer; transition: background-color 250ms ease;
+    }
+    .rp3-switch::before {
+        content: ""; position: absolute; top: 2px; left: 2px; width: 37px; height: 24px; border-radius: 999px;
+        background: var(--rp3-switch-knob); box-shadow: var(--rp3-switch-knob-shadow);
+        transition: transform var(--lt-ios-dur-fast) var(--lt-ios-spring-bouncy), background-color 160ms ease, box-shadow 160ms ease, scale 160ms ease;
+    }
+    .rp3-switch:active::before { scale: 1.18; background: var(--rp3-switch-knob-glass); box-shadow: var(--lt-glass-rim), var(--rp3-switch-knob-shadow); }
+    .rp3-switch:checked { background: var(--rp3-switch-on); }
+    .rp3-switch:checked::before { transform: translateX(22px); }
+
+    /* ============================================================
+       8. 悬浮胶囊 Tab 栏 / 底部搜索胶囊 / Home 指示条
+       ============================================================ */
+    .rp3-bottom {
+        position: absolute; z-index: 10; left: var(--rp3-tabbar-inset); right: var(--rp3-tabbar-inset); bottom: var(--rp3-tabbar-bottom);
+        display: flex; gap: 10px; align-items: center; pointer-events: none;
+    }
+    .rp3-bottom > * { pointer-events: auto; }
+    .rp3-tabbar { flex: 1; height: var(--rp3-tabbar-h); padding: 4px; border-radius: 999px; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
+    .rp3-tab {
+        position: relative; display: grid; justify-items: center; align-content: center; gap: 1px; border-radius: 999px;
+        color: var(--lt-sys-label); font: var(--lt-type-tablabel); letter-spacing: var(--lt-ios-tablabel-track);
+        transition: background-color 200ms ease, color 200ms ease;
+    }
+    .rp3-tab .lt-icon { width: var(--rp3-tabbar-icon); height: var(--rp3-tabbar-icon); }
+    .rp3-tab .lt-icon--fill, .rp3-tab[aria-selected="true"] .lt-icon:not(.lt-icon--fill) { display: none; }
+    .rp3-tab[aria-selected="true"] .lt-icon--fill { display: inline-block; }
+    .rp3-tab[aria-selected="true"] { background: var(--lt-glass-pill); color: var(--rp3-tab-on, var(--lt-sys-tint)); }
+    .rp3-search-fab { flex: none; width: var(--rp3-tabbar-h); height: var(--rp3-tabbar-h); border-radius: 50%; display: grid; place-items: center; color: var(--lt-sys-label); }
+    .rp3-search-fab .lt-icon { width: 24px; height: 24px; }
+    .rp3-searchbar {
+        flex: 1; display: flex; align-items: center; gap: 8px; height: var(--rp3-search-h); padding: 0 16px; border-radius: 999px;
+        color: var(--lt-sys-label-2); font: var(--lt-type-body); letter-spacing: var(--lt-ios-body-track);
+    }
+    .rp3-searchbar .lt-icon { width: 19px; height: 19px; stroke-width: 2; }
+    .rp3-searchbar .lt-icon[data-icon="mic"] { margin-left: auto; }
+    .rp3-homebar {
+        position: absolute; z-index: 95; left: 50%; bottom: var(--rp3-homebar-bottom); width: var(--rp3-homebar-w); height: var(--rp3-homebar-h);
+        transform: translateX(-50%); border-radius: 3px; background: var(--lt-sys-label); cursor: pointer; transition: background-color var(--lt-ios-dur-fast);
+    }
+    .rp3-homebar::before { content: ""; position: absolute; inset: -14px -20px; }
+    .rp3-homebar[data-on="wall"] { background: var(--rp3-on-wall); }
+
+    /* ============================================================
+       9. 信息（iMessage 风格）：玻璃顶栏按钮 + 悬浮玻璃输入胶囊，气泡从下方流过
+       ============================================================ */
+    .rp3-imsg { --rp3-view-bg: var(--rp3-imsg-bg); }
+    .rp3-imsg-head {
+        position: absolute; z-index: 5; top: 0; left: 0; right: 0; padding: calc(var(--rp3-status-h) - 2px) 16px 0;
+        display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; pointer-events: none;
+    }
+    .rp3-imsg-head > * { pointer-events: auto; }
+    .rp3-imsg-head > :first-child { justify-self: start; }
+    .rp3-imsg-who { display: grid; justify-items: center; gap: 4px; }
+    .rp3-imsg-who .rp3-avatar { --rp3-ava: 52px; box-shadow: var(--lt-glass-shadow); }
+    .rp3-imsg-name { display: inline-flex; align-items: center; gap: 2px; height: 26px; padding: 0 10px; border-radius: 999px; font: var(--lt-type-caption1); font-weight: 600; letter-spacing: 0; }
+    .rp3-imsg-name .lt-icon { width: 11px; height: 11px; opacity: 0.5; stroke-width: 2.6; }
+    .rp3-thread {
+        position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column;
+        padding: calc(var(--rp3-status-h) + 96px) 0 calc(var(--rp3-safe-bottom) + 76px); background: var(--rp3-imsg-bg);
+    }
+    .rp3-thread::-webkit-scrollbar { display: none; }
+    .rp3-stamp { margin: 14px 0 6px; text-align: center; font: var(--lt-type-caption2); letter-spacing: 0.06px; color: var(--lt-sys-label-2); }
+    .rp3-stamp b { font-weight: 600; }
+    .rp3-msg { display: flex; padding: 0 18px; margin-top: 2px; }
+    .rp3-msg[data-first] { margin-top: 10px; }
+    .rp3-msg[data-from="me"] { justify-content: flex-end; }
+    .rp3-bubble {
+        position: relative; isolation: isolate; max-width: var(--rp3-bubble-max); padding: var(--rp3-bubble-pad); border-radius: var(--rp3-bubble-radius);
+        background: var(--rp3-imsg-them); color: var(--rp3-imsg-them-fg); font: var(--lt-type-body); letter-spacing: var(--lt-ios-body-track); overflow-wrap: anywhere; white-space: pre-wrap;
+    }
+    .rp3-msg[data-from="me"] .rp3-bubble { background: var(--rp3-imsg-me); color: var(--rp3-imsg-me-fg); }
+    .rp3-msg[data-new] .rp3-bubble { animation: rp3-bubble-in var(--lt-ios-dur) var(--lt-ios-spring-bouncy) both; transform-origin: 100% 100%; }
+    .rp3-msg[data-from="them"][data-new] .rp3-bubble { transform-origin: 0 100%; }
+    /* 尾巴：气泡色的钩（background: inherit）+ 与线程背景同色的遮挡；颜色永远跟随 token */
+    .rp3-bubble[data-tail]::before, .rp3-bubble[data-tail]::after { content: ""; position: absolute; z-index: -1; bottom: 0; height: 20px; }
+    .rp3-msg[data-from="me"] .rp3-bubble[data-tail]::before { right: -7px; width: 20px; background: inherit; border-bottom-left-radius: 16px 14px; }
+    .rp3-msg[data-from="me"] .rp3-bubble[data-tail]::after { right: -26px; width: 26px; background: var(--rp3-imsg-bg); border-bottom-left-radius: 10px; }
+    .rp3-msg[data-from="them"] .rp3-bubble[data-tail]::before { left: -7px; width: 20px; background: inherit; border-bottom-right-radius: 16px 14px; }
+    .rp3-msg[data-from="them"] .rp3-bubble[data-tail]::after { left: -26px; width: 26px; background: var(--rp3-imsg-bg); border-bottom-right-radius: 10px; }
+    .rp3-receipt { align-self: flex-end; padding: 3px 22px 0; font: var(--lt-type-caption2); font-weight: 500; letter-spacing: 0.06px; color: var(--lt-sys-label-2); }
+    .rp3-typing { display: inline-flex; gap: 4px; padding: 12px 14px; }
+    .rp3-typing i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: 0.3; animation: rp3-dots 1.3s infinite; }
+    .rp3-typing i:nth-child(2) { animation-delay: 0.18s; }
+    .rp3-typing i:nth-child(3) { animation-delay: 0.36s; }
+    .rp3-composer { position: absolute; z-index: 5; left: 14px; right: 14px; bottom: calc(var(--rp3-safe-bottom) - 6px); display: flex; align-items: flex-end; gap: 8px; }
+    .rp3-composer-plus { flex: none; color: var(--lt-glass-on); }
+    .rp3-composer-plus .lt-icon { width: 22px; height: 22px; stroke-width: 2.1; }
+    .rp3-field { flex: 1; min-width: 0; display: flex; align-items: center; min-height: var(--rp3-glass-btn); padding: 0 4px 0 16px; border-radius: 22px; }
+    .rp3-field input { flex: 1; min-width: 0; height: 40px; padding: 0; border: 0; outline: 0; background: transparent; font: var(--lt-type-body); letter-spacing: var(--lt-ios-body-track); color: var(--lt-sys-label); }
+    .rp3-field input::placeholder { color: var(--lt-sys-label-3); }
+    .rp3-field-btn { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; color: var(--lt-sys-label-2); }
+    .rp3-field-btn .lt-icon { width: 21px; height: 21px; }
+    .rp3-field-btn[data-send] { background: var(--rp3-imsg-me); color: var(--rp3-imsg-me-fg); }
+    .rp3-field-btn[data-send] .lt-icon { width: 18px; height: 18px; stroke-width: 2.4; }
+    .rp3-field-btn[hidden] { display: none; }
+
+    /* ============================================================
+       10. 微信风格（保持微信自己的扁平语言；只有底部 Tab 栏用玻璃胶囊）
+       ============================================================ */
+    .rp3-wx { --rp3-view-bg: var(--rp3-wx-bg); --rp3-tab-on: var(--rp3-wx-green); --rp3-edge-fade: linear-gradient(180deg, var(--rp3-wx-bg), transparent); background: var(--rp3-wx-bg); }
+    .rp3-wx-head {
+        position: absolute; z-index: 5; top: 0; left: 0; right: 0; height: calc(var(--rp3-status-h) + var(--rp3-nav-h)); padding: var(--rp3-status-h) 8px 0;
+        display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; background: var(--rp3-wx-bar); color: var(--rp3-wx-icon); box-shadow: 0 var(--lt-hairline) 0 var(--rp3-wx-line);
+    }
+    .rp3-wx-head > :first-child { justify-self: start; }
+    .rp3-wx-head button { display: grid; place-items: center; width: 44px; height: 44px; }
+    .rp3-wx-head .lt-icon { width: 24px; height: 24px; }
+    .rp3-wx-title { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--lt-sys-label); }
+    .rp3-wx-thread { position: absolute; left: 0; right: 0; top: calc(var(--rp3-status-h) + var(--rp3-nav-h)); bottom: calc(56px + var(--rp3-safe-bottom)); overflow-y: auto; scrollbar-width: none; padding: 4px 0 12px; }
+    .rp3-wx-thread::-webkit-scrollbar { display: none; }
+    .rp3-wx-time { margin: 18px 0 14px; text-align: center; font: var(--lt-type-caption1); color: var(--rp3-wx-time); letter-spacing: 0; }
+    .rp3-wx-msg { display: flex; align-items: flex-start; gap: 10px; padding: 0 12px; margin-bottom: 16px; }
+    .rp3-wx-msg[data-from="me"] { flex-direction: row-reverse; }
+    .rp3-wx-ava { --rp3-ava: 42px; border-radius: var(--rp3-wx-avatar-radius); font-size: 17px; }
+    .rp3-wx-bub {
+        position: relative; isolation: isolate; max-width: 68%; min-height: 42px; padding: 10px 12px; border-radius: 4px;
+        background: var(--rp3-wx-them); color: var(--rp3-wx-them-fg); font: 400 var(--lt-ios-body-size) / 1.35 var(--lt-font-ios); letter-spacing: 0; overflow-wrap: anywhere; white-space: pre-wrap;
+    }
+    .rp3-wx-bub::before { content: ""; position: absolute; z-index: -1; top: 15px; left: -4px; width: 10px; height: 10px; background: inherit; border-radius: 1.5px; transform: rotate(45deg); }
+    .rp3-wx-msg[data-from="me"] .rp3-wx-bub { background: var(--rp3-wx-me); color: var(--rp3-wx-me-fg); }
+    .rp3-wx-msg[data-from="me"] .rp3-wx-bub::before { left: auto; right: -4px; }
+    .rp3-wx-msg[data-new] .rp3-wx-bub { animation: rp3-bubble-in var(--lt-ios-dur-fast) var(--lt-ios-spring) both; }
+    .rp3-wx-input {
+        position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 10px; padding: 8px 12px calc(8px + var(--rp3-safe-bottom));
+        background: var(--rp3-wx-input-bar); color: var(--rp3-wx-icon); box-shadow: 0 calc(var(--lt-hairline) * -1) 0 var(--rp3-wx-line);
+    }
+    .rp3-wx-ib { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; }
+    .rp3-wx-ib .lt-icon { width: 19px; height: 19px; }
+    .rp3-wx-field { flex: 1; min-width: 0; height: 40px; padding: 0 10px; border: 0; outline: 0; border-radius: 6px; background: var(--rp3-wx-field); color: var(--lt-sys-label); font: 400 var(--lt-ios-callout-size) / 40px var(--lt-font-ios); }
+    .rp3-wx-send { flex: none; height: 34px; padding: 0 14px; border-radius: 6px; background: var(--rp3-wx-green); color: var(--rp3-on-chip); font: var(--lt-type-subhead); font-weight: 600; }
+    .rp3-wx-send[hidden], .rp3-wx-ib[hidden] { display: none; }
+    .rp3-wx-list { background: var(--rp3-wx-them); }
+    .rp3-wx-row { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 74px; padding: 0 18px; text-align: left; }
+    .rp3-wx-row:active { background: var(--lt-sys-gray5); }
+    .rp3-wx-row + .rp3-wx-row::before { content: ""; position: absolute; top: 0; right: 0; left: 80px; height: var(--lt-hairline); background: var(--rp3-wx-line); }
+    .rp3-wx-row .rp3-avatar { --rp3-ava: 50px; border-radius: 8px; font-size: 20px; }
+    .rp3-wx-row-main { flex: 1; min-width: 0; display: grid; gap: 3px; }
+    .rp3-wx-row-name { font: 400 var(--lt-ios-body-size) / 22px var(--lt-font-ios); letter-spacing: 0; color: var(--lt-sys-label); }
+    .rp3-wx-row-sub { font: 400 var(--lt-ios-subhead-size) / 20px var(--lt-font-ios); color: var(--rp3-wx-time); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rp3-wx-row-time { align-self: flex-start; padding-top: 16px; font: var(--lt-type-caption1); color: var(--rp3-wx-time); }
+
+    /* ============================================================
+       11. 控制中心：玻璃模块（同心大圆角）、玻璃圆钮、玻璃滑杆
+       ============================================================ */
+    .rp3-cc { position: absolute; inset: 0; z-index: 90; pointer-events: none; color: var(--rp3-cc-fg); }
+    .rp3-cc::before { content: ""; position: absolute; inset: 0; background: var(--rp3-cc-scrim); backdrop-filter: var(--rp3-cc-blur); -webkit-backdrop-filter: var(--rp3-cc-blur); opacity: 0; transition: opacity var(--lt-ios-dur-fast) ease; }
+    .rp3-cc[data-open] { pointer-events: auto; }
+    .rp3-cc[data-open]::before { opacity: 1; }
+    .rp3-cc-grid {
+        position: absolute; top: 84px; left: 28px; right: 28px; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 82px; gap: 18px;
+        transform-origin: 85% 0; transform: translateY(-24px) scale(0.92); opacity: 0;
+        transition: transform var(--lt-ios-dur) var(--lt-ios-spring-bouncy), opacity var(--lt-ios-dur-fast) ease;
+    }
+    .rp3-cc[data-open] .rp3-cc-grid { transform: none; opacity: 1; }
+    .rp3-cc-mod { border-radius: 34px; overflow: hidden; color: var(--rp3-cc-fg); }
+    .rp3-cc-mod[data-span="2x2"] { grid-column: span 2; grid-row: span 2; }
+    .rp3-cc-mod[data-span="2x1"] { grid-column: span 2; border-radius: 999px; }
+    .rp3-cc-mod[data-span="1x2"] { grid-row: span 2; border-radius: 999px; }
+    .rp3-cc-mod[data-span="1x1"] { border-radius: 50%; }
+    .rp3-cc-conn { display: grid; grid-template-columns: repeat(2, 62px); grid-template-rows: repeat(2, 62px); place-content: center; gap: 14px 20px; }
+    .rp3-cc-round { display: grid; place-items: center; width: 62px; height: 62px; border-radius: 50%; color: var(--rp3-cc-fg); background: var(--rp3-cc-module); box-shadow: var(--rp3-cc-module-rim); transition: background-color 200ms ease, transform var(--lt-ios-dur-fast) var(--lt-ios-spring-bouncy); }
+    .rp3-cc-round .lt-icon { width: 26px; height: 26px; }
+    .rp3-cc-round:active { transform: scale(0.92); }
+    .rp3-cc-round[aria-pressed="true"] { background: var(--rp3-cc-on-bg, var(--rp3-cc-blue)); }
+    .rp3-cc-round[data-tone="orange"] { --rp3-cc-on-bg: var(--rp3-cc-orange); }
+    .rp3-cc-round[data-tone="green"] { --rp3-cc-on-bg: var(--rp3-cc-green); }
+    .rp3-cc-round[data-tone="indigo"] { --rp3-cc-on-bg: var(--rp3-cc-indigo); }
+    .rp3-cc-btn { display: grid; place-items: center; width: 100%; height: 100%; border-radius: inherit; color: var(--rp3-cc-fg); transition: background-color 200ms ease, transform var(--lt-ios-dur-fast) var(--lt-ios-spring-bouncy); }
+    .rp3-cc-btn .lt-icon { width: 28px; height: 28px; }
+    .rp3-cc-btn:active { transform: scale(0.92); }
+    .rp3-cc-btn[aria-pressed="true"] { background: var(--rp3-cc-on); color: var(--lt-sys-black); }
+    .rp3-cc-media { display: flex; flex-direction: column; padding: 18px; }
+    .rp3-cc-media-art { width: 50px; height: 50px; border-radius: 12px; background: var(--rp3-tile-gloss), var(--rp3-tile-red); display: grid; place-items: center; color: var(--rp3-on-chip); }
+    .rp3-cc-media-art .lt-icon { width: 26px; height: 26px; }
+    .rp3-cc-media-title { margin-top: 10px; font: var(--lt-type-subhead); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rp3-cc-media-sub { font: var(--lt-type-footnote); color: var(--rp3-cc-fg-2); }
+    .rp3-cc-media-ctl { margin-top: auto; display: flex; justify-content: space-between; padding: 0 6px; }
+    .rp3-cc-media-ctl button .lt-icon { width: 28px; height: 28px; }
+    .rp3-cc-focus { display: flex; align-items: center; gap: 10px; width: 100%; height: 100%; padding: 0 16px 0 12px; text-align: left; }
+    .rp3-cc-focus .rp3-cc-round { width: 50px; height: 50px; flex: none; }
+    .rp3-cc-focus .rp3-cc-round .lt-icon { width: 22px; height: 22px; }
+    .rp3-cc-focus b { font: var(--lt-type-subhead); font-weight: 600; }
+    .rp3-cc-slider { --v: 0.6; position: relative; touch-action: none; cursor: ns-resize; }
+    .rp3-cc-slider::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--v) * 100%); background: var(--rp3-cc-slider-fill); transition: height 80ms linear; }
+    .rp3-cc-slider .lt-icon { position: absolute; left: 50%; bottom: 22px; width: 28px; height: 28px; transform: translateX(-50%); color: var(--rp3-cc-slider-ico); }
+    .rp3-cc-slider[data-low] .lt-icon { color: var(--rp3-cc-fg); }
+
+    /* v2 Tapback 的 SVG 回应配色（rp-interactions.js v2.1） */
+    .rp-tapback .lt-icon, .rp-react-bar .lt-icon { width: 1em; height: 1em; }
+    :is(.rp-tapback, .rp-react-bar button)[data-em="heart"] { color: var(--lt-sys-pink); }
+    :is(.rp-tapback, .rp-react-bar button)[data-em="laugh"] { color: var(--lt-sys-orange); }
+    :is(.rp-tapback, .rp-react-bar button)[data-em="exclaim-double"] { color: var(--lt-sys-red); }
+
+    /* ============================================================
+       12. 减少动效：弹簧、缩放、push、气泡入场都退化为即时切换
+       ============================================================ */
+    @media (prefers-reduced-motion: reduce) {
+        .rp3 *, .rp3 *::before, .rp3 *::after { animation-duration: 1ms; animation-iteration-count: 1; transition-duration: 1ms; }
+    }
+
+    /* ============================================================
+       B. 旧 DOM 桥接（phone/home-screen.js 的 .app-icon / .dock-app / .home-page-dot / .app-name 等）
+          图标需要 phone/ui/rp-icons-bridge.js 先打上 data-rp3-tile 并注入 .rp3-glyph（SVG）
+       ============================================================ */
+    #phone-panel[data-rp-ds="2"][data-rp-ui="2"][data-rp-ios="3"] { font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] :is(.app-icon, .dock-app)[data-rp3-tile] .app-icon-bg {
+        position: relative; display: grid; place-items: center; overflow: visible; border-radius: 0; background: none; box-shadow: none;
+        color: var(--rp3-glyph, var(--rp3-on-chip)); filter: var(--rp3-icon-shadow);
+    }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] :is(.app-icon, .dock-app)[data-rp3-tile] .app-icon-bg::before,
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] :is(.app-icon, .dock-app)[data-rp3-tile] .app-icon-bg::after {
+        content: ""; position: absolute; inset: 0; -webkit-mask: var(--rp3-squircle) center / 100% 100% no-repeat; mask: var(--rp3-squircle) center / 100% 100% no-repeat;
+    }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] :is(.app-icon, .dock-app)[data-rp3-tile] .app-icon-bg::before { background: var(--rp3-tile-gloss), var(--rp3-tile, var(--rp3-tile-gray)); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] :is(.app-icon, .dock-app)[data-rp3-tile] .app-icon-bg::after { background: var(--rp3-squircle-rim) center / 100% 100% no-repeat; }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] :is(.app-icon, .dock-app)[data-rp3-tile] :is(.app-icon-emoji, .home-custom-icon-img, .px-dock-icon) { display: none; }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] :is(.app-icon, .dock-app)[data-rp3-tile] .rp3-glyph {
+        position: relative; z-index: 1; width: 58%; height: 58%; filter: var(--rp3-glyph-depth); -webkit-mask-image: var(--rp3-glyph-gloss); mask-image: var(--rp3-glyph-gloss);
+    }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="green"] { --lt-icon-knock: var(--rp3-knock-green); --rp3-tile: var(--rp3-tile-green); --rp3-tint: var(--rp3-tint-green); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="leaf"] { --lt-icon-knock: var(--rp3-knock-leaf); --rp3-tile: var(--rp3-tile-leaf); --rp3-tint: var(--rp3-tint-leaf); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="blue"] { --lt-icon-knock: var(--rp3-knock-blue); --rp3-tile: var(--rp3-tile-blue); --rp3-tint: var(--rp3-tint-blue); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="sky"] { --lt-icon-knock: var(--rp3-knock-sky); --rp3-tile: var(--rp3-tile-sky); --rp3-tint: var(--rp3-tint-sky); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="gray"] { --lt-icon-knock: var(--rp3-knock-gray); --rp3-tile: var(--rp3-tile-gray); --rp3-tint: var(--rp3-tint-gray); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="red"] { --lt-icon-knock: var(--rp3-knock-red); --rp3-tile: var(--rp3-tile-red); --rp3-tint: var(--rp3-tint-red); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="pink"] { --lt-icon-knock: var(--rp3-knock-pink); --rp3-tile: var(--rp3-tile-pink); --rp3-tint: var(--rp3-tint-pink); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="orange"] { --lt-icon-knock: var(--rp3-knock-orange); --rp3-tile: var(--rp3-tile-orange); --rp3-tint: var(--rp3-tint-orange); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="yellow"] { --lt-icon-knock: var(--rp3-knock-yellow); --rp3-tile: var(--rp3-tile-yellow); --rp3-tint: var(--rp3-tint-yellow); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="purple"] { --lt-icon-knock: var(--rp3-knock-purple); --rp3-tile: var(--rp3-tile-purple); --rp3-tint: var(--rp3-tint-purple); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="indigo"] { --lt-icon-knock: var(--rp3-knock-indigo); --rp3-tile: var(--rp3-tile-indigo); --rp3-tint: var(--rp3-tint-indigo); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="teal"] { --lt-icon-knock: var(--rp3-knock-teal); --rp3-tile: var(--rp3-tile-teal); --rp3-tint: var(--rp3-tint-teal); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="graphite"] { --lt-icon-knock: var(--rp3-knock-graphite); --rp3-tile: var(--rp3-tile-graphite); --rp3-tint: var(--rp3-tint-graphite); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="white"] { --lt-icon-knock: var(--rp3-knock-white); --rp3-tile: var(--rp3-tile-white); --rp3-tint: var(--rp3-tint-white); --rp3-glyph: var(--rp3-cal-red); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="brown"] { --lt-icon-knock: var(--rp3-knock-brown); --rp3-tile: var(--rp3-tile-brown); --rp3-tint: var(--rp3-tint-brown); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="mint"] { --lt-icon-knock: var(--rp3-knock-mint); --rp3-tile: var(--rp3-tile-mint); --rp3-tint: var(--rp3-tint-mint); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="coral"] { --lt-icon-knock: var(--rp3-knock-coral); --rp3-tile: var(--rp3-tile-coral); --rp3-tint: var(--rp3-tint-coral); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] [data-rp3-tile="navy"] { --lt-icon-knock: var(--rp3-knock-navy); --rp3-tile: var(--rp3-tile-navy); --rp3-tint: var(--rp3-tint-navy); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"][data-rp3-icons="dark"] [data-rp3-tile] { --rp3-glyph: var(--rp3-tint); --lt-icon-knock: var(--rp3-knock-dark); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"][data-rp3-icons="dark"] [data-rp3-tile] .app-icon-bg::before { background: var(--rp3-tile-dark); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"][data-rp3-icons="clear"] [data-rp3-tile] { --rp3-glyph: var(--rp3-glyph-clear); --lt-icon-knock: var(--rp3-knock-clear); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"][data-rp3-icons="clear"] [data-rp3-tile] .app-icon-bg::before { background: var(--rp3-tile-gloss), var(--rp3-tile-clear); backdrop-filter: var(--rp3-tile-clear-blur); -webkit-backdrop-filter: var(--rp3-tile-clear-blur); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] .home-screen .app-name { font: var(--lt-type-caption1); letter-spacing: var(--lt-ios-caption1-track); color: var(--rp3-label-fg); text-shadow: var(--rp3-label-shadow); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] .home-screen .dock.yzp-home-dock {
+        border-radius: var(--rp3-dock-radius); background: var(--lt-glass-fill); box-shadow: var(--lt-glass-rim), var(--lt-glass-shadow);
+        backdrop-filter: var(--lt-glass-blur); -webkit-backdrop-filter: var(--lt-glass-blur);
+    }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] .home-screen .home-page-dot { background: var(--rp3-on-wall); opacity: 0.4; }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] .home-screen .home-page-dot.is-active { opacity: 1; }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] .home-screen :is(.home-widget-card, .home-music-card, .home-time-card, .home-diary-card, .home-settings-card, .home-social-card, .home-smart-widget-card) {
+        border-radius: var(--rp3-widget-radius); background: var(--lt-glass-fill); box-shadow: var(--lt-glass-rim), var(--lt-glass-shadow);
+        backdrop-filter: var(--lt-glass-blur); -webkit-backdrop-filter: var(--lt-glass-blur);
+    }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] :is(.phone-notification, .phone-notification-rich) {
+        border-radius: 28px; background: var(--lt-glass-fill-strong); color: var(--lt-sys-label); box-shadow: var(--lt-glass-rim), var(--lt-glass-shadow);
+        backdrop-filter: var(--lt-glass-blur-strong); -webkit-backdrop-filter: var(--lt-glass-blur-strong);
+    }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] :is(.sys-cc-tile, .sys-cc-music, .sys-cc-scale, .sys-cc-near-field) {
+        border-radius: 34px; background: var(--rp3-cc-module); box-shadow: var(--rp3-cc-module-rim); backdrop-filter: var(--lt-glass-blur); -webkit-backdrop-filter: var(--lt-glass-blur);
+    }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] .settings-app { background: var(--lt-sys-grouped-bg); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] .settings-app .setting-section { border-radius: var(--rp3-row-radius); background: var(--lt-sys-grouped-bg-2); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] .settings-app .setting-item { min-height: var(--rp3-row-h-min); border-color: var(--lt-sys-separator); border-bottom-width: var(--lt-hairline); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] .settings-app .setting-label { font: var(--lt-type-body); letter-spacing: var(--lt-ios-body-track); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] .settings-app :is(.setting-value, .setting-desc, .setting-info) { font: var(--lt-type-footnote); color: var(--lt-sys-label-2); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] .wechat-app .chat-messages { background: var(--rp3-wx-bg); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] .wechat-app .chat-message .message-text { border-radius: 4px; font: 400 var(--lt-ios-body-size) / 1.35 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] .wechat-app .chat-message.message-left .message-text { background: var(--rp3-wx-them); color: var(--rp3-wx-them-fg); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] .wechat-app .chat-message.message-right .message-text { background: var(--rp3-wx-me); color: var(--rp3-wx-me-fg); }
+    #phone-panel[data-rp-ios="3"][data-rp-ui="2"] .wechat-app .chat-message .message-avatar { border-radius: var(--rp3-wx-avatar-radius); }
+
+/* ── 减少动效 · 显式 still 档（与 phone.css 第 ⑤ 段同一口径） ──────────────
+   本文件在 rp.components 层内、加载序最靠后，所以这里的 animation: none 能压住
+   phone-components-v2.css 的同层规则。只列**装饰类**：锁屏上滑提示的呼吸、
+   桌面图标编辑态的抖动 —— 停了不丢信息（提示文字与编辑按钮都还在）。
+   **状态类一律不在此列**：rp2-wave（灵动岛声波）/ rp2-dots / rp3-dots（输入中圆点）
+   是「正在进行」的唯一可见回执，停掉等于把用户正在看的东西停掉。
+   判据：tests/audit/longlist_scale_probe.cjs 的 decorUncovered / stateInStill 两向核对。 */
+html[data-still="1"] .rp-lock-hint,
+html[data-still="1"] #phone-panel[data-rp-ds="2"][data-rp-ui="2"] .phone-lockscreen .pls-hint,
+html[data-still="1"] .rp-home-grid[data-editing] > .rp-icon .rp-icon-art {
+    animation: none;
+}
+
+/* 系统级 prefers-reduced-motion 也把这两条装饰动画停掉（用户没开 App 内 still 档时的兜底） */
+@media (prefers-reduced-motion: reduce) {
+    .rp-lock-hint,
+    #phone-panel[data-rp-ds="2"][data-rp-ui="2"] .phone-lockscreen .pls-hint,
+    .rp-home-grid[data-editing] > .rp-icon .rp-icon-art { animation: none; }
+}
+}

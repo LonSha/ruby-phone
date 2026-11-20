@@ -1,0 +1,738 @@
+/* ============================================================
+   RubyPhone v3.4 · App 皮肤：蜜语（honey）—— 家族：通讯
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   三个子层（右边赢左边，与特异性无关）：
+     rp.skins.remap   旧规则重映射：写死颜色 -> 语义 token（浅 / 深自动），字号吸附 iOS 阶梯（最小 11pt），
+                      间距吸附 4pt 栅格（8pt 栅格 + 半步），圆角吸附阶梯，霓虹投影 / 文字阴影去掉
+     rp.skins.roles   结构角色 -> v3 组件（导航栏 / 玻璃圆钮 / 分段 / 分组列表 / 卡片 / Sheet / 表单 / 按钮 / 徽标）
+     rp.skins.curated 手工精修（只有重点 App 有）
+   规矩：零 !important、零写死颜色、零字符图标；不改元素 ID / 类名 / 结构，不碰 display / position 以外的状态切换。
+   生成：v3.3 皮肤生成器（输入与角色表见 tools/app-skins-v33.manifest.json；角色 211 个类 / 38 种角色，重映射 416 / 586 条旧规则，
+         伪元素字符图标 0 处，扩大点击区 43 个类）。原生配色：light。
+   v3.4：done-partial -> done。层序多一个子层 rp.skins.inline（运行时逐站点内联映射写出的 data-rp34 令牌，样式在
+         phone/design/app-skins-inline-v3.4.css）；本文件末尾「v3.4 逐屏精修」一段是读完该 App 全部视图模板后手工写的，
+         所选类名全部在源码里核对过（verification/selector-audit.tsv）。改动说明见 README 第三节。
+   ============================================================ 
+ * v3.6：小字强调色 43 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 2 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.roles {
+    /* 作用域：强调色（brand:honey）*/
+    #phone-panel[data-rp-ios="3"] :where([class^="honey-"], [class*=" honey-"]) { --rp33-accent: var(--rp33-brand-honey); --rp36-accent-text: var(--rp36-text-brand-honey); --rp33-accent-soft: color-mix(in srgb, var(--rp33-brand-honey) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--rp33-brand-honey) 40%, transparent); --rp33-bg: var(--rp33-bg-plain); }
+    #phone-panel[data-rp-ios="3"] .honey-content { background-color: var(--rp33-bg); background-image: none; color: var(--rp33-label); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-live-collab-request-top, .honey-live-header, .honey-live-intro-top, .honey-mine-account-head, .honey-mine-friend-head, .honey-mine-request-top, .honey-nav, .honey-search-head, .honey-today-head) { background-color: var(--rp33-bg); background-image: none; border: 0; box-shadow: none; color: var(--rp33-label); min-block-size: var(--rp3-nav-h); padding-inline: var(--rp33-sp-2); gap: var(--rp33-sp-2); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-host-name, .honey-live-collab-request-name, .honey-meta-title-text, .honey-mine-gender-label, .honey-mine-inline-label, .honey-nav-title, .honey-search-title) { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-back-btn, .honey-follow-video-modal-close, .honey-icon-btn, .honey-scene-modal-close-btn, .honey-scene-tag-editor-close, .honey-scene-tag-history-close, .honey-search-close) { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); min-inline-size: var(--rp3-glass-btn); flex: none; padding: 0; justify-content: center; align-items: center; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 19px; line-height: 1; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-back-btn, .honey-follow-video-modal-close, .honey-icon-btn, .honey-scene-modal-close-btn, .honey-scene-tag-editor-close, .honey-scene-tag-history-close, .honey-search-close):active { scale: 0.94; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-delete-custom-video-btn, .honey-follow-action-btn-compact, .honey-generated-video-replay, .honey-gift-btn, .honey-mine-avatar, .honey-mine-gender-btn, .honey-scene-tag-history-edit, .honey-scene-toggle-btn) { border: 0; box-shadow: none; color: var(--rp33-label-2); text-shadow: none; -webkit-tap-highlight-color: transparent; }
+    #phone-panel[data-rp-ios="3"] .honey-tabs { background: var(--rp33-seg-bg); border: 0; border-radius: 999px; box-shadow: none; padding: 2px; gap: 0; }
+    #phone-panel[data-rp-ios="3"] .honey-tabs:has(> :nth-child(5)) { background: transparent; padding: 0; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .honey-tabs:has(> :nth-child(5)) > :is(.honey-tab) { background-color: var(--rp33-fill); color: var(--rp33-label); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-tabs:has(> :nth-child(5)) > :is(.honey-tab):is(.active, .is-active, .on, .selected, .is-selected, .current, .is-current, .checked, [aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) { background-color: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-tab { min-block-size: var(--rp33-tab-h); padding-inline: var(--rp33-sp-3); border: 0; border-radius: 999px; background: transparent; box-shadow: none; color: var(--rp33-label-2); font-family: var(--lt-font-ios); font-size: var(--lt-ios-subhead-size); font-weight: 600; letter-spacing: var(--lt-ios-subhead-track); text-shadow: none; justify-content: center; align-items: center; text-align: center; }
+    #phone-panel[data-rp-ios="3"] .honey-tab:is(.active, .is-active, .on, .selected, .is-selected, .current, .is-current, .checked, [aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) { background-color: var(--rp33-seg-on); color: var(--rp33-label); box-shadow: var(--rp33-seg-shadow); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-video-modal-list, .honey-hot-list, .honey-live-collab-modal-list, .honey-live-gifts-list, .honey-live-rank-list, .honey-mine-friend-list, .honey-mine-request-list, .honey-scene-tag-history-list) { margin-inline: var(--rp33-margin); border: 0; border-radius: var(--rp3-row-radius); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-shadow-1); overflow: clip; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-reference-strength-row, .honey-mine-gender-row, .honey-settings-row) { min-block-size: var(--rp3-row-h-min); padding-inline: var(--rp33-sp-4); border: 0; border-block-end: var(--lt-hairline) solid var(--rp33-sep); border-radius: 0; background-color: var(--rp33-surface); background-image: none; box-shadow: none; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-reference-strength-row, .honey-mine-gender-row, .honey-settings-row):last-child { border-block-end: 0; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-reference-strength-row, .honey-mine-gender-row, .honey-settings-row):active { background-color: var(--rp33-highlight); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-custom-video-item, .honey-follow-item, .honey-follow-video-bind-row, .honey-hot-item, .honey-live-gift-item, .honey-live-rank-row, .honey-mine-friend-item, .honey-mine-request-item, .honey-scene-tag-history-item) { min-block-size: var(--rp3-row-h-min); border: 0; border-radius: var(--rp33-row-radius-single); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-shadow-1); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-host-wechat-reject-panel, .honey-live-visibility-panel, .honey-recharge-panel, .honey-scene-block, .honey-scene-tag-history-panel, .honey-search-panel, .honey-today-card) { border: 0; border-radius: var(--rp33-card-radius); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-card-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-reference-card, .honey-mine-account-card, .honey-settings-card) { border: 0; border-radius: var(--rp33-media-radius); background-color: var(--rp33-surface-2); background-image: none; box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-section-title, .honey-gift-group-title, .honey-hot-section-title) { font: var(--lt-type-footnote); font-weight: 600; letter-spacing: var(--lt-ios-footnote-track); color: var(--rp33-label-2); padding-inline: var(--rp33-sp-4); text-transform: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-video-modal-panel, .honey-scene-modal-card, .honey-scene-tag-editor-dialog) { border: 0; border-radius: var(--rp33-dialog-radius); background-color: var(--rp33-sheet-bg); background-image: none; box-shadow: var(--rp33-float-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-video-modal-head, .honey-scene-modal-head, .honey-scene-tag-editor-head, .honey-scene-tag-history-head) { border: 0; background: transparent; box-shadow: none; min-block-size: 52px; padding-inline: var(--rp33-sp-4); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-video-modal-title, .honey-follow-video-picker-label, .honey-live-visibility-title, .honey-recharge-title, .honey-scene-modal-title, .honey-scene-tag-editor-title, .honey-scene-tag-history-title, .honey-settings-label) { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-video-modal-backdrop, .honey-live-visibility-backdrop, .honey-recharge-backdrop, .honey-scene-modal-backdrop, .honey-scene-tag-editor-overlay, .honey-scene-tag-history-backdrop, .honey-search-backdrop) { background: var(--rp33-scrim); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-chat-input, .honey-mine-intro, .honey-mine-live-nickname, .honey-mine-stat-input, .honey-prompt-editor, .honey-scene-tag-editor-textarea, .honey-search-input, .honey-settings-input) { border: 0; border-radius: var(--rp33-field-radius); background-color: var(--rp33-field-bg); background-image: none; box-shadow: none; color: var(--rp33-label); caret-color: var(--rp33-accent); font-family: var(--lt-font-ios); font-size: var(--lt-ios-body-size); line-height: var(--lt-ios-body-line); min-block-size: var(--rp33-hit); padding: 10px var(--rp33-sp-3); outline: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-chat-input, .honey-mine-intro, .honey-mine-live-nickname, .honey-mine-stat-input, .honey-prompt-editor, .honey-scene-tag-editor-textarea, .honey-search-input, .honey-settings-input)::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-chat-input, .honey-mine-intro, .honey-mine-live-nickname, .honey-mine-stat-input, .honey-prompt-editor, .honey-scene-tag-editor-textarea, .honey-search-input, .honey-settings-input):focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-reference-enabled, .honey-follow-reference-strength, .honey-follow-reference-upload) { accent-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-mine-start-btn, .honey-settings-btn-primary) { border: 0; border-radius: 999px; background-color: var(--rp33-accent); background-image: none; box-shadow: none; color: var(--rp33-on-accent); font-family: var(--lt-font-ios); font-weight: 600; letter-spacing: -0.2px; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-mine-start-btn, .honey-settings-btn-primary):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-mine-start-btn, .honey-settings-btn-primary):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-custom-video-toggle-btn, .honey-end-live-btn, .honey-follow-btn, .honey-follow-reference-preview, .honey-follow-video-item, .honey-gift-option, .honey-goto-live-btn, .honey-history-date-item, .honey-live-collab-request-cta, .honey-live-visibility-btn, .honey-meta-collab-btn, .honey-refresh-btn, .honey-scene-retry-btn, .honey-scene-tag-btn, .honey-scene-tag-editor-button, .honey-scene-tag-history-retag, .honey-scene-tts-btn, .honey-search-btn, .honey-settings-btn, .honey-settings-btn-muted, .honey-settings-inline-btn, .honey-unlock-btn) { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; box-shadow: none; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-action-btn, .honey-follow-host-row, .honey-follow-video-picker-trigger, .honey-live-collab-request-item) { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; box-shadow: none; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-custom-video-toggle-btn, .honey-end-live-btn, .honey-follow-action-btn, .honey-follow-btn, .honey-follow-host-row, .honey-follow-reference-preview, .honey-follow-video-item, .honey-follow-video-picker-trigger, .honey-gift-option, .honey-goto-live-btn, .honey-history-date-item, .honey-live-collab-request-cta, .honey-live-collab-request-item, .honey-live-visibility-btn, .honey-meta-collab-btn, .honey-refresh-btn, .honey-scene-retry-btn, .honey-scene-tag-btn, .honey-scene-tag-editor-button, .honey-scene-tag-history-retag, .honey-scene-tts-btn, .honey-search-btn, .honey-settings-btn, .honey-settings-btn-muted, .honey-settings-inline-btn, .honey-unlock-btn):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-custom-video-toggle-btn, .honey-end-live-btn, .honey-follow-action-btn, .honey-follow-btn, .honey-follow-host-row, .honey-follow-reference-preview, .honey-follow-video-item, .honey-follow-video-picker-trigger, .honey-gift-option, .honey-goto-live-btn, .honey-history-date-item, .honey-live-collab-request-cta, .honey-live-collab-request-item, .honey-live-visibility-btn, .honey-meta-collab-btn, .honey-refresh-btn, .honey-scene-retry-btn, .honey-scene-tag-btn, .honey-scene-tag-editor-button, .honey-scene-tag-history-retag, .honey-scene-tts-btn, .honey-search-btn, .honey-settings-btn, .honey-settings-btn-muted, .honey-settings-inline-btn, .honey-unlock-btn):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-host-wechat-reject-ok, .honey-settings-btn-danger) { border: 0; border-radius: 999px; background-color: var(--rp33-danger-soft); background-image: none; box-shadow: none; color: var(--rp36-text-red); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-host-wechat-reject-ok, .honey-settings-btn-danger):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-host-wechat-reject-ok, .honey-settings-btn-danger):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-host-avatar, .honey-host-avatar, .honey-meta-audience-avatar, .honey-mine-request-avatar) { border-radius: 50%; box-shadow: 0 0 0 var(--lt-hairline) var(--rp33-avatar-ring); object-fit: cover; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-badge, .honey-live-collab-request-badge, .honey-live-gift-badge, .honey-live-self-badge, .honey-live-status-dot, .honey-today-badge) { background-color: var(--rp33-badge-bg); background-image: none; color: var(--rp33-badge-fg); border: 0; border-radius: 999px; box-shadow: none; font-family: var(--lt-font-ios-rounded); font-weight: 600; font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-hot-tag, .honey-live-tags, .honey-meta-pill, .honey-tag) { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; color: var(--rp36-accent-text); box-shadow: none; font-family: var(--lt-font-ios); font-size: var(--lt-ios-caption1-size); line-height: var(--lt-ios-caption1-line); font-weight: 600; padding: 2px var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-empty-title, .honey-hot-title, .honey-live-rank-title, .honey-scene-title, .honey-settings-card-title, .honey-today-title) { color: var(--rp33-label); font-weight: 600; letter-spacing: -0.2px; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-custom-video-name, .honey-host-name, .honey-live-comment-user, .honey-live-rank-name, .honey-live-user-scene-title, .honey-mine-request-name) { color: var(--rp33-label); font-weight: 600; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-custom-video-hint, .honey-follow-host-status, .honey-follow-reference-desc, .honey-hot-meta, .honey-live-collab-modal-desc, .honey-live-collab-request-sub, .honey-live-visibility-desc, .honey-mine-request-meta, .honey-nai-status, .honey-scene-desc, .honey-scene-modal-desc, .honey-scene-tag-history-time, .honey-settings-desc) { color: var(--rp33-label-2); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-favor-label, .honey-mine-account-stat-label, .honey-unlock-label) { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-coin-balance, .honey-follow-reference-strength-value, .honey-mine-account-stat-num, .honey-recharge-preview-value, .honey-recharge-wallet-value) { font-family: var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-custom-video-empty, .honey-follow-empty, .honey-follow-empty-desc, .honey-follow-empty-icon, .honey-follow-history-empty, .honey-follow-video-empty, .honey-live-rank-empty, .honey-nai-placeholder, .honey-page-placeholder, .honey-scene-tag-history-empty) { color: var(--rp33-label-2); font-family: var(--lt-font-ios); text-align: center; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-bg-image, .honey-nai-generated-image) { border-radius: var(--rp33-media-radius); object-fit: cover; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-favor-track, .honey-live-gift-text-track, .honey-live-gifts-track, .honey-meta-title-track) { border: 0; border-radius: 999px; background-color: var(--rp33-fill); background-image: none; box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-favor-fill { border-radius: 999px; background-color: var(--rp33-accent); background-image: none; box-shadow: none; }
+    /* 点击区不小于 44pt：视觉尺寸不变，用透明伪元素扩大命中区 */
+    #phone-panel[data-rp-ios="3"] :is(.honey-custom-video-toggle-btn, .honey-delete-custom-video-btn, .honey-end-live-btn, .honey-follow-action-btn, .honey-follow-action-btn-compact, .honey-follow-btn, .honey-follow-host-row, .honey-follow-reference-preview, .honey-follow-video-item, .honey-follow-video-picker-trigger, .honey-gift-btn, .honey-gift-option, .honey-history-date-item, .honey-host-wechat-reject-ok, .honey-hot-tag, .honey-live-collab-request-cta, .honey-live-collab-request-item, .honey-live-visibility-btn, .honey-meta-collab-btn, .honey-meta-pill, .honey-mine-avatar, .honey-mine-gender-btn, .honey-mine-start-btn, .honey-refresh-btn, .honey-scene-retry-btn, .honey-scene-tag-btn, .honey-scene-tag-editor-button, .honey-scene-tag-history-edit, .honey-scene-tag-history-retag, .honey-scene-toggle-btn, .honey-scene-tts-btn, .honey-search-btn, .honey-settings-btn, .honey-settings-btn-danger, .honey-settings-btn-muted, .honey-settings-btn-primary, .honey-settings-inline-btn, .honey-tab, .honey-tag) { position: relative; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-custom-video-toggle-btn, .honey-delete-custom-video-btn, .honey-end-live-btn, .honey-follow-action-btn, .honey-follow-action-btn-compact, .honey-follow-btn, .honey-follow-host-row, .honey-follow-reference-preview, .honey-follow-video-item, .honey-follow-video-picker-trigger, .honey-generated-video-replay, .honey-gift-btn, .honey-gift-option, .honey-goto-live-btn, .honey-history-date-item, .honey-host-wechat-reject-ok, .honey-hot-tag, .honey-live-collab-request-cta, .honey-live-collab-request-item, .honey-live-tags, .honey-live-visibility-btn, .honey-meta-collab-btn, .honey-meta-pill, .honey-mine-avatar, .honey-mine-gender-btn, .honey-mine-start-btn, .honey-refresh-btn, .honey-scene-retry-btn, .honey-scene-tag-btn, .honey-scene-tag-editor-button, .honey-scene-tag-history-edit, .honey-scene-tag-history-retag, .honey-scene-toggle-btn, .honey-scene-tts-btn, .honey-search-btn, .honey-settings-btn, .honey-settings-btn-danger, .honey-settings-btn-muted, .honey-settings-btn-primary, .honey-settings-inline-btn, .honey-tab, .honey-tag, .honey-unlock-btn)::after { content: ""; position: absolute; inset: min(0px, calc((100% - var(--rp33-hit)) / 2)); }
+}
+@layer rp.skins.remap {
+    #phone-panel[data-rp-ios="3"] .phone-screen .phone-back-button.is-dark-surface, #phone-panel[data-rp-ios="3"] .phone-body-panel-honey .phone-screen .phone-back-button, #phone-panel[data-rp-ios="3"] .phone-body-panel-games .phone-screen .phone-back-button, #phone-panel[data-rp-ios="3"] .phone-body-panel-wangxiang .phone-screen .phone-back-button { background: var(--rp33-scrim); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .phone-screen .toggle-slider::before, #phone-panel[data-rp-ios="3"] .phone-screen .st-phone-toggle-slider::before, #phone-panel[data-rp-ios="3"] .phone-screen .honey-toggle-slider::before, #phone-panel[data-rp-ios="3"] .phone-screen .phone-call-toggle-slider::before { background: var(--rp33-surface); }
+    #phone-panel[data-rp-ios="3"] .phone-screen .honey-toggle-slider { background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .phone-screen .honey-toggle-switch input:checked + .honey-toggle-slider { background: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content input:not(.phone-secret-input):not(.phone-worldbook-search-input):not(.honey-app *):not(.wangxiang-app *):not(.wechat-app .chat-input):not([type="checkbox"]):not([type="range"]):not([type="color"]):not(#honey-chat-input):not(#video-chat-input):not(#voice-chat-input):not(#phone-call-input), #phone-panel[data-rp-ios="3"]-content textarea:not(.honey-app *):not(.wangxiang-app *) { background: var(--rp33-surface); border: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"]-content select:not(.honey-app *) { background: var(--rp33-surface); border: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"]-content .honey-app input:not([type="checkbox"]):not([type="range"]):not([type="color"]), #phone-panel[data-rp-ios="3"]-content .honey-app textarea, #phone-panel[data-rp-ios="3"]-content .honey-app .honey-settings-input, #phone-panel[data-rp-ios="3"]-content .honey-app .honey-prompt-editor { background: var(--lt-sys-blue); background-color: var(--lt-sys-blue); color: var(--rp33-on-accent); -webkit-text-fill-color: var(--rp33-on-accent); caret-color: var(--rp33-on-accent); border-color: color-mix(in srgb, var(--rp33-accent) 45%, transparent); box-shadow: inset 0 0 0 1000px var(--lt-sys-blue); }
+    #phone-panel[data-rp-ios="3"]-content .honey-app input:not([type="checkbox"]):not([type="range"]):not([type="color"])::placeholder, #phone-panel[data-rp-ios="3"]-content .honey-app textarea::placeholder, #phone-panel[data-rp-ios="3"]-content .honey-app .honey-settings-input::placeholder, #phone-panel[data-rp-ios="3"]-content .honey-app .honey-prompt-editor::placeholder { color: var(--rp36-accent-text); -webkit-text-fill-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"]-content .honey-app input:-webkit-autofill, #phone-panel[data-rp-ios="3"]-content .honey-app input:-webkit-autofill:hover, #phone-panel[data-rp-ios="3"]-content .honey-app input:-webkit-autofill:focus, #phone-panel[data-rp-ios="3"]-content .honey-app textarea:-webkit-autofill, #phone-panel[data-rp-ios="3"]-content .honey-app textarea:-webkit-autofill:hover, #phone-panel[data-rp-ios="3"]-content .honey-app textarea:-webkit-autofill:focus { -webkit-text-fill-color: var(--rp33-label); box-shadow: inset 0 0 0 1000px var(--lt-sys-blue); }
+    #phone-panel[data-rp-ios="3"]-content .honey-app #honey-mine-live-nickname.honey-settings-input, #phone-panel[data-rp-ios="3"]-content .honey-app #honey-mine-live-title.honey-settings-input { background: linear-gradient(145deg, var(--lt-sys-indigo), var(--lt-sys-purple)); background-color: var(--lt-sys-indigo); box-shadow: inset 0 1px 0 transparent,
+        inset 0 0 0 1000px color-mix(in srgb, var(--lt-sys-indigo) 28%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .honey-app .phone-prompt-preset-select { background: var(--lt-sys-blue); background-color: var(--lt-sys-blue); background-image: linear-gradient(45deg, transparent 50%, color-mix(in srgb, var(--rp33-accent) 12%, var(--rp33-surface)) 50%),
+        linear-gradient(135deg, color-mix(in srgb, var(--rp33-accent) 12%, var(--rp33-surface)) 50%, transparent 50%); color: var(--rp33-on-accent); -webkit-text-fill-color: var(--rp33-on-accent); border-color: color-mix(in srgb, var(--rp33-accent) 45%, transparent); box-shadow: inset 0 0 0 1000px var(--lt-sys-blue); padding: 0 32px 0 12px; }
+    #phone-panel[data-rp-ios="3"]-content .honey-app .phone-prompt-preset-select option { background: var(--lt-sys-blue); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"]-content .honey-app .phone-prompt-preset-new, #phone-panel[data-rp-ios="3"]-content .honey-app .phone-prompt-preset-delete { background: transparent; color: var(--rp36-accent-text); border-color: color-mix(in srgb, var(--rp33-accent) 34%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .honey-app .phone-prompt-preset-save { background: linear-gradient(135deg, var(--rp33-accent), var(--lt-sys-mint)); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-app { background: var(--lt-sys-pink); color: var(--rp33-on-accent); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .honey-content { background: var(--lt-sys-pink); gap: 8px; }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-app .honey-nav { background: linear-gradient(180deg, color-mix(in srgb, var(--lt-sys-pink) 40%, transparent), color-mix(in srgb, var(--lt-sys-pink) 30%, transparent)); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-app .honey-tabs { background: color-mix(in srgb, var(--lt-sys-pink) 34%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-meta-row { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-nav-title-live { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-live-status-green { background: var(--lt-sys-purple); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-live-status-yellow { background: var(--lt-sys-purple); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-live-status-red { background: var(--rp33-accent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-meta-host { gap: 4px; }
+    #phone-panel[data-rp-ios="3"] .honey-meta-title-text { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-meta-audience-row { gap: 4px; }
+    #phone-panel[data-rp-ios="3"] .honey-meta-audience-avatar { border: var(--lt-hairline) solid var(--rp33-sep); margin-left: -8px; background-color: var(--lt-sys-pink); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .honey-meta-audience-avatar.a1 { background-image: linear-gradient(135deg, var(--rp33-accent), var(--rp33-accent)); }
+    #phone-panel[data-rp-ios="3"] .honey-meta-audience-avatar.a2 { background-image: linear-gradient(135deg, var(--lt-sys-purple), var(--lt-sys-purple)); }
+    #phone-panel[data-rp-ios="3"] .honey-meta-audience-avatar.a3 { background-image: linear-gradient(135deg, var(--lt-sys-purple), var(--rp33-accent)); }
+    #phone-panel[data-rp-ios="3"] .honey-meta-audience-online { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-meta-collab { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-live-rank-mini { border-radius: 8px; background: linear-gradient(145deg, color-mix(in srgb, var(--lt-sys-pink) 40%, transparent), color-mix(in srgb, var(--lt-sys-pink) 34%, transparent)); border: var(--lt-hairline) solid var(--rp33-sep); box-shadow: inset 0 1px 0 var(--rp33-sep),
+        0 2px 8px color-mix(in srgb, var(--lt-sys-pink) 24%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-live-rank-mini.is-expanded { box-shadow: inset 0 1px 0 var(--rp33-sep),
+        0 4px 14px color-mix(in srgb, var(--lt-sys-pink) 34%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-live-rank-mini:focus-visible { outline: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .honey-live-rank-title { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-rank-row.is-self { border-top: 1px dashed color-mix(in srgb, var(--rp33-accent) 32%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-live-rank-index { font-size: var(--lt-ios-caption2-size); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .honey-live-rank-name { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-rank-coins { font-size: var(--lt-ios-caption2-size); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .honey-live-rank-empty { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-meta-collab-btn { border: var(--lt-hairline) solid var(--rp33-sep); background: linear-gradient(145deg, color-mix(in srgb, var(--rp33-accent) 24%, transparent), color-mix(in srgb, var(--lt-sys-pink) 34%, transparent)); color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); padding: 0 8px; box-shadow: inset 0 1px 0 var(--rp33-sep),
+        0 2px 7px color-mix(in srgb, var(--lt-sys-pink) 24%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-meta-collab-btn.is-empty { background: linear-gradient(145deg, var(--rp33-fill-2), color-mix(in srgb, var(--lt-sys-pink) 34%, transparent)); border-color: color-mix(in srgb, var(--rp33-accent) 26%, transparent); color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .honey-meta-pill { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); background: color-mix(in srgb, var(--rp33-accent) 16%, transparent); border: 1px solid color-mix(in srgb, var(--rp33-accent) 45%, transparent); }
+    @media (max-width: 360px) {
+    #phone-panel[data-rp-ios="3"] .honey-meta-row { gap: 4px; }
+    }
+    @media (max-width: 360px) {
+    #phone-panel[data-rp-ios="3"] .honey-meta-pill { font-size: var(--lt-ios-caption2-size); }
+    }
+    #phone-panel[data-rp-ios="3"] .honey-page-placeholder .honey-content { background: radial-gradient(130% 90% at 12% -10%, color-mix(in srgb, var(--rp33-accent) 18%, transparent), transparent 48%),
+        radial-gradient(140% 100% at 100% 0%, color-mix(in srgb, var(--lt-sys-purple) 16%, transparent), transparent 52%),
+        linear-gradient(170deg, var(--lt-sys-pink) 0%, var(--lt-sys-pink) 46%, var(--lt-sys-pink) 100%); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-mine .honey-settings-card { background: linear-gradient(150deg, var(--lt-sys-pink), var(--lt-sys-pink)); }
+    #phone-panel[data-rp-ios="3"] .honey-recommend-wrap { background: linear-gradient(150deg, color-mix(in srgb, var(--lt-sys-pink) 8%, transparent), color-mix(in srgb, var(--lt-sys-pink) 22%, transparent)); box-shadow: inset 0 1px 0 var(--rp33-sep),
+        inset 0 -1px 0 var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .honey-recommend-wrap::before { background: linear-gradient(180deg, transparent, transparent 28%),
+        radial-gradient(110% 80% at 0% 0%, transparent, transparent 65%); }
+    #phone-panel[data-rp-ios="3"] .honey-pull-refresh-inner { gap: 8px; padding: 8px 12px; font-size: var(--lt-ios-caption2-size); color: var(--rp33-on-accent); background: var(--lt-sys-pink); border: 1px solid color-mix(in srgb, var(--rp33-accent) 18%, transparent); box-shadow: inset 0 1px 0 var(--rp33-sep),
+        0 4px 14px color-mix(in srgb, var(--lt-sys-pink) 24%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-pull-refresh-indicator.ready .honey-pull-refresh-inner { color: var(--rp36-accent-text); border-color: color-mix(in srgb, var(--rp33-accent) 35%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-pull-refresh-indicator.loading .honey-pull-refresh-inner { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .honey-pull-refresh-indicator.success .honey-pull-refresh-inner { color: var(--rp36-text-purple); }
+    #phone-panel[data-rp-ios="3"] .honey-pull-refresh-indicator.error .honey-pull-refresh-inner { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .honey-search-modal { padding: 20px; }
+    #phone-panel[data-rp-ios="3"] .honey-search-backdrop { background: color-mix(in srgb, var(--lt-sys-pink) 40%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-search-panel { border: 1px solid color-mix(in srgb, var(--rp33-accent) 26%, transparent); background: radial-gradient(110% 90% at 12% 0%, color-mix(in srgb, var(--rp33-accent) 18%, transparent), transparent 50%),
+        linear-gradient(155deg, var(--lt-sys-pink), var(--lt-sys-pink)); box-shadow: inset 0 1px 0 var(--rp33-sep),
+        0 18px 42px color-mix(in srgb, var(--lt-sys-pink) 46%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-search-head { margin-bottom: 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-search-title { font-size: var(--lt-ios-subhead-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-search-close { background: transparent; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-search-input { border: var(--lt-hairline) solid var(--rp33-sep); background: transparent; color: var(--rp33-label); padding: 0 12px; font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .honey-search-input::placeholder { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-search-btn { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .honey-search-btn.is-secondary { background: transparent; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-search-btn.is-primary { background: linear-gradient(135deg, var(--rp33-accent), var(--rp33-accent)); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-list { padding: 12px; gap: 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-list { padding: 12px; gap: 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-item { border: var(--lt-hairline) solid var(--rp33-sep); background: linear-gradient(145deg, transparent, var(--lt-sys-pink)); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-host-row { gap: 12px; padding: 12px 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-host-avatar { background: linear-gradient(135deg, var(--rp33-accent), var(--rp33-accent)); border: var(--lt-hairline) solid var(--rp33-sep); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-host-topline { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-host-subline { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-host-name { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-host-figure { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); border: var(--lt-hairline) solid var(--rp33-sep); background: transparent; padding: 1px 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-badge { font-size: var(--lt-ios-caption2-size); padding: 1px 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-badge.online { background: color-mix(in srgb, var(--lt-sys-purple) 15%, transparent); color: var(--rp36-text-purple); border: 1px solid color-mix(in srgb, var(--lt-sys-purple) 30%, transparent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-badge.offline { background: transparent; color: var(--rp33-label-2); border: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-host-status { font-size: var(--lt-ios-caption2-size); padding: 1px 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-host-status.is-online { color: var(--rp36-text-purple); background: color-mix(in srgb, var(--lt-sys-purple) 22%, transparent); border-color: color-mix(in srgb, var(--lt-sys-purple) 45%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-host-status.is-offline { color: var(--rp36-accent-text); background: color-mix(in srgb, var(--lt-sys-pink) 24%, transparent); border-color: color-mix(in srgb, var(--rp33-accent) 25%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-host-count { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-favor-label { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-favor-track { background: linear-gradient(180deg, transparent, transparent),
+        transparent; border: var(--lt-hairline) solid var(--rp33-sep); box-shadow: inset 0 1px 2px var(--rp33-sep),
+        inset 0 -1px 2px var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-favor-fill { background: linear-gradient(90deg, var(--rp33-accent) 0%, var(--rp33-accent) 52%, var(--rp33-accent) 100%); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-favor-fill::after { background: radial-gradient(circle, var(--rp33-bg) 0%, transparent 75%); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-host-arrow { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-history-wrap { padding: 0 12px 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-goto-live-btn { border: 1px solid color-mix(in srgb, var(--rp33-accent) 42%, transparent); padding: 3px 8px; font-size: var(--lt-ios-caption2-size); color: var(--rp33-on-accent); background: linear-gradient(135deg, var(--rp33-accent), var(--rp33-accent)); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-section-title { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-history-date-item { border: 1px solid color-mix(in srgb, var(--rp33-accent) 28%, transparent); border-radius: 12px; background: linear-gradient(145deg, color-mix(in srgb, var(--lt-sys-pink) 38%, transparent), color-mix(in srgb, var(--lt-sys-pink) 40%, transparent)); color: var(--rp33-on-accent); padding: 8px 12px; font-size: var(--lt-ios-caption2-size); box-shadow: inset 0 1px 0 var(--rp33-sep),
+        0 6px 14px color-mix(in srgb, var(--lt-sys-pink) 28%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-history-date-left { gap: 8px; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-history-date-right { color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-history-empty { color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); padding: 8px 2px 2px; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-picker-trigger { border: 1px solid color-mix(in srgb, var(--rp33-accent) 28%, transparent); background: linear-gradient(145deg, color-mix(in srgb, var(--lt-sys-pink) 24%, transparent), color-mix(in srgb, var(--lt-sys-pink) 40%, transparent)); color: var(--rp33-label); padding: 8px 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-picker-label { gap: 8px; font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-picker-current { color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-picker-arrow { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-item { border: 1px solid color-mix(in srgb, var(--rp33-accent) 28%, transparent); background: linear-gradient(145deg, color-mix(in srgb, var(--lt-sys-pink) 33%, transparent), color-mix(in srgb, var(--lt-sys-pink) 40%, transparent)); color: var(--rp33-label); padding: 8px 12px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-item.is-bound { border-color: color-mix(in srgb, var(--rp33-accent) 50%, transparent); background: linear-gradient(145deg, color-mix(in srgb, var(--rp33-accent) 40%, transparent), color-mix(in srgb, var(--lt-sys-pink) 40%, transparent)); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-left { gap: 8px; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-left i { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-right { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-empty { color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-reference-card { border: 1px solid color-mix(in srgb, var(--rp33-accent) 28%, transparent); background: linear-gradient(145deg, color-mix(in srgb, var(--lt-sys-pink) 24%, transparent), color-mix(in srgb, var(--lt-sys-pink) 40%, transparent)); padding: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-reference-main { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-reference-preview { border: var(--lt-hairline) solid var(--rp33-sep); background: linear-gradient(145deg, transparent, color-mix(in srgb, var(--lt-sys-pink) 40%, transparent)),
+        linear-gradient(135deg, var(--rp33-accent), color-mix(in srgb, var(--rp33-accent) 40%, transparent)); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-reference-preview i { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-reference-title { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-reference-title span:first-child { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-reference-title i { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-reference-state { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-reference-desc { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-reference-strength-row { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-reference-strength-row span { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-reference-strength-row b { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-reference-strength { accent-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-modal-backdrop { background: var(--lt-sys-pink); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-modal-panel { border: 1px solid color-mix(in srgb, var(--rp33-accent) 28%, transparent); background: linear-gradient(160deg, var(--lt-sys-pink), var(--lt-sys-pink)); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-modal-head { padding: 12px 12px; border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-modal-title { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-modal-close { border: var(--lt-hairline) solid var(--rp33-sep); background: transparent; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-modal-list { padding: 12px; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-action-btn { border: var(--lt-hairline) solid var(--rp33-sep); background: transparent; color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-action-btn.is-danger { border-color: color-mix(in srgb, var(--rp33-accent) 40%, transparent); background: linear-gradient(145deg, color-mix(in srgb, var(--lt-sys-pink) 40%, transparent), color-mix(in srgb, var(--lt-sys-pink) 40%, transparent)); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-empty { border: var(--lt-hairline) dashed var(--rp33-sep); background: linear-gradient(150deg, transparent, color-mix(in srgb, var(--lt-sys-pink) 40%, transparent)); padding: 28px 16px; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-empty-icon { font-size: var(--lt-ios-title2-size); color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-empty-title { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label); margin-bottom: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-empty-desc { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-list { padding-bottom: 16px; }
+    #phone-panel[data-rp-ios="3"] .honey-mine-account-head { gap: 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-mine-avatar { border: var(--lt-hairline) solid var(--rp33-sep); background: linear-gradient(145deg, var(--rp33-accent), var(--rp33-accent)); color: var(--rp33-on-accent); font-size: var(--lt-ios-body-size); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-gender-row { margin-top: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-mine-gender-label { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-gender-switch { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-mine-gender-btn { padding: 0 12px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 20%, transparent); background: transparent; color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-gender-btn.is-active { background: linear-gradient(135deg, color-mix(in srgb, var(--rp33-accent) 36%, transparent), color-mix(in srgb, var(--rp33-accent) 28%, transparent)); border-color: color-mix(in srgb, var(--rp33-accent) 46%, transparent); color: var(--rp33-label); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] #honey-mine-live-nickname.honey-settings-input, #phone-panel[data-rp-ios="3"] #honey-mine-live-title.honey-settings-input { background: linear-gradient(145deg, var(--lt-sys-purple), var(--lt-sys-pink)); color: var(--rp33-on-accent); -webkit-text-fill-color: var(--rp33-on-accent); caret-color: var(--rp33-on-accent); border-color: color-mix(in srgb, var(--rp33-accent) 34%, transparent); box-shadow: inset 0 1px 0 transparent,
+        0 0 0 1px transparent; }
+    #phone-panel[data-rp-ios="3"] #honey-mine-live-nickname.honey-settings-input::placeholder, #phone-panel[data-rp-ios="3"] #honey-mine-live-title.honey-settings-input::placeholder { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-settings-btn.honey-mine-start-btn { font-size: var(--lt-ios-caption2-size); margin-top: 20px; }
+    #phone-panel[data-rp-ios="3"] .honey-mine-account-stats { padding: 8px 12px; background: color-mix(in srgb, var(--rp33-accent) 8%, transparent); border: 1px solid color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-account-stat { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-mine-account-stat-num { font-size: var(--lt-ios-subhead-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-account-stat-label { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-account-stat-topic { border-left: var(--lt-hairline) solid var(--rp33-sep); padding-left: 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-mine-stat-input.honey-settings-input { padding: 0 12px; font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-request-list, #phone-panel[data-rp-ios="3"] .honey-mine-friend-list { gap: 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-mine-request-item, #phone-panel[data-rp-ios="3"] .honey-mine-friend-item { border: var(--lt-hairline) solid var(--rp33-sep); background: linear-gradient(145deg, transparent, color-mix(in srgb, var(--lt-sys-pink) 40%, transparent)); box-shadow: none; padding: 12px 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-mine-request-top, #phone-panel[data-rp-ios="3"] .honey-mine-friend-item { gap: 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-mine-request-avatar { background: linear-gradient(135deg, var(--rp33-accent), var(--rp33-accent)); border: var(--lt-hairline) solid var(--rp33-sep); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-request-name { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-request-source { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-friend-badge { margin-left: 8px; padding: 2px 8px; background: color-mix(in srgb, var(--rp33-accent) 18%, transparent); border: 1px solid color-mix(in srgb, var(--rp33-accent) 32%, transparent); color: var(--rp36-accent-text); -webkit-text-fill-color: var(--rp33-accent); font-size: var(--lt-ios-caption2-size); box-shadow: inset 0 1px 0 var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-friend-badge i { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-request-message { margin: 8px 0 0; font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-request-inline-actions, #phone-panel[data-rp-ios="3"] .honey-mine-friend-actions { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-action-btn-compact { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-section-title { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-item { gap: 12px; padding: 12px 12px; border: var(--lt-hairline) solid var(--rp33-sep); background: linear-gradient(140deg, transparent, var(--lt-sys-pink)); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-page-recommend .honey-hot-item { background: linear-gradient(140deg, color-mix(in srgb, var(--lt-sys-pink) 28%, transparent), color-mix(in srgb, var(--lt-sys-pink) 40%, transparent)); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-item::before { background: linear-gradient(180deg, var(--rp33-fill-2), transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-item:active { border-color: color-mix(in srgb, var(--rp33-accent) 34%, transparent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-hot-item-compact { padding: 8px 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-hot-item-compact .honey-hot-rank { font-size: var(--lt-ios-caption2-size); border-radius: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-hot-item-compact .honey-hot-title { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-item-compact .honey-hot-host, #phone-panel[data-rp-ios="3"] .honey-hot-item-compact .honey-hot-online, #phone-panel[data-rp-ios="3"] .honey-hot-item-compact .honey-hot-category { font-size: var(--lt-ios-caption2-size); padding: 1px 4px; }
+    #phone-panel[data-rp-ios="3"] .honey-hot-follow-state { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-follow-state.is-followed { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-follow-state.is-unfollowed { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .honey-today-card { padding: 12px 12px 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-today-card::before { background: linear-gradient(180deg, var(--rp33-fill-2), transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-today-head { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-today-badge, #phone-panel[data-rp-ios="3"] .honey-today-category { padding: 2px 8px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-today-badge { color: var(--rp33-on-accent); background: linear-gradient(135deg, var(--rp33-accent), var(--rp33-accent)); border: 1px solid color-mix(in srgb, var(--rp33-accent) 45%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-today-category { color: var(--rp36-text-purple); background: color-mix(in srgb, var(--lt-sys-purple) 28%, transparent); border: 1px solid color-mix(in srgb, var(--lt-sys-purple) 36%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-today-title { margin-top: 8px; font-size: var(--lt-ios-subhead-size); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-today-intro { margin-top: 8px; font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-today-meta { margin-top: 8px; gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-hot-rank { font-size: var(--lt-ios-caption2-size); color: var(--rp33-on-accent); background: linear-gradient(180deg, var(--rp33-fill-2), var(--lt-sys-pink)); border: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-rank.top3 { color: var(--rp33-on-accent); background: linear-gradient(180deg, color-mix(in srgb, var(--rp33-accent) 35%, transparent), var(--lt-sys-pink)); border-color: color-mix(in srgb, var(--rp33-accent) 40%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-title-row { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-hot-title { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-heat { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-meta { margin-top: 4px; gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-hot-host, #phone-panel[data-rp-ios="3"] .honey-hot-online { padding: 1px 8px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-category { color: var(--rp36-text-purple); background: color-mix(in srgb, var(--lt-sys-purple) 22%, transparent); border: 1px solid color-mix(in srgb, var(--lt-sys-purple) 28%, transparent); padding: 1px 8px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-host { color: var(--rp33-label); background: color-mix(in srgb, var(--rp33-accent) 18%, transparent); border: 1px solid color-mix(in srgb, var(--rp33-accent) 26%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-online { color: var(--rp36-text-purple); background: color-mix(in srgb, var(--lt-sys-purple) 20%, transparent); border: 1px solid color-mix(in srgb, var(--lt-sys-purple) 24%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-tag { padding: 1px 8px; font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); border: 1px solid color-mix(in srgb, var(--rp33-accent) 46%, transparent); background: color-mix(in srgb, var(--rp33-accent) 20%, transparent); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-hot-tag.tag-explosive { color: var(--rp33-label); border-color: var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 30%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-tag.tag-hot { color: var(--rp36-accent-text); border-color: var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 28%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-tag.tag-new { color: var(--rp36-text-purple); border-color: var(--lt-sys-purple); background: color-mix(in srgb, var(--lt-sys-purple) 26%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-arrow { color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); border: 1px solid color-mix(in srgb, var(--rp33-accent) 25%, transparent); background: transparent; }
+    @media (max-width: 360px) {
+    #phone-panel[data-rp-ios="3"] .honey-hot-item { padding: 8px 12px; }
+    }
+    @media (max-width: 360px) {
+    #phone-panel[data-rp-ios="3"] .honey-hot-item-compact { padding: 8px 8px; gap: 8px; }
+    }
+    @media (max-width: 360px) {
+    #phone-panel[data-rp-ios="3"] .honey-hot-item-compact .honey-hot-rank { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 360px) {
+    #phone-panel[data-rp-ios="3"] .honey-today-card { padding: 12px 12px 8px; }
+    }
+    @media (max-width: 360px) {
+    #phone-panel[data-rp-ios="3"] .honey-today-title { font-size: var(--lt-ios-footnote-size); }
+    }
+    @media (max-width: 360px) {
+    #phone-panel[data-rp-ios="3"] .honey-today-intro { margin-top: 4px; font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 360px) {
+    #phone-panel[data-rp-ios="3"] .honey-hot-title { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-width: 360px) {
+    #phone-panel[data-rp-ios="3"] .honey-hot-heat, #phone-panel[data-rp-ios="3"] .honey-hot-host, #phone-panel[data-rp-ios="3"] .honey-hot-online, #phone-panel[data-rp-ios="3"] .honey-hot-tag { font-size: var(--lt-ios-caption2-size); }
+    }
+    #phone-panel[data-rp-ios="3"] .honey-nav { padding: 44px 12px 12px; background: linear-gradient(180deg, transparent, transparent),
+        linear-gradient(135deg, var(--lt-sys-pink), var(--lt-sys-pink)); border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 28%, transparent); box-shadow: inset 0 1px 0 var(--rp33-sep),
+        0 6px 16px color-mix(in srgb, var(--lt-sys-pink) 28%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-nav-title { font-size: var(--lt-ios-callout-size); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-back-btn, #phone-panel[data-rp-ios="3"] .honey-icon-btn { color: var(--rp33-label); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .honey-back-btn i, #phone-panel[data-rp-ios="3"] .honey-icon-btn i { color: var(--rp33-label); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .honey-tabs { padding: 8px 8px 8px; background: linear-gradient(180deg, transparent, var(--lt-sys-pink)); border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-tab { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); padding: 8px 4px; border: var(--lt-hairline) solid var(--rp33-sep); background: transparent; }
+    #phone-panel[data-rp-ios="3"] .honey-tab.active { color: var(--rp33-on-accent); border-color: color-mix(in srgb, var(--rp33-accent) 42%, transparent); background: linear-gradient(180deg, color-mix(in srgb, var(--rp33-accent) 24%, transparent), var(--lt-sys-pink)); box-shadow: inset 0 1px 0 var(--rp33-sep),
+        0 4px 10px var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .honey-tab:active { background: transparent; border-color: color-mix(in srgb, var(--rp33-accent) 34%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-nai-placeholder.has-generated-image { background: var(--lt-sys-pink); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-app .honey-generated-video-replay { border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-scrim); color: var(--rp33-on-accent); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-app .honey-generated-video-replay i { font-size: var(--lt-ios-title3-size); }
+    #phone-panel[data-rp-ios="3"] .honey-nai-glass { background: color-mix(in srgb, var(--lt-sys-pink) 25%, transparent); box-shadow: inset 0 0 100px color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-unlock-btn { background: var(--rp33-fill-2); border: var(--lt-hairline) solid var(--rp33-sep); color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .honey-unlock-btn i { color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-unlock-btn:active { background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .honey-unlock-btn.is-regenerate { background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .honey-nai-status { padding: 8px 8px; background: var(--lt-sys-pink); color: var(--rp33-on-accent); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-nai-status.is-error { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-header { background: var(--rp33-scrim); }
+    #phone-panel[data-rp-ios="3"] .honey-host-avatar { background: linear-gradient(135deg, var(--rp33-accent), var(--rp33-accent)); }
+    #phone-panel[data-rp-ios="3"] .honey-host-name { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-host-viewers { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-btn { background: linear-gradient(135deg, var(--rp33-accent), var(--rp33-accent)); border: 1px solid color-mix(in srgb, var(--rp33-accent) 40%, transparent); color: var(--rp33-on-accent); font-size: var(--lt-ios-caption2-size); padding: 0 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-btn.is-followed { background: transparent; border: var(--lt-hairline) solid var(--rp33-sep); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-self-badge { background: linear-gradient(135deg, color-mix(in srgb, var(--rp33-accent) 26%, transparent), color-mix(in srgb, var(--rp33-accent) 22%, transparent)); border: var(--lt-hairline) solid var(--rp33-sep); color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-live-tags { gap: 4px; }
+    #phone-panel[data-rp-ios="3"] .honey-tag { background: color-mix(in srgb, var(--rp33-accent) 20%, transparent); border: 1px solid var(--rp33-accent); color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); padding: 2px 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-live-gifts { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-live-user-scene-preview { border: var(--lt-hairline) solid var(--rp33-sep); background: linear-gradient(160deg, var(--lt-sys-pink), var(--lt-sys-pink)); box-shadow: inset 0 1px 0 var(--rp33-sep),
+        0 8px 18px var(--rp33-sep); padding: 8px 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-live-user-scene-title { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-user-scene-body { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-gifts.is-expanded .honey-live-gifts-list { background: var(--rp33-scrim); padding: 12px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 35%, transparent); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .honey-live-gifts-track { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-live-gift-item { background: linear-gradient(135deg, color-mix(in srgb, var(--rp33-accent) 12%, transparent), color-mix(in srgb, var(--lt-sys-pink) 14%, transparent)); color: var(--rp33-label); padding: 2px 8px; font-size: var(--lt-ios-caption2-size); text-shadow: none; gap: 4px; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-gift-item::after { background: linear-gradient(180deg, var(--rp33-fill-2), transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-live-gift-intro { background: linear-gradient(135deg, color-mix(in srgb, var(--rp33-accent) 14%, transparent), color-mix(in srgb, var(--rp33-accent) 16%, transparent)); }
+    #phone-panel[data-rp-ios="3"] .honey-live-gift-reward { background: linear-gradient(135deg, color-mix(in srgb, var(--rp33-accent) 14%, transparent), color-mix(in srgb, var(--lt-sys-pink) 16%, transparent)); padding: 1px 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-live-notify-icon { font-size: var(--lt-ios-caption2-size); background: linear-gradient(135deg, var(--rp33-fill-2), color-mix(in srgb, var(--rp33-accent) 30%, transparent)); border: var(--lt-hairline) solid var(--rp33-sep); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-live-gift-comment { background: linear-gradient(135deg, color-mix(in srgb, var(--lt-sys-purple) 12%, transparent), color-mix(in srgb, var(--lt-sys-purple) 14%, transparent)); padding: 1px 8px; gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-live-comment-rank { font-size: var(--lt-ios-caption2-size); padding: 3px 4px; color: var(--rp36-text-purple); background: linear-gradient(135deg, color-mix(in srgb, var(--rp33-accent) 40%, transparent), color-mix(in srgb, var(--rp33-accent) 40%, transparent)); border: 1px solid color-mix(in srgb, var(--rp33-accent) 32%, transparent); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .honey-live-comment-line { font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-purple); }
+    #phone-panel[data-rp-ios="3"] .honey-live-comment-user { font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-purple); }
+    #phone-panel[data-rp-ios="3"] .honey-live-comment-content { font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-purple); }
+    #phone-panel[data-rp-ios="3"] .honey-live-gift-badge { font-size: var(--lt-ios-caption2-size); padding: 3px 4px; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-gift-badge.is-gift { background: linear-gradient(135deg, color-mix(in srgb, var(--rp33-accent) 40%, transparent), color-mix(in srgb, var(--rp33-accent) 40%, transparent)); border: 1px solid color-mix(in srgb, var(--rp33-accent) 28%, transparent); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .honey-live-gift-badge.is-comment { background: linear-gradient(135deg, color-mix(in srgb, var(--lt-sys-purple) 40%, transparent), color-mix(in srgb, var(--lt-sys-purple) 40%, transparent)); border: 1px solid color-mix(in srgb, var(--lt-sys-purple) 26%, transparent); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .honey-gift-icon { background: var(--rp33-fill-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-live-gift-text { color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-live-bottom { background: linear-gradient(180deg, color-mix(in srgb, var(--lt-sys-pink) 8%, transparent), color-mix(in srgb, var(--lt-sys-pink) 32%, transparent)); padding: 8px 12px calc(12px + env(safe-area-inset-bottom, 0px)); gap: 8px; }
+    #phone-panel[data-rp-ios="3"].phone-keyboard-open .honey-page-live .honey-live-bottom { padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+    #phone-panel[data-rp-ios="3"] .honey-page-live.is-scene-collapsed .honey-live-bottom { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+    #phone-panel[data-rp-ios="3"] .honey-input-bar { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-refresh-btn, #phone-panel[data-rp-ios="3"] .honey-gift-btn, #phone-panel[data-rp-ios="3"] .honey-scene-toggle-btn { background: var(--rp33-fill-2); border: var(--lt-hairline) solid var(--rp33-sep); font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .honey-refresh-btn i, #phone-panel[data-rp-ios="3"] .honey-gift-btn i, #phone-panel[data-rp-ios="3"] .honey-scene-toggle-btn i { color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-refresh-btn:active, #phone-panel[data-rp-ios="3"] .honey-gift-btn:active, #phone-panel[data-rp-ios="3"] .honey-scene-toggle-btn:active { background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live .honey-unlock-btn, #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live .honey-refresh-btn, #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live .honey-scene-toggle-btn, #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live .honey-gift-btn { background: var(--lt-sys-pink); border: var(--lt-hairline) solid var(--rp33-sep); color: var(--rp33-on-accent); box-shadow: 0 3px 10px var(--rp33-sep),
+        inset 0 1px 0 var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live .honey-unlock-btn i, #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live .honey-refresh-btn i, #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live .honey-scene-toggle-btn i, #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live .honey-gift-btn i { color: var(--rp33-label); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live .honey-unlock-btn:active, #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live .honey-refresh-btn:active, #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live .honey-scene-toggle-btn:active, #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live .honey-gift-btn:active, #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live.is-scene-modal-open .honey-scene-toggle-btn, #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live.is-gift-picker-open .honey-gift-btn { background: var(--rp33-accent); border-color: var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live .honey-unlock-btn:focus-visible, #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live .honey-refresh-btn:focus-visible, #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live .honey-scene-toggle-btn:focus-visible, #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-live .honey-gift-btn:focus-visible { outline: 2px solid var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-end-live-btn { border: 1px solid color-mix(in srgb, var(--rp33-accent) 40%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--rp33-accent) 38%, transparent), color-mix(in srgb, var(--rp33-accent) 34%, transparent)); color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .honey-end-live-btn:active { background: linear-gradient(135deg, color-mix(in srgb, var(--rp33-accent) 40%, transparent), color-mix(in srgb, var(--rp33-accent) 40%, transparent)); }
+    #phone-panel[data-rp-ios="3"] .honey-chat-input { background: var(--lt-sys-purple); border: 1px solid color-mix(in srgb, var(--rp33-accent) 26%, transparent); color: var(--rp33-on-accent); -webkit-text-fill-color: var(--rp33-on-accent); caret-color: var(--rp33-on-accent); font-size: var(--lt-ios-caption1-size); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-app .honey-chat-input, #phone-panel[data-rp-ios="3"] #honey-live-view .honey-chat-input { background: var(--lt-sys-purple); color: var(--rp33-on-accent); -webkit-text-fill-color: var(--rp33-on-accent); border-color: color-mix(in srgb, var(--rp33-accent) 26%, transparent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-chat-input::placeholder { color: var(--rp33-label); -webkit-text-fill-color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-chat-input:focus, #phone-panel[data-rp-ios="3"] .honey-chat-input:active { background: var(--lt-sys-purple); border-color: color-mix(in srgb, var(--rp33-accent) 38%, transparent); color: var(--rp33-on-accent); -webkit-text-fill-color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-chat-input:-webkit-autofill, #phone-panel[data-rp-ios="3"] .honey-chat-input:-webkit-autofill:hover, #phone-panel[data-rp-ios="3"] .honey-chat-input:-webkit-autofill:focus { -webkit-text-fill-color: var(--rp33-label); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-gift-picker { gap: 4px; padding: 8px; background: var(--lt-sys-pink); border: 1px solid color-mix(in srgb, var(--rp33-accent) 55%, transparent); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .honey-gift-group-title { font-size: var(--lt-ios-caption2-size); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .honey-gift-option { border: 1px solid color-mix(in srgb, var(--rp33-accent) 45%, transparent); background: transparent; color: var(--rp33-label); border-radius: 8px; padding: 4px 4px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-gift-option .gift-emoji { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-gift-option .gift-label { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-gift-option .gift-price { font-size: var(--lt-ios-caption2-size); color: var(--rp36-accent-text); }
+    @media (hover: hover) and (pointer: fine) {
+    #phone-panel[data-rp-ios="3"] .honey-gift-picker { padding: 4px; }
+    }
+    @media (hover: hover) and (pointer: fine) {
+    #phone-panel[data-rp-ios="3"] .honey-gift-group-title { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (hover: hover) and (pointer: fine) {
+    #phone-panel[data-rp-ios="3"] .honey-gift-option { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (hover: hover) and (pointer: fine) {
+    #phone-panel[data-rp-ios="3"] .honey-gift-option .gift-emoji { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (hover: hover) and (pointer: fine) {
+    #phone-panel[data-rp-ios="3"] .honey-gift-option .gift-label { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (hover: hover) and (pointer: fine) {
+    #phone-panel[data-rp-ios="3"] .honey-gift-option .gift-price { font-size: var(--lt-ios-caption2-size); }
+    }
+    #phone-panel[data-rp-ios="3"] .honey-scene-block { background: transparent; border: 1px solid color-mix(in srgb, var(--rp33-accent) 35%, transparent); padding: 8px 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-scene-title { font-size: var(--lt-ios-caption1-size); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-title-row { margin-bottom: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-scene-title-row.is-titleless { margin-bottom: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tts-btn { border: 1px solid var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 26%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tts-btn i { color: var(--rp33-label); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tts-btn:hover { background: color-mix(in srgb, var(--rp33-accent) 36%, transparent); border-color: var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tts-btn.is-playing { background: color-mix(in srgb, var(--rp33-accent) 40%, transparent); border-color: var(--rp33-sep); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-desc { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-modal { padding: 76px 12px 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-scene-modal-backdrop { background: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-modal-card { border: 1px solid color-mix(in srgb, var(--rp33-accent) 40%, transparent); background: linear-gradient(180deg, transparent, transparent 18%, var(--lt-sys-pink) 72%),
+        linear-gradient(160deg, var(--lt-sys-pink), var(--lt-sys-pink)); box-shadow: 0 16px 40px var(--rp33-sep),
+        inset 0 1px 0 var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-modal-head { padding: 12px 12px 8px; border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 26%, transparent); background: linear-gradient(180deg, color-mix(in srgb, var(--rp33-accent) 16%, transparent), color-mix(in srgb, var(--rp33-accent) 8%, transparent)); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-modal-title { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-modal-close-btn { border: 1px solid var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 26%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-modal-close-btn i { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-btn i { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-modal-desc { padding: 12px 12px 16px; font-size: var(--lt-ios-footnote-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-backdrop { background: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-panel { border: 1px solid color-mix(in srgb, var(--rp33-accent) 42%, transparent); background: linear-gradient(160deg, var(--lt-sys-pink), var(--lt-sys-pink)); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-head { padding: 8px 12px; border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 24%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-title { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-actions { gap: 8px; padding: 8px 12px 0; }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-edit { border: 1px solid color-mix(in srgb, var(--rp33-accent) 48%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-edit i { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-retag { border: 1px solid color-mix(in srgb, var(--rp33-accent) 48%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, transparent); color: var(--rp33-label); gap: 4px; padding: 0 12px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-retag i { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-close { border: 1px solid var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 20%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-close i { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-list { padding: 8px 12px 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-item { border: 1px solid color-mix(in srgb, var(--rp33-accent) 22%, transparent); border-radius: 10px; background: transparent; }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-meta { margin-bottom: 8px; font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-time { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-prompt { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-history-empty { padding: 16px 12px; font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-editor-overlay { padding: 12px; background: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-editor-dialog { border: 1px solid color-mix(in srgb, var(--rp33-accent) 48%, transparent); background: linear-gradient(160deg, var(--lt-sys-pink), var(--lt-sys-pink)); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-editor-head { padding: 8px 12px; border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 24%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-editor-title { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-editor-close { border: 1px solid var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 20%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-editor-close i { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-editor-body { padding: 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-editor-textarea { border: 1px solid color-mix(in srgb, var(--rp33-accent) 34%, transparent); background: transparent; color: var(--rp33-label); padding: 8px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-editor-textarea:focus { border-color: var(--rp33-accent); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-editor-actions { gap: 8px; padding: 0 12px 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-editor-button { border-radius: 8px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 40%, transparent); padding: 0 12px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-editor-button.is-secondary { background: transparent; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-scene-tag-editor-button.is-primary { background: color-mix(in srgb, var(--rp33-accent) 30%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-modal-backdrop { background: color-mix(in srgb, var(--lt-sys-pink) 8%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-modal-panel { border-radius: 10px; border: var(--lt-hairline) solid var(--rp33-sep); background: linear-gradient(145deg, color-mix(in srgb, var(--lt-sys-pink) 40%, transparent), color-mix(in srgb, var(--lt-sys-pink) 34%, transparent)); box-shadow: inset 0 1px 0 var(--rp33-sep),
+        0 4px 14px color-mix(in srgb, var(--lt-sys-pink) 34%, transparent); gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-modal-title { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-modal-close { border: var(--lt-hairline) solid var(--rp33-sep); background: transparent; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-modal-close i { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-modal-desc { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-visibility-modal { padding: 20px; }
+    #phone-panel[data-rp-ios="3"] .honey-live-visibility-backdrop { background: color-mix(in srgb, var(--lt-sys-purple) 40%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-live-visibility-panel { background: var(--lt-sys-pink); border: var(--lt-hairline) solid var(--rp33-sep); box-shadow: var(--rp33-shadow-2); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-live-visibility-title { font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"] .honey-live-visibility-desc { color: var(--rp33-label); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .honey-live-visibility-actions { margin-top: 16px; }
+    #phone-panel[data-rp-ios="3"] .honey-live-visibility-btn { border: var(--lt-hairline) solid var(--rp33-sep); background: transparent; color: var(--rp33-label); font-size: var(--lt-ios-caption1-size); gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-live-visibility-btn, #phone-panel[data-rp-ios="3"] .honey-live-visibility-btn span, #phone-panel[data-rp-ios="3"] .honey-live-visibility-btn i { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-visibility-btn.is-private { border-color: var(--rp33-sep); background: transparent; }
+    #phone-panel[data-rp-ios="3"] .honey-live-visibility-btn.is-public { border-color: color-mix(in srgb, var(--rp33-accent) 40%, transparent); background: linear-gradient(145deg, color-mix(in srgb, var(--lt-sys-pink) 40%, transparent), color-mix(in srgb, var(--lt-sys-pink) 40%, transparent)); }
+    #phone-panel[data-rp-ios="3"] .honey-host-wechat-reject-panel { padding: 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-host-wechat-reject-text { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-host-wechat-reject-ok { border: 1px solid color-mix(in srgb, var(--rp33-accent) 38%, transparent); background: linear-gradient(135deg, var(--rp33-accent), var(--rp33-accent)); color: var(--rp33-on-accent); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-request-item { border: var(--lt-hairline) solid var(--rp33-sep); border-radius: 8px; background: transparent; padding: 4px 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-request-item:hover { background: transparent; border-color: var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-request-name { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-request-badge { padding: 1px 4px; font-size: var(--lt-ios-caption2-size); border: var(--lt-hairline) solid var(--rp33-sep); color: var(--rp33-label); background: transparent; }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-request-badge.is-ranked { background: color-mix(in srgb, var(--rp33-accent) 8%, transparent); border-color: color-mix(in srgb, var(--rp33-accent) 18%, transparent); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-request-badge.is-unranked { background: color-mix(in srgb, var(--lt-sys-purple) 8%, transparent); border-color: color-mix(in srgb, var(--lt-sys-purple) 18%, transparent); color: var(--rp36-text-purple); }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-request-badge.is-host { background: color-mix(in srgb, var(--rp33-accent) 8%, transparent); border-color: color-mix(in srgb, var(--rp33-accent) 18%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-request-sub { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-request-cta { font-size: var(--lt-ios-caption2-size); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-end-actions { gap: 12px; margin-top: 16px; }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-end-actions .honey-follow-action-btn { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .phone-view-layer[data-view-id="honey-settings"] { background: var(--lt-sys-pink); }
+    #phone-panel[data-rp-ios="3"] .honey-page-settings .honey-content { background: var(--lt-sys-pink); }
+    #phone-panel[data-rp-ios="3"] .honey-settings-card { background: var(--lt-sys-pink); border-top: 1px solid color-mix(in srgb, var(--rp33-accent) 18%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-page-settings .honey-settings-card { background: linear-gradient(150deg, var(--lt-sys-pink), var(--lt-sys-pink)); border-top-color: var(--rp33-sep); border-bottom-color: var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .honey-settings-card-title { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label); margin-bottom: 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-page-settings .phone-prompt-fold { background: var(--lt-sys-purple); border: 1px solid color-mix(in srgb, var(--rp33-accent) 28%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-page-settings .phone-prompt-fold-header { padding: 12px 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-page-settings .phone-prompt-fold-title { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-page-settings .phone-prompt-fold-desc { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-page-settings .phone-prompt-fold-arrow { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .honey-page-settings .phone-prompt-fold-content { background: var(--lt-sys-pink); border-top: 1px solid color-mix(in srgb, var(--rp33-accent) 20%, transparent); padding: 12px 12px 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-settings-row { gap: 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-settings-input { border: 1px solid color-mix(in srgb, var(--rp33-accent) 22%, transparent); background: var(--lt-sys-purple); color: var(--rp33-on-accent); -webkit-text-fill-color: var(--rp33-on-accent); font-size: var(--lt-ios-caption1-size); padding: 0 16px 0 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-settings-input:-webkit-autofill, #phone-panel[data-rp-ios="3"] .honey-settings-input:-webkit-autofill:hover, #phone-panel[data-rp-ios="3"] .honey-settings-input:-webkit-autofill:focus { -webkit-text-fill-color: var(--rp33-label); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-settings-input::placeholder { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] #honey-user-nickname.honey-settings-input { background: var(--lt-sys-purple); color: var(--rp33-on-accent); -webkit-text-fill-color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] #honey-recharge-yuan.honey-settings-input { background: var(--lt-sys-purple); color: var(--rp33-on-accent); -webkit-text-fill-color: var(--rp33-on-accent); caret-color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-settings-inline-btn { padding: 0 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-coin-balance { font-size: var(--lt-ios-callout-size); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-settings-label { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-settings-desc { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-honey-worldbook-list { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-app .phone-worldbook-source-name { color: var(--rp33-label); -webkit-text-fill-color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-app .phone-worldbook-entry-trigger, #phone-panel[data-rp-ios="3"]-content .phone-screen .honey-app .phone-worldbook-entry-trigger i { color: var(--rp33-label); -webkit-text-fill-color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-worldbook-fold { margin-top: 12px; }
+    #phone-panel[data-rp-ios="3"] .phone-honey-worldbook-item { border-top: var(--lt-hairline) solid var(--rp33-sep); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-honey-worldbook-text { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-honey-worldbook-name { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-honey-worldbook-meta { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-toggle-slider { background: var(--rp33-fill-2); border: 1px solid color-mix(in srgb, var(--rp33-accent) 45%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-toggle-slider::before { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .honey-toggle-switch input:checked + .honey-toggle-slider { background: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-prompt-editor { margin-top: 12px; background: var(--lt-sys-purple); border: 1px solid color-mix(in srgb, var(--rp33-accent) 45%, transparent); color: var(--rp33-on-accent); font-size: var(--lt-ios-caption2-size); padding: 12px 16px 12px 12px; font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .honey-prompt-editor:focus { background: var(--lt-sys-purple); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-prompt-editor::placeholder { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-settings-actions { margin-top: 12px; }
+    #phone-panel[data-rp-ios="3"] .honey-settings-btn { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .honey-settings-btn-muted { background: var(--rp33-fill-2); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-settings-btn-primary { background: linear-gradient(135deg, var(--rp33-accent), var(--rp33-accent)); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-settings-btn-danger { margin-top: 12px; background: linear-gradient(135deg, var(--rp33-accent), var(--rp33-accent)); color: var(--rp33-on-accent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-recharge-backdrop { background: var(--lt-sys-purple); }
+    #phone-panel[data-rp-ios="3"] .honey-recharge-panel { background: linear-gradient(145deg, var(--lt-sys-pink), var(--lt-sys-pink)); border: 1px solid color-mix(in srgb, var(--rp33-accent) 35%, transparent); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .honey-recharge-title { font-size: var(--lt-ios-subhead-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-recharge-wallet-value { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-recharge-preview-value { color: var(--rp36-accent-text); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-refresh-btn:disabled, #phone-panel[data-rp-ios="3"] .honey-chat-input:disabled { color: var(--rp33-label); -webkit-text-fill-color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-custom-video-empty { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); padding: 12px 0; }
+    #phone-panel[data-rp-ios="3"] .honey-custom-video-item { background: transparent; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--rp33-accent) 20%, transparent); }
+    #phone-panel[data-rp-ios="3"] .honey-custom-video-name { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-custom-video-icon { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-delete-custom-video-btn { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .honey-delete-custom-video-btn i { color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-custom-video-hint { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-custom-video-toggle-btn { background: transparent; border: 1px solid color-mix(in srgb, var(--rp33-accent) 25%, transparent); color: var(--rp33-label); padding: 8px 8px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .phone-body-panel-honey .phone-statusbar .time, #phone-panel[data-rp-ios="3"] .phone-body-panel-honey .statusbar-left .time { color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .phone-body-panel-honey .phone-wifi-signal, #phone-panel[data-rp-ios="3"] .phone-body-panel-honey .phone-wifi-signal .fa-wifi { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-body-panel-honey .battery-text { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .phone-body-panel-honey .battery-body { border-color: var(--rp33-sep); background: color-mix(in srgb, var(--lt-sys-pink) 40%, transparent); }
+    #phone-panel[data-rp-ios="3"] .phone-body-panel-honey .battery-head { background: var(--rp33-bg); }
+}
+@layer rp.skins.curated {
+    /* ===================== v3.4 逐屏精修 ===================== */
+    /* ---- 蜜语 v3.4：两种语境。列表页（推荐 / 关注 / 历史 / 我的 / 设置）跟随系统浅深色，蜜语粉只当强调色；
+            直播间压在视频画面上，固定用「媒体之上」的深色玻璃 + 白字（浅深色都一样，底是画面不是系统表面）。---- */
+    #phone-panel[data-rp-ios="3"] .honey-app { --rp33-accent: var(--rp33-brand-honey); --rp36-accent-text: var(--rp36-text-brand-honey); background: var(--rp33-bg); color: var(--rp33-label); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .honey-content { background: transparent; gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .honey-theme-background { opacity: 0.12; }
+
+    /* 导航栏：iOS 26 透明栏 + 滚动边缘玻璃；标题 headline；品牌字 title3 圆体 */
+    #phone-panel[data-rp-ios="3"] .honey-nav { background: color-mix(in srgb, var(--rp33-bg) 76%, transparent); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); border: 0; box-shadow: none; padding-inline: var(--rp33-sp-4); gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .honey-nav-title { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-brand-title { font: 700 var(--lt-ios-title3-size) / 1 var(--lt-font-ios-rounded); color: var(--rp33-label); letter-spacing: 0; }
+    #phone-panel[data-rp-ios="3"] .honey-brand-logo { border-radius: 8px; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-back-btn, .honey-icon-btn, .honey-search-close, .honey-follow-video-modal-close, .honey-scene-modal-close-btn, .honey-scene-tag-history-close, .honey-scene-tag-editor-close, .honey-live-collab-modal-close) { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); min-inline-size: var(--rp3-glass-btn); padding: 0; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 17px; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-back-btn, .honey-icon-btn):active { scale: 0.94; }
+
+    /* 页签：4 等分改成 iOS 分段控件 */
+    #phone-panel[data-rp-ios="3"] .honey-tabs { margin: var(--rp33-sp-2) var(--rp33-sp-4); padding: 2px; gap: 0; border: 0; border-radius: 999px; background: var(--rp33-seg-bg); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-tab { min-block-size: var(--rp33-tab-h); padding: 0 var(--rp33-sp-2); border: 0; border-radius: 999px; background: transparent; color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-tab:is(.active, .is-active) { background: var(--rp33-seg-on); box-shadow: var(--rp33-seg-shadow); color: var(--rp33-label); font-weight: 600; }
+
+    /* 推荐：热榜 = 圆角 16 的行卡；名次方块（前三用强调色）；今日卡 = 22 圆角卡片 */
+    #phone-panel[data-rp-ios="3"] .honey-recommend-wrap { padding: 0 var(--rp33-sp-4) var(--rp33-sp-6); gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-section-title { margin: var(--rp33-sp-4) 0 var(--rp33-sp-1); font: var(--lt-type-title3); letter-spacing: var(--lt-ios-title3-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-list { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-hot-item, .honey-today-card) { border: 0; background: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-card-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-item { min-block-size: 64px; padding: var(--rp33-sp-3) var(--rp33-sp-4); gap: var(--rp33-sp-3); border-radius: var(--rp33-feed-radius); align-items: center; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-hot-item, .honey-today-card)::before, .honey-live-gift-item::after { content: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-hot-item, .honey-today-card):active { background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-rank { inline-size: 28px; block-size: 28px; border: 0; border-radius: 8px; background: var(--rp33-fill); color: var(--rp33-label-2); font: 700 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .honey-hot-rank.top3 { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-title { font: 600 var(--lt-ios-subhead-size) / 1.3 var(--lt-font-ios); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-meta { gap: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-hot-host, .honey-hot-online, .honey-today-category) { padding: 2px var(--rp33-sp-2); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); font-weight: 500; }
+    #phone-panel[data-rp-ios="3"] .honey-hot-heat { color: var(--rp36-accent-text); font: 600 var(--lt-ios-caption1-size) / 1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .honey-hot-arrow { color: var(--rp33-label-3); font-size: 13px; }
+    #phone-panel[data-rp-ios="3"] .honey-hot-item-compact { min-block-size: 52px; padding: var(--rp33-sp-2) var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-item-compact .honey-hot-rank { inline-size: 24px; block-size: 24px; font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-item-compact .honey-hot-title { font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .honey-hot-item-compact :is(.honey-hot-host, .honey-hot-online) { font-size: var(--lt-ios-caption2-size); padding: 1px 6px; }
+    #phone-panel[data-rp-ios="3"] .honey-today-card { min-block-size: 116px; padding: var(--rp33-sp-4); border-radius: var(--rp33-card-radius); }
+    #phone-panel[data-rp-ios="3"] .honey-today-head { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .honey-today-badge { padding: 3px var(--rp33-sp-2); border: 0; border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); font: 600 var(--lt-ios-caption2-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .honey-today-title { font: var(--lt-type-headline); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-today-intro { font: var(--lt-type-subhead); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .honey-today-meta { font: var(--lt-type-caption1); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-pull-refresh-indicator, .honey-live-pull-refresh-indicator) { color: var(--rp33-label-2); font-size: var(--lt-ios-footnote-size); }
+
+    /* 搜索 / 场景 / 连麦 / 可见性 / 视频选择：同一套 iOS Sheet（居中 30、底部 34） */
+    #phone-panel[data-rp-ios="3"] :is(.honey-search-backdrop, .honey-scene-modal-backdrop, .honey-scene-tag-history-backdrop, .honey-live-collab-modal-backdrop, .honey-live-visibility-backdrop, .honey-follow-video-modal-backdrop, .honey-recharge-backdrop, .honey-scene-tag-editor-overlay) { background: var(--rp33-scrim); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-search-panel, .honey-scene-modal-card, .honey-scene-tag-history-panel, .honey-scene-tag-editor-dialog, .honey-live-collab-modal-panel, .honey-live-visibility-panel, .honey-follow-video-modal-panel, .honey-recharge-panel) { border: 0; border-radius: var(--rp33-dialog-radius); background: var(--rp33-sheet-bg); background-image: none; box-shadow: var(--rp33-float-shadow); color: var(--rp33-label); padding: var(--rp33-sp-5); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-search-head, .honey-scene-modal-head, .honey-scene-tag-history-head, .honey-scene-tag-editor-head, .honey-live-collab-modal-head, .honey-follow-video-modal-head) { gap: var(--rp33-sp-2); padding: 0 0 var(--rp33-sp-3); border: 0; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-search-title, .honey-scene-modal-title, .honey-scene-tag-history-title, .honey-scene-tag-editor-title, .honey-live-collab-modal-title, .honey-live-visibility-title, .honey-follow-video-modal-title, .honey-recharge-title) { font: var(--lt-type-headline); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-scene-modal-desc, .honey-live-collab-modal-desc, .honey-live-visibility-desc, .honey-host-wechat-reject-text) { font: var(--lt-type-subhead); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-search-input, .honey-scene-tag-editor-textarea, .honey-settings-input, .honey-mine-stat-input, .honey-prompt-editor) { min-block-size: 44px; padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); box-shadow: var(--rp34-field-rim); color: var(--rp33-label); font: var(--lt-type-body); caret-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-search-input, .honey-scene-tag-editor-textarea, .honey-settings-input, .honey-prompt-editor)::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-search-actions, .honey-scene-modal-actions, .honey-scene-tag-history-actions, .honey-scene-tag-editor-actions, .honey-live-visibility-actions, .honey-live-collab-end-actions, .honey-settings-actions) { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-search-btn, .honey-settings-btn-primary, .honey-host-wechat-reject-ok, .honey-live-collab-request-cta) { min-block-size: var(--rp33-hit); padding-inline: var(--rp33-sp-5); border: 0; border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); font: 600 var(--lt-ios-body-size) / 1 var(--lt-font-ios); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-scene-tts-btn, .honey-scene-retry-btn, .honey-scene-tag-btn, .honey-scene-tag-history-edit, .honey-scene-tag-history-retag, .honey-scene-tag-editor-button, .honey-live-visibility-btn, .honey-follow-action-btn, .honey-settings-btn, .honey-settings-inline-btn, .honey-custom-video-toggle-btn) { min-block-size: 36px; padding-inline: var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-settings-btn-muted) { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-settings-btn-danger, .honey-delete-custom-video-btn) { min-block-size: 36px; border: 0; border-radius: 999px; background: var(--rp33-danger-soft); color: var(--rp36-text-red); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-action-btn-compact { min-block-size: 30px; padding-inline: var(--rp33-sp-3); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-scene-tag-history-item, .honey-follow-video-item, .honey-live-collab-request-item, .honey-custom-video-item) { min-block-size: var(--rp3-row-h-min); padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-row-radius-single); background: var(--rp33-surface-2); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-scene-tag-history-time, .honey-live-collab-request-sub, .honey-custom-video-hint, .honey-follow-video-empty, .honey-scene-tag-history-empty) { font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-scene-tag-history-prompt, .honey-custom-video-name, .honey-live-collab-request-name) { font: var(--lt-type-subhead); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-live-collab-request-badge { padding: 2px var(--rp33-sp-2); border-radius: 999px; background: var(--rp33-accent-soft); color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); font-weight: 600; }
+
+    /* ===== 直播间：媒体之上 ===== */
+    #phone-panel[data-rp-ios="3"] .honey-page-live { --rp33-accent: var(--rp33-brand-honey); --rp36-accent-text: var(--rp36-text-brand-honey); background: var(--rp34-call-bg); color: var(--rp34-media-fg); }
+    #phone-panel[data-rp-ios="3"] .honey-page-live .honey-content { background: transparent; }
+    #phone-panel[data-rp-ios="3"] .honey-page-live .honey-nav { background: var(--rp34-media-scrim-top); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] .honey-page-live :is(.honey-nav-title, .honey-meta-title-text) { color: var(--rp34-media-fg); text-shadow: var(--rp34-media-text-shadow); }
+    #phone-panel[data-rp-ios="3"] .honey-page-live :is(.honey-back-btn, .honey-icon-btn, .honey-unlock-btn, .honey-scene-toggle-btn) { background: var(--rp34-media-glass); box-shadow: var(--rp34-media-rim); -webkit-backdrop-filter: var(--rp34-media-glass-blur); backdrop-filter: var(--rp34-media-glass-blur); color: var(--rp34-media-fg); }
+    #phone-panel[data-rp-ios="3"] .honey-page-live .honey-unlock-btn { inline-size: 40px; block-size: 40px; min-inline-size: 40px; flex-basis: 40px; border: 0; border-radius: 999px; }
+    #phone-panel[data-rp-ios="3"] .honey-page-live .honey-unlock-btn i { color: var(--rp34-media-fg); font-size: 15px; filter: none; }
+    #phone-panel[data-rp-ios="3"] .honey-meta-row { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-meta-host, .honey-live-header) { min-block-size: 40px; padding: 4px var(--rp33-sp-3) 4px 4px; gap: var(--rp33-sp-2); border: 0; border-radius: 999px; background: var(--rp34-media-glass); box-shadow: var(--rp34-media-rim); -webkit-backdrop-filter: var(--rp34-media-glass-blur); backdrop-filter: var(--rp34-media-glass-blur); }
+    #phone-panel[data-rp-ios="3"] .honey-host-avatar { inline-size: 32px; block-size: 32px; border: 0; box-shadow: 0 0 0 1.5px var(--rp34-media-line); }
+    #phone-panel[data-rp-ios="3"] .honey-host-name { font: 600 var(--lt-ios-footnote-size) / 1.2 var(--lt-font-ios); color: var(--rp34-media-fg); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-host-viewers, .honey-meta-audience-online, .honey-meta-collab) { font: 500 var(--lt-ios-caption2-size) / 1.2 var(--lt-font-ios); color: var(--rp34-media-fg-2); text-shadow: none; font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-btn { block-size: 28px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-btn.is-followed { background: var(--rp34-media-fill); color: var(--rp34-media-fg); }
+    #phone-panel[data-rp-ios="3"] .honey-meta-audience-avatar { inline-size: 28px; block-size: 28px; border: 1.5px solid var(--rp34-media-line); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-meta-collab-btn, .honey-meta-pill) { block-size: 24px; padding: 0 var(--rp33-sp-2); border: 0; border-radius: 999px; background: var(--rp34-media-glass); box-shadow: var(--rp34-media-rim); color: var(--rp34-media-fg); font: 500 var(--lt-ios-caption2-size) / 24px var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .honey-meta-collab-btn.is-empty { color: var(--rp34-media-fg-3); }
+    #phone-panel[data-rp-ios="3"] .honey-meta-pill { max-inline-size: 72px; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-live-status-dot) { inline-size: 8px; block-size: 8px; }
+    #phone-panel[data-rp-ios="3"] .honey-live-status-green { background: var(--rp34-live-dot); }
+    #phone-panel[data-rp-ios="3"] .honey-live-status-yellow { background: var(--lt-sys-yellow); }
+    #phone-panel[data-rp-ios="3"] .honey-live-status-red { background: var(--lt-sys-red); }
+    #phone-panel[data-rp-ios="3"] .honey-live-rank-mini { border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp34-media-glass); box-shadow: var(--rp34-media-rim); -webkit-backdrop-filter: var(--rp34-media-glass-blur); backdrop-filter: var(--rp34-media-glass-blur); padding: var(--rp33-sp-2) var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .honey-live-rank-title { font: 600 var(--lt-ios-caption1-size) / 1.2 var(--lt-font-ios); color: var(--rp34-media-fg); }
+    #phone-panel[data-rp-ios="3"] .honey-live-rank-row { gap: var(--rp33-sp-2); min-block-size: 22px; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-live-rank-index, .honey-live-rank-name, .honey-live-rank-coins, .honey-live-rank-empty) { font: 500 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); color: var(--rp34-media-fg-2); }
+    #phone-panel[data-rp-ios="3"] .honey-live-rank-coins { font-family: var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; color: var(--rp34-media-fg); }
+    /* 礼物 / 弹幕滚动条：白字压在玻璃胶囊里，最小 11pt */
+    #phone-panel[data-rp-ios="3"] .honey-live-gift-item { padding: 6px var(--rp33-sp-3); gap: var(--rp33-sp-2); border: 0; border-radius: 16px; background: var(--rp34-media-glass); box-shadow: var(--rp34-media-rim); -webkit-backdrop-filter: var(--rp34-media-glass-blur); backdrop-filter: var(--rp34-media-glass-blur); color: var(--rp34-media-fg); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-live-gift-text, .honey-live-gift-text-clone, .honey-live-gift-intro, .honey-live-gift-reward, .honey-live-gift-text-reward) { font: 500 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); color: var(--rp34-media-fg); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-live-comment-line, .honey-live-comment-content) { font: 400 var(--lt-ios-footnote-size) / 1.35 var(--lt-font-ios); color: var(--rp34-media-fg); }
+    #phone-panel[data-rp-ios="3"] .honey-live-comment-user { font: 600 var(--lt-ios-footnote-size) / 1.35 var(--lt-font-ios); color: color-mix(in srgb, var(--rp33-brand-honey) 55%, var(--rp34-media-fg)); }
+    #phone-panel[data-rp-ios="3"] .honey-live-comment-rank { padding: 2px 6px; border: 0; border-radius: 999px; background: var(--rp34-media-fill); color: var(--rp34-media-fg); font: 600 var(--lt-ios-caption2-size) / 1 var(--lt-font-ios-rounded); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-live-self-badge, .honey-live-notify-icon) { color: var(--rp34-media-fg-2); }
+    #phone-panel[data-rp-ios="3"] .honey-live-gifts.is-expanded .honey-live-gifts-list { border-radius: var(--rp33-feed-radius); background: var(--rp34-media-glass-strong); -webkit-backdrop-filter: var(--rp34-media-glass-blur); backdrop-filter: var(--rp34-media-glass-blur); }
+    /* 底栏：画面渐暗 + 玻璃输入胶囊 + 礼物圆键 */
+    #phone-panel[data-rp-ios="3"] .honey-live-bottom { background: var(--rp34-media-scrim-bottom); padding-inline: var(--rp33-sp-3); gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .honey-input-bar { gap: var(--rp33-sp-2); align-items: center; }
+    #phone-panel[data-rp-ios="3"] .honey-app .honey-chat-input { min-block-size: 40px; padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp34-media-glass); box-shadow: var(--rp34-media-rim); -webkit-backdrop-filter: var(--rp34-media-glass-blur); backdrop-filter: var(--rp34-media-glass-blur); color: var(--rp34-media-fg); font: var(--lt-type-subhead); caret-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-app .honey-chat-input::placeholder { color: var(--rp34-media-fg-3); }
+    #phone-panel[data-rp-ios="3"] .honey-app .honey-chat-input:focus { background: var(--rp34-media-glass-strong); }
+    #phone-panel[data-rp-ios="3"] .honey-gift-btn { inline-size: 40px; block-size: 40px; min-inline-size: 40px; padding: 0; border: 0; border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-end-live-btn { block-size: 32px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--lt-sys-red); color: var(--rp34-on-color); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .honey-gift-picker { inline-size: 264px; padding: var(--rp33-sp-2); gap: var(--rp33-sp-2); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp34-media-glass-strong); box-shadow: var(--rp34-media-rim), var(--rp33-float-shadow); -webkit-backdrop-filter: var(--rp34-media-glass-blur); backdrop-filter: var(--rp34-media-glass-blur); }
+    #phone-panel[data-rp-ios="3"] .honey-gift-option { min-block-size: 64px; padding: var(--rp33-sp-2) var(--rp33-sp-1); gap: 2px; border: 0; border-radius: 14px; background: var(--rp34-media-fill); color: var(--rp34-media-fg); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .honey-gift-option:active { background: var(--rp34-media-fill-2); }
+    #phone-panel[data-rp-ios="3"] .honey-gift-option :is(.gift-label) { font-size: var(--lt-ios-caption1-size); color: var(--rp34-media-fg); }
+    #phone-panel[data-rp-ios="3"] .honey-gift-option :is(.gift-price) { font: 600 var(--lt-ios-caption2-size) / 1 var(--lt-font-ios-rounded); color: color-mix(in srgb, var(--rp33-brand-honey) 60%, var(--rp34-media-fg)); }
+    #phone-panel[data-rp-ios="3"] .honey-gift-group-title { grid-column: 1 / -1; font: 600 var(--lt-ios-caption2-size) / 1.4 var(--lt-font-ios); color: var(--rp34-media-fg-2); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-nai-status, .honey-generated-video-replay) { border: 0; border-radius: 999px; background: var(--rp34-media-glass); color: var(--rp34-media-fg); font-size: var(--lt-ios-caption1-size); }
+
+    /* ===== 关注 / 历史 ===== */
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-list, .honey-mine-list) { padding: var(--rp33-sp-2) var(--rp33-sp-4) var(--rp33-sp-6); gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-item { border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-card-shadow); overflow: clip; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-host-row { min-block-size: 68px; padding: var(--rp33-sp-3) var(--rp33-sp-4); gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-host-avatar { inline-size: 44px; block-size: 44px; border: 0; box-shadow: 0 0 0 0.5px var(--rp33-avatar-ring); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-host-name, .honey-mine-request-name) { font: var(--lt-type-headline); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-host-figure, .honey-follow-host-subline, .honey-follow-host-count, .honey-mine-request-source, .honey-follow-favor-label) { font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-badge, .honey-mine-friend-badge) { padding: 2px var(--rp33-sp-2); border: 0; border-radius: 999px; background: var(--rp33-accent-soft); color: var(--rp36-accent-text); font: 600 var(--lt-ios-caption2-size) / 1.2 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-favor-track { block-size: 4px; border: 0; border-radius: 999px; background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-favor-fill { border-radius: 999px; background: var(--rp33-accent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-host-arrow { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-history-wrap { padding: 0 var(--rp33-sp-4) var(--rp33-sp-3); gap: 0; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-section-title { padding: var(--rp33-sp-3) 0 var(--rp33-sp-1); font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .honey-history-date-item { min-block-size: var(--rp3-row-h-min); padding: var(--rp33-sp-2) 0; border: 0; border-bottom: 0.5px solid var(--rp33-sep); background: transparent; color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-history-date-right) { color: var(--rp33-label-2); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .honey-goto-live-btn { min-block-size: 30px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-accent-soft); color: var(--rp36-accent-text); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-video-bind-row, .honey-follow-reference-card) { margin-block-start: var(--rp33-sp-2); padding: var(--rp33-sp-3); gap: var(--rp33-sp-3); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface-2); background-image: none; }
+    #phone-panel[data-rp-ios="3"] .honey-follow-video-picker-trigger { min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-video-picker-label, .honey-follow-reference-state, .honey-follow-reference-desc, .honey-follow-reference-strength-value) { font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-follow-video-picker-current, .honey-follow-reference-title) { font: 600 var(--lt-ios-subhead-size) / 1.3 var(--lt-font-ios); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-reference-preview { border-radius: var(--rp33-media-radius); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-reference-strength { accent-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-empty { padding: var(--rp33-sp-8) var(--rp33-sp-6); gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-empty-icon { font-size: 44px; color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-empty-title { font: var(--lt-type-title3); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-follow-empty-desc { font: var(--lt-type-subhead); color: var(--rp33-label-2); }
+
+    /* ===== 我的：账户卡 + 数据格 + 好友 / 申请列表 ===== */
+    #phone-panel[data-rp-ios="3"] :is(.honey-mine-account-card, .honey-settings-card) { padding: var(--rp33-sp-4); gap: var(--rp33-sp-3); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-account-head { gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-avatar { inline-size: 64px; block-size: 64px; border: 0; border-radius: 999px; box-shadow: 0 0 0 0.5px var(--rp33-avatar-ring); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-account-stats { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-account-stat { padding: var(--rp33-sp-3) var(--rp33-sp-2); border: 0; border-radius: 14px; background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-account-stat-num { font: 700 var(--lt-ios-title2-size) / 1.1 var(--lt-font-ios-rounded); color: var(--rp33-label); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-mine-account-stat-label, .honey-mine-account-stat-topic, .honey-mine-inline-label, .honey-mine-gender-label) { font: var(--lt-type-caption1); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-gender-switch { padding: 2px; gap: 0; border: 0; border-radius: 999px; background: var(--rp33-seg-bg); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-gender-btn { min-block-size: 30px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: transparent; color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .honey-mine-gender-btn:is(.active, .is-active) { background: var(--rp33-seg-on); box-shadow: var(--rp33-seg-shadow); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .honey-settings-btn.honey-mine-start-btn { block-size: 34px; padding: 0 var(--rp33-sp-4); font-size: var(--lt-ios-subhead-size); border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-mine-request-item, .honey-mine-friend-item) { min-block-size: 64px; padding: var(--rp33-sp-3) var(--rp33-sp-4); gap: var(--rp33-sp-3); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .honey-mine-request-avatar { inline-size: 40px; block-size: 40px; border-radius: 999px; }
+    #phone-panel[data-rp-ios="3"] .honey-mine-request-message { font: var(--lt-type-subhead); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] :is(.honey-mine-request-inline-actions, .honey-mine-friend-actions) { gap: var(--rp33-sp-2); }
+
+    /* ===== 设置页（蜜语自己的） ===== */
+    #phone-panel[data-rp-ios="3"] .honey-settings-content { padding: var(--rp33-sp-2) var(--rp33-sp-4) var(--rp33-sp-8); gap: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .honey-settings-card-title { font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); color: var(--rp33-label-2); letter-spacing: 0; }
+    #phone-panel[data-rp-ios="3"] .honey-settings-label { font: var(--lt-type-subhead); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .honey-settings-row { min-block-size: var(--rp3-row-h-min); gap: var(--rp33-sp-3); border-bottom: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .honey-settings-row:last-child { border-bottom: 0; }
+    #phone-panel[data-rp-ios="3"] .honey-settings-desc { font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .honey-coin-balance { font: 700 var(--lt-ios-title2-size) / 1.1 var(--lt-font-ios-rounded); color: var(--rp36-accent-text); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-recharge-wallet-value, .honey-recharge-preview-value) { font: 700 var(--lt-ios-title1-size) / 1.1 var(--lt-font-ios-rounded); color: var(--rp33-label); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .honey-worldbook-fold { border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface-2); }
+
+    /* v3.3 角色表在直播间里的误判，逐个纠正：跑马灯轨道不是进度条、介绍条 / 场景块不是页面栏 / 白卡、徽标不是未读红点 */
+    #phone-panel[data-rp-ios="3"] :is(.honey-live-gift-text-track, .honey-live-gifts-track, .honey-meta-title-track) { background: transparent; border-radius: 0; }
+    #phone-panel[data-rp-ios="3"] :is(.honey-mine-request-top, .honey-mine-friend-head, .honey-live-collab-request-top) { min-block-size: 0; padding-inline: 0; background: transparent; }
+    #phone-panel[data-rp-ios="3"] .honey-page-live :is(.honey-live-intro-top, .honey-scene-block) { border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp34-media-glass); box-shadow: var(--rp34-media-rim); -webkit-backdrop-filter: var(--rp34-media-glass-blur); backdrop-filter: var(--rp34-media-glass-blur); color: var(--rp34-media-fg); }
+    #phone-panel[data-rp-ios="3"] .honey-page-live .honey-scene-block { padding: var(--rp33-sp-3); gap: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .honey-page-live :is(.honey-scene-title, .honey-live-user-scene-title) { font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); color: var(--rp34-media-fg); }
+    #phone-panel[data-rp-ios="3"] .honey-page-live :is(.honey-scene-desc, .honey-live-user-scene-body, .honey-nai-placeholder, .honey-unlock-label) { font: var(--lt-type-footnote); color: var(--rp34-media-fg-2); }
+    #phone-panel[data-rp-ios="3"] .honey-page-live :is(.honey-live-tags, .honey-tag, .honey-hot-tag, .honey-live-self-badge) { padding: 2px var(--rp33-sp-2); border: 0; border-radius: 999px; background: var(--rp34-media-fill); color: var(--rp34-media-fg); font: 500 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .honey-refresh-btn { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); color: var(--rp33-label); }
+
+    /* 深色岛：直播间内 v3.3 角色表用到的语义色就地改指向深色组（见 phone-tokens-v3.4.css 第 7 组） */
+    #phone-panel[data-rp-ios="3"] .honey-page-live { --rp33-label: var(--rp34-dk-label); --rp33-label-2: var(--rp34-dk-label-2); --rp33-label-3: var(--rp34-dk-label-3); --rp33-surface: var(--rp34-dk-surface); --rp33-surface-2: var(--rp34-dk-surface-2); --rp33-fill: var(--rp34-dk-fill); --rp33-fill-2: var(--rp34-dk-fill-2); --rp33-field-bg: var(--rp34-dk-fill); --rp33-sep: var(--rp34-dk-sep); --rp33-seg-bg: var(--rp34-dk-fill); --rp33-seg-on: var(--rp34-dk-seg-on); --rp33-glassbtn-bg: var(--rp34-dk-glassbtn-bg); --rp33-glassbtn-rim: var(--rp34-dk-glassbtn-rim); --rp33-sheet-bg: var(--rp34-dk-surface); --rp33-card-shadow: var(--rp34-dk-shadow); --rp33-shadow-1: none; --lt-sys-label: var(--rp34-dk-label); --lt-sys-label-2: var(--rp34-dk-label-2); --lt-sys-label-3: var(--rp34-dk-label-3); --lt-sys-separator: var(--rp34-dk-sep); --lt-sys-fill-3: var(--rp34-dk-fill); --lt-sys-grouped-bg-2: var(--rp34-dk-surface); --lt-sys-grouped-bg-3: var(--rp34-dk-surface-2); color-scheme: dark; --rp33-bg: transparent; }
+}

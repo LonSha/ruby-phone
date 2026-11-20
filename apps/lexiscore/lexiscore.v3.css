@@ -1,0 +1,46 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：词法评分案头（lexiscore）—— 家族：角色扮演专属（作者案头式小工具）· 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/lexiscore/lexiscore-view.js（唯一视图，一屏）；-app.js / -data.js 是词法打分逻辑，无 DOM。
+   屏幕与状态：读数行 · 收词条（JSON 大输入框 + 三个按钮）· 查询（小输入框 .ls-input-sm）· 上次查询（有才出现）· 台账（有 / 空）。
+   设计：iOS inset grouped；强调色系统棕（文字工具的「纸墨」感只留在强调色上）。JSON / 查询输入用等宽字；
+         「收下词条」「查询」是主按钮，两个「清…」走危险色（按 data-act 区分）。
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构 / data-* 不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 2 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    #phone-panel[data-rp-ios="3"] :is(.ls-root, .ls-wrap) { --rp33-accent: var(--lt-sys-brown); --rp36-accent-text: var(--rp36-text-brown); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-brown) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-brown) 40%, transparent); }
+
+    /* ===== 屏：案头页面底 + 读数行 ===== */
+    #phone-panel[data-rp-ios="3"] .ls-wrap { min-block-size: 100%; box-sizing: border-box; padding: var(--rp33-sp-3) var(--rp33-margin) var(--rp33-sp-8); background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .ls-head { padding: var(--rp33-sp-1) var(--rp33-sp-1) var(--rp33-sp-3); border: 0; color: var(--rp33-label-2); font: var(--lt-type-footnote); font-variant-numeric: tabular-nums; }
+
+    /* ===== 组件：分组卡 ===== */
+    #phone-panel[data-rp-ios="3"] .ls-sec { margin-block-end: var(--rp33-sp-4); padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .ls-sec h3 { margin: 0 0 var(--rp33-sp-2); font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); }
+
+    /* ===== 屏：收词条 / 查询 · 输入框 ===== */
+    #phone-panel[data-rp-ios="3"] .ls-input { box-sizing: border-box; min-block-size: 96px; margin-block-end: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: 400 var(--lt-ios-footnote-size) / 1.45 var(--lt-font-ios-mono); outline: none; resize: vertical; }
+    #phone-panel[data-rp-ios="3"] .ls-input.ls-input-sm { min-block-size: var(--rp33-hit); font: var(--lt-type-body); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .ls-input::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .ls-input:focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+
+    /* ===== 组件：按钮 ===== */
+    #phone-panel[data-rp-ios="3"] .ls-btn { position: relative; min-block-size: 36px; margin: var(--rp33-sp-1) var(--rp33-sp-2) var(--rp33-sp-1) 0; padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .ls-btn::after { content: ""; position: absolute; inset: -4px 0; }
+    #phone-panel[data-rp-ios="3"] .ls-btn:is([data-act="intake"], [data-act="query"]) { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .ls-btn[data-act^="clear"] { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .ls-btn:active { filter: brightness(0.92); scale: 0.97; }
+
+    /* ===== 屏：上次查询 / 台账 · 行 ===== */
+    #phone-panel[data-rp-ios="3"] .ls-row { position: relative; justify-content: space-between; align-items: center; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) 0; border: 0; color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .ls-row + .ls-row::before { content: ""; position: absolute; inset-block-start: 0; inset-inline: 0 calc(var(--rp33-sp-4) * -1); border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .ls-row > span + span { flex: none; max-inline-size: 60%; color: var(--rp33-label-2); font: var(--lt-type-footnote); font-variant-numeric: tabular-nums; text-align: end; }
+
+    /* ===== 状态：空（台账还没有记录） ===== */
+    #phone-panel[data-rp-ios="3"] .ls-empty { padding: var(--rp33-sp-2) 0; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+}

@@ -1,0 +1,97 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：工作流（workflow）—— 家族：作者案头 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/workflow/workflow-view.js（_head / _flow / _stateBox / _html）、apps/workflow/workflow-design.js（设计器：草稿 / 条件 / 参数 / 重复 / 预览 / 保存 / 已存设计）；workflow-app.js 无 DOM。
+   屏幕与状态：页头（标题 / 说明 / 读取来源 / 自检 .wfl-self-bad / 回执 .wfl-flash-bad / 运行状态）·
+               流程列表（流程卡：头（名称 + 打开钮）/ 提示 / 读数；步骤：.wfl-step-write 写入步、头（名称 + 级别）/ 元信息 / 面 / 坏原因；动作：运行 .wfl-btn-run）·
+               状态盒（.wfl-box：h3 + 行：键 / 值）· 设计器（.wfl-design：草稿卡（头 + 条件 / 参数 / 重复行）、参数行：键 / 输入（名称 / 数字 / 下拉）/ 状态 .wfl-pstate-bad、
+               预览（文本 .wfl-ptext-write 写入句）、小按钮 :disabled、保存区、已存设计行）。
+   设计：作者案头家族模板（与 backupdesk / creationdesk 一致），强调色系统蓝；写入步 / 写入句 = 橙色语义（会落盘），旧版 3px / 2px 左线改成浅底；
+         流程卡与状态盒 = 分组卡，步骤 = 次级表面圆角卡；小按钮 28pt + 扩展热区。
+   audit-allow: wfl-root —— 旧样式里的容器名
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 7 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    #phone-panel[data-rp-ios="3"] .wfl-wrap { --rp33-accent: var(--lt-sys-blue); --rp36-accent-text: var(--rp36-text-blue); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-blue) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-blue) 40%, transparent); }
+
+    /* ===== 屏：案头页面底 + 页头 ===== */
+    #phone-panel[data-rp-ios="3"] .wfl-wrap { min-block-size: 100%; box-sizing: border-box; padding: var(--rp33-sp-3) var(--rp33-margin) var(--rp33-sp-8); background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .wfl-head { margin-block-end: var(--rp33-sp-4); padding: var(--rp33-sp-1) var(--rp33-sp-1) var(--rp33-sp-2); border: 0; }
+    #phone-panel[data-rp-ios="3"] .wfl-title { color: var(--rp33-label); font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); }
+    #phone-panel[data-rp-ios="3"] .wfl-sub { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .wfl-reads { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label-3); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .wfl-run { margin-block: var(--rp33-sp-1); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+
+    /* ===== 状态：自检 / 回执 ===== */
+    #phone-panel[data-rp-ios="3"] .wfl-self { margin-block-end: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: var(--rp33-fill); color: var(--rp33-label-2); font: var(--lt-type-footnote); opacity: 1; }
+    #phone-panel[data-rp-ios="3"] .wfl-self-bad { border: 0; background: var(--rp33-danger-soft); color: var(--rp36-text-red); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .wfl-flash { margin-block-end: var(--rp33-sp-3); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-accent-soft); color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1.35 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .wfl-flash-bad { border: 0; background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+
+    /* ===== 屏：流程列表 · 流程卡 ===== */
+    #phone-panel[data-rp-ios="3"] .wfl-flows { gap: var(--rp33-sp-3); margin-block-end: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.wfl-flow, .wfl-box) { padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .wfl-box { margin-block-end: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .wfl-box h3 { margin: 0 0 var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); }
+    #phone-panel[data-rp-ios="3"] .wfl-flow-head { align-items: center; justify-content: space-between; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .wfl-flow-label { color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .wfl-open { position: relative; min-block-size: 28px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .wfl-open::after { content: ""; position: absolute; inset: -8px -2px; }
+    #phone-panel[data-rp-ios="3"] .wfl-flow-hint { color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .wfl-flow-read { color: var(--rp33-label-3); font: var(--lt-type-caption1); }
+
+    /* ===== 屏：流程列表 · 步骤卡 ===== */
+    #phone-panel[data-rp-ios="3"] .wfl-steps { display: flex; flex-direction: column; gap: var(--rp33-sp-2); margin-block: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .wfl-step { padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .wfl-step-write { border: 0; background: color-mix(in srgb, var(--lt-sys-orange) 10%, var(--rp33-surface-2)); }
+    #phone-panel[data-rp-ios="3"] .wfl-step-head { align-items: baseline; justify-content: space-between; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .wfl-step-label { color: var(--rp33-label); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .wfl-step-lv { padding: 1px var(--rp33-sp-2); border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label-2); font: 600 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .wfl-step-meta { color: var(--rp33-label-3); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .wfl-step-faces { color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .wfl-step-bad { color: var(--rp36-text-red); font: var(--lt-type-caption1); }
+
+    /* ===== 屏：状态盒 · 行 ===== */
+    #phone-panel[data-rp-ios="3"] .wfl-row { justify-content: space-between; align-items: center; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) 0; border: 0; border-block-start: 0.5px solid var(--rp33-sep); font: var(--lt-type-subhead); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .wfl-box h3 + .wfl-row { border-block-start: 0; }
+    #phone-panel[data-rp-ios="3"] .wfl-row-k { min-inline-size: 0; overflow-wrap: anywhere; color: var(--rp33-label); font: 400 var(--lt-ios-footnote-size) / 1.35 var(--lt-font-ios-mono); }
+    #phone-panel[data-rp-ios="3"] .wfl-row-v { flex: none; max-inline-size: 55%; color: var(--rp33-label-2); font: var(--lt-type-footnote); text-align: end; }
+
+    /* ===== 组件：按钮 ===== */
+    #phone-panel[data-rp-ios="3"] .wfl-acts { flex-wrap: wrap; gap: var(--rp33-sp-2); margin-block-start: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .wfl-btn { position: relative; min-block-size: 36px; padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .wfl-btn::after { content: ""; position: absolute; inset: -4px 0; }
+    #phone-panel[data-rp-ios="3"] .wfl-btn-run { border: 0; background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .wfl-btn-mini { min-block-size: 28px; padding: 0 var(--rp33-sp-3); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .wfl-btn-mini::after { inset: -8px -2px; }
+    #phone-panel[data-rp-ios="3"] .wfl-btn-mini[disabled] { color: var(--rp33-label-3); opacity: 1; cursor: default; }
+    #phone-panel[data-rp-ios="3"] :is(.wfl-btn, .wfl-open):not([disabled]):active { filter: brightness(0.92); scale: 0.97; }
+
+    /* ===== 屏：设计器 · 草稿卡 / 条件 / 参数 / 重复 ===== */
+    #phone-panel[data-rp-ios="3"] .wfl-design { margin-block-end: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .wfl-draft { margin-block: var(--rp33-sp-2); padding: var(--rp33-sp-3); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .wfl-draft-head { align-items: center; justify-content: space-between; gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] :is(.wfl-cond, .wfl-params, .wfl-repeat) { flex-wrap: wrap; align-items: center; gap: var(--rp33-sp-2); margin-block: var(--rp33-sp-1); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .wfl-prow { flex-wrap: wrap; align-items: center; gap: var(--rp33-sp-2); min-block-size: 36px; }
+    #phone-panel[data-rp-ios="3"] .wfl-pkey { color: var(--rp33-label); font: 400 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios-mono); }
+    #phone-panel[data-rp-ios="3"] .wfl-pstate { color: var(--rp33-label-3); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .wfl-pstate-bad { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .wfl-input { min-block-size: 36px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); outline: none; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .wfl-input:focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .wfl-input-name { flex: 1 1 160px; }
+    #phone-panel[data-rp-ios="3"] .wfl-input-num { inline-size: 64px; font-variant-numeric: tabular-nums; text-align: end; }
+
+    /* ===== 屏：设计器 · 预览 / 保存 / 已存设计 ===== */
+    #phone-panel[data-rp-ios="3"] .wfl-preview { margin-block: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-surface); box-shadow: var(--rp33-rim); }
+    #phone-panel[data-rp-ios="3"] .wfl-ptext { color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .wfl-ptext-write { color: var(--rp36-text-orange); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .wfl-save { flex-wrap: wrap; align-items: center; gap: var(--rp33-sp-2); margin-block-start: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(.wfl-saved, .wfl-designs) { display: flex; flex-direction: column; }
+    #phone-panel[data-rp-ios="3"] .wfl-saved-row { justify-content: space-between; align-items: center; gap: var(--rp33-sp-2); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-1) 0; border: 0; border-block-start: 0.5px solid var(--rp33-sep); font: var(--lt-type-footnote); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .wfl-saved-row .wfl-row-k { font-size: var(--lt-ios-footnote-size); }
+}

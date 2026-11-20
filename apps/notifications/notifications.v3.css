@@ -1,0 +1,145 @@
+/* ============================================================
+   RubyPhone v3.3 · App 皮肤：通知中心（notifications）—— 家族：系统 / 工具
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   三个子层（右边赢左边，与特异性无关）：
+     rp.skins.remap   旧规则重映射：写死颜色 -> 语义 token（浅 / 深自动），字号吸附 iOS 阶梯（最小 11pt），
+                      间距吸附 4pt 栅格（8pt 栅格 + 半步），圆角吸附阶梯，霓虹投影 / 文字阴影去掉
+     rp.skins.roles   结构角色 -> v3 组件（导航栏 / 玻璃圆钮 / 分段 / 分组列表 / 卡片 / Sheet / 表单 / 按钮 / 徽标）
+     rp.skins.curated 手工精修（只有重点 App 有）
+   规矩：零 !important、零写死颜色、零字符图标；不改元素 ID / 类名 / 结构，不碰 display / position 以外的状态切换。
+   生成：v3.3 皮肤生成器（输入与角色表见 tools/app-skins-v33.manifest.json；角色 49 个类 / 21 种角色，重映射 71 / 85 条旧规则，
+         伪元素字符图标 0 处，扩大点击区 10 个类）。原生配色：light。
+   ============================================================ 
+ * v3.6：小字强调色 11 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.curated;
+@layer rp.skins.roles {
+    /* 作用域：强调色（sys:blue）*/
+    #phone-panel[data-rp-ios="3"] :where([class^="nc-"], [class*=" nc-"]) { --rp33-accent: var(--lt-sys-blue); --rp36-accent-text: var(--rp36-text-blue); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-blue) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-blue) 40%, transparent); }
+    #phone-panel[data-rp-ios="3"] :is(.nc-body, .nc-wrap) { background-color: var(--rp33-bg); background-image: none; color: var(--rp33-label); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+    #phone-panel[data-rp-ios="3"] :is(.nc-ac-head, .nc-away-head, .nc-hid-head, .nc-topbar) { background-color: var(--rp33-bg); background-image: none; border: 0; box-shadow: none; color: var(--rp33-label); min-block-size: var(--rp3-nav-h); padding-inline: var(--rp33-sp-2); gap: var(--rp33-sp-2); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.nc-name, .nc-title) { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.nc-act, .nc-danger) { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); min-inline-size: var(--rp3-glass-btn); flex: none; padding: 0; justify-content: center; align-items: center; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 19px; line-height: 1; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.nc-act, .nc-danger):active { scale: 0.94; }
+    #phone-panel[data-rp-ios="3"] :is(.nc-ac-btn, .nc-away-ack, .nc-away-toggle, .nc-del, .nc-group-mute, .nc-group-toggle) { border: 0; box-shadow: none; color: var(--rp33-label-2); text-shadow: none; -webkit-tap-highlight-color: transparent; }
+    #phone-panel[data-rp-ios="3"] .nc-filters { background: var(--rp33-seg-bg); border: 0; border-radius: 999px; box-shadow: none; padding: 2px; gap: 0; }
+    #phone-panel[data-rp-ios="3"] .nc-filters:has(> :nth-child(5)) { background: transparent; padding: 0; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .nc-filters:has(> :nth-child(5)) > :is(.nc-chip) { background-color: var(--rp33-fill); color: var(--rp33-label); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .nc-filters:has(> :nth-child(5)) > :is(.nc-chip):is(.active, .is-active, .on, .selected, .is-selected, .current, .is-current, .checked, [aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) { background-color: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .nc-chip { min-block-size: var(--rp33-tab-h); padding-inline: var(--rp33-sp-3); border: 0; border-radius: 999px; background: transparent; box-shadow: none; color: var(--rp33-label-2); font-family: var(--lt-font-ios); font-size: var(--lt-ios-subhead-size); font-weight: 600; letter-spacing: var(--lt-ios-subhead-track); text-shadow: none; justify-content: center; align-items: center; text-align: center; }
+    #phone-panel[data-rp-ios="3"] .nc-chip:is(.active, .is-active, .on, .selected, .is-selected, .current, .is-current, .checked, [aria-selected="true"], [aria-pressed="true"], [aria-current="page"]) { background-color: var(--rp33-seg-on); color: var(--rp33-label); box-shadow: var(--rp33-seg-shadow); }
+    #phone-panel[data-rp-ios="3"] .nc-list { margin-inline: var(--rp33-margin); border: 0; border-radius: var(--rp3-row-radius); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-shadow-1); overflow: clip; }
+    #phone-panel[data-rp-ios="3"] :is(.nc-ac-item, .nc-item, .nc-row) { min-block-size: var(--rp3-row-h-min); border: 0; border-radius: var(--rp33-row-radius-single); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-shadow-1); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.nc-ac-note, .nc-away-box) { border: 0; border-radius: var(--rp33-card-radius); background-color: var(--rp33-surface); background-image: none; box-shadow: var(--rp33-card-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .nc-search { border: 0; border-radius: var(--rp33-field-radius); background-color: var(--rp33-field-bg); background-image: none; box-shadow: none; color: var(--rp33-label); caret-color: var(--rp33-accent); font-family: var(--lt-font-ios); font-size: var(--lt-ios-body-size); line-height: var(--lt-ios-body-line); min-block-size: var(--rp33-hit); padding: 10px var(--rp33-sp-3); outline: none; }
+    #phone-panel[data-rp-ios="3"] .nc-search::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .nc-search:focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] :is(.nc-ac-btn-off, .nc-ac-open, .nc-hid-toggle) { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; box-shadow: none; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.nc-ac-btn-off, .nc-ac-open, .nc-hid-toggle):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.nc-ac-btn-off, .nc-ac-open, .nc-hid-toggle):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.nc-avatar, .nc-avatar-icon, .nc-avatar-text) { border-radius: 50%; box-shadow: 0 0 0 var(--lt-hairline) var(--rp33-avatar-ring); object-fit: cover; }
+    #phone-panel[data-rp-ios="3"] .nc-unread { background-color: var(--rp33-badge-bg); background-image: none; color: var(--rp33-badge-fg); border: 0; border-radius: 999px; box-shadow: none; font-family: var(--lt-font-ios-rounded); font-weight: 600; font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] :is(.nc-empty-title, .nc-hid-title) { color: var(--rp33-label); font-weight: 600; letter-spacing: -0.2px; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.nc-hid-sub, .nc-muted, .nc-receipt-hint, .nc-time) { color: var(--rp33-label-2); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .nc-chip-num { font-family: var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.nc-empty, .nc-empty-icon, .nc-empty-sub) { color: var(--rp33-label-2); font-family: var(--lt-font-ios); text-align: center; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .nc-away-banner { border-radius: var(--rp33-media-radius); object-fit: cover; }
+    /* 点击区不小于 44pt：视觉尺寸不变，用透明伪元素扩大命中区 */
+    #phone-panel[data-rp-ios="3"] :is(.nc-ac-btn, .nc-ac-btn-off, .nc-ac-open, .nc-away-ack, .nc-away-toggle, .nc-chip, .nc-del, .nc-group-mute, .nc-group-toggle, .nc-hid-toggle) { position: relative; }
+    #phone-panel[data-rp-ios="3"] :is(.nc-ac-btn, .nc-ac-btn-off, .nc-ac-open, .nc-away-ack, .nc-away-toggle, .nc-chip, .nc-del, .nc-group-mute, .nc-group-toggle, .nc-hid-toggle)::after { content: ""; position: absolute; inset: min(0px, calc((100% - var(--rp33-hit)) / 2)); }
+}
+@layer rp.skins.remap {
+    #phone-panel[data-rp-ios="3"] .nc-digest-line { padding: 8px 16px 4px; font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .nc-group { background: transparent; }
+    #phone-panel[data-rp-ios="3"] .nc-group.nc-unread { background: color-mix(in srgb, var(--rp33-accent) 10%, transparent); }
+    #phone-panel[data-rp-ios="3"] .nc-group-head { padding: 12px 12px; gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .nc-group-ico { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .nc-group-t1 { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .nc-group-t2 { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .nc-apptag.nc-cross { background: color-mix(in srgb, var(--lt-sys-yellow) 18%, transparent); color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .nc-apptag.nc-muted { background: transparent; color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .nc-wrap { background: var(--lt-sys-gray); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .nc-topbar { padding: 16px 16px 8px; }
+    #phone-panel[data-rp-ios="3"] .nc-title { font-size: var(--lt-ios-title3-size); }
+    #phone-panel[data-rp-ios="3"] .nc-act { background: transparent; color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .nc-act:hover { background: transparent; }
+    #phone-panel[data-rp-ios="3"] .nc-act.nc-danger:hover { background: color-mix(in srgb, var(--lt-sys-red) 25%, transparent); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .nc-searchbar { background: transparent; }
+    #phone-panel[data-rp-ios="3"] .nc-searchbar i { color: var(--rp33-label-2); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .nc-search { color: var(--rp33-label); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .nc-filters { gap: 8px; padding: 2px 16px 12px; }
+    #phone-panel[data-rp-ios="3"] .nc-chip { padding: 4px 12px; font-size: var(--lt-ios-caption1-size); background: transparent; color: var(--rp33-label-3); gap: 4px; }
+    #phone-panel[data-rp-ios="3"] .nc-chip-on { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .nc-chip-num { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .nc-flash { background: color-mix(in srgb, var(--rp33-accent) 15%, transparent); color: var(--rp36-accent-text); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .nc-item { gap: 12px; padding: 12px 12px; margin-bottom: 8px; background: transparent; }
+    #phone-panel[data-rp-ios="3"] .nc-item.nc-jumpable:hover { background: transparent; }
+    #phone-panel[data-rp-ios="3"] .nc-item.nc-unread { background: color-mix(in srgb, var(--rp33-accent) 10%, transparent); }
+    #phone-panel[data-rp-ios="3"] .nc-avatar { border-radius: 12px; background: transparent; font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .nc-avatar-icon { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .nc-name { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .nc-time { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .nc-row2 { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .nc-row3 { margin-top: 8px; }
+    #phone-panel[data-rp-ios="3"] .nc-apptag { font-size: var(--lt-ios-caption2-size); padding: 1px 8px; background: transparent; color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .nc-count { font-size: var(--lt-ios-caption2-size); color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .nc-jump { font-size: var(--lt-ios-caption2-size); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .nc-del { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .nc-del:hover { background: color-mix(in srgb, var(--lt-sys-red) 20%, transparent); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .nc-empty { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .nc-empty-title { font-size: var(--lt-ios-subhead-size); color: var(--rp33-label-3); margin-bottom: 8px; }
+    #phone-panel[data-rp-ios="3"] .nc-empty-sub { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .nc-ac { margin: 0 16px 12px; padding: 12px 12px; background: color-mix(in srgb, var(--rp33-accent) 8%, transparent); border: 1px solid color-mix(in srgb, var(--rp33-accent) 18%, transparent); }
+    #phone-panel[data-rp-ios="3"] .nc-ac-mute { background: transparent; border-color: var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .nc-ac-head { font-size: var(--lt-ios-footnote-size); color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .nc-ac-note { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); margin-top: 4px; }
+    #phone-panel[data-rp-ios="3"] .nc-ac-lanetitle { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .nc-ac-lanen { font-size: var(--lt-ios-caption2-size); padding: 0 8px; background: transparent; }
+    #phone-panel[data-rp-ios="3"] .nc-ac-item { gap: 8px; padding: 8px 8px; border-radius: 12px; background: transparent; margin-bottom: 4px; }
+    #phone-panel[data-rp-ios="3"] .nc-ac-icon { font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .nc-ac-t1 { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .nc-ac-t2 { font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .nc-ac-t3 { font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .nc-ac-btns { gap: 4px; }
+    #phone-panel[data-rp-ios="3"] .nc-ac-btn { padding: 4px 8px; font-size: var(--lt-ios-caption2-size); background: transparent; color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .nc-ac-btn:hover { background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .nc-ac-open { background: color-mix(in srgb, var(--rp33-accent) 35%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .nc-digest-line { padding: 8px 16px 4px; font-size: var(--lt-ios-caption2-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .nc-group { background: transparent; }
+    #phone-panel[data-rp-ios="3"] .nc-group.nc-unread { background: color-mix(in srgb, var(--rp33-accent) 10%, transparent); }
+    #phone-panel[data-rp-ios="3"] .nc-group-head { padding: 12px 12px; gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .nc-group-ico { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .nc-group-t1 { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .nc-group-t2 { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .nc-apptag.nc-cross { background: color-mix(in srgb, var(--lt-sys-yellow) 18%, transparent); color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .nc-apptag.nc-muted { background: transparent; color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .nc-hub-warn { color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .nc-hid { margin: 0 16px 12px; padding: 8px 12px; background: transparent; border: var(--lt-hairline) dashed var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .nc-hid-head { gap: 8px; font-size: var(--lt-ios-caption1-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .nc-hid-title { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .nc-hid-sub { color: var(--rp33-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .nc-hid-body { padding-top: 8px; border-top: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .nc-hid-body .nc-item { background: transparent; }
+}
+@layer rp.skins.curated {
+    /* ---- 通知中心：锁屏通知同款玻璃卡（圆角 22）、分组堆叠、chip 过滤条 ---- */
+    #phone-panel[data-rp-ios="3"] .nc-wrap { background: var(--lt-sys-grouped-bg); color: var(--lt-sys-label); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .nc-topbar { background: var(--lt-sys-grouped-bg); border: 0; box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .nc-title { font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] :is(.nc-searchbar, .nc-search) { min-block-size: 40px; border: 0; border-radius: 999px; background: var(--rp33-field-bg); color: var(--lt-sys-label); font: var(--lt-type-body); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .nc-filters { gap: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-margin); }
+    #phone-panel[data-rp-ios="3"] .nc-chip { min-block-size: var(--rp33-tab-h); padding-inline: var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--lt-sys-label); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .nc-chip.nc-chip-on { background: var(--lt-sys-tint); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] :is(.nc-item, .nc-group) { margin: 0 var(--rp33-margin) var(--rp33-sp-2); border: 0; border-radius: 22px; background: var(--rp3-notif-bg); box-shadow: var(--lt-glass-rim), var(--rp33-shadow-2); -webkit-backdrop-filter: var(--lt-glass-blur-strong); backdrop-filter: var(--lt-glass-blur-strong); color: var(--rp3-notif-fg); }
+    #phone-panel[data-rp-ios="3"] .nc-group-head { min-block-size: var(--rp33-hit); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .nc-avatar { inline-size: 38px; block-size: 38px; border-radius: 9px; }
+    #phone-panel[data-rp-ios="3"] :is(.nc-name, .nc-group-t1, .nc-row-t1) { font: var(--lt-type-subhead); font-weight: 600; color: var(--rp3-notif-fg); }
+    #phone-panel[data-rp-ios="3"] :is(.nc-body, .nc-row-t2, .nc-group-t2, .nc-digest-line) { font: var(--lt-type-subhead); color: var(--rp3-notif-fg); }
+    #phone-panel[data-rp-ios="3"] :is(.nc-time, .nc-apptag, .nc-receipt-hint, .nc-tier) { font: var(--lt-type-caption1); color: var(--rp3-notif-fg-2); }
+    #phone-panel[data-rp-ios="3"] .nc-unread { background: var(--lt-sys-tint); }
+    #phone-panel[data-rp-ios="3"] :is(.nc-act, .nc-ac-btn, .nc-away-ack, .nc-group-toggle, .nc-hid-toggle) { min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--lt-sys-label); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.nc-del, .nc-danger) { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .nc-empty { padding: var(--rp33-sp-8) var(--rp33-sp-6); color: var(--lt-sys-label-2); text-align: center; }
+    #phone-panel[data-rp-ios="3"] .nc-empty-title { font: var(--lt-type-title3); color: var(--lt-sys-label); }
+}

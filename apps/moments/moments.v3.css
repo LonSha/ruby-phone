@@ -1,0 +1,28 @@
+/* ============================================================
+   RubyPhone v3.3 · App 皮肤：朋友圈（moments）—— 家族：社交信息流
+   ------------------------------------------------------------
+   apps/moments/ 目录只有引擎模块（npc 社交生态 / 动态互动网络），界面由微信 apps/wechat/ 的 moment-* / moments-* 类渲染，
+   所以本皮肤随微信一起加载（config/style-skin-v3.js 里 wechat 的 extra）。只在 #phone-panel[data-rp-ios="3"] 下生效。
+   零 !important、零写死颜色、零字符图标。
+   ============================================================ */
+@layer rp.skins.remap, rp.skins.roles, rp.skins.curated;
+@layer rp.skins.curated {
+    /* ---- 朋友圈：白底流、44 圆角方头像、昵称微信蓝、九宫格方图、评论区浅底 ---- */
+    #phone-panel[data-rp-ios="3"] :is(.moments-page, .moments-feed) { background: var(--lt-sys-bg); color: var(--lt-sys-label); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .moment-item { gap: var(--rp33-sp-3); padding: var(--rp33-sp-4); border-bottom: var(--lt-hairline) solid var(--rp3-wx-line); background: var(--lt-sys-bg); }
+    #phone-panel[data-rp-ios="3"] .moment-avatar-col :is(img, div) { inline-size: 44px; block-size: 44px; border-radius: 6px; }
+    #phone-panel[data-rp-ios="3"] .moment-author { font: 600 var(--lt-ios-body-size) / var(--lt-ios-body-line) var(--lt-font-ios); color: var(--rp33-wx-name); }
+    #phone-panel[data-rp-ios="3"] .moment-text { margin-block: var(--rp33-sp-1) var(--rp33-sp-2); font: var(--lt-type-body); letter-spacing: var(--lt-ios-body-track); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] .moment-images { gap: 4px; }
+    #phone-panel[data-rp-ios="3"] :is(.moment-img, .moment-img-wrapper) { border-radius: 0; }
+    #phone-panel[data-rp-ios="3"] .moment-time { font: var(--lt-type-caption1); color: var(--lt-sys-label-3); }
+    #phone-panel[data-rp-ios="3"] :is(.moment-action-btn, .like-btn, .comment-btn) { min-inline-size: var(--rp33-hit); min-block-size: 32px; border: 0; border-radius: 6px; background: var(--rp33-wx-comment-bg); color: var(--rp33-wx-name); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .moment-interactions { margin-block-start: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: 6px; background: var(--rp33-wx-comment-bg); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] :is(.like-names, .comment-author) { color: var(--rp33-wx-name); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] :is(.comment-content, .comment-colon) { color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] .comment-row + .comment-row { margin-block-start: 2px; }
+    #phone-panel[data-rp-ios="3"] :is(.inline-comment-box) { gap: var(--rp33-sp-2); padding: var(--rp33-sp-2); background: var(--rp3-wx-input-bar); border-top: var(--lt-hairline) solid var(--rp3-wx-line); }
+    #phone-panel[data-rp-ios="3"] .inline-comment-input { min-block-size: 40px; padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: 8px; background: var(--rp3-wx-field); color: var(--lt-sys-label); font: var(--lt-type-body); }
+    #phone-panel[data-rp-ios="3"] .inline-comment-send { min-block-size: 36px; padding-inline: var(--rp33-sp-4); border: 0; border-radius: 6px; background: var(--rp3-wx-green); color: var(--rp33-on-accent); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .moments-empty-tip { padding: var(--rp33-sp-8) var(--rp33-sp-6); font: var(--lt-type-subhead); color: var(--lt-sys-label-2); text-align: center; }
+}

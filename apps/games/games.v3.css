@@ -1,0 +1,322 @@
+/* ============================================================
+   RubyPhone v3.4 · App 皮肤：游戏（games）—— 家族：游戏
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   三个子层（右边赢左边，与特异性无关）：
+     rp.skins.remap   旧规则重映射：写死颜色 -> 语义 token（浅 / 深自动），字号吸附 iOS 阶梯（最小 11pt），
+                      间距吸附 4pt 栅格（8pt 栅格 + 半步），圆角吸附阶梯，霓虹投影 / 文字阴影去掉
+     rp.skins.roles   结构角色 -> v3 组件（导航栏 / 玻璃圆钮 / 分段 / 分组列表 / 卡片 / Sheet / 表单 / 按钮 / 徽标）
+     rp.skins.curated 手工精修（只有重点 App 有）
+   规矩：零 !important、零写死颜色、零字符图标；不改元素 ID / 类名 / 结构，不碰 display / position 以外的状态切换。
+   生成：v3.3 皮肤生成器（输入与角色表见 tools/app-skins-v33.manifest.json；角色 121 个类 / 15 种角色，重映射 104 / 131 条旧规则，
+         伪元素字符图标 0 处，扩大点击区 63 个类）。原生配色：dark。
+   v3.4：done-partial -> done。层序多一个子层 rp.skins.inline（运行时逐站点内联映射写出的 data-rp34 令牌，样式在
+         phone/design/app-skins-inline-v3.4.css）；本文件末尾「v3.4 逐屏精修」一段是读完该 App 全部视图模板后手工写的，
+         所选类名全部在源码里核对过（verification/selector-audit.tsv）。改动说明见 README 第三节。
+   ============================================================ 
+ * v3.6：小字强调色 48 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 4 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.roles {
+    /* 作用域：强调色（sys:blue）*/
+    #phone-panel[data-rp-ios="3"] :where([class^="games-"], [class*=" games-"], [class^="ld-"], [class*=" ld-"]) { --rp33-accent: var(--lt-sys-blue); --rp36-accent-text: var(--rp36-text-blue); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-blue) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-blue) 40%, transparent); }
+    #phone-panel[data-rp-ios="3"] .games-topbar { background-color: var(--rp33-bg); background-image: none; border: 0; box-shadow: none; color: var(--rp33-label); min-block-size: var(--rp3-nav-h); padding-inline: var(--rp33-sp-2); gap: var(--rp33-sp-2); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.games-title, .games-title-text, .games-title-wrap) { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.games-back-btn, .games-icon-btn-home, .games-share-close, .games-sudoku-icon-btn, .games-undercover-back-image-btn, .games-undercover-overlay-close, .games-undercover-settings-image-btn, .games-undercover-share-close, .games-werewolf-settings-btn) { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); min-inline-size: var(--rp3-glass-btn); flex: none; padding: 0; justify-content: center; align-items: center; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 19px; line-height: 1; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.games-back-btn, .games-icon-btn-home, .games-share-close, .games-sudoku-icon-btn, .games-undercover-back-image-btn, .games-undercover-overlay-close, .games-undercover-settings-image-btn, .games-undercover-share-close, .games-werewolf-settings-btn):active { scale: 0.94; }
+    #phone-panel[data-rp-ios="3"] :is(.games-action-toggle, .games-icon-btn, .games-log-toggle) { border: 0; box-shadow: none; color: var(--rp33-label-2); text-shadow: none; -webkit-tap-highlight-color: transparent; }
+    #phone-panel[data-rp-ios="3"] :is(.games-share-dialog, .games-undercover-error-dialog, .games-undercover-share-dialog) { border: 0; border-radius: var(--rp33-dialog-radius); background-color: var(--rp33-sheet-bg); background-image: none; box-shadow: var(--rp33-float-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.games-settings-head, .games-share-header) { border: 0; background: transparent; box-shadow: none; min-block-size: 52px; padding-inline: var(--rp33-sp-4); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.games-ai-error-title, .games-game-title, .games-prompt-title, .games-setup-label, .games-share-name, .games-wager-modal-title, .ld-sheet-title) { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.games-ai-error-overlay, .games-catbox-coadopt-overlay, .games-catbox-confirm-overlay, .games-catbox-inventory-overlay, .games-catbox-letters-overlay, .games-settings-overlay, .games-setup-overlay, .games-share-overlay, .games-undercover-error-overlay, .games-undercover-invite-overlay, .games-undercover-settings-overlay, .games-undercover-share-overlay, .games-undercover-start-choice-overlay, .games-wager-modal-backdrop, .games-werewolf-backdrop, .games-werewolf-entry-overlay, .games-werewolf-invite-overlay, .games-werewolf-record-overlay, .games-werewolf-settings-overlay, .ld-overlay) { background: var(--rp33-scrim); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.games-action-input, .games-settings-textarea, .games-wager-modal-input, .ld-input) { border: 0; border-radius: var(--rp33-field-radius); background-color: var(--rp33-field-bg); background-image: none; box-shadow: none; color: var(--rp33-label); caret-color: var(--rp33-accent); font-family: var(--lt-font-ios); font-size: var(--lt-ios-body-size); line-height: var(--lt-ios-body-line); min-block-size: var(--rp33-hit); padding: 10px var(--rp33-sp-3); outline: none; }
+    #phone-panel[data-rp-ios="3"] :is(.games-action-input, .games-settings-textarea, .games-wager-modal-input, .ld-input)::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] :is(.games-action-input, .games-settings-textarea, .games-wager-modal-input, .ld-input):focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] :is(.games-catbox-confirm-cancel, .games-catbox-confirm-ok, .games-catbox-primary, .games-prompt-btn-primary, .games-share-send, .games-start-btn, .games-undercover-chat-send, .games-undercover-invite-confirm, .games-undercover-share-send, .games-undercover-start-choice-btn, .games-wager-send-btn, .games-werewolf-action-primary, .games-werewolf-speech-send) { border: 0; border-radius: 999px; background-color: var(--rp33-accent); background-image: none; box-shadow: none; color: var(--rp33-on-accent); font-family: var(--lt-font-ios); font-weight: 600; letter-spacing: -0.2px; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.games-primary-btn, .ld-primary-btn) { border: 0; border-radius: 999px; background-color: var(--rp33-accent); background-image: none; box-shadow: none; color: var(--rp33-on-accent); font-family: var(--lt-font-ios); font-weight: 600; letter-spacing: -0.2px; text-shadow: none; min-block-size: var(--rp33-btn-h); font-size: var(--lt-ios-headline-size); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.games-catbox-confirm-cancel, .games-catbox-confirm-ok, .games-catbox-primary, .games-primary-btn, .games-prompt-btn-primary, .games-share-send, .games-start-btn, .games-undercover-chat-send, .games-undercover-invite-confirm, .games-undercover-share-send, .games-undercover-start-choice-btn, .games-wager-send-btn, .games-werewolf-action-primary, .games-werewolf-speech-send, .ld-primary-btn):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.games-catbox-confirm-cancel, .games-catbox-confirm-ok, .games-catbox-primary, .games-primary-btn, .games-prompt-btn-primary, .games-share-send, .games-start-btn, .games-undercover-chat-send, .games-undercover-invite-confirm, .games-undercover-share-send, .games-undercover-start-choice-btn, .games-wager-send-btn, .games-werewolf-action-primary, .games-werewolf-speech-send, .ld-primary-btn):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.games-2048-card, .games-action-btn, .games-action-entry, .games-action-sheet, .games-board-card, .games-catbox-abandon-action, .games-catbox-adopt-btn, .games-catbox-bg-btn, .games-catbox-card, .games-catbox-letter-btn, .games-guesswhat-card, .games-ludo-card, .games-muted, .games-mystery-card, .games-player-count-btn, .games-poker-card, .games-prompt-btn, .games-prompt-btn-muted, .games-random-wager-btn, .games-scriptkill-card, .games-seaturtle-card, .games-share-action, .games-sudoku-card, .games-undercover-card, .games-undercover-error-retry, .games-undercover-settings-action, .games-undercover-share-action, .games-werewolf-action, .games-werewolf-card, .games-werewolf-entry-btn, .games-werewolf-vote-target, .ld-action-area, .ld-dice-btn) { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; box-shadow: none; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.games-2048-restart-btn, .games-catbox-profile, .games-game-card, .games-setup-hero, .games-werewolf-chat-day-toggle, .games-werewolf-chat-toggle, .games-werewolf-night-skip) { border: 0; border-radius: 999px; background-color: var(--rp33-accent-soft); background-image: none; box-shadow: none; color: var(--rp36-accent-text); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.games-2048-card, .games-2048-restart-btn, .games-action-btn, .games-action-entry, .games-action-sheet, .games-board-card, .games-catbox-abandon-action, .games-catbox-adopt-btn, .games-catbox-bg-btn, .games-catbox-card, .games-catbox-letter-btn, .games-catbox-profile, .games-game-card, .games-guesswhat-card, .games-ludo-card, .games-muted, .games-mystery-card, .games-player-count-btn, .games-poker-card, .games-prompt-btn, .games-prompt-btn-muted, .games-random-wager-btn, .games-scriptkill-card, .games-seaturtle-card, .games-setup-hero, .games-share-action, .games-sudoku-card, .games-undercover-card, .games-undercover-error-retry, .games-undercover-settings-action, .games-undercover-share-action, .games-werewolf-action, .games-werewolf-card, .games-werewolf-chat-day-toggle, .games-werewolf-chat-toggle, .games-werewolf-entry-btn, .games-werewolf-night-skip, .games-werewolf-vote-target, .ld-action-area, .ld-dice-btn):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.games-2048-card, .games-2048-restart-btn, .games-action-btn, .games-action-entry, .games-action-sheet, .games-board-card, .games-catbox-abandon-action, .games-catbox-adopt-btn, .games-catbox-bg-btn, .games-catbox-card, .games-catbox-letter-btn, .games-catbox-profile, .games-game-card, .games-guesswhat-card, .games-ludo-card, .games-muted, .games-mystery-card, .games-player-count-btn, .games-poker-card, .games-prompt-btn, .games-prompt-btn-muted, .games-random-wager-btn, .games-scriptkill-card, .games-seaturtle-card, .games-setup-hero, .games-share-action, .games-sudoku-card, .games-undercover-card, .games-undercover-error-retry, .games-undercover-settings-action, .games-undercover-share-action, .games-werewolf-action, .games-werewolf-card, .games-werewolf-chat-day-toggle, .games-werewolf-chat-toggle, .games-werewolf-entry-btn, .games-werewolf-night-skip, .games-werewolf-vote-target, .ld-action-area, .ld-dice-btn):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.games-share-cancel, .games-undercover-settings-reset, .games-undercover-share-cancel, .ld-ghost-btn) { border: 0; border-radius: 999px; background-color: var(--rp33-fill); background-image: none; box-shadow: none; color: var(--rp33-label); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.games-share-cancel, .games-undercover-settings-reset, .games-undercover-share-cancel, .ld-ghost-btn):active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] :is(.games-share-cancel, .games-undercover-settings-reset, .games-undercover-share-cancel, .ld-ghost-btn):disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] .games-danger { border: 0; border-radius: 999px; background-color: var(--rp33-danger-soft); background-image: none; box-shadow: none; color: var(--rp36-text-red); font-family: var(--lt-font-ios); font-weight: 600; text-shadow: none; min-block-size: var(--rp33-btn-h-sm); padding-inline: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .games-danger:active { filter: brightness(0.92); }
+    #phone-panel[data-rp-ios="3"] .games-danger:disabled { background-color: var(--rp33-fill); color: var(--rp33-label-3); filter: none; }
+    #phone-panel[data-rp-ios="3"] :is(.games-game-desc, .games-game-meta, .games-prompt-desc, .games-prompt-subtitle, .games-setting-desc, .games-subtitle) { color: var(--rp33-label-2); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.games-contact-empty, .games-share-empty, .ld-empty) { color: var(--rp33-label-2); font-family: var(--lt-font-ios); text-align: center; text-shadow: none; }
+    /* 点击区不小于 44pt：视觉尺寸不变，用透明伪元素扩大命中区 */
+    #phone-panel[data-rp-ios="3"] :is(.games-2048-card, .games-2048-restart-btn, .games-action-btn, .games-action-entry, .games-action-toggle, .games-board-card, .games-catbox-abandon-action, .games-catbox-adopt-btn, .games-catbox-card, .games-catbox-confirm-cancel, .games-catbox-confirm-ok, .games-catbox-primary, .games-catbox-profile, .games-danger, .games-game-card, .games-guesswhat-card, .games-icon-btn, .games-log-toggle, .games-ludo-card, .games-muted, .games-mystery-card, .games-player-count-btn, .games-poker-card, .games-primary-btn, .games-prompt-btn, .games-prompt-btn-muted, .games-prompt-btn-primary, .games-random-wager-btn, .games-scriptkill-card, .games-seaturtle-card, .games-setup-hero, .games-share-action, .games-share-cancel, .games-share-send, .games-start-btn, .games-sudoku-card, .games-undercover-card, .games-undercover-chat-send, .games-undercover-error-retry, .games-undercover-invite-confirm, .games-undercover-settings-action, .games-undercover-settings-reset, .games-undercover-share-action, .games-undercover-share-cancel, .games-undercover-share-send, .games-undercover-start-choice-btn, .games-wager-send-btn, .games-werewolf-action, .games-werewolf-action-primary, .games-werewolf-card, .games-werewolf-chat-day-toggle, .games-werewolf-chat-toggle, .games-werewolf-entry-btn, .games-werewolf-night-skip, .games-werewolf-speech-send, .games-werewolf-vote-target, .ld-action-area, .ld-dice-btn, .ld-ghost-btn, .ld-primary-btn) { position: relative; }
+    #phone-panel[data-rp-ios="3"] :is(.games-2048-card, .games-2048-restart-btn, .games-action-btn, .games-action-entry, .games-action-sheet, .games-action-toggle, .games-board-card, .games-catbox-abandon-action, .games-catbox-adopt-btn, .games-catbox-bg-btn, .games-catbox-card, .games-catbox-confirm-cancel, .games-catbox-confirm-ok, .games-catbox-letter-btn, .games-catbox-primary, .games-catbox-profile, .games-danger, .games-game-card, .games-guesswhat-card, .games-icon-btn, .games-log-toggle, .games-ludo-card, .games-muted, .games-mystery-card, .games-player-count-btn, .games-poker-card, .games-primary-btn, .games-prompt-btn, .games-prompt-btn-muted, .games-prompt-btn-primary, .games-random-wager-btn, .games-scriptkill-card, .games-seaturtle-card, .games-setup-hero, .games-share-action, .games-share-cancel, .games-share-send, .games-start-btn, .games-sudoku-card, .games-undercover-card, .games-undercover-chat-send, .games-undercover-error-retry, .games-undercover-invite-confirm, .games-undercover-settings-action, .games-undercover-settings-reset, .games-undercover-share-action, .games-undercover-share-cancel, .games-undercover-share-send, .games-undercover-start-choice-btn, .games-wager-send-btn, .games-werewolf-action, .games-werewolf-action-primary, .games-werewolf-card, .games-werewolf-chat-day-toggle, .games-werewolf-chat-toggle, .games-werewolf-entry-btn, .games-werewolf-night-skip, .games-werewolf-speech-send, .games-werewolf-vote-target, .ld-action-area, .ld-dice-btn, .ld-ghost-btn, .ld-primary-btn)::after { content: ""; position: absolute; inset: min(0px, calc((100% - var(--rp33-hit)) / 2)); }
+}
+@layer rp.skins.remap {
+    #phone-panel[data-rp-ios="3"] .games-catbox-profile { gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .games-catbox-primary, #phone-panel[data-rp-ios="3"] .games-catbox-adopt-btn, #phone-panel[data-rp-ios="3"] .games-catbox-actions button { border: var(--lt-hairline) solid var(--rp33-sep); color: var(--rp36-text-yellow); background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] .games-catbox-primary { background: color-mix(in srgb, var(--rp33-accent) 40%, transparent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .games-catbox-adopt-btn { background: var(--lt-sys-red); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .games-catbox-bg-btn { border: var(--lt-hairline) solid var(--rp33-sep); background: color-mix(in srgb, var(--lt-sys-cyan) 18%, var(--rp33-surface)); color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .games-catbox-letter-btn span { background: var(--lt-sys-red); color: var(--rp33-on-accent); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .games-catbox-confirm-overlay { background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .games-catbox-confirm-cancel { background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] .games-catbox-confirm-ok { background: var(--lt-sys-red); }
+    #phone-panel[data-rp-ios="3"] .games-catbox-inventory-overlay, #phone-panel[data-rp-ios="3"] .games-catbox-coadopt-overlay, #phone-panel[data-rp-ios="3"] .games-catbox-letters-overlay { background: var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .games-2048-restart-btn { font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .games-2048-restart-btn:active, #phone-panel[data-rp-ios="3"] .games-2048-result button:active { background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] .ld-empty { font-size: var(--lt-ios-footnote-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .ld-primary-btn { background: var(--lt-sys-pink); color: var(--rp33-on-accent); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .ld-ghost-btn { border: var(--lt-hairline) solid var(--rp33-sep); color: var(--rp33-label-2); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .ld-action-area { background: var(--rp33-label); border-top: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .ld-input { padding: 12px 12px; border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-label); color: var(--rp33-label-2); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .ld-dice-btn { padding: 12px 0; background: var(--lt-sys-pink); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .ld-overlay { background: var(--rp33-scrim); }
+    #phone-panel[data-rp-ios="3"] .ld-sheet-title { font-size: var(--lt-ios-callout-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .games-topbar { gap: 12px; padding: 32px 12px 0; background: linear-gradient(180deg, color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)), transparent); }
+    #phone-panel[data-rp-ios="3"] .games-back-btn, #phone-panel[data-rp-ios="3"] .games-icon-btn { border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-fill-2); color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .games-icon-btn-home { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .games-icon-btn-home i { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .games-title { color: var(--rp36-text-yellow); font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"] .games-title-text { color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .games-subtitle { color: var(--rp36-text-yellow); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .games-game-card { border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-fill-2); color: var(--rp36-text-yellow); gap: 8px; }
+    #phone-panel[data-rp-ios="3"] .games-mystery-card { border-color: var(--rp33-sep); background: linear-gradient(135deg, var(--rp33-fill), var(--rp33-fill-2)),
+        var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .games-werewolf-card { border-color: color-mix(in srgb, var(--lt-sys-red) 22%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--lt-sys-red) 20%, transparent), var(--rp33-fill-2)),
+        var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .games-board-card { border-color: color-mix(in srgb, var(--lt-sys-orange) 28%, transparent); }
+    #phone-panel[data-rp-ios="3"] .games-seaturtle-card { border-color: var(--rp33-sep); background: linear-gradient(135deg, var(--rp33-fill), var(--rp33-fill-2)),
+        var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .games-guesswhat-card { border-color: color-mix(in srgb, var(--lt-sys-indigo) 26%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--lt-sys-indigo) 20%, transparent), var(--rp33-fill-2)),
+        var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .games-scriptkill-card { border-color: color-mix(in srgb, var(--lt-sys-indigo) 26%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--lt-sys-indigo) 20%, transparent), var(--rp33-fill-2)),
+        var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .games-ludo-card { border-color: color-mix(in srgb, var(--lt-sys-pink) 26%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--lt-sys-pink) 20%, transparent), var(--rp33-fill-2)),
+        var(--rp33-fill-2); }
+    #phone-panel[data-rp-ios="3"] .games-game-title { color: var(--rp36-text-yellow); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .games-game-desc { color: var(--rp36-text-yellow); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .games-game-meta { gap: 8px; margin-top: 12px; }
+    #phone-panel[data-rp-ios="3"] .games-game-meta span { background: color-mix(in srgb, var(--lt-sys-yellow) 14%, transparent); color: var(--rp36-text-yellow); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .games-setup-overlay { padding: 72px 16px 20px; background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .games-setup-hero { gap: 12px; padding: 0 0 16px; border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .games-setup-label { margin-top: 16px; color: var(--rp36-text-yellow); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .games-player-count-btn { border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-fill-2); color: var(--rp36-text-yellow); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .games-start-btn { margin-top: 16px; }
+    #phone-panel[data-rp-ios="3"] .games-contact-empty { background: var(--rp33-fill-2); color: var(--rp36-text-yellow); padding: 0 12px; font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .games-setup-label span { color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .games-settings-overlay { padding: 44px 16px 16px; background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .games-settings-head { gap: 12px; border-bottom: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .games-setting-desc { margin-top: 8px; color: var(--rp36-text-yellow); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .games-prompt-title { color: var(--rp36-text-yellow); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .games-prompt-desc { margin-top: 4px; color: var(--rp36-text-yellow); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .games-settings-textarea { margin-top: 12px; padding: 12px; border: 1px solid color-mix(in srgb, var(--lt-sys-yellow) 18%, transparent); background: var(--rp33-bg); color: var(--rp36-text-yellow); caret-color: var(--lt-sys-yellow); font-size: var(--lt-ios-caption1-size); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .games-settings-textarea:focus { border-color: color-mix(in srgb, var(--lt-sys-yellow) 57%, transparent); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .games-prompt-btn { font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .games-prompt-btn-muted { background: var(--rp33-fill-2); color: var(--rp36-text-yellow); border: var(--lt-hairline) solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .games-prompt-btn-primary { background: linear-gradient(180deg, var(--lt-sys-yellow), var(--lt-sys-orange)); color: var(--rp36-text-brown); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .games-ai-error-overlay { padding: 0 20px; background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .games-ai-error-title { color: var(--rp36-text-yellow); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .games-log-toggle { border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-fill); color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .games-action-input { border: var(--lt-hairline) solid var(--rp33-sep); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp36-text-yellow); font-size: var(--lt-ios-footnote-size); padding: 0 12px; }
+    #phone-panel[data-rp-ios="3"] .games-action-input::placeholder { color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .games-action-input:focus { border-color: var(--lt-sys-yellow); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .games-action-toggle { border: var(--lt-hairline) solid var(--rp33-sep); background: var(--rp33-fill); color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .games-action-sheet { padding: 8px; background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); border: var(--lt-hairline) solid var(--rp33-sep); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .games-action-btn, #phone-panel[data-rp-ios="3"] .games-primary-btn { background: linear-gradient(180deg, var(--lt-sys-yellow), var(--lt-sys-orange)); color: var(--rp36-text-brown); font-size: var(--lt-ios-caption1-size); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .games-action-btn.games-danger { background: linear-gradient(180deg, var(--lt-sys-red), var(--lt-sys-red)); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .games-action-btn.games-muted { background: linear-gradient(180deg, var(--rp33-fill), var(--rp33-fill)); color: var(--rp36-text-teal); }
+    #phone-panel[data-rp-ios="3"] .games-wager-modal-backdrop { background: var(--rp33-bg); padding: 0 20px; }
+    #phone-panel[data-rp-ios="3"] .games-wager-modal-title { color: var(--rp36-text-yellow); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .games-wager-modal-input { border: var(--lt-hairline) solid var(--rp33-sep); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp36-text-yellow); font-size: var(--lt-ios-subhead-size); padding: 0 12px; }
+    #phone-panel[data-rp-ios="3"] .games-wager-modal-input:focus { border-color: var(--lt-sys-yellow); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .games-share-overlay { padding: 12px; background: var(--rp33-scrim); }
+    #phone-panel[data-rp-ios="3"] .games-share-dialog { background: var(--rp33-label); color: var(--rp33-label-2); box-shadow: var(--rp33-shadow-2); }
+    #phone-panel[data-rp-ios="3"] .games-share-header { border-bottom: var(--lt-hairline) solid var(--rp33-sep); font-size: var(--lt-ios-footnote-size); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .games-share-close { color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .games-share-name { color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .games-share-empty { padding: 20px 12px; color: var(--rp33-label-2); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .games-share-action { font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .games-share-cancel { background: var(--rp33-label); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .games-share-send { background: var(--lt-sys-green); color: var(--rp33-on-accent); }
+    @media (max-height: 760px) {
+    #phone-panel[data-rp-ios="3"] .games-action-entry { gap: 8px; }
+    }
+    @media (max-height: 760px) {
+    #phone-panel[data-rp-ios="3"] .games-action-input { font-size: var(--lt-ios-caption1-size); }
+    }
+    @media (max-height: 760px) {
+    #phone-panel[data-rp-ios="3"] .games-action-sheet { padding: 8px; }
+    }
+    @media (max-height: 760px) {
+    #phone-panel[data-rp-ios="3"] .games-action-btn, #phone-panel[data-rp-ios="3"] .games-primary-btn { font-size: var(--lt-ios-caption2-size); }
+    }
+    @media (max-height: 760px) {
+    #phone-panel[data-rp-ios="3"] .games-wager-modal-title { font-size: var(--lt-ios-caption1-size); }
+    }
+    @media (max-height: 760px) {
+    #phone-panel[data-rp-ios="3"] .games-wager-modal-input { font-size: var(--lt-ios-footnote-size); }
+    }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-icon-btn { background: var(--rp33-surface-2); color: var(--lt-sys-orange); font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-icon-btn i { color: var(--lt-sys-orange); }
+    #phone-panel[data-rp-ios="3"] .games-werewolf-backdrop::after { background: radial-gradient(circle at 50% 7%, color-mix(in srgb, var(--rp33-accent) 28%, transparent), transparent 24%),
+        linear-gradient(90deg, var(--rp33-scrim), transparent 24%, transparent 76%, var(--rp33-scrim)); }
+    #phone-panel[data-rp-ios="3"] .games-werewolf-chat-toggle { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .games-werewolf-chat-toggle span { color: var(--rp36-accent-text); font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .games-werewolf-chat-toggle i { color: var(--rp33-accent); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .games-werewolf-chat-day-toggle { border: 1px solid color-mix(in srgb, var(--lt-sys-yellow) 42%, transparent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp36-text-yellow); padding: 0 12px; }
+    #phone-panel[data-rp-ios="3"] .games-werewolf-chat-day-toggle span { font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .games-werewolf-chat-day-toggle em { color: var(--rp36-accent-text); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .games-werewolf-night-skip { border-color: var(--lt-sys-yellow); color: var(--rp36-text-yellow); }
+    #phone-panel[data-rp-ios="3"] .games-werewolf-speech-send { border: 1px solid var(--lt-sys-yellow); background: linear-gradient(180deg, var(--lt-sys-brown), color-mix(in srgb, var(--lt-sys-brown) 18%, var(--rp33-surface))); color: var(--rp36-text-yellow); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .games-werewolf-action { border: 1px solid var(--rp33-accent); background: linear-gradient(180deg, color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)), color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface))); color: var(--rp36-accent-text); gap: 8px; font-size: var(--lt-ios-footnote-size); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .games-werewolf-action i { font-size: var(--lt-ios-body-size); }
+    #phone-panel[data-rp-ios="3"] .games-werewolf-action-primary { border-color: var(--lt-sys-yellow); background: linear-gradient(180deg, var(--lt-sys-brown), color-mix(in srgb, var(--lt-sys-brown) 18%, var(--rp33-surface))); color: var(--rp36-text-yellow); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .games-werewolf-entry-overlay { padding: 20px; background: var(--rp33-bg); }
+    #phone-panel[data-rp-ios="3"] .games-werewolf-entry-btn { border: 1px solid var(--rp33-accent); background: color-mix(in srgb, var(--rp33-accent) 18%, var(--rp33-surface)); color: var(--rp36-accent-text); font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .games-werewolf-invite-overlay, #phone-panel[data-rp-ios="3"] .games-werewolf-settings-overlay, #phone-panel[data-rp-ios="3"] .games-werewolf-record-overlay { background: var(--rp33-bg); }
+    @media (max-height: 760px) {
+    #phone-panel[data-rp-ios="3"] .games-werewolf-action { font-size: var(--lt-ios-caption2-size); }
+    }
+}
+@layer rp.skins.curated {
+    /* ---- 游戏中心：大厅 = iOS 26 Game Center 式卡片网格；对局内只给 HUD / 结算 / 按钮换装，牌桌与棋盘保留原主题色 ---- */
+    #phone-panel[data-rp-ios="3"] .games-app { color: var(--lt-sys-label); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] :is(.games-title, .games-title-text) { font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); color: var(--lt-sys-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .games-lobby-card { border: 0; border-radius: var(--rp33-card-radius); box-shadow: var(--rp33-card-shadow); overflow: clip; }
+    #phone-panel[data-rp-ios="3"] .games-back-btn { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] :is(.games-action-btn, .games-2048-restart-btn, .games-catbox-confirm-ok) { min-block-size: var(--rp33-hit); padding-inline: var(--rp33-sp-5); border: 0; border-radius: 999px; background: var(--lt-sys-tint); color: var(--rp33-on-accent); font: 600 var(--lt-ios-body-size) / 1 var(--lt-font-ios); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.games-catbox-confirm-cancel) { min-block-size: var(--rp33-hit); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] :is(.games-catbox-hud, .games-2048-score-box, .games-bottom-panel) { border: 0; border-radius: 20px; background: var(--rp33-hud-bg); box-shadow: var(--lt-glass-rim), var(--rp33-shadow-2); -webkit-backdrop-filter: var(--lt-glass-blur-strong); backdrop-filter: var(--lt-glass-blur-strong); color: var(--rp33-hud-fg); }
+    #phone-panel[data-rp-ios="3"] :is(.games-action-sheet, .games-ai-error-panel, .games-catbox-confirm-panel, .games-catbox-inventory-panel, .games-catbox-coadopt-panel) { border: 0; border-radius: var(--rp33-dialog-radius); background: var(--rp33-sheet-bg); box-shadow: var(--rp33-float-shadow); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] :is(.games-ai-error-overlay, .games-catbox-confirm-overlay, .games-catbox-inventory-overlay, .games-catbox-coadopt-overlay) { background: var(--rp33-scrim); }
+}
+@layer rp.skins.curated {
+    /* ===================== v3.4 逐屏精修 ===================== */
+    /* ---- 游戏 v3.4：棋规、几何、棋子字形与动画全部不动；换的是「颜色与材质」——
+            棋盘木纹 / 方格 / 棋子 / 棋石 / 选中与落点环、2048 色阶、数独格子与键盘、飞行棋格子全部接 --rp34-board-* / --rp34-g2048-* / --rp34-sudoku-* token，
+            并去掉 2048 的霓虹光晕；对局页外壳跟随系统浅深色（Game Center 风），棋盘作为页面里唯一的「实物」。
+            国际象棋字形 U+2654..265F 用 font-variant-emoji: text + 符号字体栈，避免 iOS 把 U+265F 渲染成彩色 emoji。---- */
+
+    /* 通用顶栏：所有小游戏共用 games-topbar / games-back-btn / games-icon-btn */
+    #phone-panel[data-rp-ios="3"] .games-topbar { min-block-size: var(--rp3-nav-h); padding-inline: var(--rp33-sp-3); gap: var(--rp33-sp-2); border: 0; background: transparent; box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.games-back-btn, .games-icon-btn, .gb-icon, .games-sudoku-icon-btn) { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); min-inline-size: var(--rp3-glass-btn); padding: 0; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--lt-sys-label); font-size: 17px; }
+    #phone-panel[data-rp-ios="3"] :is(.games-back-btn, .games-icon-btn, .gb-icon):active { scale: 0.94; }
+    #phone-panel[data-rp-ios="3"] :is(.games-topbar .games-title, .gb-title) { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--lt-sys-label); text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] :is(.games-subtitle, .gb-sub) { font: var(--lt-type-footnote); color: var(--lt-sys-label-2); }
+
+    /* ===== 对弈（象棋 / 国际象棋 / 将棋 / 斗兽棋 / 五子棋） ===== */
+    #phone-panel[data-rp-ios="3"] .gb-app { background: var(--lt-sys-grouped-bg); color: var(--lt-sys-label); font-family: var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .gb-top { min-block-size: var(--rp3-nav-h); padding: var(--rp33-sp-1) var(--rp33-sp-3); gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .gb-body { padding: var(--rp33-sp-2) var(--rp33-sp-4) var(--rp33-sp-6); gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .gb-pick { min-block-size: 72px; padding: var(--rp33-sp-4); gap: var(--rp33-sp-1); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); color: var(--lt-sys-label); text-align: start; }
+    #phone-panel[data-rp-ios="3"] .gb-pick:active { background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .gb-pick strong { font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .gb-pick span { font: var(--lt-type-subhead); color: var(--lt-sys-label-2); }
+    #phone-panel[data-rp-ios="3"] .gb-stage { padding: var(--rp33-sp-2) var(--rp33-sp-4) var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .gb-board { border-radius: 12px; background: var(--rp34-board-wood); box-shadow: var(--rp34-board-frame-shadow); }
+    #phone-panel[data-rp-ios="3"] .gb-board.gb-xiangqi { background: var(--rp34-board-wood); }
+    #phone-panel[data-rp-ios="3"] .gb-board.gb-jungle { background: var(--rp34-board-grass); }
+    #phone-panel[data-rp-ios="3"] .gb-go { background: linear-gradient(var(--rp34-board-line), var(--rp34-board-line)) center / 100% 1px no-repeat, linear-gradient(var(--rp34-board-line), var(--rp34-board-line)) center / 1px 100% no-repeat, var(--rp34-board-wood); }
+    #phone-panel[data-rp-ios="3"] .gb-xq.odd { background: var(--rp34-board-wood); }
+    #phone-panel[data-rp-ios="3"] .gb-xq.even { background: var(--rp34-board-wood-2); }
+    #phone-panel[data-rp-ios="3"] .gb-chs.light { background: var(--rp34-board-sq-light); }
+    #phone-panel[data-rp-ios="3"] .gb-chs.dark { background: var(--rp34-board-sq-dark); }
+    #phone-panel[data-rp-ios="3"] .gb-shg.odd { background: var(--rp34-board-sq-light); }
+    #phone-panel[data-rp-ios="3"] .gb-shg.even { background: var(--rp34-board-wood); }
+    #phone-panel[data-rp-ios="3"] .gb-jg { background: var(--rp34-board-grass); }
+    #phone-panel[data-rp-ios="3"] .gb-jg.river { background: var(--rp34-board-water); }
+    #phone-panel[data-rp-ios="3"] .gb-jg.trap { background: var(--rp34-board-trap); }
+    #phone-panel[data-rp-ios="3"] .gb-jg.den { background: var(--rp34-board-den); }
+    #phone-panel[data-rp-ios="3"] .gb-cell.sel { outline: 3px solid var(--rp34-board-select); outline-offset: -3px; }
+    #phone-panel[data-rp-ios="3"] .gb-cell.tgt { box-shadow: inset 0 0 0 3px var(--rp34-board-target); }
+    #phone-panel[data-rp-ios="3"] .stone { box-shadow: var(--rp34-stone-shadow); }
+    #phone-panel[data-rp-ios="3"] .stone.black { background: var(--rp34-stone-black); }
+    #phone-panel[data-rp-ios="3"] .stone.white { background: var(--rp34-stone-white); }
+    #phone-panel[data-rp-ios="3"] .piece { border: 1px solid var(--rp34-piece-rim); background: var(--rp34-piece-face); box-shadow: var(--rp34-piece-shadow); font-family: "Songti SC", "STKaiti", "Kaiti SC", serif; font-size: var(--lt-ios-footnote-size); }
+    #phone-panel[data-rp-ios="3"] .piece.red { background: var(--rp34-piece-face); color: var(--rp34-piece-red); }
+    #phone-panel[data-rp-ios="3"] .piece.black { background: var(--rp34-piece-face); color: var(--rp34-piece-black); }
+    #phone-panel[data-rp-ios="3"] .gb-shg .piece { font-size: var(--lt-ios-caption1-size); }
+    #phone-panel[data-rp-ios="3"] .cpc { font-family: "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", serif; font-variant-emoji: text; }
+    #phone-panel[data-rp-ios="3"] .cpc.white { color: var(--rp34-chess-white); text-shadow: var(--rp34-chess-white-edge); }
+    #phone-panel[data-rp-ios="3"] .cpc.black { color: var(--rp34-chess-black); text-shadow: var(--rp34-chess-black-edge); }
+    #phone-panel[data-rp-ios="3"] :is(.gb-shogi-hand, .gb-promo) { gap: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] :is(.gb-hand-lbl, .gb-promo-lbl) { font: var(--lt-type-footnote); color: var(--lt-sys-label-2); }
+    #phone-panel[data-rp-ios="3"] .gb-hand { inline-size: 40px; block-size: 40px; border: 0; border-radius: 10px; background: var(--rp33-surface); box-shadow: var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .gb-hand .piece { inline-size: 30px; block-size: 30px; font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .gb-hand em { min-inline-size: 18px; padding: 0 4px; border-radius: 999px; background: var(--lt-sys-red); color: var(--rp34-on-color); font: 600 var(--lt-ios-caption2-size) / 18px var(--lt-font-ios-rounded); }
+    #phone-panel[data-rp-ios="3"] .gb-hand.sel { box-shadow: 0 0 0 2px var(--rp34-board-select); }
+    #phone-panel[data-rp-ios="3"] :is(.gb-promo-opt, .gb-promo-cancel, #gb-undo, #gb-new) { min-block-size: 36px; padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-text-blue); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); }
+
+    /* ===== 2048：去霓虹；方块色阶走 token（浅 / 深各一套），数字圆体等宽 ===== */
+    #phone-panel[data-rp-ios="3"] .games-2048-app { background: var(--lt-sys-grouped-bg); background-image: none; color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] .games-2048-content { padding: var(--rp33-sp-2) var(--rp33-sp-5) var(--rp33-sp-6); gap: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .games-2048-score-row { gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .games-2048-score-box { min-block-size: 64px; border: 0; border-radius: 16px; background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .games-2048-score-box span { color: var(--lt-sys-label-2); font: 600 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); letter-spacing: 0.04em; }
+    #phone-panel[data-rp-ios="3"] .games-2048-score-box strong { color: var(--lt-sys-label); font: 700 var(--lt-ios-title2-size) / 1.1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .games-2048-board { padding: 10px; gap: 10px; border: 0; border-radius: 16px; background: var(--rp34-g2048-board); background-image: none; box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .games-2048-cell { border-radius: 10px; background: var(--rp34-g2048-empty); color: var(--rp34-g2048-ink); font-family: var(--lt-font-ios-rounded); font-weight: 800; font-variant-numeric: tabular-nums; box-shadow: none; text-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .games-2048-cell[data-val="2"] { background: var(--rp34-g2048-2); color: var(--rp34-g2048-ink); }
+    #phone-panel[data-rp-ios="3"] .games-2048-cell[data-val="4"] { background: var(--rp34-g2048-4); color: var(--rp34-g2048-ink); }
+    #phone-panel[data-rp-ios="3"] .games-2048-cell[data-val="8"] { background: var(--rp34-g2048-8); color: var(--rp34-g2048-ink-hi); }
+    #phone-panel[data-rp-ios="3"] .games-2048-cell[data-val="16"] { background: var(--rp34-g2048-16); color: var(--rp34-g2048-ink-hi); }
+    #phone-panel[data-rp-ios="3"] .games-2048-cell[data-val="32"] { background: var(--rp34-g2048-32); color: var(--rp34-g2048-ink-hi); }
+    #phone-panel[data-rp-ios="3"] .games-2048-cell[data-val="64"] { background: var(--rp34-g2048-64); color: var(--rp34-g2048-ink-hi); }
+    #phone-panel[data-rp-ios="3"] .games-2048-cell[data-val="128"] { background: var(--rp34-g2048-128); color: var(--rp34-g2048-ink-gold); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .games-2048-cell[data-val="256"] { background: var(--rp34-g2048-256); color: var(--rp34-g2048-ink-gold); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .games-2048-cell[data-val="512"] { background: var(--rp34-g2048-512); color: var(--rp34-g2048-ink-gold); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .games-2048-cell[data-val="1024"] { background: var(--rp34-g2048-1024); color: var(--rp34-g2048-ink-gold); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .games-2048-cell[data-val="2048"] { background: var(--rp34-g2048-2048); color: var(--rp34-g2048-ink-gold); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .games-2048-cell:is([data-val="4096"], [data-val="8192"], [data-val="16384"], [data-val="32768"], [data-val="65536"]) { background: var(--rp34-g2048-max); color: var(--rp34-g2048-ink-hi); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .games-2048-result { border-radius: 16px; background: color-mix(in srgb, var(--rp33-surface) 78%, transparent); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--lt-sys-label); gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .games-2048-result strong { font: var(--lt-type-title2); }
+    #phone-panel[data-rp-ios="3"] .games-2048-result span { color: var(--lt-sys-label-2); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] :is(.games-2048-result button, .games-2048-restart-btn) { border: 0; border-radius: 999px; background: var(--lt-sys-tint); color: var(--rp33-on-accent); font: 600 var(--lt-ios-body-size) / 1 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .games-2048-result button { block-size: 40px; padding: 0 var(--rp33-sp-5); }
+    #phone-panel[data-rp-ios="3"] .games-2048-restart-btn { block-size: var(--rp33-btn-h); }
+
+    /* ===== 数独：iOS 白底格、3x3 粗线 = 网格色；关联 / 同数 / 选中 / 错误 = 系统蓝 / 红的浅底；键盘大号圆体数字 ===== */
+    #phone-panel[data-rp-ios="3"] .games-sudoku-app { background: var(--lt-sys-grouped-bg); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-level { font: var(--lt-type-title3); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-meta { color: var(--lt-sys-label-2); font: 600 var(--lt-ios-subhead-size) / 1.3 var(--lt-font-ios); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-meta strong { color: var(--lt-sys-label); font-size: var(--lt-ios-subhead-size); }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-meta strong span { color: var(--rp36-text-red); font-size: var(--lt-ios-callout-size); }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-board { border: 2px solid var(--rp34-sudoku-grid); border-radius: 10px; background: var(--rp34-sudoku-line); overflow: clip; }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-cell { background: var(--rp34-sudoku-bg); color: var(--rp34-sudoku-entry); font-family: var(--lt-font-ios-rounded); }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-cell.is-related { background: color-mix(in srgb, var(--rp34-sudoku-related), var(--rp34-sudoku-bg)); }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-cell.is-same-number { background: color-mix(in srgb, var(--rp34-sudoku-same), var(--rp34-sudoku-bg)); }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-cell.is-selected { background: color-mix(in srgb, var(--rp34-sudoku-selected), var(--rp34-sudoku-bg)); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-cell.is-wrong { background: color-mix(in srgb, var(--rp34-sudoku-wrong), var(--rp34-sudoku-bg)); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-cell.is-fixed .games-sudoku-value { color: var(--rp34-sudoku-given); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-notes span { color: var(--lt-sys-label-2); font-size: var(--lt-ios-caption2-size); }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-tool { block-size: 56px; border-radius: 14px; color: var(--rp36-text-blue); font: 500 var(--lt-ios-caption2-size) / 1.2 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-tool i { color: var(--lt-sys-tint); font-size: 20px; }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-tool.is-active { background: color-mix(in srgb, var(--lt-sys-tint) 12%, transparent); }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-number { block-size: 52px; border-radius: 12px; color: var(--rp36-text-blue); font: 400 30px / 1 var(--lt-font-ios-rounded); }
+    #phone-panel[data-rp-ios="3"] .games-sudoku-number:active { background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] :is(.games-sudoku-difficulty-sheet, .games-sudoku-result-panel, .games-sudoku-difficulty-panel) { border: 0; border-radius: var(--rp33-sheet-radius); background: var(--rp33-sheet-bg); box-shadow: var(--rp33-float-shadow); color: var(--lt-sys-label); }
+
+    /* ===== 飞行棋：格子 = 填充色 8 圆角，终点 / 事件格 = 系统粉 / 紫浅底；骰子键 = 胶囊主按钮 ===== */
+    #phone-panel[data-rp-ios="3"] .ld-app { --rp33-accent: var(--lt-sys-pink); --rp36-accent-text: var(--rp36-text-pink); background: var(--lt-sys-grouped-bg); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] :is(.ld-board-wrap, .ld-board-preview) { border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .ld-cell { border: 0; border-radius: 8px; background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] .ld-cell-void { background: transparent; }
+    #phone-panel[data-rp-ios="3"] .ld-cell-index { font: 500 var(--lt-ios-caption2-size) / 1 var(--lt-font-ios-rounded); color: var(--lt-sys-label-3); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .ld-cell-end { background: color-mix(in srgb, var(--lt-sys-pink) 16%, transparent); }
+    #phone-panel[data-rp-ios="3"] .ld-cell-end .ld-cell-index { color: var(--rp36-text-pink); }
+    #phone-panel[data-rp-ios="3"] .ld-cell-event { background: color-mix(in srgb, var(--lt-sys-purple) 12%, transparent); }
+    #phone-panel[data-rp-ios="3"] .ld-cell-event .ld-cell-index { color: var(--rp36-text-purple); }
+    #phone-panel[data-rp-ios="3"] .ld-cell-occupied { box-shadow: inset 0 0 0 1px var(--lt-sys-separator); }
+    #phone-panel[data-rp-ios="3"] .ld-piece { inline-size: 12px; block-size: 12px; box-shadow: 0 0 0 1.5px var(--rp33-surface), var(--rp33-shadow-1); }
+    #phone-panel[data-rp-ios="3"] .ld-board-note { font: var(--lt-type-footnote); color: var(--lt-sys-label-2); }
+    #phone-panel[data-rp-ios="3"] :is(.ld-player-option, .ld-player-chip) { border: 0; border-radius: 14px; background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] :is(.ld-player-option, .ld-player-chip):is(.is-picked, .is-active) { background: var(--rp33-accent-soft); box-shadow: inset 0 0 0 1.5px var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .ld-player-name { font: var(--lt-type-footnote); color: var(--lt-sys-label); }
+    #phone-panel[data-rp-ios="3"] .ld-dice-btn { min-block-size: 64px; border: 0; border-radius: 18px; background: var(--rp33-accent); color: var(--rp33-on-accent); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .ld-dice-label { font: 600 var(--lt-ios-subhead-size) / 1.2 var(--lt-font-ios); }
+
+    /* 深色岛：画面本身是深色的对局场景（狼人杀 / 猫箱 / 海龟汤 / 你画我猜 / 迷案 / 德州牌桌）在系统浅色下也保持深色；
+       v3.3 在 .games-app 上写的 color: label（浅色下是黑字）由此在岛内变回白字。谁是卧底是暖色浅底插画、剧本杀跟随系统，不进岛。 */
+    #phone-panel[data-rp-ios="3"] :is(.games-werewolf-app, .games-catbox-app, .sts-app, .gw-app, .gm-app, .games-app:has(.games-poker-table)) { --rp33-label: var(--rp34-dk-label); --rp33-label-2: var(--rp34-dk-label-2); --rp33-label-3: var(--rp34-dk-label-3); --rp33-surface: var(--rp34-dk-surface); --rp33-surface-2: var(--rp34-dk-surface-2); --rp33-fill: var(--rp34-dk-fill); --rp33-fill-2: var(--rp34-dk-fill-2); --rp33-field-bg: var(--rp34-dk-fill); --rp33-sep: var(--rp34-dk-sep); --rp33-seg-bg: var(--rp34-dk-fill); --rp33-seg-on: var(--rp34-dk-seg-on); --rp33-glassbtn-bg: var(--rp34-dk-glassbtn-bg); --rp33-glassbtn-rim: var(--rp34-dk-glassbtn-rim); --rp33-sheet-bg: var(--rp34-dk-surface); --rp33-card-shadow: var(--rp34-dk-shadow); --rp33-shadow-1: none; --lt-sys-label: var(--rp34-dk-label); --lt-sys-label-2: var(--rp34-dk-label-2); --lt-sys-label-3: var(--rp34-dk-label-3); --lt-sys-separator: var(--rp34-dk-sep); --lt-sys-fill-3: var(--rp34-dk-fill); --lt-sys-grouped-bg-2: var(--rp34-dk-surface); --lt-sys-grouped-bg-3: var(--rp34-dk-surface-2); color-scheme: dark; --rp33-bg: var(--rp34-dk-bg); }
+}

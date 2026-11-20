@@ -1,0 +1,82 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：打卡（punchcard）—— 家族：角色扮演专属 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/punchcard/punchcard-view.js（_buildHTML：状态条、连续天数、统计、今日清单、新建草稿、历史、设置）；其余文件无 DOM。
+   屏幕与状态：页头 · 状态条（ok / warn / err）· 连续打卡卡（大数字 + 单位）· 统计 · 今日（目标、清单行：勾选 + 时刻 + 名称 + 类型 + 备注输入 + 删除；完成 .is-done）·
+               新建（草稿行：时刻 / 名称 / 类型 + 删除；动作）· 历史（可展开头：日期 / 元信息 / 删除；条目）· 设置（开关 / 数字）· 提示 / 空态。
+   设计：iOS「提醒事项」：跟随系统 inset grouped，强调色系统青；今日清单 = 系统勾选框（accent-color）+ 完成后划灰；
+         连续天数 = 48pt 细圆体等宽。历史条目旧版的 2px 左线换成缩进 + 发丝线。
+   audit-allow: pch-face-ok pch-face-warn pch-face-err —— 'pch-face-' + tone 拼出来的
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 7 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    /* 渲染自查（v3.5）：白字在本强调色上只有 2.57:1（浅）/ 1.99:1（深），不到 4.5:1；填充按钮 / 选中胶囊的文字改用带一点强调色相的近黑墨（7.23:1 / 9.13:1）。 */
+    #phone-panel[data-rp-ios="3"] .pch-root { --rp33-accent: var(--lt-sys-teal); --rp36-accent-text: var(--rp36-text-teal); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-teal) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-teal) 40%, transparent); --rp33-on-accent: color-mix(in srgb, var(--lt-sys-black) 88%, var(--rp33-accent)); }
+
+    /* ===== 屏：外壳（页面底 / 页头 / 状态条） ===== */
+    #phone-panel[data-rp-ios="3"] .pch-root { gap: var(--rp33-sp-3); min-block-size: 100%; box-sizing: border-box; padding: var(--rp33-sp-2) var(--rp33-margin) var(--rp33-sp-8); background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .pch-header { padding: var(--rp33-sp-2) var(--rp33-sp-1) 0; }
+    #phone-panel[data-rp-ios="3"] .pch-header h2 { margin: 0; font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .pch-face { align-items: center; gap: var(--rp33-sp-2); padding: var(--rp33-sp-3) var(--rp33-sp-4); border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .pch-face-ok { background: color-mix(in srgb, var(--lt-sys-green) 14%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .pch-face-warn { background: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .pch-face-err { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .pch-face-icon { font-size: 17px; line-height: 1; }
+    #phone-panel[data-rp-ios="3"] .pch-face-label { font-weight: 600; }
+
+    /* ===== 屏：连续打卡 + 统计 ===== */
+    #phone-panel[data-rp-ios="3"] .pch-streak { padding: var(--rp33-sp-5) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .pch-streak-num { color: var(--rp36-accent-text); font: 300 48px / 1.05 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .pch-streak-unit { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] :is(.pch-stats, .pch-today, .pch-create, .pch-settings) { padding: var(--rp33-sp-3) var(--rp33-sp-4) var(--rp33-sp-4); border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .pch-stat-row { justify-content: space-between; align-items: center; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-1) 0; border: 0; color: var(--rp33-label); font: var(--lt-type-subhead); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .pch-stat-row + .pch-stat-row { border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .pch-stat-row span:last-child { color: var(--rp33-label); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .pch-list-title { margin: 0 0 var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .pch-target { margin-block-end: var(--rp33-sp-2); color: var(--rp36-accent-text); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：今日清单 ===== */
+    #phone-panel[data-rp-ios="3"] .pch-item { flex-wrap: wrap; align-items: center; gap: var(--rp33-sp-2); min-block-size: 52px; padding: var(--rp33-sp-2) 0; border-radius: 0; background: transparent; border-block-start: 0.5px solid var(--rp33-sep); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .pch-item-main { flex: 1 1 auto; min-inline-size: 0; align-items: center; gap: var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-body); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pch-item-check { inline-size: 22px; block-size: 22px; accent-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] .pch-item-at { color: var(--rp36-accent-text); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .pch-item-label { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .pch-item.is-done .pch-item-label { color: var(--rp33-label-3); text-decoration: line-through; }
+    #phone-panel[data-rp-ios="3"] .pch-item-kind { padding: 1px var(--rp33-sp-2); border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label-2); font: 600 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .pch-item-remark { flex: 1 1 100%; min-block-size: 36px; }
+
+    /* ===== 组件：表单 / 按钮 ===== */
+    #phone-panel[data-rp-ios="3"] .pch-draft { flex-wrap: wrap; align-items: center; gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .pch-input { min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .pch-draft-at { font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .pch-input::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .pch-input:focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .pch-actions { flex-wrap: wrap; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .pch-btn { min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pch-btn-primary { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .pch-mini { position: relative; min-block-size: 28px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pch-mini::after { content: ""; position: absolute; inset: -8px -2px; }
+    #phone-panel[data-rp-ios="3"] :is(.pch-item-del, .pch-draft-del, .pch-hist-del) { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .pch-mini-armed { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] :is(.pch-btn, .pch-mini):active { filter: brightness(0.92); scale: 0.97; }
+
+    /* ===== 屏：历史 ===== */
+    #phone-panel[data-rp-ios="3"] .pch-list { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .pch-hist { padding: var(--rp33-sp-3) var(--rp33-sp-4); border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .pch-hist-head { align-items: center; gap: var(--rp33-sp-2); min-block-size: 36px; cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pch-hist-date { color: var(--rp33-label); font: var(--lt-type-headline); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .pch-hist-meta { flex: 1 1 auto; color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .pch-hist-item { padding: var(--rp33-sp-1) 0 var(--rp33-sp-1) var(--rp33-sp-3); border: 0; border-block-start: 0.5px solid var(--rp33-sep); color: var(--rp33-label); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pch-hist-item em { color: var(--rp33-label-2); font-style: normal; }
+
+    /* ===== 屏：设置 + 提示 + 空 ===== */
+    #phone-panel[data-rp-ios="3"] :is(.pch-toggle, .pch-field) { align-items: center; justify-content: space-between; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-1) 0; border-block-start: 0.5px solid var(--rp33-sep); color: var(--rp33-label); font: var(--lt-type-body); accent-color: var(--lt-sys-green); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .pch-field input[type="number"] { inline-size: 88px; min-block-size: 36px; padding: 0 var(--rp33-sp-2); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); font: var(--lt-type-body); font-variant-numeric: tabular-nums; text-align: end; }
+    #phone-panel[data-rp-ios="3"] .pch-hint { margin-block-start: var(--rp33-sp-2); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pch-empty { padding: var(--rp33-sp-2) 0; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+}

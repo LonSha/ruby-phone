@@ -1,0 +1,63 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：塔罗（tarot）—— 家族：角色扮演专属 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/tarot/tarot-view.js（render 模板 + <style>、_bind、_renderResult 背面 / 翻开两态、_renderHistory）；tarot-data.js 是牌库，tarot-app.js 无 DOM。
+   屏幕与状态：页头 · 问题输入 · 牌阵选择（选中 .active）· 洗牌抽牌主按钮 · 结果（牌阵标题 + 3 列牌格：背面 .tarot-card-back / 翻开 .tarot-card-revealed）·
+               求 AI 解读（抽完才显示，display 由 JS 切）· 历史占卜（有 / 空）。
+   设计：占卜台本身是「夜空」场景，所以用 v3.4 的深色岛（系统浅色下也保持深色）：表面 / 文字取 --rp34-dk-*，强调色系统靛蓝；
+         旧版三段紫色渐变底、紫色描边、渐变按钮全部换成：纯黑底 + #1c1c1e 卡面、靛蓝实底主按钮、靛蓝 / 紫两个系统色叠的牌背（只在牌背上保留一点「质感」）。
+         翻开的牌顶部 3px 色条是数据（每张牌自己的颜色，内联），保留。字号旧 10px 一律抬到 12。
+   历史行里「问：…」那一行是源码写的内联 style（color:#94a3b8），v3.4 内联映射把它翻成了蓝色令牌；
+         这里按结构（.tarot-history-item 里唯一的 div）改回次级文字色——是精确的单元素选择，不是按标签兜底。
+   规矩：零 !important、零写死颜色、零字符图标；类名 / ID / 结构不改；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 2 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    /* ===== 深色岛 + 强调色（占卜台是夜空场景） ===== */
+    #phone-panel[data-rp-ios="3"] .tarot-root { --rp33-accent: var(--lt-sys-indigo); --rp36-accent-text: var(--rp36-text-indigo); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-indigo) 22%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-indigo) 50%, transparent);
+        --rp33-label: var(--rp34-dk-label); --rp33-label-2: var(--rp34-dk-label-2); --rp33-label-3: var(--rp34-dk-label-3); --rp33-surface: var(--rp34-dk-surface); --rp33-surface-2: var(--rp34-dk-surface-2); --rp33-fill: var(--rp34-dk-fill); --rp33-fill-2: var(--rp34-dk-fill-2); --rp33-field-bg: var(--rp34-dk-fill); --rp33-sep: var(--rp34-dk-sep); --rp33-card-shadow: var(--rp34-dk-shadow); --lt-sys-label: var(--rp34-dk-label); --lt-sys-label-2: var(--rp34-dk-label-2); --lt-sys-separator: var(--rp34-dk-sep); color-scheme: dark; }
+
+    /* ===== 屏：占卜台 · 页面底与页头 ===== */
+    #phone-panel[data-rp-ios="3"] .tarot-root { min-block-size: 100%; box-sizing: border-box; padding: var(--rp33-sp-2) var(--rp33-margin) var(--rp33-sp-8); background: var(--rp34-dk-bg); background-image: none; color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .tarot-header { align-items: baseline; margin-block-end: var(--rp33-sp-3); padding: var(--rp33-sp-2) var(--rp33-sp-1) 0; }
+    #phone-panel[data-rp-ios="3"] .tarot-header h2 { margin: 0; font: var(--lt-type-largetitle); letter-spacing: 0; color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .tarot-sub { color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：问题输入 + 牌阵选择 + 抽牌 ===== */
+    #phone-panel[data-rp-ios="3"] .tarot-question { box-sizing: border-box; min-block-size: 72px; margin-block-end: var(--rp33-sp-3); padding: var(--rp33-sp-3) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; }
+    #phone-panel[data-rp-ios="3"] .tarot-question::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .tarot-question:focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .tarot-spreads { gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .tarot-spread-btn { min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label); font: 500 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .tarot-spread-btn.active { background: var(--rp33-accent-soft); color: var(--rp33-label); font-weight: 600; box-shadow: inset 0 0 0 1px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .tarot-draw-btn { min-block-size: var(--rp33-btn-h); margin-block-end: var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-accent); background-image: none; color: var(--rp33-on-accent); font: 600 var(--lt-ios-body-size) / 1 var(--lt-font-ios); letter-spacing: 0.2em; cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] :is(.tarot-draw-btn, .tarot-spread-btn, .tarot-ask):active { filter: brightness(0.9); scale: 0.98; }
+
+    /* ===== 屏：抽牌结果（背面 / 翻开） ===== */
+    #phone-panel[data-rp-ios="3"] .tarot-result { margin-block-end: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .tarot-spread-title { margin-block-end: var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .tarot-grid { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .tarot-card { padding: var(--rp33-sp-2); border: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .tarot-pos { margin-block-end: var(--rp33-sp-1); color: var(--rp33-label-2); font: 600 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios); }
+    /* 牌背：系统靛蓝 -> 紫的斜向叠色（只有这里保留一点「牌」的质感），中间的符号由运行时桥换成 SVG */
+    #phone-panel[data-rp-ios="3"] .tarot-card-back { block-size: 88px; border-radius: var(--rp33-field-radius); background: linear-gradient(135deg, var(--lt-sys-indigo), var(--lt-sys-purple)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rp34-dk-label) 18%, transparent); color: var(--rp34-dk-label); font-size: 22px; cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .tarot-card-revealed { padding-block-start: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .tarot-card-name { color: var(--rp33-label); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .tarot-card-up { margin-block-start: 2px; color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .tarot-card-rev { color: var(--rp36-text-red); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .tarot-ask { min-block-size: var(--rp33-hit); margin-block-end: var(--rp33-sp-4); border: 0; border-radius: 999px; background: color-mix(in srgb, var(--lt-sys-orange) 18%, transparent); color: var(--rp36-text-orange); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+
+    /* ===== 屏：历史占卜 ===== */
+    #phone-panel[data-rp-ios="3"] .tarot-history-title { margin: var(--rp33-sp-2) var(--rp33-sp-1); color: var(--rp33-label-2); font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .tarot-history { gap: 2px; border-radius: var(--rp33-feed-radius); overflow: clip; }
+    #phone-panel[data-rp-ios="3"] .tarot-history-item { padding: var(--rp33-sp-3) var(--rp33-sp-4); border-radius: 0; background: var(--rp33-surface); color: var(--rp33-label-2); font: var(--lt-type-footnote); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .tarot-history-item b { color: var(--rp33-label); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .tarot-history-item > div { color: var(--rp33-label-2); }
+
+    /* ===== 状态：空（还没有占卜记录） ===== */
+    #phone-panel[data-rp-ios="3"] .tarot-empty { padding: var(--rp33-sp-6) var(--rp33-sp-4); color: var(--rp33-label-2); font: var(--lt-type-subhead); text-align: center; }
+}

@@ -1,0 +1,98 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：会话台（comms）—— 家族：通讯 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器产出的 remap / roles 两个子层（那一版是逐条翻译旧规则 + 按类名猜角色）。
+         读过的源码：apps/comms/comms-view.js（唯一的视图，single 形态，无页签）、comms-app.js（只取数，不出 DOM）、comms.css。
+         画面只有一屏，按「从上到下」分节：页头 / 新开一段 / 待处理一行 / 待回应清单（有 / 无）/ 交流线卡片（有 / 空）。
+   设计：原生是深青底 + 浅青字的「终端」配色；v3.5 改成跟随系统浅深色的 iOS 分组页，青色只当强调色。
+         三种关注状态（已回 / 未读 / 未回）与接触点种类（消息 / 通话 / 漏接 / 短信）用系统绿 / 红 / 橙的 14% 浅底 + 同色字，
+         是「信号」而不是装饰：同一屏最多出现这三种颜色，其余全是中性灰与发丝线。
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构 / data-* 一个不改。层：只写 rp.skins.curated。
+   audit-allow: cm-attn-已回 cm-attn-未读 cm-attn-未回 —— comms-view.js 用 'cm-attn-' + ATTN_LABEL[...] 拼类名，后缀是中文；
+                上游旧样式写的 .cm-attn-settled / -unread / -unanswered 因此从来没命中过（v3.5 两种写法都盖，见「关注状态徽标」）
+   旧样式（apps/comms/comms.css 与 phone.css 里同一份）的写死颜色、10px 以下字号全部在下面逐条盖住；
+   @media (max-width: 340px) 那一组（9~10px 字号）同样被下面的规则盖住，手机宽度 440 下本来也不触发。
+   ============================================================ 
+ * v3.6：小字强调色 10 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    /* 作用域：强调色（系统青）。只声明变量，弹层不在 .cm-root 之外，所以挂在根上即可。 */
+    /* 渲染自查（v3.5）：白字在本强调色上只有 2.57:1（浅）/ 1.99:1（深），不到 4.5:1；填充按钮 / 选中胶囊的文字改用带一点强调色相的近黑墨（7.23:1 / 9.13:1）。 */
+    #phone-panel[data-rp-ios="3"] .cm-root { --rp33-accent: var(--lt-sys-teal); --rp36-accent-text: var(--rp36-text-teal); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-teal) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-teal) 40%, transparent); --rp33-on-accent: color-mix(in srgb, var(--lt-sys-black) 88%, var(--rp33-accent)); }
+
+    /* ===== 屏：会话台 · 页面底与页头 ===== */
+    #phone-panel[data-rp-ios="3"] .cm-root { gap: var(--rp33-sp-4); padding: var(--rp33-sp-2) var(--rp33-margin) var(--rp33-sp-8); min-block-size: 100%; box-sizing: border-box; background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+    #phone-panel[data-rp-ios="3"] .cm-head { gap: var(--rp33-sp-1); padding: var(--rp33-sp-2) var(--rp33-sp-1) 0; }
+    #phone-panel[data-rp-ios="3"] .cm-title { font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .cm-sub { font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+
+    /* ===== 屏：会话台 · 新开一段（输入胶囊 + 主按钮） ===== */
+    #phone-panel[data-rp-ios="3"] .cm-new { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .cm-new-name { min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-surface); box-shadow: var(--rp33-rim); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; }
+    #phone-panel[data-rp-ios="3"] .cm-new-name::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .cm-new-name:focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .cm-new-btn { min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-5); border: 0; border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; transition: scale var(--lt-ios-dur-fast) var(--lt-ios-ease), filter var(--lt-ios-dur-fast) var(--lt-ios-ease); }
+    #phone-panel[data-rp-ios="3"] .cm-new-btn:active { background: var(--rp33-accent); filter: brightness(0.92); scale: 0.97; }
+
+    /* ===== 状态：待处理一行（有待处理 = 橙色信号；没有 = 次级灰） ===== */
+    #phone-panel[data-rp-ios="3"] .cm-pending { padding: 0 var(--rp33-sp-1); font: 600 var(--lt-ios-footnote-size) / 1.35 var(--lt-font-ios); color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .cm-pending-none { font-weight: 400; color: var(--rp33-label-2); }
+
+    /* ===== 屏：待回应清单（inset grouped：标题 + 说明 + 按人分组的行） ===== */
+    #phone-panel[data-rp-ios="3"] .cm-reply { gap: var(--rp33-sp-3); padding: var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .cm-reply-title { font: var(--lt-type-headline); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .cm-reply-sub { margin-block-start: calc(var(--rp33-sp-2) * -1); font: var(--lt-type-footnote); color: var(--rp33-label-2); }
+    #phone-panel[data-rp-ios="3"] .cm-reply-group { gap: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .cm-reply-who { padding-block-start: var(--rp33-sp-1); font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); color: var(--rp33-label-2); text-transform: none; }
+    #phone-panel[data-rp-ios="3"] .cm-reply-list { gap: 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface-2); overflow: clip; }
+    /* 行：种类徽标 + 标题 + 三个动作；宽度不够时动作换到第二行（flex-wrap），不挤压标题 */
+    #phone-panel[data-rp-ios="3"] .cm-reply-item { flex-wrap: wrap; gap: var(--rp33-sp-2); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-2) var(--rp33-sp-3); border: 0; border-radius: 0; background: transparent; box-shadow: none; color: var(--rp33-label); font: var(--lt-type-subhead); position: relative; }
+    #phone-panel[data-rp-ios="3"] .cm-reply-item + .cm-reply-item::before { content: ""; position: absolute; inset-block-start: 0; inset-inline: var(--rp33-sp-3) 0; border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .cm-reply-btns { gap: var(--rp33-sp-1); margin-inline-start: auto; }
+    /* 清单为空 */
+    #phone-panel[data-rp-ios="3"] .cm-reply-none { padding: var(--rp33-sp-4); }
+    #phone-panel[data-rp-ios="3"] .cm-reply-none .cm-empty { padding: 0; text-align: start; }
+
+    /* ===== 组件：接触点种类徽标（消息 / 短信 = 中性；通话 = 绿；漏接 = 红） ===== */
+    #phone-panel[data-rp-ios="3"] .cm-pt-kind { padding: 2px var(--rp33-sp-2); border-radius: 6px; background: var(--rp33-fill); color: var(--rp33-label-2); font: 600 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .cm-k-call { background: color-mix(in srgb, var(--lt-sys-green) 14%, transparent); color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"] .cm-k-missed { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .cm-pt-label { color: var(--rp33-label); font: var(--lt-type-subhead); }
+
+    /* ===== 组件：行内小胶囊按钮（回到原处 / 已回应 / 稍后 / 无需回应 / 看过了 / 回过了） ===== */
+    /* 视觉 28pt 高的浅底胶囊，透明 ::after 把命中区扩到 44pt；「回到原处」是导航，用强调色字、无底 */
+    #phone-panel[data-rp-ios="3"] :is(.cm-reply-btn, .cm-pt-btn, .cm-pt-go) { position: relative; min-block-size: 28px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label); font: 500 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] :is(.cm-reply-btn, .cm-pt-btn, .cm-pt-go)::after { content: ""; position: absolute; inset: -8px -2px; }
+    #phone-panel[data-rp-ios="3"] .cm-pt-go { background: var(--rp33-accent-soft); color: var(--rp36-accent-text); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] :is(.cm-reply-btn, .cm-pt-btn, .cm-pt-go):active { filter: brightness(0.9); scale: 0.97; }
+    #phone-panel[data-rp-ios="3"] :is(.cm-reply-btn, .cm-pt-btn, .cm-pt-go):focus-visible { outline: 2px solid var(--rp33-accent-ring); outline-offset: 2px; }
+
+    /* ===== 屏：交流线卡片列表 ===== */
+    #phone-panel[data-rp-ios="3"] .cm-list { gap: var(--rp33-sp-3); }
+    /* 卡片：旧版的 3px 左色条去掉，状态改由右上角徽标表达 */
+    #phone-panel[data-rp-ios="3"] .cm-card { gap: var(--rp33-sp-2); padding: var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .cm-card-head { gap: var(--rp33-sp-2); min-block-size: 24px; }
+    #phone-panel[data-rp-ios="3"] .cm-name { font: var(--lt-type-headline); letter-spacing: var(--lt-ios-headline-track); color: var(--rp33-label); }
+    /* 关注状态徽标：已回 = 绿、未读 = 红、未回 = 橙（类名后缀是中文，源码里就是 cm-attn-已回 这样拼出来的） */
+    #phone-panel[data-rp-ios="3"] .cm-attn { padding: 3px var(--rp33-sp-2); border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label-2); font: 600 var(--lt-ios-caption1-size) / 1.2 var(--lt-font-ios); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] :is(.cm-attn-settled, .cm-attn-已回) { background: color-mix(in srgb, var(--lt-sys-green) 14%, transparent); color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"] :is(.cm-attn-unread, .cm-attn-未读) { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] :is(.cm-attn-unanswered, .cm-attn-未回) { background: color-mix(in srgb, var(--lt-sys-orange) 16%, transparent); color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .cm-counts { font: var(--lt-type-footnote); color: var(--rp33-label-2); font-variant-numeric: tabular-nums; }
+    /* 卡片里的两种提示：悬着的漏接（红）、读不出的接触点（橙）—— 浅底条，字号 footnote */
+    #phone-panel[data-rp-ios="3"] :is(.cm-dangling, .cm-wander) { padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .cm-dangling { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .cm-wander { background: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); color: var(--rp36-text-orange); }
+    /* 最近 4 个接触点：卡片里的二级分组 */
+    #phone-panel[data-rp-ios="3"] .cm-points { gap: 0; padding: var(--rp33-sp-1) 0; border-radius: var(--rp33-feed-radius); background: var(--rp33-surface-2); }
+    #phone-panel[data-rp-ios="3"] .cm-pt { gap: var(--rp33-sp-2); min-block-size: 40px; padding: 0 var(--rp33-sp-3); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .cm-acts { padding-block-start: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .cm-act { min-block-size: var(--rp33-btn-h-sm); padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; position: relative; }
+    #phone-panel[data-rp-ios="3"] .cm-act::after { content: ""; position: absolute; inset: -5px 0; }
+    #phone-panel[data-rp-ios="3"] .cm-act:active { filter: brightness(0.9); scale: 0.97; }
+
+    /* ===== 状态：空（还没有交流记录） ===== */
+    #phone-panel[data-rp-ios="3"] .cm-empty { padding: var(--rp33-sp-6) var(--rp33-sp-4); color: var(--rp33-label-2); font: var(--lt-type-subhead); text-align: center; }
+}

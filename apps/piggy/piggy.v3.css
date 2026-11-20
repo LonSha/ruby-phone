@@ -1,0 +1,89 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：存钱罐（piggy）—— 家族：财务 / 购物 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/piggy/piggy-view.js（_buildHTML：状态条、余额、开户 / 存取表单、统计、流水、银行卡、加卡表单、设置）；piggy-app.js、piggy-data.js 无 DOM。
+   屏幕与状态：页头 · 状态条（ok / warn / err）· 余额卡（40pt 大数字 + 单位）· 开户（.pg-open）· 存取（存入 / 取出单选、金额、备注、主按钮；.pg-hidden 由 App 切）·
+               统计 · 流水（备注、元信息、金额 .is-in / .is-out、删除二次确认 .pg-mini-armed）· 银行卡（卡面色是用户选的 cardColor 内联：卡行、卡号、中段、副注、删除）·
+               加卡表单 · 设置（开关 / 数字）· 提示 · 空态。
+   设计：iOS「钱包 · 储蓄」：跟随系统，强调色系统橙；余额 = 48pt 细圆体等宽；银行卡保留用户卡面色（内容），卡上文字用媒体之上的白字 token，
+         其余都是 inset grouped 行。
+   audit-allow: pg-face-ok pg-face-warn pg-face-err —— 'pg-face-' + meta.tone 拼出来的
+   keep-legacy: .pg-card —— 卡面底色是用户给每张卡选的 cardColor（内联 background-color），描边换掉，底色保留
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构不改（.pg-hidden 的显隐由旧样式与 App 管，皮肤不碰）；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 5 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    /* 渲染自查（v3.5）：白字在本强调色上只有 2.2:1（浅）/ 2.06:1（深），不到 4.5:1；填充按钮 / 选中胶囊的文字改用带一点强调色相的近黑墨（8.36:1 / 8.87:1）。 */
+    #phone-panel[data-rp-ios="3"] .pg-root { --rp33-accent: var(--lt-sys-orange); --rp36-accent-text: var(--rp36-text-orange); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-orange) 40%, transparent); --rp33-on-accent: color-mix(in srgb, var(--lt-sys-black) 88%, var(--rp33-accent)); }
+
+    /* ===== 屏：外壳（页面底 / 页头 / 状态条） ===== */
+    #phone-panel[data-rp-ios="3"] .pg-root { gap: var(--rp33-sp-3); min-block-size: 100%; box-sizing: border-box; padding: var(--rp33-sp-2) var(--rp33-margin) var(--rp33-sp-8); background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .pg-header { padding: var(--rp33-sp-2) var(--rp33-sp-1) 0; }
+    #phone-panel[data-rp-ios="3"] .pg-header h2 { margin: 0; font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .pg-face { align-items: center; gap: var(--rp33-sp-2); padding: var(--rp33-sp-3) var(--rp33-sp-4); border-radius: var(--rp33-feed-radius); background: var(--rp33-surface); color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .pg-face-ok { background: color-mix(in srgb, var(--lt-sys-green) 14%, transparent); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .pg-face-warn { background: var(--rp33-accent-soft); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .pg-face-err { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .pg-face-icon { font-size: 17px; line-height: 1; }
+    #phone-panel[data-rp-ios="3"] .pg-face-label { font-weight: 600; }
+
+    /* ===== 屏：余额卡 ===== */
+    #phone-panel[data-rp-ios="3"] .pg-balance { padding: var(--rp33-sp-5) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .pg-balance-num { color: var(--rp33-label); font: 300 48px / 1.05 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; letter-spacing: -0.5px; }
+    #phone-panel[data-rp-ios="3"] .pg-balance-unit { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+
+    /* ===== 组件：分组卡（开户 / 存取 / 统计 / 加卡 / 设置） ===== */
+    #phone-panel[data-rp-ios="3"] :is(.pg-stats, .pg-create, .pg-settings, .pg-card-form) { padding: var(--rp33-sp-3) var(--rp33-sp-4) var(--rp33-sp-4); border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .pg-open { gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(.pg-create h3, .pg-settings h3, .pg-list-title) { margin: 0 0 var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .pg-list-title { margin: var(--rp33-sp-2) var(--rp33-sp-1) var(--rp33-sp-1); color: var(--rp33-label-2); font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .pg-stat-row { justify-content: space-between; align-items: center; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-1) 0; border: 0; color: var(--rp33-label); font: var(--lt-type-subhead); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .pg-stat-row + .pg-stat-row { border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .pg-stat-row span:last-child { color: var(--rp33-label); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+
+    /* ===== 屏：存取表单 ===== */
+    #phone-panel[data-rp-ios="3"] .pg-kind { gap: var(--rp33-sp-4); margin-block-end: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .pg-radio { align-items: center; gap: var(--rp33-sp-2); min-block-size: var(--rp33-hit); color: var(--rp33-label); font: var(--lt-type-body); accent-color: var(--rp33-accent); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pg-input { min-block-size: var(--rp33-hit); margin-block-end: var(--rp33-sp-2); padding: 0 var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .pg-input::placeholder { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .pg-input:focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+
+    /* ===== 组件：按钮 ===== */
+    #phone-panel[data-rp-ios="3"] .pg-btn { min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pg-btn-primary { background: var(--rp33-accent); color: var(--rp33-on-accent); }
+    #phone-panel[data-rp-ios="3"] .pg-mini { position: relative; min-block-size: 28px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pg-mini::after { content: ""; position: absolute; inset: -8px -2px; }
+    #phone-panel[data-rp-ios="3"] .pg-mini-armed { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] :is(.pg-btn, .pg-mini):active { filter: brightness(0.92); scale: 0.97; }
+
+    /* ===== 屏：流水 ===== */
+    #phone-panel[data-rp-ios="3"] .pg-list { gap: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); overflow: clip; }
+    #phone-panel[data-rp-ios="3"] .pg-tx { align-items: center; gap: var(--rp33-sp-3); min-block-size: 56px; padding: var(--rp33-sp-2) var(--rp33-sp-4); border-radius: 0; background: transparent; box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .pg-tx + .pg-tx { border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .pg-tx-info { flex: 1 1 auto; min-inline-size: 0; }
+    #phone-panel[data-rp-ios="3"] .pg-tx-remark { color: var(--rp33-label); font: var(--lt-type-body); }
+    #phone-panel[data-rp-ios="3"] .pg-tx-meta { color: var(--rp33-label-2); font: var(--lt-type-footnote); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .pg-tx-amt { color: var(--rp33-label); font: 600 var(--lt-ios-body-size) / 1 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .pg-tx-amt.is-out { color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .pg-tx-amt.is-in { color: var(--rp36-text-green); }
+
+    /* ===== 屏：银行卡（卡面色 = 用户选的 cardColor，保留） ===== */
+    #phone-panel[data-rp-ios="3"] .pg-cards { gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .pg-card { min-block-size: 132px; gap: var(--rp33-sp-2); padding: var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); box-shadow: var(--rp33-shadow-2), var(--rp34-media-rim); color: var(--rp34-media-fg); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .pg-card-top { justify-content: space-between; align-items: baseline; }
+    #phone-panel[data-rp-ios="3"] .pg-card-bank { color: var(--rp34-media-fg); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .pg-card-no { color: var(--rp34-media-fg-2); font: 500 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios-mono); letter-spacing: 0.08em; }
+    #phone-panel[data-rp-ios="3"] .pg-card-mid { color: var(--rp34-media-fg); font: 600 var(--lt-ios-title2-size) / 1.2 var(--lt-font-ios-rounded); font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .pg-card-sub { color: var(--rp34-media-fg-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .pg-card .pg-mini { background: var(--rp34-media-fill); color: var(--rp34-media-fg); }
+
+    /* ===== 屏：设置 + 提示 + 空 ===== */
+    #phone-panel[data-rp-ios="3"] :is(.pg-toggle, .pg-field) { align-items: center; justify-content: space-between; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-1) 0; border-block-start: 0.5px solid var(--rp33-sep); color: var(--rp33-label); font: var(--lt-type-body); accent-color: var(--lt-sys-green); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .pg-field input[type="number"] { inline-size: 88px; min-block-size: 36px; padding: 0 var(--rp33-sp-2); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); font: var(--lt-type-body); font-variant-numeric: tabular-nums; text-align: end; }
+    #phone-panel[data-rp-ios="3"] .pg-hint { margin-block-start: var(--rp33-sp-2); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pg-empty { padding: var(--rp33-sp-3) var(--rp33-sp-4); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+}

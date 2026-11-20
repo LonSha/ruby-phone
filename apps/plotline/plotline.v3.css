@@ -1,0 +1,119 @@
+/* ============================================================
+   RubyPhone v3.5 · App 皮肤：剧情线（plotline）—— 家族：角色扮演专属 · 手写
+   ------------------------------------------------------------
+   只在 #phone-panel[data-rp-ios="3"] 下生效（默认关）；由 phone/ui/rp-skin-runtime.js 按需加载。
+   v3.5：整份手写，替换 v3.3 生成器的 remap / roles 子层。
+   读过的源码：apps/plotline/plotline-view.js（_draw 与 _reasonCard / _sourceCard / _stageCard / _promiseCard / _arcCard / _knowledgeCard / _parallelCard /
+               _secretCard / _echoCard / _goalCard（_goalCardInner / _paintGoal）/ _boardCard（_nodeLine / _edgeLine / _tracePathHtml）/ _settingsCard）。
+   屏幕与状态：导航（返回 / 刷新圆钮）· 原因卡（.pn-reason-<tone>）· 来源卡 · 当前幕（标题 / 目标 / 节奏 + 节点链：序号圆 / 标题 / 目标）·
+               伏笔 / 弧光 / 并行 / 秘密 / 回响（条目：.pn-item-open 未回收 / -active 进行中 / -done 已回收：谁 / 正文 / 线索 / 元信息）·
+               知情表（人 / 行 / 标签 .ok / .blind / .other）· 目标卡（输入 + 按钮、目标状态 / 预演、条目行、动作小钮、自检警告、备注）·
+               剧情板（分组：标题 / 节点：类型 / 收束 / 文本 / 动作按钮 :disabled；连线：起点到终点 + 标签；推演 .pn-cb-spec；追溯路径）· 设置（文字开关 / 滑杆）· 空态。
+   设计：原生深色 + 古铜金。v3.5 跟随系统 inset grouped，强调色系统橙（古铜语义）；条目状态改成右上角状态色的浅底（橙 / 绿 / 降不透明度），
+         3px 左色条去掉；知情标签三色（绿 = 知道、红 = 被蒙、灰 = 其他）。
+   audit-allow: pn-reason-ok pn-reason-warn pn-reason-off pn-src-ok pn-src-warn pn-src-off pn-item-open pn-item-active pn-item-done —— tone / 状态拼出来的
+   规矩：零 !important、零写死颜色、零字符图标；类名 / 结构不改（.pn-goal-note:empty 的隐藏保留在旧样式里）；只写 rp.skins.curated。
+   ============================================================ 
+ * v3.6：小字强调色 11 处改用文字安全色（--rp36-*，浅 / 深两档对实际底色 ≥ 4.5:1，见 verification/contrast-audit-v36.md）；填充 / 图标 / 大字 0 处保留原强调色。
+*/
+@layer rp.skins.remap, rp.skins.roles, rp.skins.inline, rp.skins.curated;
+@layer rp.skins.curated {
+    /* 渲染自查（v3.5）：白字在本强调色上只有 2.2:1（浅）/ 2.06:1（深），不到 4.5:1；填充按钮 / 选中胶囊的文字改用带一点强调色相的近黑墨（8.36:1 / 8.87:1）。 */
+    #phone-panel[data-rp-ios="3"] .pn-root { --rp33-accent: var(--lt-sys-orange); --rp36-accent-text: var(--rp36-text-orange); --rp33-accent-soft: color-mix(in srgb, var(--lt-sys-orange) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--lt-sys-orange) 40%, transparent); --rp33-on-accent: color-mix(in srgb, var(--lt-sys-black) 88%, var(--rp33-accent)); }
+
+    /* ===== 屏：外壳（页面底 / 导航 / 卡 / 原因） ===== */
+    #phone-panel[data-rp-ios="3"] .pn-root { background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    #phone-panel[data-rp-ios="3"] .pn-header { align-items: center; gap: var(--rp33-sp-3); min-block-size: var(--rp3-nav-h); padding: var(--rp33-sp-2) var(--rp33-margin); }
+    #phone-panel[data-rp-ios="3"] .pn-header h2 { margin: 0; flex: 1 1 auto; font: var(--lt-type-title2); letter-spacing: var(--lt-ios-title2-track); color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] .pn-nav { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); flex: none; padding: 0; border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur); color: var(--rp33-label); font-size: 17px; cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pn-body { gap: var(--rp33-sp-4); padding: 0 var(--rp33-margin) var(--rp33-sp-8); }
+    #phone-panel[data-rp-ios="3"] .pn-card { padding: var(--rp33-sp-3) var(--rp33-sp-4) var(--rp33-sp-4); border: 0; border-radius: var(--rp33-card-radius); background: var(--rp33-surface); box-shadow: var(--rp33-card-shadow); }
+    #phone-panel[data-rp-ios="3"] .pn-card-title { align-items: baseline; gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] .pn-count { color: var(--rp33-label-2); font: var(--lt-type-footnote); font-weight: 400; font-variant-numeric: tabular-nums; }
+    #phone-panel[data-rp-ios="3"] .pn-reason { border: 0; background: var(--rp33-accent-soft); box-shadow: none; }
+    #phone-panel[data-rp-ios="3"] .pn-reason-ok { border: 0; background: var(--rp33-accent-soft); }
+    #phone-panel[data-rp-ios="3"] .pn-reason-warn { border: 0; background: color-mix(in srgb, var(--lt-sys-yellow) 16%, transparent); }
+    #phone-panel[data-rp-ios="3"] .pn-reason-off { border: 0; background: var(--rp33-fill); }
+    #phone-panel[data-rp-ios="3"] .pn-reason-head { color: var(--rp33-label); font: var(--lt-type-headline); }
+    #phone-panel[data-rp-ios="3"] :is(.pn-reason-hint, .pn-sub, .pn-hint) { color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pn-src-line { padding: var(--rp33-sp-1) 0; color: var(--rp33-label); font: var(--lt-type-subhead); }
+
+    /* ===== 屏：当前幕 + 节点链 ===== */
+    #phone-panel[data-rp-ios="3"] .pn-stage-title { color: var(--rp33-label); font: var(--lt-type-title3); }
+    #phone-panel[data-rp-ios="3"] .pn-stage-goal { margin-block-start: var(--rp33-sp-1); color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .pn-stage-tempo { color: var(--rp33-label-2); font: var(--lt-type-caption1); }
+    #phone-panel[data-rp-ios="3"] .pn-nodes { gap: var(--rp33-sp-2); margin-block-start: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .pn-node { align-items: flex-start; gap: var(--rp33-sp-3); }
+    #phone-panel[data-rp-ios="3"] .pn-node-n { inline-size: 24px; block-size: 24px; flex: none; align-items: center; justify-content: center; border: 0; border-radius: 999px; background: var(--rp33-accent-soft); color: var(--rp36-accent-text); font: 700 var(--lt-ios-caption1-size) / 1 var(--lt-font-ios-rounded); }
+    #phone-panel[data-rp-ios="3"] .pn-node-title { color: var(--rp33-label); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .pn-node-goal { color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：伏笔 / 弧光 / 并行 / 秘密 / 回响 · 条目 ===== */
+    #phone-panel[data-rp-ios="3"] .pn-item { padding: var(--rp33-sp-2) 0; border: 0; border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .pn-item:first-of-type { border-block-start: 0; }
+    #phone-panel[data-rp-ios="3"] .pn-item-open { border: 0; border-block-start: 0.5px solid var(--rp33-sep); padding-inline: var(--rp33-sp-2); border-radius: var(--rp33-field-radius); background: color-mix(in srgb, var(--lt-sys-orange) 8%, transparent); }
+    #phone-panel[data-rp-ios="3"] .pn-item-active { border: 0; border-block-start: 0.5px solid var(--rp33-sep); padding-inline: var(--rp33-sp-2); border-radius: var(--rp33-field-radius); background: color-mix(in srgb, var(--lt-sys-green) 8%, transparent); }
+    #phone-panel[data-rp-ios="3"] .pn-item-done { opacity: 0.55; }
+    #phone-panel[data-rp-ios="3"] .pn-item-main { gap: 2px; }
+    #phone-panel[data-rp-ios="3"] .pn-item-who { color: var(--rp36-accent-text); font: 600 var(--lt-ios-footnote-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .pn-item-text { color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .pn-item-clue { color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pn-item-meta { color: var(--rp33-label-3); font: var(--lt-type-caption1); font-variant-numeric: tabular-nums; }
+
+    /* ===== 屏：知情表 ===== */
+    #phone-panel[data-rp-ios="3"] .pn-know { padding: var(--rp33-sp-2) 0; border: 0; border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .pn-know:first-of-type { border-block-start: 0; }
+    #phone-panel[data-rp-ios="3"] .pn-know-name { color: var(--rp33-label); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .pn-know-line { margin-block-start: 2px; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pn-know-tag { padding: 1px var(--rp33-sp-2); border-radius: 999px; font: 600 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .pn-know-tag.ok { background: color-mix(in srgb, var(--lt-sys-green) 14%, transparent); color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"] .pn-know-tag.blind { background: var(--rp33-danger-soft); color: var(--rp36-text-red); }
+    #phone-panel[data-rp-ios="3"] .pn-know-tag.other { background: var(--rp33-fill); color: var(--rp33-label-2); }
+
+    /* ===== 屏：目标卡 ===== */
+    #phone-panel[data-rp-ios="3"] .pn-goal-input { gap: var(--rp33-sp-2); margin-block-end: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .pn-goal-input input { flex: 1 1 auto; min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-3); border: 0; border-radius: var(--rp33-field-radius); background: var(--rp33-field-bg); color: var(--rp33-label); caret-color: var(--rp33-accent); font: var(--lt-type-body); font-family: var(--lt-font-ios); outline: none; }
+    #phone-panel[data-rp-ios="3"] .pn-goal-input input:focus-visible { box-shadow: 0 0 0 3px var(--rp33-accent-ring); }
+    #phone-panel[data-rp-ios="3"] .pn-goal-input button { min-block-size: var(--rp33-hit); padding: 0 var(--rp33-sp-4); border: 0; border-radius: 999px; background: var(--rp33-accent); color: var(--rp33-on-accent); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pn-goal-face { padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: var(--rp33-accent-soft); color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .pn-goal-pv { margin-block-start: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: color-mix(in srgb, var(--lt-sys-yellow) 16%, transparent); color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .pn-goal-rows-title { margin-block: var(--rp33-sp-3) var(--rp33-sp-1); color: var(--rp33-label-2); font: 600 var(--lt-ios-caption1-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .pn-goal-row { padding: var(--rp33-sp-1) 0 var(--rp33-sp-1) var(--rp33-sp-3); border: 0; border-block-start: 0.5px solid var(--rp33-sep); color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .pn-goal-actions { flex-wrap: wrap; gap: var(--rp33-sp-2); margin-block-start: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] .pn-goal-mini { position: relative; min-block-size: 28px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pn-goal-mini::after { content: ""; position: absolute; inset: -8px -2px; }
+    #phone-panel[data-rp-ios="3"] .pn-goal-selfwarn { color: var(--rp36-text-red); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pn-goal-note-text { color: var(--rp36-text-orange); font: var(--lt-type-footnote); }
+
+    /* ===== 屏：剧情板（分组 / 节点 / 连线 / 推演 / 追溯） ===== */
+    #phone-panel[data-rp-ios="3"] .pn-cb-line { color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pn-cb-group { margin-block-start: var(--rp33-sp-3); padding-block-start: var(--rp33-sp-2); border: 0; border-block-start: 0.5px solid var(--rp33-sep); }
+    #phone-panel[data-rp-ios="3"] .pn-cb-group-title { align-items: baseline; gap: var(--rp33-sp-2); color: var(--rp33-label); font: var(--lt-type-subhead); font-weight: 600; }
+    #phone-panel[data-rp-ios="3"] .pn-cb-spec .pn-cb-group-title { color: var(--rp36-accent-text); }
+    #phone-panel[data-rp-ios="3"] .pn-cb-node { padding: var(--rp33-sp-2) 0; }
+    #phone-panel[data-rp-ios="3"] .pn-cb-node-main { align-items: baseline; flex-wrap: wrap; gap: var(--rp33-sp-2); }
+    #phone-panel[data-rp-ios="3"] :is(.pn-cb-kind, .pn-cb-closure, .pn-cb-warn) { padding: 1px var(--rp33-sp-2); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label-2); font: 600 var(--lt-ios-caption2-size) / 1.3 var(--lt-font-ios); }
+    #phone-panel[data-rp-ios="3"] .pn-cb-warn { background: color-mix(in srgb, var(--lt-sys-orange) 16%, transparent); color: var(--rp36-text-orange); }
+    #phone-panel[data-rp-ios="3"] .pn-cb-text { color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .pn-cb-acts { flex-wrap: wrap; gap: var(--rp33-sp-2); margin-block-start: var(--rp33-sp-1); }
+    #phone-panel[data-rp-ios="3"] .pn-cb-btn { position: relative; min-block-size: 28px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp36-accent-text); font: 600 var(--lt-ios-footnote-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pn-cb-btn::after { content: ""; position: absolute; inset: -8px -2px; }
+    #phone-panel[data-rp-ios="3"] .pn-cb-btn[disabled] { color: var(--rp33-label-3); opacity: 1; cursor: default; }
+    #phone-panel[data-rp-ios="3"] .pn-cb-edge { padding: var(--rp33-sp-1) 0; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] :is(.pn-cb-edge-from, .pn-cb-edge-to) { color: var(--rp33-label); }
+    #phone-panel[data-rp-ios="3"] :is(.pn-cb-edge-arrow, .pn-cb-edge-label) { color: var(--rp33-label-3); }
+    #phone-panel[data-rp-ios="3"] .pn-cb-trace { margin-block-start: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-3); border-radius: var(--rp33-field-radius); background: var(--rp33-surface-2); color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+    #phone-panel[data-rp-ios="3"] .pn-cb-trace-path { color: var(--rp33-label); font: var(--lt-type-subhead); }
+    #phone-panel[data-rp-ios="3"] .pn-cb-trace-note { color: var(--rp33-label-3); font: var(--lt-type-caption1); }
+
+    /* ===== 屏：设置 + 空 ===== */
+    #phone-panel[data-rp-ios="3"] .pn-row { align-items: center; justify-content: space-between; gap: var(--rp33-sp-3); min-block-size: var(--rp33-hit); padding: var(--rp33-sp-1) 0; border-block-start: 0.5px solid var(--rp33-sep); box-sizing: border-box; }
+    #phone-panel[data-rp-ios="3"] .pn-card-title + .pn-row { border-block-start: 0; }
+    #phone-panel[data-rp-ios="3"] .pn-label { color: var(--rp33-label); font: var(--lt-type-body); }
+    #phone-panel[data-rp-ios="3"] .pn-switch { position: relative; min-inline-size: 56px; min-block-size: 32px; padding: 0 var(--rp33-sp-3); border: 0; border-radius: 999px; background: var(--rp33-fill); color: var(--rp33-label-2); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .pn-switch::after { content: ""; position: absolute; inset: -6px 0; }
+    #phone-panel[data-rp-ios="3"] .pn-switch.on { background: color-mix(in srgb, var(--lt-sys-green) 18%, transparent); color: var(--rp36-text-green); }
+    #phone-panel[data-rp-ios="3"] .pn-range { accent-color: var(--rp33-accent); }
+    #phone-panel[data-rp-ios="3"] :is(.pn-switch, .pn-goal-mini, .pn-cb-btn, .pn-nav):not([disabled]):active { filter: brightness(0.92); scale: 0.97; }
+    #phone-panel[data-rp-ios="3"] .pn-empty { padding: var(--rp33-sp-2) 0; color: var(--rp33-label-2); font: var(--lt-type-footnote); }
+}
