@@ -58,11 +58,20 @@ export function attachIosIcons(root, opts = {}) {
         note('rp_icons_err', 'LonShaIcons-missing@attach');
         import('../../shared/icons.js').then(() => {
             note('rp_icons_retry', { has: !!globalThis.LonShaIcons });
-            try { root.querySelectorAll('.app-icon[data-app], .dock-app[data-app]').forEach((el) => iconize(el, opts)); } catch (_e) { /* 忽略 */ }
+            try { run(); } catch (_e) { /* 忽略 */ }
         }).catch((e) => note('rp_icons_err', String((e && e.message) || e).slice(0, 200)));
     }
     const SEL = '.app-icon[data-app], .dock-app[data-app]';
-    const run = () => { root.querySelectorAll(SEL).forEach((el) => iconize(el, opts)); };
+    const run = () => {
+        let ok = 0;
+        let tot = 0;
+        root.querySelectorAll(SEL).forEach((el) => {
+            tot += 1;
+            if (iconize(el, opts)) ok += 1;
+        });
+        /* 可读计数：ok=实际被 SVG 接管，tot=选择器命中数。ok<tot 就是下一步要查的对象。 */
+        note('rp_icons_count', { ok: ok, tot: tot, keepCustom: !!opts.keepCustom, at: Date.now() });
+    };
     run();
     let raf = 0;
     const mo = typeof MutationObserver === 'function'
