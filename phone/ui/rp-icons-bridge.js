@@ -31,6 +31,8 @@ function iconize(el, { keepCustom = true } = {}) {
     }
     bg.insertAdjacentHTML('beforeend', art);
     el.dataset[MARK] = '1';
+    /* 原像素素材让位：否则 PNG 与新字形叠在一起，看起来仍是像素风。 */
+    try { bg.querySelectorAll('img').forEach((img) => { img.style.display = 'none'; }); } catch (_e) { /* 忽略 */ }
     return true;
 }
 
@@ -45,8 +47,20 @@ function undo(el) {
  * @param {{ keepCustom?: boolean }} [opts]
  * @returns {() => void} detach
  */
+function note(k, v) {
+    try { globalThis.localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); } catch (_e) { /* 忽略 */ }
+}
+
 export function attachIosIcons(root, opts = {}) {
     if (!root || typeof root.querySelectorAll !== 'function') return () => {};
+    /* 图标模块缺席时主动补一次（此前是静默 return false，屏幕上看不出任何异常）。 */
+    if (!globalThis.LonShaIcons) {
+        note('rp_icons_err', 'LonShaIcons-missing@attach');
+        import('../../shared/icons.js').then(() => {
+            note('rp_icons_retry', { has: !!globalThis.LonShaIcons });
+            try { root.querySelectorAll('.app-icon[data-app], .dock-app[data-app]').forEach((el) => iconize(el, opts)); } catch (_e) { /* 忽略 */ }
+        }).catch((e) => note('rp_icons_err', String((e && e.message) || e).slice(0, 200)));
+    }
     const SEL = '.app-icon[data-app], .dock-app[data-app]';
     const run = () => { root.querySelectorAll(SEL).forEach((el) => iconize(el, opts)); };
     run();

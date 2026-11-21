@@ -152,7 +152,10 @@ export function createThemeController({ storage, getRoots, getWallpaper, doc = (
             if (my !== iconBridgeToken || !isIosV3()) return;
             const offs = roots().map((el) => m.attachIosIcons(el));
             iconBridge = () => offs.forEach((f) => f());
-        }).catch(() => { /* 非致命：保留原图标 */ });
+        }).catch((e) => {
+            /* 非致命，但**不许静默**：真机排查时唯一线索就是这里。 */
+            try { globalThis.localStorage.setItem('rp_icons_err', String((e && e.message) || e).slice(0, 200)); } catch (_e) { /* 忽略 */ }
+        });
     }
     /* ---- v3.3：App 皮肤运行时（动态加载，默认不加载；关掉 v3 时完整撤销） ---- */
     let skinRuntimes = null;        // [{ ensure, detach, collect }]
@@ -229,6 +232,14 @@ export function createThemeController({ storage, getRoots, getWallpaper, doc = (
             for (const el of roots()) DC().clear(el);
         }
         syncIconBridge(ios);
+        try {
+            globalThis.localStorage.setItem('rp_icons_state', JSON.stringify({
+                ios: !!ios,
+                hasIcons: !!globalThis.LonShaIcons,
+                roots: (typeof roots === 'function' ? roots().length : -1),
+                at: Date.now(),
+            }));
+        } catch (_e) { /* 忽略 */ }
         syncSkinRuntime(ios);
         return { scheme, pack, ds, ui, accent, ios, iconStyle };
     }
