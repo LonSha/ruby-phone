@@ -1,63 +1,143 @@
 /* ========================================================
  * phone/ui/rp-icons-bridge.js — 把旧主屏（phone/home-screen.js）的图标换成 v3 SVG 图标（ESM）
  * --------------------------------------------------------
- * 只在 theme-controller 打开 iOS 拟真（data-rp-ios="3"）时由它动态加载并调用；默认不加载。
- * 做的事情只有两件，且都可撤销：
- *   1. 给 .app-icon[data-app] / .dock-app[data-app] 打 data-rp3-tile="<色板>"（颜色在 phone-tokens-v3.css）
- *   2. 在 .app-icon-bg 里追加一个 <svg class="rp3-glyph">（字形来自 shared/icons.js 的 APPS 映射）
- * 原有的 .app-icon-emoji / 像素 SVG 节点不删除，只由 CSS 隐藏；detach() 会移除注入的节点和属性。
- * 用户自定义的图片图标（.app-icon-bg.custom-icon 内的 .home-custom-icon-img）默认保留，不覆盖。
- * 主屏重渲染时用 MutationObserver 自动补上（节流到下一帧）。
+ * v2 重写（相对 v1 的三处结构性修正）：
+ *   1. 单一事实源 HOSTS：所有图标宿主在一张表里登记，新增渲染路径只加一行。
+ *      v1 逐个选择器补，漏了 .app-library-app-item，且每次都靠人记得。
+ *   2. retireArt() 内联让位：像素素材是 style="background-image:url(...)" 内联写的，
+ *      内联优先级高于任何类选择器，CSS 的 background:none 永远压不住 —— 必须由 JS 清。
+ *      v1 只隐藏 <img>，所以「文件夹的像素格子」和注入的字形叠在一起。
+ *   3. probe() 自证：把 data-rp-* 属性、--rp3-tile 计算值、::before 的 background/mask
+ *      一并写进 localStorage(rp_icons_probe)。此前只有 ok/tot 两个数字，
+ *      分不清「没接管」和「接管了但没画出来」。
+ * 自定义图片图标（bg 内有 .home-custom-icon-img）仍然尊重、不接管；
+ * 默认 PNG 素材没有 <img>，因此不会再被误判成自定义图标。
  * ======================================================== */
 import '../../shared/icons.js';   // 侧效导入：globalThis.LonShaIcons
 
 const MARK = 'rp3Iconized';
+const BG_SAVED = new WeakMap();      // 元素 -> 原 background-image
+const DISP_SAVED = new WeakMap();    // <img> -> 原 display
 
-function iconize(el, { keepCustom = true } = {}) {
+/* 图标宿主清单：单一事实源。kind='folder' 走统一文件夹字形，不给 appSpec。 */
+const HOSTS = [
+    { sel: '.app-icon[data-app]', bg: '.app-icon-bg', kind: 'app' },
+    { sel: '.dock-app[data-app]', bg: '.app-icon-bg', kind: 'app' },
+    { sel: '.app-cluster-tile[data-cluster]', bg: '.app-icon-bg', kind: 'folder' },
+    /* 应用库格子：容器不是 .app-icon-bg，需补类才能吃到 [data-rp3-tile] 的底。 */
+    { sel: '.app-library-app-item[data-app]', bg: '.app-library-app-icon', kind: 'app', adopt: true },
+];
+
+function note(k, v) {
+    try { globalThis.localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); } catch (_e) { /* 忽略 */ }
+}
+
+/** 让位：内联清掉像素素材（background-image 底色与 <img>）。 */
+function retireArt(bg) {
+    if (!bg || !bg.style) return;
+    const cur = bg.style.backgroundImage;
+    if (cur && cur !== 'none' && !BG_SAVED.has(bg)) {
+        BG_SAVED.set(bg, cur);
+        bg.style.backgroundImage = 'none';
+    }
+    try {
+        bg.querySelectorAll('img').forEach((img) => {
+            if (!DISP_SAVED.has(img)) DISP_SAVED.set(img, img.style.display);
+            img.style.display = 'none';
+        });
+    } catch (_e) { /* 忽略 */ }
+}
+
+function iconize(el, host, opts) {
     const L = globalThis.LonShaIcons;
     if (!L || !el || el.dataset[MARK] === '1') return false;
-    const isCluster = el.classList.contains('app-cluster-tile');
-    const id = el.getAttribute('data-app');
-    if (!id && !isCluster) return false;
-    /* 没有 .app-icon-bg 的壳（如 dock 的应用库入口）补一个，
-       否则 CSS 的 [data-rp3-tile] .app-icon-bg::before 没有承接元素，只剩一个裸字形。 */
-    let bg = el.querySelector('.app-icon-bg');
+    const isCluster = host.kind === 'folder';
+    const id = isCluster ? el.getAttribute('data-cluster') : el.getAttribute('data-app');
+    if (!id) return false;
+
+    let bg = el.querySelector(host.bg);
     if (!bg) {
+        if (isCluster) return false;                     // 没有承载体就别造，免得破坏布局
         bg = document.createElement('div');
         bg.className = 'app-icon-bg';
         bg.dataset.rp3Injected = '1';
         el.insertBefore(bg, el.firstChild);
     }
-    /* 文件夹（聚合壳）：不再拼像素预览图，统一中性文件夹字形。
-       CSS 对 [data-rp3-tile] .app-icon-bg 会 background:none，预览图随之让位。 */
+    if (host.adopt && !bg.classList.contains('app-icon-bg')) {
+        bg.classList.add('app-icon-bg');
+        bg.dataset.rp3Adopted = '1';
+    }
+    /* 真自定义图片：尊重。默认 PNG 素材没有 <img>，不会再被误判。 */
+    if (!isCluster && !el.classList.contains('dock-app') && bg.querySelector('.home-custom-icon-img')) return false;
+
+    retireArt(bg);
+
+    let art;
     if (isCluster) {
         el.setAttribute('data-rp3-tile', 'gray');
-        bg.insertAdjacentHTML('beforeend', L.svg('folder', { fill: true, className: 'rp3-glyph' }));
-        el.dataset[MARK] = '1';
-        return true;
-    }
-    if (keepCustom && bg.classList.contains('custom-icon') && bg.querySelector('.home-custom-icon-img') && !el.classList.contains('dock-app')) return false;
-    const spec = L.appSpec(id);
-    el.setAttribute('data-rp3-tile', spec.tile);
-    let art;
-    if (id === 'calendar') {
-        const d = new Date();
-        art = `<span class="lt-appicon-cal rp3-glyph-art" aria-hidden="true"><b>${['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()]}</b><i>${d.getDate()}</i></span>`;
+        art = L.svg('folder', { className: 'rp3-glyph' }) || L.svg('folder', { fill: true, className: 'rp3-glyph' });
     } else {
-        art = L.svg(spec.glyph, { fill: true, className: 'rp3-glyph' });
+        const spec = L.appSpec(id);
+        el.setAttribute('data-rp3-tile', spec.tile);
+        if (id === 'calendar') {
+            const d = new Date();
+            const wd = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
+            art = `<span class="lt-appicon-cal rp3-glyph-art" aria-hidden="true"><b>${wd}</b><i>${d.getDate()}</i></span>`;
+        } else {
+            art = L.svg(spec.glyph, { fill: true, className: 'rp3-glyph' })
+                || L.svg(spec.glyph, { className: 'rp3-glyph' });
+        }
     }
+    if (!art) return false;                               // 字形不存在就不要打标记，下次还能重试
     bg.insertAdjacentHTML('beforeend', art);
     el.dataset[MARK] = '1';
-    /* 原像素素材让位：否则 PNG 与新字形叠在一起，看起来仍是像素风。 */
-    try { bg.querySelectorAll('img').forEach((img) => { img.style.display = 'none'; }); } catch (_e) { /* 忽略 */ }
     return true;
 }
 
 function undo(el) {
-    el.querySelectorAll(':scope .rp3-glyph, :scope .rp3-glyph-art').forEach((n) => n.remove());
-    el.querySelectorAll('.app-icon-bg[data-rp3-injected]').forEach((n) => n.remove());
+    el.querySelectorAll('.rp3-glyph, .rp3-glyph-art').forEach((n) => n.remove());
+    el.querySelectorAll('[data-rp3-injected="1"]').forEach((n) => n.remove());
+    el.querySelectorAll('[data-rp3-adopted="1"]').forEach((n) => {
+        n.classList.remove('app-icon-bg');
+        delete n.dataset.rp3Adopted;
+    });
+    const restore = (n) => {
+        if (!n) return;
+        if (BG_SAVED.has(n)) { n.style.backgroundImage = BG_SAVED.get(n); BG_SAVED.delete(n); }
+        try {
+            n.querySelectorAll('img').forEach((img) => {
+                if (DISP_SAVED.has(img)) { img.style.display = DISP_SAVED.get(img); DISP_SAVED.delete(img); }
+            });
+        } catch (_e) { /* 忽略 */ }
+    };
+    restore(el);
+    try { el.querySelectorAll('*').forEach(restore); } catch (_e) { /* 忽略 */ }
     el.removeAttribute('data-rp3-tile');
     delete el.dataset[MARK];
+}
+
+/** 自证探针：把「为什么没画出来」需要看的量一次性写进 localStorage。 */
+function probe(root) {
+    const panel = (root.closest && root.closest('#phone-panel')) || root;
+    const el = root.querySelector('.app-icon[data-app]');
+    const bg = el && el.querySelector('.app-icon-bg');
+    let before = null;
+    try { before = bg ? getComputedStyle(bg, '::before') : null; } catch (_e) { /* 忽略 */ }
+    const g = (n) => (panel.getAttribute ? panel.getAttribute(n) : null);
+    const cut = (s, n) => String(s || '').slice(0, n);
+    return {
+        ds: g('data-rp-ds'), ui: g('data-rp-ui'), ios: g('data-rp-ios'), iconStyle: g('data-rp3-icons'),
+        tile: el ? el.getAttribute('data-rp3-tile') : null,
+        vTile: el ? cut(getComputedStyle(el).getPropertyValue('--rp3-tile').trim(), 44) : '',
+        beforeBg: before ? cut(before.backgroundImage, 44) : '',
+        beforeMask: before ? cut(before.webkitMaskImage || before.maskImage || 'none', 20) : '',
+        glyph: root.querySelectorAll('.rp3-glyph').length,
+        cluster: root.querySelectorAll('.app-cluster-tile').length,
+        clusterGlyph: root.querySelectorAll('.app-cluster-tile .rp3-glyph').length,
+        lib: root.querySelectorAll('.app-library-app-item').length,
+        libGlyph: root.querySelectorAll('.app-library-app-item .rp3-glyph').length,
+        at: Date.now(),
+    };
 }
 
 /**
@@ -65,13 +145,8 @@ function undo(el) {
  * @param {{ keepCustom?: boolean }} [opts]
  * @returns {() => void} detach
  */
-function note(k, v) {
-    try { globalThis.localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); } catch (_e) { /* 忽略 */ }
-}
-
 export function attachIosIcons(root, opts = {}) {
     if (!root || typeof root.querySelectorAll !== 'function') return () => {};
-    /* 图标模块缺席时主动补一次（此前是静默 return false，屏幕上看不出任何异常）。 */
     if (!globalThis.LonShaIcons) {
         note('rp_icons_err', 'LonShaIcons-missing@attach');
         import('../../shared/icons.js').then(() => {
@@ -79,17 +154,25 @@ export function attachIosIcons(root, opts = {}) {
             try { run(); } catch (_e) { /* 忽略 */ }
         }).catch((e) => note('rp_icons_err', String((e && e.message) || e).slice(0, 200)));
     }
-    const SEL = '.app-icon[data-app], .dock-app[data-app], .app-cluster-tile[data-cluster]';
+
+    /* 首次结果单独留存：MutationObserver 会反复 run，后几次全是「已接管」的跳过，会把 ok 刷成 0。 */
+    let firstRun = null;
     const run = () => {
         let ok = 0;
         let tot = 0;
-        root.querySelectorAll(SEL).forEach((el) => {
-            tot += 1;
-            if (iconize(el, opts)) ok += 1;
+        HOSTS.forEach((h) => {
+            let list;
+            try { list = root.querySelectorAll(h.sel); } catch (_e) { return; }
+            list.forEach((el) => {
+                tot += 1;
+                if (iconize(el, h, opts)) ok += 1;
+            });
         });
-        /* 可读计数：ok=实际被 SVG 接管，tot=选择器命中数。ok<tot 就是下一步要查的对象。 */
-        note('rp_icons_count', { ok: ok, tot: tot, keepCustom: !!opts.keepCustom, at: Date.now() });
+        if (!firstRun) firstRun = { ok, tot };
+        note('rp_icons_count', { ok, tot, first: firstRun, keepCustom: !!opts.keepCustom, at: Date.now() });
+        note('rp_icons_probe', probe(root));
     };
+
     run();
     let raf = 0;
     const mo = typeof MutationObserver === 'function'
@@ -103,4 +186,4 @@ export function attachIosIcons(root, opts = {}) {
     };
 }
 
-export const _internals = { iconize, undo };
+export const _internals = { iconize, undo, probe, HOSTS };
