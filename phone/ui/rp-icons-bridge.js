@@ -16,9 +16,26 @@ const MARK = 'rp3Iconized';
 function iconize(el, { keepCustom = true } = {}) {
     const L = globalThis.LonShaIcons;
     if (!L || !el || el.dataset[MARK] === '1') return false;
+    const isCluster = el.classList.contains('app-cluster-tile');
     const id = el.getAttribute('data-app');
-    if (!id) return false;
-    const bg = el.querySelector('.app-icon-bg') || el;
+    if (!id && !isCluster) return false;
+    /* 没有 .app-icon-bg 的壳（如 dock 的应用库入口）补一个，
+       否则 CSS 的 [data-rp3-tile] .app-icon-bg::before 没有承接元素，只剩一个裸字形。 */
+    let bg = el.querySelector('.app-icon-bg');
+    if (!bg) {
+        bg = document.createElement('div');
+        bg.className = 'app-icon-bg';
+        bg.dataset.rp3Injected = '1';
+        el.insertBefore(bg, el.firstChild);
+    }
+    /* 文件夹（聚合壳）：不再拼像素预览图，统一中性文件夹字形。
+       CSS 对 [data-rp3-tile] .app-icon-bg 会 background:none，预览图随之让位。 */
+    if (isCluster) {
+        el.setAttribute('data-rp3-tile', 'gray');
+        bg.insertAdjacentHTML('beforeend', L.svg('folder', { fill: true, className: 'rp3-glyph' }));
+        el.dataset[MARK] = '1';
+        return true;
+    }
     if (keepCustom && bg.classList.contains('custom-icon') && bg.querySelector('.home-custom-icon-img') && !el.classList.contains('dock-app')) return false;
     const spec = L.appSpec(id);
     el.setAttribute('data-rp3-tile', spec.tile);
@@ -38,6 +55,7 @@ function iconize(el, { keepCustom = true } = {}) {
 
 function undo(el) {
     el.querySelectorAll(':scope .rp3-glyph, :scope .rp3-glyph-art').forEach((n) => n.remove());
+    el.querySelectorAll('.app-icon-bg[data-rp3-injected]').forEach((n) => n.remove());
     el.removeAttribute('data-rp3-tile');
     delete el.dataset[MARK];
 }
@@ -61,7 +79,7 @@ export function attachIosIcons(root, opts = {}) {
             try { run(); } catch (_e) { /* 忽略 */ }
         }).catch((e) => note('rp_icons_err', String((e && e.message) || e).slice(0, 200)));
     }
-    const SEL = '.app-icon[data-app], .dock-app[data-app]';
+    const SEL = '.app-icon[data-app], .dock-app[data-app], .app-cluster-tile[data-cluster]';
     const run = () => {
         let ok = 0;
         let tot = 0;
