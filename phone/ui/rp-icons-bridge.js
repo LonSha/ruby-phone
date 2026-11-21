@@ -67,8 +67,11 @@ function iconize(el, host, opts) {
         bg.classList.add('app-icon-bg');
         bg.dataset.rp3Adopted = '1';
     }
-    /* 真自定义图片：尊重。默认 PNG 素材没有 <img>，不会再被误判。 */
-    if (!isCluster && !el.classList.contains('dock-app') && bg.querySelector('.home-custom-icon-img')) return false;
+    /* 不按 .home-custom-icon-img 判断「用户自定义」：
+       home-screen.js 的 renderAppIcon 里 `unifiedIconOf(app.id)` 返回的内置像素图
+       同样走这个 class（iconImage -> _renderCustomIconImage(...'home-custom-icon-img')），
+       而像素图正是 iOS 外观下要替换的对象。按它跳过 = 所有 app 都退回像素风。
+       真正的用户自定义图在 Dock 分支里另有渲染路径，不受这里影响。 */
 
     retireArt(bg);
 
