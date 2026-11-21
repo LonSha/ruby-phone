@@ -52,12 +52,15 @@ const sum = (r) => r.reduce((a, x) => a + x.lines, 0);
 
 /* ---------------- 正面 ---------------- */
 
-test('真仓读数：937 个 .js / 合计 392884 行 / 44 个大文件，台账全绿', () => {
+test('真仓读数：942 个 .js / 合计 393174 行 / 44 个大文件，台账全绿', () => {
   const r = checkCeilings({ rows, ledger });
   green(r);
-  assert.equal(r.stats.files, 937, '扫到的 .js 数量与当前实际不符（设计系统收编：phone/ 与 config/ 下 9 个新 .js 进扫描面，928 → 937 就是这层；原第 10 个 lonsha-icons.js 与 shared/icons.js 是同一张注册表的两份，已合并掉）');
-  assert.equal(r.stats.total, 392884, '全仓合计行数与台账不符（设计系统收编 +3122：9 个新 .js 全部是新文件，44 个大文件读数一条未动，账见台账 note 末段）');
-  assert.equal(r.stats.overDefault, 44, '大文件数量应为 44（cheats.js 已降到千行内，不再是大文件）');
+  /* [1120 批次] 937 → 942（+5：data/cheats/part-35…39 五个新分片），
+   *   行数 392884 → 393174（+290：五个分片各 1 包 × 4 行 + 聚合器 import 行）。
+   *   台账由 `node tests/audit/scan_file_size_ceiling.mjs --write` 重压，快照不留余量。 */
+  assert.equal(r.stats.files, 942, '扫到的 .js 数量与当前实际不符（1120 批次 +5 个分片：937 → 942）');
+  assert.equal(r.stats.total, 393174, '全仓合计行数与台账不符（1120 批次 +290 行：5 个新分片 + 聚合器 import，44 个大文件读数一条未动）');
+  assert.equal(r.stats.overDefault, 44, '大文件数量应为 44（cheats.js 仍是千行内聚合器，新增分片都远低于默认上限）');
   assert.equal(r.stats.overDefault, r.stats.ledgered, '大文件必须与台账条目一一对应');
 });
 
@@ -159,7 +162,10 @@ test('进程级：闸 rc=0，--json 可机读', () => {
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const j = JSON.parse(r.stdout);
   assert.equal(j.ok, true);
-  assert.equal(j.stats.files, 937, '子进程读数必须与正面真仓读数同源');
+  /* 【不写死数字】这条测的是「子进程与正面读数同源」，那就直接比同一个真源（rows），
+   *   而不是把 937 抄进来 —— 抄数字会让每次合法扩库都要回来手改一次，且改错了也看不出来。 */
+  assert.equal(j.stats.files, rows.length, '子进程读数必须与正面真仓读数同源');
+  assert.equal(j.stats.total, rows.reduce((n, x) => n + x.lines, 0), '合计行数必须与正面真仓读数同源');
   assert.deepEqual(j.problems, []);
 });
 

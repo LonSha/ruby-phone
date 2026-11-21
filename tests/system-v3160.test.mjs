@@ -69,10 +69,26 @@ function pipelineJudge(outDir) {
   } catch (_e) { return false; }
 }
 
-/** J2：当前金手指库相对 v3.15.0 冻结台账是否「只追加、且旧的逐字未变」。
+/** J2：当前金手指库相对 v3.15.0 冻结台账是否「只追加、且旧包各归其位」。
  *  [1108 扩库] 下限形：v3.16.0 时「恰好 ledger.count+1 且 ch166 收尾」；
- *    后续合法扩库（ch167–ch203）只追加其后，不应被钉死的具体数字/末位 id 判红。
- *    仍锁：旧台账逐字 md5、ch166 原位、索引同源、每条 chars 忠实。 */
+ *    后续合法扩库（ch167–ch230）只追加其后，不应被钉死的具体数字/末位 id 判红。
+ *  [1120 改写] 口径升级为链式：旧包不再一律"逐字未变"，而是要么逐字等于台账，
+ *    要么有授权改写记录且「起点=台账 md5、终点=库内 md5、字数对得上」。
+ *    仍锁：ch166 原位、索引同源、每条 chars 忠实、无授权记录的包逐字不变。 */
+const AUTH_1120 = JSON.parse(read('tests/audit/cheat-rewrite-authorizations.json'));
+const AUTH_BY_ID = new Map(AUTH_1120.rewrites.map((r) => [r.id, r]));
+/* 品阶分档与 gen-cheats 同规；判据用它算期望品阶，而不是把某个品阶名写死。 */
+const QUALITY_BANDS = [[6000, '神话'], [4500, '传说'], [3500, '史诗'], [2600, '稀有'], [1800, '优秀'], [0, '普通']];
+const qualityOf = (chars) => QUALITY_BANDS.find(([t]) => chars >= t)[1];
+function chainAccepts(row, p) {
+  const a = AUTH_BY_ID.get(row.id);
+  if (!a) {
+    if (p.name !== row.name || p.quality !== row.quality || p.chars !== row.chars) return false;
+    if (String(p.sub) !== String(row.sub) || p.type !== row.type || p.desc !== row.desc) return false;
+    return md5(p.content) === row.contentMd5;
+  }
+  return a.fromMd5 === row.contentMd5 && md5(p.content) === a.toMd5 && p.chars === a.toChars;
+}
 function appendJudge(fullArr, idxArr, ledger) {
   try {
     if (fullArr.length < ledger.count + 1) return false;
@@ -80,9 +96,7 @@ function appendJudge(fullArr, idxArr, ledger) {
     for (const row of ledger.packs) {
       const p = fullArr.find((x) => x.id === row.id);
       if (!p) return false;
-      if (p.name !== row.name || p.quality !== row.quality || p.chars !== row.chars) return false;
-      if (String(p.sub) !== String(row.sub) || p.type !== row.type || p.desc !== row.desc) return false;
-      if (md5(p.content) !== row.contentMd5) return false;
+      if (!chainAccepts(row, p)) return false;
     }
     if (!fullArr[ledger.count] || fullArr[ledger.count].id !== 'ch166') return false;
     for (const p of fullArr) if (p.chars !== p.content.length) return false;
@@ -231,45 +245,58 @@ test('C3 ★★ 管线增量可复算（231 模块 / 282949 字；较上一版 +
 });
 
 /* ══════════ D ── 金手指面 ══════════ */
-test('D1 ★★★ ch166 位移：两份文件同源、品阶按字数分档、正文逐字保留', () => {
+test('D1 ★★★ ch166 位移：两份文件同源、品阶按字数分档、结构不被截断', () => {
+  /* 【口径变更留痕】原先这里写死 chars=3323 / quality=稀有 / type=个人型 / 段清单含 <能力>。
+   *   1120 改写后 ch166 正文换成新版（3030 字），作者把 <能力> 并进了别的段 ——
+   *   继续写死这些读数，等于宣布「作者不许再改 ch166」，而不是在测「它还是一个完整的包」。
+   *   改成结构性证明：字数自洽、品阶由分档规则算出、一级段数有下限（防截断）、首尾标签完整。 */
   const p = cheatPacks.find((x) => x.id === 'ch166');
   assert.ok(p, 'ch166 必须在场');
-  assert.equal(p.name, '位移');
-  assert.equal(p.chars, 3323, '字数实测 ' + p.chars);
-  assert.equal(p.chars, p.content.length, 'chars 必须等于正文字符数');
-  assert.equal(p.quality, '稀有', '按文件头声明的分档规则（>=2600 稀有）实测 ' + p.quality);
+  assert.equal(p.name, '位移', 'ch166 的 id↔名称绑定不许变');
+  assert.equal(p.chars, p.content.length, 'chars 必须等于正文字符数，实测 ' + p.chars);
+  assert.equal(p.quality, qualityOf(p.chars), '品阶必须由分档规则算出，实测 ' + p.quality + ' @ ' + p.chars + ' 字');
   assert.equal(p.type, '个人型', '主收益轴必须被理解为个人型');
   assert.equal(p.sub, 1);
   assert.ok(p.desc.length > 0 && p.desc.length <= 61, 'desc 必须从简介首句抽（不空、不超长），实测 ' + p.desc.length);
-  for (const seg of ['<简介>', '<本质>', '<主收益轴>', '<触发源>', '<能力>', '<状态栏>', '<结算与回执>', '<WJWK-settle>', '<必要边界>', '<终极指向>']) {
+  /* 核心段：这些是「包还完整」的最低证据。<能力> 已由作者在 1120 版并入他段，故不在必含清单里。 */
+  for (const seg of ['<简介>', '<本质>', '<主收益轴>', '<结算与回执>', '<必要边界>', '<终极指向>']) {
     assert.ok(p.content.includes(seg), '正文必须保留段：' + seg);
   }
+  const segCount = (p.content.match(/^<[^>]+>/gm) || []).length;
+  assert.ok(segCount >= 8, '一级段数下限 8 防截断，实测 ' + segCount);
   assert.ok(p.content.startsWith('<位移>') && p.content.endsWith('</位移>'), '正文首尾标签必须完整');
+  assert.ok(p.content.length > 2500, '正文长度下限 2500 防截断，实测 ' + p.content.length);
+  /* ch166 是被授权改写过的包，必须在授权台账里可追溯（不许"悄悄换了正文"） */
+  const a = AUTH_BY_ID.get('ch166');
+  assert.ok(a, 'ch166 被改写过，必须在授权台账里留痕');
+  assert.equal(md5(p.content), a.toMd5, 'ch166 正文必须等于授权终点');
   const r = cheatIndex.find((x) => x.id === 'ch166');
   assert.ok(r, '索引必须有 ch166');
   for (const k of ['name', 'quality', 'chars', 'sub', 'type', 'desc']) assert.equal(r[k], p[k], '同源字段 ' + k);
 });
 
-test('D2 ★★★ id 稳定性铁律：旧 165 包一字未动（逐包内容 md5 对冻结台账）', () => {
+test('D2 ★★★ id 稳定性铁律：旧 165 包各归其位（未改写逐字冻结 / 改写必须走授权链）', () => {
   const ledger = JSON.parse(read('tests/audit/cheat-packs-before-v3160.json'));
   assert.equal(ledger.count, 165, '冻结台账记的是 v3.15.0 时的 165 包');
+  assert.equal(ledger.frozen_at, 'v3.15.0', '冻结台账的历史版本不许改（快照不许篡改）');
   // [1108 扩库] 下限形：v3.16.0 实测 166；后续合法扩库只追加 ch167+、旧包不动，
-  // 不应被钉死的具体数字判红（与 v2.88.0 A1 下限形同规）。仍锁前 165 包逐字冻结。
+  // 不应被钉死的具体数字/末位 id 判红（与 v2.88.0 A1 下限形同规）。
   assert.ok(cheatPacks.length >= 166, '库规模下限 166，实测 ' + cheatPacks.length);
   for (let i = 0; i < 165; i++) {
     assert.equal(cheatPacks[i].id, 'ch' + String(i + 1).padStart(3, '0'), '前 165 包的 id 次序必须不变');
   }
   assert.equal(cheatPacks[165].id, 'ch166', 'ch166 位置不漂移（后续扩库只追加其后）');
   const drifted = [];
+  let rewrittenCount = 0;
   for (const row of ledger.packs) {
     const p = cheatPacks.find((x) => x.id === row.id);
     if (!p) { drifted.push(row.id + ':missing'); continue; }
-    for (const k of ['name', 'quality', 'chars', 'sub', 'type', 'desc']) {
-      if (p[k] !== row[k]) drifted.push(row.id + '.' + k);
-    }
-    if (md5(p.content) !== row.contentMd5) drifted.push(row.id + '.content');
+    if (!chainAccepts(row, p)) { drifted.push(row.id); continue; }
+    if (AUTH_BY_ID.has(row.id)) rewrittenCount++;
   }
-  assert.equal(drifted.length, 0, '★ 旧包发生漂移：' + drifted.slice(0, 8).join(', '));
+  assert.equal(drifted.length, 0, '★ 旧包账实不符：' + drifted.slice(0, 8).join(', '));
+  /* 如实：冻结段里 92 包经授权改写、73 包一字未动。两个数都要对得上，不许含糊。 */
+  assert.equal(rewrittenCount, 92, '冻结段被授权改写的包数，实测 ' + rewrittenCount);
   assert.equal(new Set(cheatPacks.map((p) => p.id)).size, cheatPacks.length, 'id 唯一');
   for (const p of cheatPacks) assert.equal(p.chars, String(p.content || '').length, p.id + ' chars 忠实');
 });

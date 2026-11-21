@@ -6,10 +6,10 @@
  *   不抬主版本、不占版本指纹，故用描述性文件名，避免连续同号两用。
  *
  * 量什么（A～E 五组）：
- *   A 静态数据面：总库 203 / 旧 166 逐字冻结 / 新增 37 包 md5 对台账 / 索引同源。
+ *   A 静态数据面：总库＝台账 totalCount / 旧 166 逐字冻结 / 新增 37 包 md5 对台账 / 索引同源。
  *   B 来源与归并：四批来源计数、6 条冻结子条如实排除、家族归并、原文锚点。
  *   C 元数据忠实：chars / quality / desc / 模板字符串往返无损。
- *   D 真接线 + 负控制：抽卡池 203、搜索命中、注入块真带新正文；
+ *   D 真接线 + 负控制：抽卡池随库规模、搜索命中、注入块真带新正文；
  *     未知 id 如实丢弃、假账 md5 必被抓（不碰真源的内存态 breakOnce）。
  *   E 可复现与边界：合并脚本/台账在场；显式写明本环境无真机、不能保证的边界。
  *
@@ -33,6 +33,12 @@ const { cheatPacks } = await imp('data/cheats.js');
 const { cheatIndex } = await imp('data/cheat-index.js');
 const CD = await imp('apps/cheat/cheat-data.js');
 const LEDGER = JSON.parse(read('tests/audit/cheat-packs-1108.json'));
+/* [1120 批次] 库规模的真源从「写死 203」改为「1120 台账的 totalCount」：
+ *   A1/D1/D3 原本把 203 当读数指纹，但那等于宣布「以后任何批次都不许入库」。
+ *   现在改成：规模必须等于台账登记的总数（多一包或漏一包都红），
+ *   而台账本身又由 md5/元数据逐包对拍锁住 ⇒ 比写死数字更强，且能容纳新批次。 */
+const LEDGER_1120 = JSON.parse(read('tests/audit/cheat-packs-1120.json'));
+const LIB_SIZE = LEDGER_1120.totalCount;
 const FROZEN = JSON.parse(read('tests/audit/cheat-packs-before-v3160.json'));
 const MERGE = read('scripts/merge-cheats-1108.mjs');
 
@@ -40,57 +46,90 @@ const BANDS = [[6000, '神话'], [4500, '传说'], [3500, '史诗'], [2600, '稀
 const qualityOf = (chars) => BANDS.find(([t]) => chars >= t)[1];
 const byId = new Map(cheatPacks.map((p) => [p.id, p]));
 
-/* 台账对照抽成纯函数，供 D5 做「假账必转红」的内存态负控制 */
+/* ---------- 改写授权链（1120 批次引入） ----------
+ * 事实：1108 批 37 包里 33 包在本轮被作者改写并**经用户授权落库**，只有
+ *   ch167 / ch168 / ch177 / ch203 四包未动；ch166（v3.16.0 追加）也被改写。
+ * 于是「逐字冻结」这个口径不再成立 —— 但它不能简单地降级成"不查了"。
+ * 换成链式：每个旧包都必须落进两种合法状态之一，且状态本身可验：
+ *   · held      ：无授权记录 ⇒ 正文 md5 与六元数据必须**逐字等于**台账；
+ *   · rewritten ：有授权记录 ⇒ 授权起点必须等于台账 md5（改的是对的那一版），
+ *                 授权终点必须等于库内当前 md5（真落了），字数也必须对得上。
+ * 任何"变了又没有授权记录"的包依然红。 */
+const AUTH = JSON.parse(read('tests/audit/cheat-rewrite-authorizations.json'));
+const authById = new Map(AUTH.rewrites.map((r) => [r.id, r]));
+
+function chainStatus(row, p, tag) {
+  const a = authById.get(row.id);
+  if (!a) {
+    for (const k of ['name', 'quality', 'chars', 'sub', 'type', 'desc']) {
+      assert.equal(p[k], row[k], tag + '.' + k + ' 漂移（且无授权改写记录）');
+    }
+    assert.equal(md5(p.content), row.contentMd5, tag + ' 正文 md5 与台账不符（且无授权改写记录）');
+    return 'held';
+  }
+  assert.equal(a.fromMd5, row.contentMd5, tag + ' 授权起点 ≠ 台账 md5（改的不是这一版）');
+  assert.equal(a.fromChars, row.chars, tag + ' 授权记的起始字数 ≠ 台账字数');
+  assert.equal(md5(p.content), a.toMd5, tag + ' 正文 ≠ 授权终点（授权了却没落库 / 落了别的版本）');
+  assert.equal(p.chars, a.toChars, tag + ' chars 与授权终点字数不符');
+  return 'rewritten';
+}
+
+/* 台账对照抽成纯函数，供 D 组做「假账必转红」的内存态负控制 */
 function assertLedgerMatches(ledger, packs) {
   const m = new Map(packs.map((p) => [p.id, p]));
+  const stat = { held: 0, rewritten: 0 };
   for (const row of ledger.packs) {
     const p = m.get(row.id);
     assert.ok(p, '台账有而正文没有：' + row.id);
-    for (const k of ['name', 'quality', 'chars', 'sub', 'type', 'desc']) {
-      assert.equal(p[k], row[k], row.id + '.' + k + ' 台账/正文漂移');
-    }
-    assert.equal(md5(p.content), row.contentMd5, row.id + ' 正文 md5 与台账不符');
+    stat[chainStatus(row, p, row.id)]++;
   }
+  return stat;
 }
 
 /* ---------------- A 组：静态数据面 ---------------- */
-test('A1 总库 203：前 166 包 id/次序冻结，新增 ch167–ch203 连续', () => {
-  assert.equal(cheatPacks.length, 203, '库规模实测 ' + cheatPacks.length);
+test('A1 库规模＝台账总数：前 166 包 id/次序冻结，其后 id 连续到末位', () => {
+  assert.equal(cheatPacks.length, LIB_SIZE, '库规模实测 ' + cheatPacks.length + '，台账 ' + LIB_SIZE);
   for (let i = 0; i < 166; i++) {
     assert.equal(cheatPacks[i].id, 'ch' + String(i + 1).padStart(3, '0'), '旧包 id 次序 @' + i);
   }
-  for (let i = 166; i < 203; i++) {
+  for (let i = 166; i < cheatPacks.length; i++) {
     assert.equal(cheatPacks[i].id, 'ch' + String(i + 1).padStart(3, '0'), '新增包 id 连续 @' + i);
   }
-  assert.equal(new Set(cheatPacks.map((p) => p.id)).size, 203, 'id 唯一');
+  assert.equal(new Set(cheatPacks.map((p) => p.id)).size, cheatPacks.length, 'id 唯一');
 });
 
-test('A2 ★ 旧 166 包逐字冻结（v3.16.0 台账 165 包 md5 全部仍成立）', () => {
+test('A2 ★ 旧 165 包账实相符（未被改写的逐字冻结 / 被改写的必须走授权链）', () => {
   assert.equal(FROZEN.count, 165, '冻结台账记的是 165 包');
-  let drifted = 0;
+  assert.equal(FROZEN.frozen_at, 'v3.15.0', '冻结台账的冻结版本不许改（历史快照不许篡改）');
+  const stat = { held: 0, rewritten: 0 };
   for (const row of FROZEN.packs) {
     const p = byId.get(row.id);
-    if (!p) { drifted++; continue; }
-    for (const k of ['name', 'quality', 'chars', 'sub', 'type', 'desc']) {
-      if (p[k] !== row[k]) drifted++;
-    }
-    if (md5(p.content) !== row.contentMd5) drifted++;
+    assert.ok(p, '冻结台账里的包必须仍在库内：' + row.id);
+    stat[chainStatus(row, p, row.id)]++;
   }
-  assert.equal(drifted, 0, '★ 旧包发生漂移的字段数 ' + drifted);
-  // ch166「位移」也逐字未动（v3.16.0 追加包，同样不许被本轮改写）
-  assert.equal(byId.get('ch166').name, '位移');
-  assert.ok(byId.get('ch166').content.endsWith('</位移>'), 'ch166 正文尾标签完整');
+  /* 冻结段里 92 包被授权改写、73 包未动 —— 两个数都要如实，不许为了好看全算成"未动" */
+  assert.equal(stat.rewritten, 92, '冻结段被授权改写的包数，实测 ' + stat.rewritten);
+  assert.equal(stat.held, 73, '冻结段未动的包数，实测 ' + stat.held);
+  // ch166「位移」是 v3.16.0 追加包，本轮也被改写过：名称与家族不变，正文尾标签仍完整
+  const c166 = byId.get('ch166');
+  assert.equal(c166.name, '位移', 'ch166 名称与 id 绑定不变');
+  assert.ok(c166.content.endsWith('</位移>'), 'ch166 正文尾标签完整（改写不许把标签弄坏）');
 });
 
-test('A3 新增 37 包逐包对台账（md5 + 六元数据）', () => {
+test('A3 新增 37 包账实相符（被改写的走授权链，未动的逐字对台账）', () => {
   assert.equal(LEDGER.beforeCount, 166);
   assert.equal(LEDGER.addedCount, 37);
   assert.equal(LEDGER.totalCount, 203);
   assert.equal(LEDGER.packs.length, 37);
-  assertLedgerMatches(LEDGER, cheatPacks);
+  const stat = assertLedgerMatches(LEDGER, cheatPacks);
+  assert.equal(stat.rewritten, 33, '1108 批次被改写的包数，实测 ' + stat.rewritten);
+  assert.equal(stat.held, 4, '1108 批次未动的包数，实测 ' + stat.held);
+  for (const id of ['ch167', 'ch168', 'ch177', 'ch203']) {
+    assert.ok(!authById.has(id), id + ' 是 1108 批次里未被改写的四包之一，不该出现在授权台账里');
+  }
 });
 
-test('A4 轻量索引与正文同源（203 条逐字段）', () => {
+test('A4 轻量索引与正文同源（逐字段）', () => {
   assert.equal(cheatIndex.length, cheatPacks.length, '索引条数');
   for (const r of cheatIndex) {
     const p = byId.get(r.id);
@@ -142,19 +181,27 @@ test('B3 家族归并：骇客主+详解合 1 包；漫漫长路 21 段合 1 包
   assert.equal((mmlc.content.match(/^<[^>]+>/gm) || []).length >= 21, true, '一级段标签数下限');
 });
 
-test('B4 原文不可变锚点（正文换皮必转红，不依赖外部附件）', () => {
+test('B4 原文不可变锚点（只取未被改写的四包；被改写的包由 A3 授权链兜住）', () => {
+  /* 【口径变更留痕】原锚点里的 ch195 / ch196 / ch199 / ch202 在 1120 批量改写中
+   *   已被作者换了正文。继续拿旧句子硬判，等于要求作者回到旧版本 —— 那不是判据，
+   *   那是锁死演进。所以锚点只取**未被改写的四包**（ch167/168/177/203），
+   *   被改写包的一致性交给 A3 的授权链（起点=台账 md5、终点=库内 md5）。
+   *   B4 的独特价值仍是：有一条与外部附件无关、纯文本级的"这包还是这包"的证明。 */
   const anchors = [
-    ['ch199', '命中注定', '万象必然性最终定义权'],
-    ['ch202', '诸天聊天群', '群主'],
-    ['ch195', '诸天盲盒', '随机化身为诸天万界中的某个角色'],
-    ['ch196', '瓦学弟', '义母'],
+    ['ch167', '万界武库思维链（V2.1）', '只读取本次叙事相较上一次结算真正新增的事实'],
+    ['ch168', '太始天（精简版，择一开启）', '是与{{user}}生命本源共生的真实内天地'],
+    ['ch177', '太始天（完整版，择一开启））', '是由{{user}}生命本源开辟'],
     ['ch203', '漫漫长路', '是与{{user}}本源永久绑定的求真道基'],
-    ['ch177', '太始天（完整版，择一开启））', '太始天'],
   ];
   for (const [id, name, frag] of anchors) {
     const p = byId.get(id);
     assert.equal(p.name, name, id + ' 名称');
     assert.ok(p.content.includes(frag), id + ' ' + name + ' 缺原文锚点「' + frag + '」');
+    assert.ok(!authById.has(id), id + ' 用作不可变锚点，就不许出现在授权改写台账里（否则锚点自相矛盾）');
+  }
+  /* 反向约束：被改写的包不许再被当作"原文锚点"来源，避免以后有人悄悄把锚点搬过去 */
+  for (const id of ['ch195', 'ch196', 'ch199', 'ch202']) {
+    assert.ok(authById.has(id), id + ' 已被授权改写，必须留在授权台账里可追溯');
   }
 });
 
@@ -190,9 +237,9 @@ test('C2 模板字符串往返无损（反引号 / ${ / 反斜杠不经手改）
 });
 
 /* ---------------- D 组：真接线 + 负控制 ---------------- */
-test('D1 抽卡侧真扩到 203（不进「全部」混杂池的契约不变）', () => {
+test('D1 抽卡池随库规模全量铺开（不进「全部」混杂池的契约不变）', () => {
   const items = CD.cheatGachaItems();
-  assert.equal(items.length, 203, '外挂 item 数实测 ' + items.length);
+  assert.equal(items.length, cheatPacks.length, '外挂 item 数实测 ' + items.length + '，库 ' + cheatPacks.length);
   const ids = new Set(items.map((x) => x.id));
   assert.ok(ids.has('cheat_ch203'), '新包 ch203 必须进抽卡池');
   assert.ok(ids.has('cheat_ch166'), '旧包 ch166 不许被挤掉');
@@ -222,7 +269,7 @@ test('D3 搜索 / 分组 / 按 id 取包 三条视图链路都命中新包', () 
   assert.equal(CD.getCheatById('ch999'), null, '未知 id 返回 null（不猜）');
   const groups = CD.cheatsGroupedByQuality();
   const total = groups.reduce((s, g) => s + g.list.length, 0);
-  assert.equal(total, 203, '品阶分组覆盖全库，实测 ' + total);
+  assert.equal(total, cheatPacks.length, '品阶分组覆盖全库，实测 ' + total);
   assert.ok(groups.some((g) => g.list.some((p) => p.id === 'ch203')), '神话组含漫漫长路');
 });
 

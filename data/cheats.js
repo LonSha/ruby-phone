@@ -7,7 +7,7 @@
  *
  * 【id 稳定性铁律】分片顺序 = 原文件顺序，id 永不重排/删除；下线包只标记不下架。
  * 【同源】轻量索引仍是 data/cheat-index.js（抽卡侧只读元数据），两文件由测试锁定一致。
- * 【生成】scripts/split-cheats-v24.mjs（幂等，重跑给出同样结果）。
+ * 【生成】分片由 scripts/split-cheats-v24.mjs（1120 批次由 scripts/merge-cheats-1120.mjs）写出，幂等。
  * ======================================================== */
 'use strict';
 import { packs as p01 } from './cheats/part-01.js';
@@ -44,10 +44,15 @@ import { packs as p31 } from './cheats/part-31.js';
 import { packs as p32 } from './cheats/part-32.js';
 import { packs as p33 } from './cheats/part-33.js';
 import { packs as p34 } from './cheats/part-34.js';
+import { packs as p35 } from './cheats/part-35.js';
+import { packs as p36 } from './cheats/part-36.js';
+import { packs as p37 } from './cheats/part-37.js';
+import { packs as p38 } from './cheats/part-38.js';
+import { packs as p39 } from './cheats/part-39.js';
 
-export const cheatPacks = [].concat(p01, p02, p03, p04, p05, p06, p07, p08, p09, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31, p32, p33, p34);
+export const cheatPacks = [].concat(p01, p02, p03, p04, p05, p06, p07, p08, p09, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19, p20, p21, p22, p23, p24, p25, p26, p27, p28, p29, p30, p31, p32, p33, p34, p35, p36, p37, p38, p39);
 
-export const CHEAT_PART_COUNT = 34;
+export const CHEAT_PART_COUNT = 39;
 export const CHEAT_PACK_COUNT = cheatPacks.length;
 
 export default { cheatPacks, CHEAT_PART_COUNT, CHEAT_PACK_COUNT };

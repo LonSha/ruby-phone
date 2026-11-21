@@ -66,9 +66,9 @@
     "check_chain_len": 21
   },
   "tests": {
-    "test_files": 532,
+    "test_files": 533,
     "audit_dir_exists": true,
-    "audit_files": 56
+    "audit_files": 58
   },
   "browser": {
     "scenarios": [
@@ -120,7 +120,7 @@
   "material_split": {
     "material_dir": ".sourcematerial",
     "material_present": true,
-    "material_files": 2,
+    "material_files": 3,
     "material_files_note": "私有素材目录在场，文件数为实读",
     "suite_files": 2,
     "suite_list": [
@@ -133,7 +133,7 @@
         "id": "mechanism",
         "label": "公开夹具验机制",
         "suite_scope": "tests/ 下不含 \".sourcematerial\" 的套件",
-        "suite_files": 530,
+        "suite_files": 531,
         "runnable": true,
         "why": "不读私有素材 ⇒ 干净检出即可跑（本组永远是「可跑」，缺的只是「跑没跑」）"
       },

@@ -10,8 +10,19 @@
  * D 同源面：index 与 packs 元数据逐字一致（含新包）。
  */
 import { strict as A } from 'node:assert';
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { cheatPacks } from '../data/cheats.js';
 import { cheatIndex, cheatItemId, cheatPackIdOfItem } from '../data/cheat-index.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '..');
+const md5 = (s) => crypto.createHash('md5').update(String(s), 'utf8').digest('hex');
+/* 1120 批次的改写授权台账（旧包正文换版必须在这里留痕） */
+const AUTH_DOC = JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', 'audit', 'cheat-rewrite-authorizations.json'), 'utf8'));
+const AUTH_BY_ID = new Map((AUTH_DOC.rewrites || []).map((r) => [r.id, r]));
 
 const results = [];
 const ok = (name, cond, detail = '') => results.push({ name, cond, detail });
@@ -33,11 +44,25 @@ ok('A4 前 157 包 id 连续无漂移（ch001..ch157）',
 ok('A5 正文全部非空且 chars 忠实',
   cheatPacks.every((p) => String(p.content || '').trim().length > 0 && p.chars === p.content.length));
 
-/* B 更新面（V4.1 覆盖特征：以 diff 实测字数为锚） */
-ok('B1 源堡覆盖为 V4.1 版（5662 字）', byName.get('源堡')?.chars === 5662, String(byName.get('源堡')?.chars));
-ok('B2 神圣几何覆盖为 V4.1 版（8121 字）', byName.get('神圣几何')?.chars === 8121, String(byName.get('神圣几何')?.chars));
-ok('B3 点石成金覆盖为 V4.1 版（3872 字，旧版 1188）', byName.get('点石成金')?.chars === 3872, String(byName.get('点石成金')?.chars));
-ok('B4 文明之光系统为 V4.1 版（主条4382+3子条=10562 字，旧版 15065）', byName.get('文明之光系统')?.chars === 10562, String(byName.get('文明之光系统')?.chars));
+/* B 更新面（覆盖特征）
+ * [1120 改写] 原先把 V4.1 的字数硬写死（5662 / 8121 / 3872 / 10562）。作者整包重写后
+ *   这些字数必然变 —— 写死等于「不许作者再改」。B 组要证明的性质其实是
+ *   「同名包的正文确实被新版本覆盖了，不是还留着旧版」，所以改成对照授权台账：
+ *     · 有授权记录 ⇒ chars / md5 必须等于授权终点，且字数**必须与旧读数不同**（真被换了）；
+ *     · 无授权记录 ⇒ 字数必须仍等于旧读数（说明它确实没被覆盖，而不是被悄悄改了）。 */
+const LEGACY_CHARS = { '源堡': 5662, '神圣几何': 8121, '点石成金': 3872, '文明之光系统': 10562 };
+for (const [name, oldChars] of Object.entries(LEGACY_CHARS)) {
+  const p = byName.get(name);
+  if (!p) { ok('B·' + name + ' 必须在场', false, '缺包'); continue; }
+  const a = AUTH_BY_ID.get(p.id);
+  if (a) {
+    ok('B·' + name + ' 已换版（chars＝授权终点 ' + a.toChars + '）', p.chars === a.toChars, '实测 ' + p.chars);
+    ok('B·' + name + ' 正文＝授权终点 md5', md5(p.content) === a.toMd5);
+    ok('B·' + name + ' 必须真的被覆盖（字数不等旧版 ' + oldChars + '）', p.chars !== oldChars, '仍是旧字数');
+  } else {
+    ok('B·' + name + ' 未被改写（chars 保持旧读数 ' + oldChars + '）', p.chars === oldChars, '实测 ' + p.chars);
+  }
+}
 ok('B5 覆盖包 id 原地保留', byName.get('源堡')?.id === 'ch146' && byName.get('与共者')?.id === 'ch157');
 
 /* C 新增面 */
@@ -49,8 +74,14 @@ ok('C2 思维链V2 内容含 WJWK-think/WJWK-settle 结算格式',
   byName.get('万界武库思维链（V2）')?.content.includes('<WJWK-settle>'));
 ok('C3 通用选项栏内容含四思路', ['光明大道', '技出奇招', '未雨绸缪', '破釜沉舟']
   .every((k) => byName.get('万界武库通用选项栏')?.content.includes(k)));
-ok('C4 新包品阶合法（按新字数分档）',
-  byName.get('神圣几何')?.quality === '神话' && byName.get('武魂')?.quality === '传说');
+/* C4 [1120 改写] 原先把品阶写死（神圣几何=神话 / 武魂=传说）。作者整包重写后字数变了，
+ *   品阶按分档规则自然落档也会变 —— 写死品阶名等于测"字数有没有变"，不是测"品阶合不合法"。
+ *   改为：品阶必须等于它自己字数的分档结果。 */
+const QUALITY_BANDS = [[6000, '神话'], [4500, '传说'], [3500, '史诗'], [2600, '稀有'], [1800, '优秀'], [0, '普通']];
+const qualityOf = (n) => QUALITY_BANDS.find(([t]) => n >= t)[1];
+ok('C4 新包品阶合法（按其字数落档，不写死品阶名）',
+  ['神圣几何', '武魂'].every((n) => { const p = byName.get(n); return !!p && p.quality === qualityOf(p.chars); }),
+  ['神圣几何', '武魂'].map((n) => n + '=' + byName.get(n)?.quality + '@' + byName.get(n)?.chars).join(' / '));
 
 /* C5 当版增量锚（[v3.16.0]）—— 库规模改下限形后，由本条承担「新包真的进来了」 */
 ok('C5 ch166 位移就位（个人型 / 含 WJWK-settle 结算段）',

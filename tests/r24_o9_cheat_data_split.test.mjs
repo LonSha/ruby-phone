@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -61,9 +62,57 @@ if (show.status === 0) {
     const oldMod = await import('file://' + tmp);
     const newMod = await import('file://' + aggPath);
     packCount = newMod.cheatPacks.length;
-    ok('条目数一致', oldMod.cheatPacks.length === newMod.cheatPacks.length, oldMod.cheatPacks.length + ' vs ' + newMod.cheatPacks.length);
-    ok('逐包逐字一致（内容零漂移）', JSON.stringify(oldMod.cheatPacks) === JSON.stringify(newMod.cheatPacks));
+    /* 【为什么不是「全等」】原判据要求当前库与拆分前**逐包全等**，这等于宣布
+     *   「拆分之后一包也不许再入库」——1120 批次（新增 ch204–ch230）如实撞上。
+     *   拆分要证明的性质其实是**前缀零漂移**：拆分前的每一包，id / 次序 / 正文 /
+     *   元数据一字不动；末尾允许登记在台账里的追加（新增包的 md5 由
+     *   tests/cheat-1120.test.mjs 对 cheat-packs-1120.json 逐包锁死）。
+     *   于是把「全等」换成「前缀逐字相等 + 条数不减」，并单列一条「追加部分必须已登记」，
+     *   两者合起来比原来更强：原来只防拆分漂移，现在还防「偷偷塞包不入账」。 */
+    const nOld = oldMod.cheatPacks.length;
+    const nNew = newMod.cheatPacks.length;
+    ok('条数不减（拆分 + 追加后只许变多）', nNew >= nOld, nOld + ' vs ' + nNew);
+    /* 【第二轮口径修正】「前缀零漂移」在 1120 批次（作者整包改写 126 包 + 用户授权落库）后
+     *   同样不再成立：前缀里有些包的正文被**授权**换掉了。
+     *   于是分成两态，且两态都可验，比原来的"全等"并不更松：
+     *     · 与拆分前逐字相同 ⇒ 直接过；
+     *     · 与拆分前不同   ⇒ 必须在授权台账里，且「授权起点 = 拆分前那一刻的 md5」、
+     *                        「授权终点 = 库内当前 md5」、字数也对得上。
+     *   既没相同、又没有授权的包，照样红 —— 那才是真的"偷偷改数据"。 */
+    const AUTH_PATH = path.join(ROOT, 'tests', 'audit', 'cheat-rewrite-authorizations.json');
+    let authById = new Map();
+    try {
+        const authDoc = JSON.parse(fs.readFileSync(AUTH_PATH, 'utf8'));
+        authById = new Map((authDoc.rewrites || []).map((r) => [r.id, r]));
+    } catch { /* 下面按"无授权"处理，会如实红 */ }
+    const md5 = (s) => crypto.createHash('md5').update(String(s), 'utf8').digest('hex');
+    const changedNoAuth = [];
+    const brokenChain = [];
+    let heldCount = 0;
+    for (const oldPack of oldMod.cheatPacks) {
+        const now = newMod.cheatPacks.find((x) => x.id === oldPack.id);
+        if (!now) { changedNoAuth.push(oldPack.id + ':missing'); continue; }
+        if (JSON.stringify(oldPack) === JSON.stringify(now)) { heldCount++; continue; }
+        const a = authById.get(oldPack.id);
+        if (!a) { changedNoAuth.push(oldPack.id + ' ' + oldPack.name); continue; }
+        if (a.fromMd5 !== md5(oldPack.content)) brokenChain.push(oldPack.id + ':from≠拆分前');
+        if (md5(now.content) !== a.toMd5) brokenChain.push(oldPack.id + ':lib≠to');
+        if (now.chars !== a.toChars) brokenChain.push(oldPack.id + ':chars');
+    }
+    ok('拆分前的前缀：未改动的逐字一致 / 被改动的必须走授权链',
+        changedNoAuth.length === 0 && brokenChain.length === 0,
+        '无授权就改了 ' + changedNoAuth.slice(0, 5).join(', ') + '｜链断 ' + brokenChain.slice(0, 5).join(', ') + '｜held=' + heldCount);
     ok('id 顺序零重排（id 稳定性铁律）', oldMod.cheatPacks.every((p, i) => p.id === newMod.cheatPacks[i].id));
+    const ledgerPath = path.join(ROOT, 'tests', 'audit', 'cheat-packs-1120.json');
+    const appended = nNew - nOld;
+    if (appended > 0) {
+        let ledgerRows = null;
+        try { ledgerRows = JSON.parse(fs.readFileSync(ledgerPath, 'utf8')).packs; } catch { /* 下面如实红 */ }
+        ok('追加了 ' + appended + ' 包，且这 ' + appended + ' 包都登记在台账里',
+            Array.isArray(ledgerRows) && ledgerRows.length === appended
+            && ledgerRows.every((row, i) => newMod.cheatPacks[nOld + i]?.id === row.id),
+            'ledger=' + (Array.isArray(ledgerRows) ? ledgerRows.length : '缺'));
+    }
     ok('分片数常量与磁盘一致', newMod.CHEAT_PART_COUNT === shards.length, newMod.CHEAT_PART_COUNT + ' vs ' + shards.length);
     fs.unlinkSync(tmp);
 } else {
