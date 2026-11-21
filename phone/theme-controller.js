@@ -150,7 +150,7 @@ export function createThemeController({ storage, getRoots, getWallpaper, doc = (
         if (iconBridge) return;
         import('./ui/rp-icons-bridge.js').then((m) => {
             if (my !== iconBridgeToken || !isIosV3()) return;
-            const offs = roots().map((el) => m.attachIosIcons(el));
+            const offs = roots().map((el) => m.attachIosIcons(el, { keepCustom: false }));
             iconBridge = () => offs.forEach((f) => f());
         }).catch((e) => {
             /* 非致命，但**不许静默**：真机排查时唯一线索就是这里。 */
