@@ -334,6 +334,22 @@ export function createFontScaleManager(deps) {
             /* [v4.92.0] 像素皮肤：主 CSS 注入成功后，追加 pixel-skin.css（像素 OS 视觉）。
              *   失败不阻塞主 CSS —— 像素化是呈现层增强，降级即回到原视觉。 */
             try {
+                /* [fix] 像素皮肤只在主题包选 pixel 时加载。
+                 *   原来是无条件注入：iOS v3 皮肤与像素皮肤同时生效，
+                 *   pixel-skin 用 #phone-panel-content 前缀 + !important 压过 v3，
+                 *   表现为「明明是 iOS 皮肤，看起来却是像素风」，且圆角被压平、
+                 *   像素等宽字体与 iOS 字阶双轨打架。
+                 *   非 pixel 包时顺手移除残留的 #rp-pixel-skin（切主题后必须摘掉）。 */
+                const __pack = (() => {
+                    try { return String(window.localStorage.getItem('phone-theme-pack') || 'default'); }
+                    catch (_e) { return 'default'; }
+                })();
+                if (__pack !== 'pixel') {
+                    const stale = document.getElementById('rp-pixel-skin');
+                    if (stale) stale.remove();
+                    /* 由外层 catch 静默吃掉：不是错误，是「这套皮肤不该加载」。 */
+                    throw new Error('pixel-skin skipped (pack=' + __pack + ')');
+                }
                 const pr = await fetch(ST_PHONE_PIXEL_CSS_URL, { cache: 'no-cache' });
                 if (pr.ok) {
                     const pcss = await pr.text();

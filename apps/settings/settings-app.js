@@ -345,12 +345,19 @@ export class SettingsApp {
             const line = at === null ? '时机未声明' : effectLine(key);
             const why = at === null ? '这一项还没登记生效时机（见 config/setting-effect.js）' : effectWhyOf(key);
             const sel = '.setting-effect-badge[data-for="' + key + '"]';
-            let badge = el.parentElement?.querySelector?.(sel);
+            /* 挂在**整行之后**，不塞进控件所在的 flex 行。
+             *   塞进行里会成为第三个 flex 子项，宽度被压到最小内容宽，
+             *   长句「生效时机：…」于是竖排溢出、压到相邻行上（真机那团重叠字）。
+             *   注意设定行不一定有 .setting-item 祖节点，取不到时退回原宿主。 */
+            const item = (el.closest && el.closest('.setting-item')) || null;
+            const host = (item && item.parentElement) ? item.parentElement : (el.parentElement || el);
+            let badge = host.querySelector ? host.querySelector(sel) : null;
             if (!badge) {
                 badge = doc.createElement('div');
                 badge.className = 'setting-effect-badge';
                 badge.setAttribute('data-for', key);
-                (el.parentElement || el).appendChild(badge);
+                if (item && item.parentElement) item.parentElement.insertBefore(badge, item.nextSibling);
+                else (el.parentElement || el).appendChild(badge);
             }
             badge.setAttribute('data-at', at === null ? 'unknown' : String(at));
             badge.style.cssText = 'display:block;margin-top:4px;font-size:11px;line-height:1.4;'
