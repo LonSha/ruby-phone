@@ -130,10 +130,13 @@ export function createThemeController({ storage, getRoots, getWallpaper, doc = (
     let observers = [];
     let characterVars = null;
 
-    const isDs2 = () => get(KEYS.ds, '1') === '2';
+    /* 默认值 '1' -> '2'：isIosV3 早已默认 '3'，却卡在这道老闸上，
+     * 全新安装时整条 v3 链路（图标桥 / 图标遮罩 / App 皮肤）压根不启动。
+     * 显式存过 '1' 的用户仍尊重（回落旧外观）。 */
+    const isDs2 = () => get(KEYS.ds, '2') === '2';
     const getScheme = () => { const s = get(KEYS.scheme, 'auto'); return SCHEMES.includes(s) ? s : 'auto'; };
     const getPack = () => { const p = get(KEYS.pack, 'default'); return PACKS.includes(p) ? p : 'default'; };
-    const isUiV2 = () => isDs2() && get(KEYS.ui, '1') === '2';
+    const isUiV2 = () => isDs2() && get(KEYS.ui, '2') === '2';   // 同上：默认 '2'
     const getAccent = () => { const a = get(KEYS.accent, 'default'); return ACCENTS.includes(a) ? a : 'default'; };
     /* 设计系统收编：v3 外观**默认开**（新装即生效）；用户显式关过（存 '1'）才回落旧外观。
        判据：默认值从 '1' 改为 '3'，语义仍是「存储值为 '3' 才开」，只是没存过时算开。 */
