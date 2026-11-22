@@ -36,7 +36,7 @@ function getRuntimeStats(...args) {
             return window.VirtualPhone.cachedMofoData;
         }
 
-        const module = await getBootTiming().instrumentImport(import('./apps/mofo/mofo-data.js'), './apps/mofo/mofo-data.js');
+        const module = await getBootTiming().instrumentImport(import('./mofo-data.js'), './mofo-data.js');
         window.VirtualPhone.cachedMofoData = new module.MofoData(getStorage());
         if (window.VirtualPhone.mofoApp && window.VirtualPhone.mofoApp.mofoData !== window.VirtualPhone.cachedMofoData) {
             window.VirtualPhone.mofoApp.mofoData = window.VirtualPhone.cachedMofoData;
