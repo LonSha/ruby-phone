@@ -19334,3 +19334,89 @@ html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box
 #phone-panel[data-orientation="landscape"] .phone-in-panel .phone-screen {
     padding-top: 0;
 }
+
+/* ===== [v4.158-css] 控制中心 · 胶囊形态（左侧胶囊 / 右侧竖滑块 / 正圆按钮 / 整宽媒体卡） ===== */
+/* ===================================================================
+   控制中心 · 胶囊形态（对照用户实机截图定稿：左侧竖向胶囊 / 右侧竖滑块
+   与正圆按钮 / 横贯整宽的媒体卡）。只改形态，不改任何交互与状态。
+   =================================================================== */
+.sys-cc-panel{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 62px;
+  grid-template-areas:
+    "grip    grip"
+    "title   title"
+    "toggles scale"
+    "radar   radar"
+    "music   music"
+    "release release"
+    "dup     dup"
+    "lock    lock"
+    "hint    hint";
+  column-gap:14px; row-gap:12px;
+  padding:16px 18px 22px;
+  border-radius:0 0 34px 34px;
+}
+.sys-cc-grip{grid-area:grip}
+.sys-cc-title{grid-area:title;text-align:left;padding-left:2px;margin:0}
+
+/* —— 左侧：竖向胶囊 —— */
+.sys-cc-grid{grid-area:toggles;display:flex;flex-direction:column;gap:10px}
+.sys-cc-tile{
+  flex-direction:row;align-items:center;justify-content:flex-start;
+  gap:10px;height:58px;padding:0 16px;border-radius:29px;font-size:12.5px;
+}
+.sys-cc-tile i{font-size:16px;width:18px;text-align:center;flex:0 0 auto}
+.sys-cc-tile > span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sys-cc-tile .sys-cc-state{margin-left:auto;flex:0 0 auto;font-size:11px;opacity:.8}
+
+/* —— 右侧：竖向滑块 —— */
+.sys-cc-scale:not(.sys-cc-releases):not(.sys-cc-dups){
+  grid-area:scale;margin:0;padding:10px 8px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  border-radius:31px;
+}
+.sys-cc-scale:not(.sys-cc-releases):not(.sys-cc-dups) .sys-cc-scale-head{
+  flex-direction:column;align-items:center;gap:1px;margin:0;font-size:10px;line-height:1.2;
+}
+.sys-cc-scale:not(.sys-cc-releases):not(.sys-cc-dups) .sys-cc-scale-head > span:first-child{
+  writing-mode:vertical-rl;letter-spacing:1px;opacity:.75;
+}
+.sys-cc-scale:not(.sys-cc-releases):not(.sys-cc-dups) input[type="range"]{
+  writing-mode:vertical-lr;direction:rtl;
+  -webkit-appearance:slider-vertical;
+  width:100%;flex:1;min-height:120px;height:100%;
+}
+.sys-cc-scale:not(.sys-cc-releases):not(.sys-cc-dups) input[type="range"]::-webkit-slider-runnable-track{
+  width:6px;border-radius:3px;
+}
+
+/* —— 其余整宽块 —— */
+.sys-cc-near-field{grid-area:radar}
+.sys-cc-music{grid-area:music;margin:0;border-radius:22px;padding:12px 14px;min-height:80px}
+.sys-cc-scale.sys-cc-releases{grid-area:release}
+.sys-cc-scale.sys-cc-dups{grid-area:dup}
+.sys-cc-hint{grid-area:hint;margin-top:2px}
+
+/* —— 锁屏：正圆按钮 —— */
+.sys-cc-action.sys-cc-lock{
+  grid-area:lock;justify-self:start;
+  width:62px;height:62px;padding:0;border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-size:10px;line-height:1.1;
+}
+.sys-cc-action.sys-cc-lock i,.sys-cc-action.sys-cc-lock span{font-size:10px}
+
+/* ===== [v4.158-ui] 主屏搜索入口（设计稿：时钟 → 搜索 → 图标页 → 页码 → dock） ===== */
+.rp-home-search{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  margin:0 auto 10px;height:32px;max-width:78%;padding:0 16px;
+  border:none;border-radius:16px;background:rgba(255,255,255,.14);color:rgba(255,255,255,.74);
+  font-size:12px;cursor:pointer;
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);
+  -webkit-tap-highlight-color:transparent;
+}
+.rp-home-search:active{transform:scale(.98)}
+.rp-home-search svg{flex:0 0 auto;opacity:.82}
+.rp-home-search span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
