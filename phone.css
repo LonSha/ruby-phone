@@ -19562,126 +19562,21 @@ html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box
 :where(.phone-screen .phone-view-current img) { max-width: 100%; }
 :where(.phone-screen .phone-view-current [class*="-avatar"]) { flex: 0 0 auto; object-fit: cover; }
 
-/* ===== [v4.158-heavy] 六个重度 App 的顶部骨架平齐（微信 / 微博 / B 站 / 小红书 / 贴吧 / 淘宝） =====
-   纪律：只改顶部框（页头 / 标题 / 页签）的**尺寸与排版**，不碰颜色、不碰卡片与列表行。
-   选择器命中才生效；未命中即空操作（与本仓现有类名对齐，不自造新类）。 */
-.wechat-header,
-.weibo-header,
-.bilibili-header,
-.bili-header,
-.xhs-header,
-.tieba-header,
-.taobao-header {
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 48px;
-}
-.wechat-header-title,
-.weibo-header-title,
-.bilibili-header-title,
-.bili-header-title,
-.xhs-header-title,
-.tieba-header-title,
-.taobao-header-title {
-  font-size: 17px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.weibo-back-btn,
-.bili-back-btn,
-.xhs-back-btn,
-.tieba-back-btn,
-.taobao-back-btn,
-.wechat-back-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 36px;
-  min-height: 36px;
-  border-radius: 999px;
-}
-.weibo-tabs,
-.bili-tabs,
-.xhs-tabs,
-.tieba-tabs,
-.taobao-tabs,
-.weibo-tabbar,
-.bili-tabbar,
-.xhs-tabbar,
-.tieba-tabbar,
-.taobao-tabbar,
-.xhs-tab,
-.weibo-tab,
-.bili-tab,
-.tieba-tab,
-.taobao-tab {
-  box-sizing: border-box;
-  line-height: 1.2;
-}
-.weibo-tab,
-.bili-tab,
-.xhs-tab,
-.tieba-tab,
-.taobao-tab {
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
+/* ===== [v4.158-heavy] 六个重度 App 的顶部框（微信 / 微博 / B 站 / 小红书 / 贴吧 / 淘宝） =====
+   选择器全部已在仓内核对过（只写真存在的类名，不预留猜测）：
+     wechat-header / weibo-nav-bar / bl-header / xhs-header / tb-header / tbo-header
 
-/* [v4.158-heavy-b] 上一段的真实前缀补齐（仓内核对过：bili = bl- / tieba = tb- / 淘宝 = tbo-） */
-.bl-header,
-.tb-header,
-.tb-detail-header,
-.tbo-header {
+种树抬到 #phone-panel-content .phone-view-current：App 自己的样式是运行时插入 document.head 的，
+   纯类名选择器在同级时会输。只写尺寸与排版，不写颜色 / 背景 / 阴影，
+   因此不会碰到浅底 App 的对比度。 */
+#phone-panel-content .phone-view-current :is(.wechat-header, .weibo-nav-bar, .bl-header, .xhs-header, .tb-header, .tb-detail-header, .tbo-header) {
   box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 8px;
   min-height: 48px;
 }
-.tb-header-title {
-  font-size: 17px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.tb-back-btn,
-.tb-detail-back {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 36px;
-  min-height: 36px;
-  border-radius: 999px;
-}
-.bl-nav {
-  box-sizing: border-box;
-  line-height: 1.2;
-  min-height: 44px;
-}
-
-/* ===== [v4.158-heavy-c] 上两段的落实层 =====
-   为何要重写一遍带种树：App 自己的样式是运行时插在 document.head 里的，同级时它在后、
-   纯类名选择器会输。因此这里用 `#phone-panel-content .phone-view-current` 把种树抬到能稳定生效，
-   但**仍然只写尺寸与排版**（不写颜色 / 背景 / 阴影），所以不会碰浅底 App 的对比度。 */
-#phone-panel-content .phone-view-current :is(.wechat-header, .weibo-header, .bl-header, .bilibili-header, .xhs-header, .tb-header, .tb-detail-header, .tbo-header) {
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 48px;
-}
-#phone-panel-content .phone-view-current :is(.wechat-header-title, .weibo-header-title, .xhs-header-title, .tb-header-title) {
+#phone-panel-content .phone-view-current :is(.wechat-header-title, .weibo-nav-title, .tb-header-title) {
   font-size: 17px;
   font-weight: 650;
   letter-spacing: -0.01em;
@@ -19699,8 +19594,10 @@ html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box
   min-height: 36px;
   border-radius: 999px;
 }
-#phone-panel-content .phone-view-current :is(.weibo-tab, .bl-nav, .xhs-tab, .tb-tab, .tbo-tab) {
+#phone-panel-content .phone-view-current :is(.weibo-tabs, .weibo-tab, .xhs-header-tabs, .xhs-tab, .bl-nav) {
   box-sizing: border-box;
-  min-height: 44px;
   line-height: 1.2;
+}
+#phone-panel-content .phone-view-current :is(.weibo-tab, .xhs-tab, .bl-nav) {
+  min-height: 44px;
 }
