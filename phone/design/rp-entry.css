@@ -49,6 +49,7 @@
 @import url("./rp-desktop-v2.css");   /* 桌面重构 v2：仅 [data-rp-desktop="2"] 命中，默认开（storage phone-desktop-v2=0 关） */
 @import url("../../apps/memory/memory.v4.css");   /* 记忆面板重构 v4：仅 .mem-root[data-rp-mem="4"] 命中 */
 @import url("./rp-refresh-v4.css");   /* 全机 UI 刷新 v4：仅 [data-rp-refresh="4"] 命中，默认开（storage phone-refresh-v4=0 关） */
+@import url("../../apps/wechat/wechat.v4.css");   /* 微信·照现实（v4）：仅 [data-rp-refresh="4"] .wechat-app 命中 */
 
 /* ---------- 宿主护盾（未分层，必须在层外） ----------
    SillyTavern 主题和其他扩展的样式都是「未分层」的，天然高于任何 @layer。

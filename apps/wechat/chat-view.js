@@ -2906,11 +2906,11 @@ renderChatRoom(chat) {
         const rightButtonIsMore = !isCurrentChatSending && !hasInputText;
         const safeChatId = this._escapeHtml(String(chat?.id || '').trim());
         const inputAreaStyle = this.showQuickReplies
-            ? 'background: transparent !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; border-top: none !important;'
-            : 'background: rgba(255, 255, 255, 0.15) !important; backdrop-filter: blur(35px) saturate(200%) !important; -webkit-backdrop-filter: blur(35px) saturate(200%) !important; border-top: 0.5px solid rgba(0, 0, 0, 0.15) !important;';
+            ? ' backdrop-filter: none !important; -webkit-backdrop-filter: none !important; border-top: none !important;'
+            : '';
         const inputBarStyle = this.showQuickReplies
-            ? 'background: rgba(255, 255, 255, 0.15) !important; backdrop-filter: blur(35px) saturate(200%) !important; -webkit-backdrop-filter: blur(35px) saturate(200%) !important; border-top: 0.5px solid rgba(0, 0, 0, 0.15) !important;'
-            : 'background: transparent !important;';
+            ? ''
+            : '';
 
         return `
     <div class="chat-room" data-chat-id="${safeChatId}">
@@ -2931,7 +2931,7 @@ renderChatRoom(chat) {
                     ${this.showQuickReplies ? this.renderQuickReplyPanel() : ''}
 
                     <!-- 引用预览栏 - 仿真实微信浅灰条 -->
-                    ${this.activeQuote ? `<div class="active-quote-bar" style="padding: 2px 8px; background: rgba(0,0,0,0.05); font-size: 10px; color: #888; display: flex; justify-content: space-between; align-items: center; line-height: 1.2;"><div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${this._escapeHtml(this.activeQuote.sender)}: ${this._escapeHtml(this.activeQuote.content.length > 20 ? this.activeQuote.content.substring(0, 20) + '...' : this.activeQuote.content)}</div><button aria-label="关闭" id="cancel-quote-btn" style="background: none; border: none; color: #aaa; cursor: pointer; padding: 0 4px; font-size: 10px; line-height: 1;"><i class="fa-solid fa-xmark"></i></button></div>` : ''}
+                    ${this.activeQuote ? `<div class="active-quote-bar" style="padding: 2px 8px; background: rgba(0,0,0,0.05); font-size: 10px; color: #888; display: flex; justify-content: space-between; align-items: center; line-height: 1.2;"><div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${this._escapeHtml(this.activeQuote.sender)}: ${this._escapeHtml(this.activeQuote.content.length > 20 ? this.activeQuote.content.substring(0, 20) + '...' : this.activeQuote.content)}</div><button aria-label="关闭" id="cancel-quote-btn" style=""><i class="fa-solid fa-xmark"></i></button></div>` : ''}
 
                     <!-- 输入行 -->
                     <div class="chat-input-bar" style="display: flex; align-items: center; justify-content: space-between; ${inputBarStyle}">
@@ -2950,7 +2950,7 @@ renderChatRoom(chat) {
                         </div>
                         <div class="chat-input-wrapper" style="flex: 1; margin: 0;">
                             <input type="text" class="chat-input" id="chat-input"
-                                   style="background: rgba(255, 255, 255, 0.42) !important; border: 0.5px solid rgba(255, 255, 255, 0.58) !important; color: #111111 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;"
+                                   style=""
                                    placeholder="${this._escapeHtml(this._getQuickReplyInputPlaceholder())}" value="${this._escapeHtml(this.inputText)}">
                         </div>
                         <div style="display: flex; align-items: center; gap: 0px;">
@@ -16638,12 +16638,12 @@ ${callTranscript}`;
                         <span style="font-size: 14px; color: #222;">单个金额</span>
                         <div style="display: flex; align-items: center; justify-content: flex-end; height: 42px; min-width: 130px; padding: 0 11px; border-radius: 10px; background: #fff; box-sizing: border-box;">
                             <span style="font-size: 14px; color: #b8b8b8; margin-right: 7px;">¥</span>
-                            <input type="text" id="redpacket-amount" placeholder="0.00" inputmode="decimal" style="background: transparent !important; border: none !important; outline: none !important; box-shadow: none !important; font-size: 16px; line-height: 1; text-align: right; color: #a8a8a8; width: 64px; padding: 0;">
+                            <input type="text" id="redpacket-amount" placeholder="0.00" inputmode="decimal" style=" border: none !important; outline: none !important; box-shadow: none !important; font-size: 16px; line-height: 1; text-align: right; color: #a8a8a8; width: 64px; padding: 0;">
                         </div>
                     </div>
                 </div>
                 <div style="display: flex; align-items: center; background: #fff; border-radius: 12px; margin: 0 12px 10px; padding: 0 12px; box-sizing: border-box; min-height: 58px;">
-                    <input type="text" id="redpacket-wish" placeholder="恭喜发财，大吉大利" maxlength="25" style="flex: 1; min-width: 0; height: 42px; background: transparent !important; border: none !important; outline: none !important; box-shadow: none !important; font-size: 14px; color: #222; padding: 0;">
+                    <input type="text" id="redpacket-wish" placeholder="恭喜发财，大吉大利" maxlength="25" style="flex: 1; min-width: 0; height: 42px;  border: none !important; outline: none !important; box-shadow: none !important; font-size: 14px; color: #222; padding: 0;">
                     <i class="fa-regular fa-face-smile" aria-hidden="true" style="font-size: 18px; color: #8a8a8a; margin-left: 8px; flex-shrink: 0;"></i>
                 </div>
                 <div style="text-align: center; margin: 25px 0 15px;">
@@ -16664,13 +16664,13 @@ ${callTranscript}`;
                         <span style="font-size: 14px; color: #222;">单个金额</span>
                         <div style="display: flex; align-items: center;">
                             <span style="font-size: 14px; color: #b8b8b8; margin-right: 8px;">¥</span>
-                            <input type="text" id="redpacket-amount" placeholder="0.00" inputmode="decimal" style="background: transparent !important; border: none !important; outline: none !important; box-shadow: none !important; font-size: 17px; text-align: right; color: #a8a8a8; width: 64px; padding: 0;">
+                            <input type="text" id="redpacket-amount" placeholder="0.00" inputmode="decimal" style=" border: none !important; outline: none !important; box-shadow: none !important; font-size: 17px; text-align: right; color: #a8a8a8; width: 64px; padding: 0;">
                         </div>
                     </div>
                     <div style="display: flex; align-items: center; justify-content: space-between; min-height: 58px; border-bottom: 1px solid #f1f1f1;">
                         <span style="font-size: 14px; color: #222;">发给</span>
                         <div style="display: flex; align-items: center; min-width: 0; max-width: 68%;">
-                            <select id="redpacket-group-recipient" aria-label="选择群成员" style="max-width: 170px; border: none !important; outline: none !important; box-shadow: none !important; background: transparent !important; color: #999; font-size: 13px; text-align: right; text-align-last: right; appearance: none; padding: 0 16px 0 0;">
+                            <select id="redpacket-group-recipient" aria-label="选择群成员" style="max-width: 170px; border: none !important; outline: none !important; box-shadow: none !important;  color: #999; font-size: 13px; text-align: right; text-align-last: right; appearance: none; padding: 0 16px 0 0;">
                                 <option value="" style="text-align: left; text-align-last: left; direction: ltr;">选择群成员</option>
                                 ${memberOptions}
                             </select>
@@ -16679,7 +16679,7 @@ ${callTranscript}`;
                     </div>
                     <div style="display: flex; align-items: center; min-height: 58px;">
                         <span style="font-size: 14px; color: #222; margin-right: 24px;">祝福语</span>
-                        <input type="text" id="redpacket-wish" placeholder="恭喜发财，大吉大利" maxlength="25" style="flex: 1; min-width: 0; background: transparent !important; border: none !important; outline: none !important; box-shadow: none !important; font-size: 13px; color: #222; padding: 0;">
+                        <input type="text" id="redpacket-wish" placeholder="恭喜发财，大吉大利" maxlength="25" style="flex: 1; min-width: 0;  border: none !important; outline: none !important; box-shadow: none !important; font-size: 13px; color: #222; padding: 0;">
                         <i class="fa-regular fa-face-smile" aria-hidden="true" style="font-size: 17px; color: #8a8a8a; margin-left: 8px; flex-shrink: 0;"></i>
                     </div>
 
@@ -16700,19 +16700,19 @@ ${callTranscript}`;
                 <div style="background: #fff; border-radius: 14px; margin: 0 12px 10px; padding: 0 14px; box-sizing: border-box;">
                     <div style="display: flex; align-items: center; justify-content: space-between; min-height: 58px; border-bottom: 1px solid #f1f1f1;">
                         <span style="font-size: 14px; color: #222;">红包类型</span>
-                        <button id="redpacket-group-kind-toggle" type="button" style="display: inline-flex; align-items: center; gap: 8px; border: none !important; outline: none !important; background: transparent !important; color: #666; font-size: 13px; padding: 0; cursor: pointer;"><span>拼手气红包</span><i class="fa-solid fa-chevron-right" aria-hidden="true" style="font-size: 10px; color: #bbb;"></i></button>
+                        <button id="redpacket-group-kind-toggle" type="button" style="display: inline-flex; align-items: center; gap: 8px; border: none !important; outline: none !important;  color: #666; font-size: 13px; padding: 0; cursor: pointer;"><span>拼手气红包</span><i class="fa-solid fa-chevron-right" aria-hidden="true" style="font-size: 10px; color: #bbb;"></i></button>
                     </div>
                     <div style="display: flex; align-items: center; justify-content: space-between; min-height: 58px; border-bottom: 1px solid #f1f1f1;">
                         <span style="font-size: 14px; color: #222;">总金额</span>
-                        <div style="display: flex; align-items: center;"><span style="font-size: 14px; color: #b8b8b8; margin-right: 8px;">¥</span><input type="text" id="redpacket-group-total" placeholder="0.00" inputmode="decimal" style="background: transparent !important; border: none !important; outline: none !important; box-shadow: none !important; font-size: 17px; text-align: right; color: #999; width: 64px; padding: 0;"></div>
+                        <div style="display: flex; align-items: center;"><span style="font-size: 14px; color: #b8b8b8; margin-right: 8px;">¥</span><input type="text" id="redpacket-group-total" placeholder="0.00" inputmode="decimal" style=" border: none !important; outline: none !important; box-shadow: none !important; font-size: 17px; text-align: right; color: #999; width: 64px; padding: 0;"></div>
                     </div>
                     <div style="display: flex; align-items: center; justify-content: space-between; min-height: 58px; border-bottom: 1px solid #f1f1f1;">
                         <span style="font-size: 14px; color: #222;">红包个数</span>
-                        <div style="display: flex; align-items: center; color: #aaa; font-size: 13px;"><input id="redpacket-group-count" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="填写个数" aria-label="红包个数" style="width: 72px; background: transparent !important; border: none !important; outline: none !important; box-shadow: none !important; color: #888; font-size: 13px; text-align: right; padding: 0;"><span style="margin-left: 5px; color: #888;">个</span></div>
+                        <div style="display: flex; align-items: center; color: #aaa; font-size: 13px;"><input id="redpacket-group-count" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="填写个数" aria-label="红包个数" style="width: 72px;  border: none !important; outline: none !important; box-shadow: none !important; color: #888; font-size: 13px; text-align: right; padding: 0;"><span style="margin-left: 5px; color: #888;">个</span></div>
                     </div>
                     <div style="display: flex; align-items: center; min-height: 58px;">
                         <span style="font-size: 14px; color: #222; margin-right: 24px;">祝福语</span>
-                        <input type="text" id="redpacket-group-wish" placeholder="恭喜发财，大吉大利" maxlength="25" style="flex: 1; min-width: 0; background: transparent !important; border: none !important; outline: none !important; box-shadow: none !important; font-size: 13px; color: #222; padding: 0;">
+                        <input type="text" id="redpacket-group-wish" placeholder="恭喜发财，大吉大利" maxlength="25" style="flex: 1; min-width: 0;  border: none !important; outline: none !important; box-shadow: none !important; font-size: 13px; color: #222; padding: 0;">
                         <i class="fa-regular fa-face-smile" aria-hidden="true" style="font-size: 17px; color: #8a8a8a; margin-left: 8px; flex-shrink: 0;"></i>
                     </div>
 
@@ -16729,8 +16729,8 @@ ${callTranscript}`;
 
         const groupTabs = isGroupChat ? `
                 <div style="display: flex; align-items: center; margin: 0 12px 10px; padding: 0 7px; height: 52px; border-radius: 13px; background: #fff;">
-                    <button class="wechat-redpacket-group-tab" data-redpacket-mode="single" type="button" style="flex: 1; height: 100%; border: none !important; outline: none !important; background: transparent !important; color: #fa5151; font-size: 14px; font-weight: 600; cursor: pointer;"><span style="display: inline-flex; align-items: center; height: 100%; border-bottom: 2px solid #fa5151; box-sizing: border-box;">单独红包</span></button>
-                    <button class="wechat-redpacket-group-tab" data-redpacket-mode="group" type="button" style="flex: 1; height: 100%; border: none !important; outline: none !important; background: transparent !important; color: #888; font-size: 14px; cursor: pointer;"><span style="display: inline-flex; align-items: center; height: 100%; border-bottom: 2px solid transparent; box-sizing: border-box;">群红包</span></button>
+                    <button class="wechat-redpacket-group-tab" data-redpacket-mode="single" type="button" style="flex: 1; height: 100%; border: none !important; outline: none !important;  color: #fa5151; font-size: 14px; font-weight: 600; cursor: pointer;"><span style="display: inline-flex; align-items: center; height: 100%; border-bottom: 2px solid #fa5151; box-sizing: border-box;">单独红包</span></button>
+                    <button class="wechat-redpacket-group-tab" data-redpacket-mode="group" type="button" style="flex: 1; height: 100%; border: none !important; outline: none !important;  color: #888; font-size: 14px; cursor: pointer;"><span style="display: inline-flex; align-items: center; height: 100%; border-bottom: 2px solid transparent; box-sizing: border-box;">群红包</span></button>
                 </div>
             ` : '';
         const dialogBody = isGroupChat

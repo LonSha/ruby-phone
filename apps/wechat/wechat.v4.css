@@ -1,0 +1,211 @@
+/* ============================================================
+   \u5fae\u4fe1\u00b7\u7167\u73b0\u5b9e\u91cd\u5199\uff08wechat v4\uff09
+   ------------------------------------------------------------
+   \u4f5c\u7528\u57df\uff1a[data-rp-refresh="4"] .wechat-app\uff08\u5f00\u5173\u540c\u5168\u673a\u5237\u65b0\uff09
+   \u5c42\uff1arp.skins.curated\uff08\u538b\u5728 wechat.v3.css \u4e0e\u5e94\u7528\u5185\u8054\u6837\u5f0f\u4e4b\u4e0a\uff0c\u4e0d\u7528 !important\uff09
+   \u4f9d\u636e\uff1a\u5b98\u65b9\u5c3a\u5bf8\u2014\u2014\u9876\u680f44 / \u4f1a\u8bdd\u884c64 / \u5934\u50cf44\u5706\u89d26 /
+         \u5e95\u680f50 / \u6c14\u6ce1\u534a\u5f846\u3001\u81ea\u5df1#95EC69\u3001\u5bf9\u65b9#FFF / \u672a\u8bfb\u89d2\u6807#FA5151
+   ============================================================ */
+@layer rp.skins.curated {
+
+[data-rp-refresh="4"] .wechat-app {
+    background: #EDEDED;
+    color: #111;
+    font-size: 16px;
+    letter-spacing: 0;
+}
+
+/* ---------- 1. \u9876\u680f ---------- */
+[data-rp-refresh="4"] .wechat-app .wechat-header {
+    height: 44px;
+    min-height: 44px;
+    padding: 0 8px;
+    background: #EDEDED;
+    border-bottom: .5px solid #D8D8D8;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+[data-rp-refresh="4"] .wechat-app .wechat-header-title,
+[data-rp-refresh="4"] .wechat-app .wechat-header-title-text {
+    font-size: 17px;
+    font-weight: 500;
+    color: #111;
+}
+[data-rp-refresh="4"] .wechat-app :is(.wechat-back-btn, .wechat-header-btn, .wechat-header-left, .wechat-header-right) {
+    color: #111;
+    font-size: 15px;
+}
+
+/* ---------- 2. \u4f1a\u8bdd\u5217\u8868 ---------- */
+[data-rp-refresh="4"] .wechat-app .wechat-chat-list { background: #FFF; }
+[data-rp-refresh="4"] .wechat-app .chat-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 64px;
+    padding: 8px 12px;
+    margin: 0;
+    background: #FFF;
+    border: 0;
+    border-bottom: .5px solid #E5E5E5;
+    box-shadow: none;
+}
+[data-rp-refresh="4"] .wechat-app .chat-item:active { background: #E5E5E5; }
+[data-rp-refresh="4"] .wechat-app .chat-avatar {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #D9D9D9;
+}
+[data-rp-refresh="4"] .wechat-app .chat-avatar > * { width: 100%; height: 100%; }
+[data-rp-refresh="4"] .wechat-app .chat-info { flex: 1 1 auto; min-width: 0; }
+[data-rp-refresh="4"] .wechat-app .chat-name {
+    font-size: 16px;
+    font-weight: 400;
+    color: #111;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+[data-rp-refresh="4"] .wechat-app .chat-last-msg {
+    margin-top: 3px;
+    font-size: 13px;
+    color: #9A9A9A;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+[data-rp-refresh="4"] .wechat-app .chat-time {
+    font-size: 11.5px;
+    color: #B2B2B2;
+    align-self: flex-start;
+    margin-top: 2px;
+}
+[data-rp-refresh="4"] .wechat-app .chat-badge {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: #FA5151;
+    color: #FFF;
+    font-size: 11px;
+    line-height: 18px;
+    text-align: center;
+}
+
+/* ---------- 3. \u804a\u5929\u9875 ---------- */
+[data-rp-refresh="4"] .wechat-app .chat-room { background: #EDEDED; }
+[data-rp-refresh="4"] .wechat-app .chat-messages {
+    padding: 12px;
+    gap: 10px;
+    background: #EDEDED;
+}
+[data-rp-refresh="4"] .wechat-app .chat-message { gap: 8px; margin: 0; }
+[data-rp-refresh="4"] .wechat-app .message-avatar {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    border-radius: 5px;
+    overflow: hidden;
+}
+[data-rp-refresh="4"] .wechat-app .message-content > div > div,
+[data-rp-refresh="4"] .wechat-app .message-left .bubble,
+[data-rp-refresh="4"] .wechat-app .message-right .bubble {
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 15px;
+    line-height: 1.45;
+    box-shadow: none;
+}
+[data-rp-refresh="4"] .wechat-app .message-left .bubble { background: #FFF; color: #111; }
+[data-rp-refresh="4"] .wechat-app .message-right .bubble { background: #95EC69; color: #111; }
+[data-rp-refresh="4"] .wechat-app .message-sender { color: #576B95; font-size: 12px; }
+[data-rp-refresh="4"] .wechat-app :is(.chat-time-marker, .wechat-manual-time-marker) {
+    font-size: 11px;
+    color: #B2B2B2;
+    text-align: center;
+}
+
+/* ---------- 4. \u8f93\u5165\u533a\uff08\u5185\u8054\u73bb\u7483\u6837\u5f0f\u5df2\u5728 chat-view.js \u4e2d\u62c6\u6389\uff09 ---------- */
+[data-rp-refresh="4"] .wechat-app .chat-input-area {
+    background: #F7F7F7;
+    border-top: .5px solid #D8D8D8;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+[data-rp-refresh="4"] .wechat-app .chat-input-bar { padding: 7px 8px; gap: 6px; background: #F7F7F7; }
+[data-rp-refresh="4"] .wechat-app .chat-input {
+    height: 36px;
+    border-radius: 4px;
+    border: 0;
+    background: #FFF;
+    color: #111;
+    font-size: 15px;
+    padding: 0 10px;
+}
+[data-rp-refresh="4"] .wechat-app .input-btn { color: #555; }
+
+/* ---------- 5. \u5e95\u680f\uff084 \u9879\uff09 ---------- */
+[data-rp-refresh="4"] .wechat-app .wechat-tabbar {
+    height: 50px;
+    padding: 4px 0 2px;
+    background: #F7F7F7;
+    border-top: .5px solid #D8D8D8;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+[data-rp-refresh="4"] .wechat-app .wechat-tab {
+    font-size: 10px;
+    color: #7A7A7A;
+}
+[data-rp-refresh="4"] .wechat-app .wechat-tab.active,
+[data-rp-refresh="4"] .wechat-app .wechat-tab.is-on {
+    color: #07C160;
+    font-weight: 400;
+}
+[data-rp-refresh="4"] .wechat-app .wechat-moments-unread-dot { background: #FA5151; }
+
+/* ---------- 6. \u901a\u8baf\u5f55\uff08\u9996\u5b57\u6bcd\u5206\u7ec4\uff09 ---------- */
+[data-rp-refresh="4"] .wechat-app .contacts-group-title {
+    padding: 6px 12px;
+    font-size: 13px;
+    color: #888;
+    background: #EDEDED;
+    font-weight: 400;
+}
+[data-rp-refresh="4"] .wechat-app .contact-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 56px;
+    padding: 8px 12px;
+    background: #FFF;
+    border-bottom: .5px solid #E5E5E5;
+}
+[data-rp-refresh="4"] .wechat-app .contact-item:active { background: #E5E5E5; }
+[data-rp-refresh="4"] .wechat-app .contact-avatar {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    border-radius: 5px;
+    overflow: hidden;
+}
+[data-rp-refresh="4"] .wechat-app .contact-name { font-size: 16px; color: #111; }
+
+/* ---------- 7. \u53d1\u73b0 / \u6211\uff08\u5206\u7ec4\u884c\uff09 ---------- */
+[data-rp-refresh="4"] .wechat-app .wechat-profile { background: #EDEDED; }
+[data-rp-refresh="4"] .wechat-app .msg-action-btn {
+    border-radius: 0;
+    background: #FFF;
+    border-bottom: .5px solid #E5E5E5;
+    font-size: 16px;
+    color: #111;
+    min-height: 48px;
+    justify-content: space-between;
+}
+
+} /* @layer rp.skins.curated */
