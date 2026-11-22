@@ -92,10 +92,14 @@ export class HomeScreen {
         const homeLayout = this.getHomeLayout();
         const hasCardCustomCss = homeLayout === 'cards' && !!this.getCardLayoutCustomCssText();
         const cardCustomClass = hasCardCustomCss ? ' home-card-custom-css-active yzp-home-card-custom-css-active' : '';
+        /* [桌面重构 v2] 视觉开关：只挂 data-rp-desktop="2"，样式在
+         *   phone/design/rp-desktop-v2.css（@layer rp.components，作用域同此属性）。
+         *   默认开（'1'）；storage 存 'phone-desktop-v2' = '0' 即回到旧桌面外观。
+         *   这里只加一个属性，不动结构 / 分页 / 路由 —— 关掉就等于完全没改过。 */
+        const desktopV2Attr = this.getDesktopV2() ? ' data-rp-desktop="2"' : '';
         this.preloadCardLayoutCustomCss();
-
         const html = `
-            <div class="home-screen yzp-home-screen home-layout-${homeLayout} yzp-home-layout-${homeLayout}${cardCustomClass}"${renderKeyAttr}>
+            <div class="home-screen yzp-home-screen home-layout-${homeLayout} yzp-home-layout-${homeLayout}${cardCustomClass}"${desktopV2Attr}${renderKeyAttr}>
                 <div class="wallpaper" style="${wallpaperStyle}"></div>
 
                 ${homeLayout === 'cards' ? this.renderCardLayout() : this.renderIconLayout()}
@@ -113,6 +117,11 @@ export class HomeScreen {
     getHomeLayout() {
         const layout = String(window.VirtualPhone?.storage?.get('phone-home-layout') || 'icons');
         return layout === 'cards' ? 'cards' : 'icons';
+    }
+    /** [桌面重构 v2] 是否启用新桌面外观。默认开；storage 'phone-desktop-v2'='0' 关闭。 */
+    getDesktopV2() {
+        const raw = window.VirtualPhone?.storage?.get?.('phone-desktop-v2');
+        return String(raw === undefined || raw === null || raw === '' ? '1' : raw) !== '0';
     }
 
     _getWallpaperImage() {
@@ -201,6 +210,10 @@ export class HomeScreen {
                 <div class="time-large yzp-home-time-large">${this.getCurrentTime()}</div>
                 <div class="date yzp-home-date">${this._escapeHtml(dateInfo.date)}${dateInfo.weekday ? ` ${this._escapeHtml(dateInfo.weekday)}` : ''}</div>
             </div>
+            <button type="button" class="rp-home-search" id="rp-home-search" aria-label="搜索应用与消息">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.4 16.4 21 21"/></svg>
+                <span>搜索应用、消息、记忆</span>
+            </button>
             <div class="app-grid-pager yzp-home-app-grid-pager" data-page-count="${pages.length}">
                 ${pages.map((apps, index) => `
                     <div class="app-grid yzp-home-app-grid app-grid-page yzp-home-app-grid-page" data-page-index="${index}">
@@ -511,6 +524,12 @@ export class HomeScreen {
 
     /** 分页手势与页码点击。水平滑动翻页；垂直滑动**不**拦截（留给宿主页面滚动）。 */
     bindIconPager() {
+        /* 主屏搜索入口（设计稿：时钟 → 搜索 → 图标页 → 页码 → dock）。点它进既有应用库。 */
+        const searchBtn = this.phoneShell?.screen?.querySelector?.('#rp-home-search');
+        if (searchBtn && searchBtn.dataset.searchBound !== '1') {
+            searchBtn.dataset.searchBound = '1';
+            searchBtn.addEventListener('click', () => this.openLibrary());
+        }
         const pager = this.phoneShell?.screen?.querySelector?.('.app-grid-pager');
         if (!pager || pager.dataset.pagerBound === '1') return;
         pager.dataset.pagerBound = '1';
