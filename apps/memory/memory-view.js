@@ -1194,6 +1194,17 @@ export class MemoryView {
   }
 
   /* ================= 主绘制 ================= */
+  /**
+   * [记忆面板重构 v4] 视觉开关：返回 ` data-rp-mem="4"` 或空串。
+   *   样式在 apps/memory/memory.v4.css（@layer rp.skins.curated，压在 memory.v3.css 之后）。
+   *   默认开；storage 'memory-panel-v4'='0' 即回到 v3 外观，DOM 一个字节都不变。
+   */
+  _memRootAttr() {
+    let raw;
+    try { raw = window.VirtualPhone?.storage?.get?.('memory-panel-v4'); } catch (_e) { raw = null; }
+    const on = String(raw === undefined || raw === null || raw === '' ? '1' : raw) !== '0';
+    return on ? ' data-rp-mem="4"' : '';
+  }
   _draw() {
     const pkg = this.app.insights({ perSense: 4, perScene: 2, perStage: 3, traceDays: 14 });
     // 覆盖度单独特数（现算纯读，不与 insights 混取——模块缺席不连坐其他页）
@@ -1205,7 +1216,7 @@ export class MemoryView {
      *   故本页首次打开不会付出全量扫描代价（与上游「诊断面不许有副作用」同纪律）。 */
     try { pkg.factFace = this.app.phoneFactFace(); } catch (_e) { pkg.factFace = null; }
     if (!pkg.data) {
-      this.container.innerHTML = '<div class="mem-root"><div class="mem-none">记忆系统未初始化，请刷新酒馆后重试</div></div>';
+      this.container.innerHTML = '<div class="mem-root"' + this._memRootAttr() + '><div class="mem-none">记忆系统未初始化，请刷新酒馆后重试</div></div>';
       return;
     }
     // 非法分页回落（防外部污染 _tab 后渲染空白）
@@ -1224,7 +1235,7 @@ export class MemoryView {
     const core = pkg.data;
     const autoOn = !!(core && core.config && core.config.autoInject);
     const html = [
-      '<div class="mem-root">',
+      '<div class="mem-root"' + this._memRootAttr() + '>',
       '  <header class="mem-header">',
       '    <button aria-label="返回" class="mem-back" id="mem-back"><i class="fa-solid fa-chevron-left"></i></button>',
       '    <h2 class="mem-title"><i class="fa-solid fa-brain"></i> 记忆</h2>',

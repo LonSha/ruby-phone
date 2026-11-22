@@ -1,0 +1,1032 @@
+/* ============================================================
+   RubyPhone · 记忆面板重构 v4（apps/memory 视觉层）
+   ------------------------------------------------------------
+   作用域：.mem-root 上有 data-rp-mem="4" 时命中（memory-view.js 挂）。
+           默认开；storage 'memory-panel-v4'='0' 关闭 → 一条规则都不命中。
+   层：@layer rp.skins.curated —— 比按需加载的 memory.v3.css（rp.apps）后，
+       不需要 !important 就能压过 v3，且不新增层、不动层序。
+   只改视觉：卡片圆角/间距/字阶/色调/轨迹柱/tab 胶囊/读数条。
+   真实类名全部照 memory-view.js 现状（mem-header / mem-tabs / mem-tab /
+   mem-audit-bar / mem-overview / mem-o-card / mem-trace / mem-sense-card /
+   mem-scene-card / mem-cov-* / mem-none / mem-footer）。
+   ============================================================ */
+@layer rp.skins.curated {
+
+/* ---------- 0. 变量：浅色底 + 深色覆盖 ---------- */
+.mem-root[data-rp-mem="4"] {
+    --m4-bg: #F3F4F8;
+    --m4-card: #FFFFFF;
+    --m4-ink: #15161C;
+    --m4-ink2: #5B6070;
+    --m4-ink3: #8E94A4;
+    --m4-line: #E8EAF0;
+    --m4-accent: #6366F1;
+    --m4-soft: #EEF0FF;
+    --m4-ok: #10B981;
+    --m4-warn: #F59E0B;
+    --m4-bad: #EF4444;
+    background: var(--m4-bg);
+    color: var(--m4-ink);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+:where([data-theme="dark"], body.dark, .dark) .mem-root[data-rp-mem="4"] {
+    --m4-bg: #0E0F14;
+    --m4-card: #181A21;
+    --m4-ink: #E9EAF0;
+    --m4-ink2: #A2A8B8;
+    --m4-ink3: #717786;
+    --m4-line: #262932;
+    --m4-accent: #7C7FFF;
+    --m4-soft: #1E2038;
+    --m4-ok: #34D399;
+    --m4-warn: #FBBF24;
+    --m4-bad: #F87171;
+}
+
+/* ---------- 1. 头部 ---------- */
+.mem-root[data-rp-mem="4"] .mem-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 46px;
+    flex: 0 0 auto;
+    padding: 0 14px;
+    background: transparent;
+    border-bottom: 0;
+}
+.mem-root[data-rp-mem="4"] .mem-header .mem-back,
+.mem-root[data-rp-mem="4"] .mem-header .mem-sleep {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    background: var(--m4-card);
+    color: var(--m4-ink2);
+    border: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    cursor: pointer;
+}
+.mem-root[data-rp-mem="4"] .mem-header .mem-sleep { margin-left: auto; }
+.mem-root[data-rp-mem="4"] .mem-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: .2px;
+    color: var(--m4-ink);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+}
+.mem-root[data-rp-mem="4"] .mem-title i {
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    background: linear-gradient(150deg, #8B8DFF, #5B5EE8);
+    color: #fff;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ---------- 2. 分页条：7 个等宽胶囊 ---------- */
+.mem-root[data-rp-mem="4"] .mem-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+    height: 40px;
+    flex: 0 0 auto;
+    padding: 0 8px;
+    background: transparent;
+    border-bottom: .5px solid var(--m4-line);
+    overflow: hidden;
+}
+.mem-root[data-rp-mem="4"] .mem-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: 10.5px;
+    line-height: 1;
+    color: var(--m4-ink3);
+    background: transparent;
+    border: 0;
+    border-radius: 9px;
+    padding: 0 2px;
+    position: relative;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.mem-root[data-rp-mem="4"] .mem-tab i { font-size: 9.5px; opacity: .8; }
+.mem-root[data-rp-mem="4"] .mem-tab.on {
+    color: var(--m4-accent);
+    font-weight: 700;
+    background: var(--m4-soft);
+}
+.mem-root[data-rp-mem="4"] .mem-tab.on i { opacity: 1; }
+.mem-root[data-rp-mem="4"] .mem-tab.on::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 3px;
+    transform: translateX(-50%);
+    width: 14px;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--m4-accent);
+}
+
+/* ---------- 3. 主体 ---------- */
+.mem-root[data-rp-mem="4"] .mem-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 10px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    background: transparent;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ---------- 4. 体检条（概览顶部） ---------- */
+.mem-root[data-rp-mem="4"] .mem-audit-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--m4-card);
+    border-radius: 13px;
+    padding: 10px 12px;
+    border-left: 3px solid var(--ag, var(--m4-ok));
+    box-shadow: none;
+}
+.mem-root[data-rp-mem="4"] .mem-audit-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ag, var(--m4-ok));
+    flex: 0 0 auto;
+}
+.mem-root[data-rp-mem="4"] .mem-audit-bar b {
+    font-size: 12.5px;
+    color: var(--ag, var(--m4-ok));
+    font-weight: 700;
+    flex: 0 0 auto;
+}
+.mem-root[data-rp-mem="4"] .mem-audit-sum {
+    font-size: 11.5px;
+    color: var(--m4-ink2);
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---------- 5. 四个主计数 ---------- */
+.mem-root[data-rp-mem="4"] .mem-overview {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 7px;
+}
+.mem-root[data-rp-mem="4"] .mem-o-card {
+    background: var(--m4-card);
+    border-radius: 12px;
+    padding: 10px 4px;
+    text-align: center;
+    border: 0;
+}
+.mem-root[data-rp-mem="4"] .mem-o-num {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -.5px;
+    color: var(--m4-ink);
+    line-height: 1.1;
+}
+.mem-root[data-rp-mem="4"] .mem-o-lbl {
+    font-size: 9.5px;
+    color: var(--m4-ink3);
+    margin-top: 3px;
+    letter-spacing: .2px;
+}
+
+/* ---------- 6. 区块卡 ---------- */
+.mem-root[data-rp-mem="4"] .mem-section {
+    background: var(--m4-card);
+    border-radius: 14px;
+    padding: 11px 13px;
+    margin: 0;
+    border: 0;
+}
+.mem-root[data-rp-mem="4"] .mem-section-title {
+    font-size: 12px;
+    color: var(--m4-ink3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 8px;
+    font-weight: 600;
+    letter-spacing: .2px;
+}
+.mem-root[data-rp-mem="4"] .mem-section-title i { color: var(--m4-ink3); font-size: 10.5px; }
+
+/* ---------- 7. 情感轨迹 ---------- */
+.mem-root[data-rp-mem="4"] .mem-trace {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 62px;
+    padding-top: 4px;
+}
+.mem-root[data-rp-mem="4"] .mem-trace-col {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    height: 100%;
+}
+.mem-root[data-rp-mem="4"] .mem-trace-bar {
+    width: 100%;
+    border-radius: 3px 3px 1px 1px;
+    min-height: 5px;
+}
+.mem-root[data-rp-mem="4"] .mem-trace-lbl {
+    font-size: 8px;
+    color: var(--m4-ink3);
+    line-height: 1;
+}
+
+/* ---------- 8. 五感卡 ---------- */
+.mem-root[data-rp-mem="4"] .mem-sense-card {
+    background: var(--m4-card);
+    border-radius: 14px;
+    overflow: hidden;
+    border: 0;
+    padding: 0;
+}
+.mem-root[data-rp-mem="4"] .mem-sense-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border-left: 3px solid var(--sc, var(--m4-accent));
+    background: transparent;
+}
+.mem-root[data-rp-mem="4"] .mem-sense-icon {
+    width: 21px;
+    height: 21px;
+    border-radius: 7px;
+    background: var(--m4-soft);
+    font-size: 11px;
+    line-height: 21px;
+    text-align: center;
+    flex: 0 0 auto;
+}
+.mem-root[data-rp-mem="4"] .mem-sense-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--m4-ink);
+}
+.mem-root[data-rp-mem="4"] .mem-sense-count {
+    margin-left: auto;
+    font-size: 10.5px;
+    color: var(--m4-ink3);
+}
+.mem-root[data-rp-mem="4"] .mem-sense-body { padding: 0 12px 4px; }
+.mem-root[data-rp-mem="4"] .mem-sense-item { padding: 7px 0; border: 0; }
+.mem-root[data-rp-mem="4"] .mem-sense-item + .mem-sense-item {
+    border-top: .5px solid var(--m4-line);
+}
+.mem-root[data-rp-mem="4"] .mem-sense-text {
+    font-size: 12px;
+    line-height: 1.42;
+    color: var(--m4-ink2);
+}
+.mem-root[data-rp-mem="4"] .mem-sense-meta {
+    font-size: 10px;
+    color: var(--m4-ink3);
+    margin-top: 3px;
+}
+
+/* ---------- 9. 场景卡 ---------- */
+.mem-root[data-rp-mem="4"] .mem-scene-card {
+    background: var(--m4-card);
+    border-radius: 14px;
+    padding: 10px 13px;
+    border: 0;
+}
+.mem-root[data-rp-mem="4"] .mem-scene-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--m4-ink3);
+}
+.mem-root[data-rp-mem="4"] .mem-scene-place {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--m4-ink);
+}
+.mem-root[data-rp-mem="4"] .mem-scene-count {
+    margin-left: auto;
+    font-size: 10.5px;
+    color: var(--m4-ink3);
+}
+.mem-root[data-rp-mem="4"] .mem-scene-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+}
+.mem-root[data-rp-mem="4"] .mem-scene-chip {
+    font-size: 9.5px;
+    padding: 2px 7px;
+    border-radius: 7px;
+    background: var(--m4-soft);
+    color: var(--m4-accent);
+    border: 0;
+    line-height: 1.5;
+}
+.mem-root[data-rp-mem="4"] .mem-scene-samples {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.mem-root[data-rp-mem="4"] .mem-scene-sample {
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--m4-ink2);
+    padding-left: 8px;
+    border-left: 2px solid var(--m4-line);
+}
+
+/* ---------- 10. 体检页 ---------- */
+.mem-root[data-rp-mem="4"] .mem-audit-card {
+    background: var(--m4-card);
+    border-radius: 16px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    border: 0;
+}
+.mem-root[data-rp-mem="4"] .mem-audit-grade {
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+    background: var(--m4-soft);
+    color: var(--ag, var(--m4-accent));
+    font-size: 25px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    line-height: 1;
+}
+.mem-root[data-rp-mem="4"] .mem-audit-counts {
+    font-size: 12px;
+    color: var(--m4-ink2);
+    line-height: 1.5;
+}
+
+/* ---------- 11. 覆盖度页 ---------- */
+.mem-root[data-rp-mem="4"] .mem-cov-hero {
+    background: var(--m4-card);
+    border-radius: 16px;
+    padding: 15px 14px;
+    text-align: center;
+    border: 0;
+}
+.mem-root[data-rp-mem="4"] .mem-cov-rate {
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -1.4px;
+    line-height: 1;
+    color: var(--ag, var(--m4-warn));
+}
+.mem-root[data-rp-mem="4"] .mem-cov-line {
+    font-size: 11.5px;
+    color: var(--m4-ink2);
+    margin-top: 6px;
+    line-height: 1.45;
+}
+.mem-root[data-rp-mem="4"] .mem-cov-why {
+    background: var(--m4-card);
+    border-radius: 14px;
+    padding: 10px 13px;
+    border: 0;
+}
+.mem-root[data-rp-mem="4"] .mem-cov-why-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 11.5px;
+    color: var(--m4-ink2);
+}
+.mem-root[data-rp-mem="4"] .mem-cov-why-row + .mem-cov-why-row {
+    border-top: .5px solid var(--m4-line);
+}
+.mem-root[data-rp-mem="4"] .mem-cov-why-label { flex: 1 1 auto; min-width: 0; }
+.mem-root[data-rp-mem="4"] .mem-cov-why-count {
+    color: var(--m4-ink3);
+    font-size: 11px;
+    flex: 0 0 auto;
+}
+.mem-root[data-rp-mem="4"] .mem-cov-missing {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+.mem-root[data-rp-mem="4"] .mem-cov-floor {
+    font-size: 10px;
+    padding: 3px 7px;
+    border-radius: 7px;
+    background: var(--m4-bg);
+    color: var(--m4-ink2);
+    border: .5px solid var(--m4-line);
+    line-height: 1.4;
+}
+
+/* ---------- 12. 空态 / 提示 ---------- */
+.mem-root[data-rp-mem="4"] .mem-none {
+    background: var(--m4-card);
+    border-radius: 14px;
+    padding: 22px 16px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--m4-ink2);
+    line-height: 1.6;
+    border: 0;
+}
+.mem-root[data-rp-mem="4"] .mem-hint {
+    display: block;
+    font-size: 11px;
+    color: var(--m4-ink3);
+    margin-top: 6px;
+    line-height: 1.5;
+}
+
+/* ---------- 13. 通用小项（清单 / 结果 / 后续问） ---------- */
+.mem-root[data-rp-mem="4"] .mem-search-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.mem-root[data-rp-mem="4"] .mem-search-row input {
+    flex: 1 1 auto;
+    height: 36px;
+    border-radius: 11px;
+    background: var(--m4-card);
+    border: .5px solid var(--m4-line);
+    color: var(--m4-ink);
+    font-size: 12.5px;
+    padding: 0 12px;
+}
+.mem-root[data-rp-mem="4"] .mem-results { display: flex; flex-direction: column; gap: 8px; }
+.mem-root[data-rp-mem="4"] .mem-res {
+    background: var(--m4-card);
+    border-radius: 12px;
+    padding: 9px 12px;
+    border: 0;
+}
+.mem-root[data-rp-mem="4"] .mem-res-lbl {
+    font-size: 10.5px;
+    color: var(--m4-ink3);
+    margin-bottom: 5px;
+}
+.mem-root[data-rp-mem="4"] .mem-res-text {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--m4-ink);
+}
+.mem-root[data-rp-mem="4"] .mem-sup-tag {
+    font-size: 9.5px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: var(--m4-soft);
+    color: var(--m4-accent);
+    margin-left: 5px;
+}
+.mem-root[data-rp-mem="4"] .mem-item-mini {
+    background: var(--m4-card);
+    border-radius: 12px;
+    padding: 8px 11px;
+    font-size: 11.5px;
+    color: var(--m4-ink2);
+    line-height: 1.45;
+    border: 0;
+}
+.mem-root[data-rp-mem="4"] .mem-fu-face {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+.mem-root[data-rp-mem="4"] .mem-fu-time,
+.mem-root[data-rp-mem="4"] .mem-fu-clear {
+    font-size: 10.5px;
+    color: var(--m4-ink3);
+}
+
+/* ---------- 14. 底部条 ---------- */
+.mem-root[data-rp-mem="4"] .mem-footer {
+    flex: 0 0 auto;
+    background: var(--m4-card);
+    border-top: .5px solid var(--m4-line);
+    padding: 9px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+.mem-root[data-rp-mem="4"] .mem-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--m4-ink2);
+}
+.mem-root[data-rp-mem="4"] .mem-danger {
+    align-self: flex-start;
+    font-size: 11px;
+    color: var(--m4-bad);
+    background: transparent;
+    border: 0;
+    padding: 2px 0;
+    cursor: pointer;
+}
+
+/* ---------- 15. 窄屏：缩字号不缩结构 ---------- */
+@media (max-width: 380px) {
+    .mem-root[data-rp-mem="4"] .mem-tab { font-size: 9.5px; }
+    .mem-root[data-rp-mem="4"] .mem-tab i { display: none; }
+    .mem-root[data-rp-mem="4"] .mem-o-num { font-size: 18px; }
+    .mem-root[data-rp-mem="4"] .mem-cov-rate { font-size: 32px; }
+}
+
+/* ---------- 16. 问往事：问句条 + 结果出处 ---------- */
+.mem-root[data-rp-mem="4"] .mem-search-row input {
+    height: 38px;
+    border-radius: 12px;
+    border: 0;
+    background: var(--m4-card);
+    padding: 0 12px;
+    color: var(--m4-ink);
+    font-size: 12.5px;
+}
+.mem-root[data-rp-mem="4"] .mem-search-row input::placeholder { color: var(--m4-ink3); }
+.mem-root[data-rp-mem="4"] .mem-search-row button {
+    flex: 0 0 auto;
+    height: 38px;
+    min-width: 38px;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 0;
+    background: var(--m4-accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.mem-root[data-rp-mem="4"] .mem-search-row .mem-ask-cancel {
+    background: transparent;
+    border: .5px solid var(--m4-line);
+    color: var(--m4-ink3);
+    font-size: 11.5px;
+    font-weight: 400;
+}
+.mem-root[data-rp-mem="4"] .mem-ask-run {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--m4-accent);
+    margin-top: 7px;
+}
+.mem-root[data-rp-mem="4"] .mem-ask-run:empty { display: none; }
+.mem-root[data-rp-mem="4"] .mem-ask-canceled {
+    text-align: left;
+    padding: 9px 12px;
+    color: var(--m4-warn);
+    background: transparent;
+    border: .5px dashed var(--m4-line);
+}
+.mem-root[data-rp-mem="4"] .mem-results { gap: 7px; margin-top: 8px; }
+.mem-root[data-rp-mem="4"] .mem-res-text { font-size: 12.5px; }
+.mem-root[data-rp-mem="4"] .mem-res-lbl {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 10.5px;
+    color: var(--m4-ink3);
+    margin-top: 6px;
+}
+.mem-root[data-rp-mem="4"] .mem-src-go,
+.mem-root[data-rp-mem="4"] .mem-res-perm {
+    border: 0;
+    border-radius: 6px;
+    background: var(--m4-soft);
+    color: var(--m4-accent);
+    font-size: 10.5px;
+    padding: 1px 6px;
+    cursor: pointer;
+}
+.mem-root[data-rp-mem="4"] .mem-res-score {
+    margin-left: auto;
+    font-size: 9.5px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: var(--m4-soft);
+    color: var(--m4-accent);
+}
+
+/* ---------- 17. 幕次：节目条 / 幕次时间线 / 视角 ---------- */
+.mem-root[data-rp-mem="4"] .mem-rp-progs {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.mem-root[data-rp-mem="4"] .mem-rp-prog {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    border-radius: 11px;
+    background: transparent;
+    padding: 8px 10px;
+    cursor: pointer;
+}
+.mem-root[data-rp-mem="4"] .mem-rp-prog.on { background: var(--m4-soft); }
+.mem-root[data-rp-mem="4"] .mem-rp-prog-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--m4-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mem-root[data-rp-mem="4"] .mem-rp-prog.on .mem-rp-prog-title { color: var(--m4-accent); }
+.mem-root[data-rp-mem="4"] .mem-rp-prog-meta {
+    flex: 0 0 auto;
+    font-size: 10.5px;
+    color: var(--m4-ink3);
+}
+.mem-root[data-rp-mem="4"] .mem-rp-acts {
+    margin-top: 9px;
+    padding-left: 6px;
+    border-left: 1.5px dashed var(--m4-line);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.mem-root[data-rp-mem="4"] .mem-rp-act {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    text-align: left;
+    border: .5px solid var(--m4-line);
+    border-radius: 12px;
+    background: var(--m4-card);
+    padding: 9px 11px;
+    cursor: pointer;
+}
+.mem-root[data-rp-mem="4"] .mem-rp-act.on {
+    border-color: var(--m4-accent);
+    box-shadow: 0 0 0 1px var(--m4-accent) inset;
+}
+.mem-root[data-rp-mem="4"] .mem-rp-act-idx {
+    align-self: flex-start;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 3px 7px;
+    border-radius: 7px;
+    background: var(--m4-accent);
+    color: #fff;
+}
+.mem-root[data-rp-mem="4"] .mem-rp-act-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--m4-ink);
+    line-height: 1.35;
+}
+.mem-root[data-rp-mem="4"] .mem-rp-act-meta {
+    font-size: 11px;
+    color: var(--m4-ink3);
+    line-height: 1.45;
+}
+.mem-root[data-rp-mem="4"] .mem-rp-vbar {
+    display: flex;
+    gap: 5px;
+    margin: 9px 0 8px;
+}
+.mem-root[data-rp-mem="4"] .mem-rp-viewer {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 30px;
+    border-radius: 9px;
+    border: .5px solid var(--m4-line);
+    background: transparent;
+    color: var(--m4-ink2);
+    font-size: 11px;
+    cursor: pointer;
+}
+.mem-root[data-rp-mem="4"] .mem-rp-viewer.on {
+    border-color: transparent;
+    background: var(--m4-soft);
+    color: var(--m4-accent);
+    font-weight: 600;
+}
+.mem-root[data-rp-mem="4"] .mem-rp-view {
+    background: var(--m4-soft);
+    border-radius: 12px;
+    padding: 10px 12px;
+}
+.mem-root[data-rp-mem="4"] .mem-rp-text {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--m4-ink);
+}
+.mem-root[data-rp-mem="4"] .mem-rp-vmeta {
+    font-size: 10px;
+    color: var(--m4-ink3);
+    margin-top: 6px;
+}
+.mem-root[data-rp-mem="4"] .mem-rp-fallback {
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--m4-warn);
+    margin-bottom: 6px;
+}
+
+/* ---------- 18. 体检页：问题条 / 长期清单 ---------- */
+.mem-root[data-rp-mem="4"] .mem-issue {
+    margin-top: 6px;
+    padding: 9px 11px;
+    border-radius: 12px;
+    border-left: 2.5px solid var(--ic, var(--m4-warn));
+    background: transparent;
+}
+.mem-root[data-rp-mem="4"] .mem-issue-top {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--m4-ink);
+    line-height: 1.4;
+}
+.mem-root[data-rp-mem="4"] .mem-issue-top i { color: var(--ic, var(--m4-warn)); font-size: 11px; }
+.mem-root[data-rp-mem="4"] .mem-issue-advice {
+    margin-top: 5px;
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--m4-ink2);
+}
+.mem-root[data-rp-mem="4"] .mem-issue-advice i { color: var(--m4-ink3); font-size: 10px; margin-right: 3px; }
+.mem-root[data-rp-mem="4"] .mem-lc-card {
+    margin-top: 7px;
+    padding: 9px 11px;
+    border-radius: 12px;
+    background: transparent;
+    border-left: 2.5px solid var(--lcc, var(--m4-accent));
+}
+.mem-root[data-rp-mem="4"] .mem-lc-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+.mem-root[data-rp-mem="4"] .mem-lc-head b {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--lcc, var(--m4-ink));
+}
+.mem-root[data-rp-mem="4"] .mem-lc-n {
+    margin-left: auto;
+    font-size: 10.5px;
+    color: var(--m4-ink3);
+}
+.mem-root[data-rp-mem="4"] .mem-lc-list { margin-top: 6px; }
+.mem-root[data-rp-mem="4"] .mem-lc-row {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    padding: 4px 0;
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--m4-ink2);
+}
+.mem-root[data-rp-mem="4"] .mem-lc-row + .mem-lc-row { border-top: .5px solid var(--m4-line); }
+.mem-root[data-rp-mem="4"] .mem-lc-days { flex: 0 0 auto; color: var(--m4-ink3); font-size: 10.5px; }
+.mem-root[data-rp-mem="4"] .mem-lc-text { flex: 1 1 auto; min-width: 0; }
+.mem-root[data-rp-mem="4"] .mem-lc-prot,
+.mem-root[data-rp-mem="4"] .mem-lc-tag {
+    flex: 0 0 auto;
+    font-size: 9.5px;
+    padding: 1px 5px;
+    border-radius: 6px;
+    background: var(--m4-soft);
+    color: var(--m4-accent);
+}
+
+/* ---------- 19. 问往事页的四个子面：追问 / 物品 / 改设定 / 资料 ---------- */
+.mem-root[data-rp-mem="4"] .mem-fu-face,
+.mem-root[data-rp-mem="4"] .mem-item-face,
+.mem-root[data-rp-mem="4"] .mem-sr-face,
+.mem-root[data-rp-mem="4"] .mem-lore-face {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--m4-ink);
+    background: var(--m4-soft);
+    border-radius: 12px;
+    padding: 9px 12px;
+    margin-top: 8px;
+}
+.mem-root[data-rp-mem="4"] .mem-sr-face.mem-sr-state-undec,
+.mem-root[data-rp-mem="4"] .mem-sr-face.mem-sr-state-none {
+    background: transparent;
+    border: .5px dashed var(--m4-line);
+    color: var(--m4-ink2);
+}
+.mem-root[data-rp-mem="4"] .mem-fu-cands {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+}
+.mem-root[data-rp-mem="4"] .mem-fu-cand {
+    border: .5px solid var(--m4-line);
+    background: transparent;
+    color: var(--m4-ink2);
+    font-size: 10.5px;
+    padding: 3px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.mem-root[data-rp-mem="4"] .mem-fu-cand:hover {
+    background: var(--m4-soft);
+    border-color: transparent;
+    color: var(--m4-accent);
+}
+.mem-root[data-rp-mem="4"] .mem-fu-trace {
+    margin-top: 9px;
+    padding-top: 7px;
+    border-top: .5px solid var(--m4-line);
+}
+.mem-root[data-rp-mem="4"] .mem-fu-trace-title,
+.mem-root[data-rp-mem="4"] .mem-item-rows-title,
+.mem-root[data-rp-mem="4"] .mem-sr-rows-title,
+.mem-root[data-rp-mem="4"] .mem-lore-rows-title {
+    font-size: 10.5px;
+    color: var(--m4-ink3);
+    margin-bottom: 5px;
+    line-height: 1.45;
+}
+.mem-root[data-rp-mem="4"] .mem-fu-trace-row {
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--m4-ink3);
+    padding: 3px 0;
+}
+.mem-root[data-rp-mem="4"] .mem-fu-scroll {
+    font-size: 10px;
+    color: var(--m4-ink3);
+    padding: 3px 0;
+    opacity: .9;
+}
+.mem-root[data-rp-mem="4"] .mem-fu-note,
+.mem-root[data-rp-mem="4"] .mem-item-note {
+    margin-top: 7px;
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--m4-accent);
+}
+.mem-root[data-rp-mem="4"] .mem-item-row {
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--m4-ink2);
+    padding: 5px 0;
+}
+.mem-root[data-rp-mem="4"] .mem-item-row + .mem-item-row { border-top: .5px solid var(--m4-line); }
+.mem-root[data-rp-mem="4"] .mem-item-should {
+    margin-top: 6px;
+    font-size: 10.5px;
+    line-height: 1.45;
+    color: var(--m4-ink3);
+}
+.mem-root[data-rp-mem="4"] .mem-sr-row {
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--m4-ink2);
+    padding: 5px 0 5px 8px;
+    border-left: 2px solid transparent;
+}
+.mem-root[data-rp-mem="4"] .mem-sr-row + .mem-sr-row { margin-top: 2px; }
+.mem-root[data-rp-mem="4"] .mem-sr-dec,
+.mem-root[data-rp-mem="4"] .mem-sr-row.mem-sr-state-decided,
+.mem-root[data-rp-mem="4"] .mem-sr-row.mem-sr-state-hit { border-left-color: var(--m4-ok); }
+.mem-root[data-rp-mem="4"] .mem-sr-undec,
+.mem-root[data-rp-mem="4"] .mem-sr-row.mem-sr-state-undecided { border-left-color: var(--m4-warn); }
+.mem-root[data-rp-mem="4"] .mem-sr-tag {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 9.5px;
+    padding: 1px 5px;
+    border-radius: 6px;
+    background: var(--m4-soft);
+    color: var(--m4-accent);
+}
+.mem-root[data-rp-mem="4"] .mem-sr-gate {
+    margin-top: 7px;
+    font-size: 10.5px;
+    line-height: 1.45;
+    color: var(--m4-ink3);
+}
+.mem-root[data-rp-mem="4"] .mem-lore-stages {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+}
+.mem-root[data-rp-mem="4"] .mem-lore-stage {
+    font-size: 10px;
+    padding: 3px 7px;
+    border-radius: 7px;
+    border: .5px solid var(--m4-line);
+    color: var(--m4-ink2);
+    background: transparent;
+}
+.mem-root[data-rp-mem="4"] .mem-lore-row {
+    padding: 7px 0;
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--m4-ink2);
+}
+.mem-root[data-rp-mem="4"] .mem-lore-row + .mem-lore-row { border-top: .5px solid var(--m4-line); }
+.mem-root[data-rp-mem="4"] .mem-lore-rowhead {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--m4-ink);
+}
+.mem-root[data-rp-mem="4"] .mem-lore-num { flex: 0 0 auto; color: var(--m4-ink3); font-size: 10px; }
+.mem-root[data-rp-mem="4"] .mem-lore-snip {
+    margin-top: 4px;
+    padding-left: 8px;
+    border-left: 2px solid var(--m4-line);
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--m4-ink2);
+}
+.mem-root[data-rp-mem="4"] .mem-lore-verdict,
+.mem-root[data-rp-mem="4"] .mem-lore-verline {
+    display: block;
+    margin-top: 4px;
+    font-size: 10.5px;
+    color: var(--m4-ink3);
+}
+.mem-root[data-rp-mem="4"] .mem-lore-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 5px;
+}
+.mem-root[data-rp-mem="4"] .mem-lore-tags span {
+    font-size: 9.5px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: var(--m4-soft);
+    color: var(--m4-accent);
+}
+
+/* ---------- 20. 窄屏补充 ---------- */
+@media (max-width: 380px) {
+    .mem-root[data-rp-mem="4"] .mem-rp-act-meta,
+    .mem-root[data-rp-mem="4"] .mem-lc-row { font-size: 10.5px; }
+    .mem-root[data-rp-mem="4"] .mem-search-row input { height: 34px; font-size: 12px; }
+    .mem-root[data-rp-mem="4"] .mem-search-row button { height: 34px; min-width: 34px; }
+}
+
+} /* @layer rp.skins.curated */
