@@ -1779,6 +1779,16 @@ export class PhoneShell {
      *   不做其他任何事：历史栈 / Z-index / 回键都归 setContent（唯一收口点）。 */
     setCurrentApp(appId) {
         this.currentApp = (appId === undefined || appId === null) ? null : String(appId);
+        /* [UI 刷新 v4] 把当前 App id 印到手机根节点上：让 rp-refresh-v4.css 能按 App
+         *   取品牌色（--rf-accent）而不得不用 102 份选择器。不控制渲染、不改历史栈。 */
+        try {
+            const els = ['phone-panel', 'phone-floating-entry-root', 'phone-sms-popup-root']
+                .map((id) => document.getElementById(id)).filter(Boolean);
+            for (const el of els) {
+                if (this.currentApp) el.setAttribute('data-app-id', this.currentApp);
+                else el.removeAttribute('data-app-id');
+            }
+        } catch (_e) { /* 非致命：无 DOM 时仅不染色 */ }
     }
     /** 当前 App 的内容宿主（供 view 写入）。无壳 / 无栈时返回 null（调用方自行退化）。 */
     getContentContainer() {

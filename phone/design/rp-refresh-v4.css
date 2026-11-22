@@ -166,4 +166,27 @@
     [data-rp-refresh="4"] :is(input, select, textarea) { font-size: 12.5px; }
 }
 
+/* ---------- 11. 各 App 品牌强调色（--rf-accent）：按 data-app-id 切，不动任何布局 */
+[data-rp-refresh="4"][data-app-id="album"] { --rf-accent: #F5B301; }
+[data-rp-refresh="4"][data-app-id="bilibili"] { --rf-accent: #FB7299; }
+[data-rp-refresh="4"][data-app-id="calendar"] { --rf-accent: #FF3B30; }
+[data-rp-refresh="4"][data-app-id="call"] { --rf-accent: #34C759; }
+[data-rp-refresh="4"][data-app-id="clock"] { --rf-accent: #FF9500; }
+[data-rp-refresh="4"][data-app-id="diary"] { --rf-accent: #C08A6A; }
+[data-rp-refresh="4"][data-app-id="gacha"] { --rf-accent: #FF9F0A; }
+[data-rp-refresh="4"][data-app-id="lofter"] { --rf-accent: #506BFF; }
+[data-rp-refresh="4"][data-app-id="music"] { --rf-accent: #C20C0C; }
+[data-rp-refresh="4"][data-app-id="phone"] { --rf-accent: #34C759; }
+[data-rp-refresh="4"][data-app-id="pixiv"] { --rf-accent: #0096FA; }
+[data-rp-refresh="4"][data-app-id="reading"] { --rf-accent: #8B6B4A; }
+[data-rp-refresh="4"][data-app-id="settings"] { --rf-accent: #8E8E93; }
+[data-rp-refresh="4"][data-app-id="taobao"] { --rf-accent: #FF5000; }
+[data-rp-refresh="4"][data-app-id="tieba"] { --rf-accent: #3385FF; }
+[data-rp-refresh="4"][data-app-id="wallet"] { --rf-accent: #FF9500; }
+[data-rp-refresh="4"][data-app-id="weather"] { --rf-accent: #4A90D9; }
+[data-rp-refresh="4"][data-app-id="wechat"] { --rf-accent: #07C160; }
+[data-rp-refresh="4"][data-app-id="weibo"] { --rf-accent: #E6162D; }
+[data-rp-refresh="4"][data-app-id="xhs"] { --rf-accent: #FF2E4D; }
+
+
 } /* @layer rp.skins.curated */
