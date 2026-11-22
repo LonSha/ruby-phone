@@ -281,7 +281,7 @@ export class LockScreen {
       '<div class="pls-hello" id="pls-hello">' + _esc(parts.greeting) + ' · ' + _esc(weather) + '</div>' +
       '<div class="pls-date" id="pls-date">' + parts.date + '</div>' +
       '<div class="pls-time" id="pls-time">' + parts.time + '</div>' +
-      '<div class="pls-sign" style="font-size:12px;opacity:0.8;margin-top:4px;text-align:center;">“' + _esc(signature) + '”</div>' +
+      '<div class="pls-sign">“' + _esc(signature) + '”</div>' +
       '<div class="pls-battery">' + batLine + '</div>' +
       trackHtml +
       notesHtml +

@@ -19420,3 +19420,252 @@ html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box
 .rp-home-search:active{transform:scale(.98)}
 .rp-home-search svg{flex:0 0 auto;opacity:.82}
 .rp-home-search span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ===== [v4.158-lock] 锁屏 · 对齐设计稿（大字时钟 / 玻璃通知面板 / 胶囊播放条） ===== */
+.phone-lockscreen .pls-time {
+  font-size: 76px;
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 24px rgba(0,0,0,.28);
+}
+.phone-lockscreen .pls-date {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  opacity: .86;
+}
+.phone-lockscreen .pls-sign {
+  position: relative; z-index: 1;
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  opacity: .72;
+  text-align: center;
+  max-width: 88%;
+  word-break: break-word;
+}
+.phone-lockscreen .pls-battery { margin-top: 9px; font-size: 12px; opacity: .78; letter-spacing: .02em; }
+.phone-lockscreen .pls-notes {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 22px;
+  background: rgba(16,18,24,.42);
+  border: 1px solid rgba(255,255,255,.12);
+}
+.phone-lockscreen .pls-notes-head {
+  font-size: 11.5px; letter-spacing: .06em; opacity: .66; margin-bottom: 9px;
+}
+.phone-lockscreen .pls-note { gap: 10px; padding: 9px 2px; }
+.phone-lockscreen .pls-note-title { font-size: 13.5px; font-weight: 650; letter-spacing: -0.005em; }
+.phone-lockscreen .pls-note-msg { font-size: 12px; opacity: .8; line-height: 1.45; }
+.phone-lockscreen .pls-track {
+  border-radius: 999px;
+  padding: 9px 14px;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.10);
+}
+.phone-lockscreen .pls-track-title { font-size: 13px; font-weight: 600; }
+.phone-lockscreen .pls-track-artist { font-size: 11.5px; opacity: .7; }
+.phone-lockscreen .pls-hint {
+  margin-top: auto;
+  margin-bottom: 2px;
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+  opacity: .6;
+}
+
+/* ===== [v4.158-apps] 89 个 App 共用骨架 · 只收敛尺寸与排版，不碰颜色 =====
+   为何用 :where()：零特异性 ⇒ 它只能填空白，永远压不过已有的 App 规则。
+   89 个 App 各自有一套尺寸，没有眼睛当场验收的情况下，唯一安全的收敛方式就是只当底。 */
+:where(.phone-screen .phone-view-current) {
+  -webkit-font-smoothing: antialiased;
+  text-size-adjust: 100%;
+  --rp-r-1: 10px;
+  --rp-r-2: 14px;
+  --rp-r-3: 18px;
+  --rp-r-4: 22px;
+  --rp-hit: 44px;
+}
+:where(.phone-screen .phone-view-current :is(h1, h2, h3, h4)) {
+  margin-block: 0;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+:where(.phone-screen .phone-view-current h1) { font-size: 26px; font-weight: 700; }
+:where(.phone-screen .phone-view-current h2) { font-size: 19px; font-weight: 650; }
+:where(.phone-screen .phone-view-current h3) { font-size: 16px; font-weight: 600; }
+:where(.phone-screen .phone-view-current :is([class$="-header"], [class*="-header "])) {
+  box-sizing: border-box;
+}
+:where(.phone-screen .phone-view-current :is([class*="header-title"], [class*="page-title"], [class*="app-title"])) {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+:where(.phone-screen .phone-view-current :is([class*="section-title"], [class*="group-title"], [class*="card-title"])) {
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+:where(.phone-screen .phone-view-current :is([class$="-card"], [class*="-card "]):not([class*="card-title"])) {
+  box-sizing: border-box;
+  border-radius: var(--rp-r-3);
+}
+:where(.phone-screen .phone-view-current :is([class$="-row"], [class$="-item"])) {
+  box-sizing: border-box;
+  min-height: 0;
+}
+:where(.phone-screen .phone-view-current :is([class$="-btn"], [class$="-button"])) {
+  box-sizing: border-box;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+:where(.phone-screen .phone-view-current :is([class*="-btn"], [class*="-button"], [class$="-row"], [class*="-item"])) > :where(svg, i, .fa-solid, .fa-regular) {
+  flex: 0 0 auto;
+}
+:where(.phone-screen .phone-view-current :is(input:not([type="checkbox"]):not([type="radio"]), textarea, select)) {
+  box-sizing: border-box;
+  font-size: 15px;
+  line-height: 1.35;
+  border-radius: var(--rp-r-1);
+  max-width: 100%;
+}
+:where(.phone-screen .phone-view-current textarea) { resize: none; }
+:where(.phone-screen .phone-view-current :is([class*="-empty"], [class*="-none"], [class*="-placeholder"])) {
+  box-sizing: border-box;
+  padding: 28px 16px;
+  text-align: center;
+  line-height: 1.5;
+  opacity: .72;
+}
+:where(.phone-screen .phone-view-current :is([class*="-hint"], [class*="-desc"], [class*="-tip"], [class*="-sub"])) {
+  font-size: 12.5px;
+  line-height: 1.5;
+  opacity: .78;
+}
+:where(.phone-screen .phone-view-current :is([class*="-chip"], [class*="-tag"], [class*="-pill"])) {
+  border-radius: 999px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+:where(.phone-screen .phone-view-current [class*="-list"]::-webkit-scrollbar) { width: 0; height: 0; }
+:where(.phone-screen .phone-view-current [class*="-scroll"]::-webkit-scrollbar) { width: 0; height: 0; }
+:where(.phone-screen .phone-view-current img) { max-width: 100%; }
+:where(.phone-screen .phone-view-current [class*="-avatar"]) { flex: 0 0 auto; object-fit: cover; }
+
+/* ===== [v4.158-heavy] 六个重度 App 的顶部骨架平齐（微信 / 微博 / B 站 / 小红书 / 贴吧 / 淘宝） =====
+   纪律：只改顶部框（页头 / 标题 / 页签）的**尺寸与排版**，不碰颜色、不碰卡片与列表行。
+   选择器命中才生效；未命中即空操作（与本仓现有类名对齐，不自造新类）。 */
+.wechat-header,
+.weibo-header,
+.bilibili-header,
+.bili-header,
+.xhs-header,
+.tieba-header,
+.taobao-header {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+}
+.wechat-header-title,
+.weibo-header-title,
+.bilibili-header-title,
+.bili-header-title,
+.xhs-header-title,
+.tieba-header-title,
+.taobao-header-title {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.weibo-back-btn,
+.bili-back-btn,
+.xhs-back-btn,
+.tieba-back-btn,
+.taobao-back-btn,
+.wechat-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 999px;
+}
+.weibo-tabs,
+.bili-tabs,
+.xhs-tabs,
+.tieba-tabs,
+.taobao-tabs,
+.weibo-tabbar,
+.bili-tabbar,
+.xhs-tabbar,
+.tieba-tabbar,
+.taobao-tabbar,
+.xhs-tab,
+.weibo-tab,
+.bili-tab,
+.tieba-tab,
+.taobao-tab {
+  box-sizing: border-box;
+  line-height: 1.2;
+}
+.weibo-tab,
+.bili-tab,
+.xhs-tab,
+.tieba-tab,
+.taobao-tab {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* [v4.158-heavy-b] 上一段的真实前缀补齐（仓内核对过：bili = bl- / tieba = tb- / 淘宝 = tbo-） */
+.bl-header,
+.tb-header,
+.tb-detail-header,
+.tbo-header {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+}
+.tb-header-title {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tb-back-btn,
+.tb-detail-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 999px;
+}
+.bl-nav {
+  box-sizing: border-box;
+  line-height: 1.2;
+  min-height: 44px;
+}
