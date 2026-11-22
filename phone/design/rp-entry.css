@@ -46,7 +46,7 @@
 @import url("../themes/huawei.css");
 @import url("../themes/pixel.css");
 @import url("../themes/material-you.css");
-/* 桌面重构 v2：rp-desktop-v2.css 不在本仓（未提交），故不引入；否则 @import 404 会订阅整张表失败 */
+@import url("./rp-desktop-v2.css");   /* 桌面重构 v2：仅 [data-rp-desktop="2"] 命中，默认开（storage phone-desktop-v2=0 关） */
 @import url("../../apps/memory/memory.v4.css");   /* 记忆面板重构 v4：仅 .mem-root[data-rp-mem="4"] 命中 */
 
 /* ---------- 宿主护盾（未分层，必须在层外） ----------
