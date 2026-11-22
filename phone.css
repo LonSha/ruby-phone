@@ -19669,3 +19669,38 @@ html[data-ax-theme="dark"] #phone-panel-content :is(.axd-box, .te-card, .cph-box
   line-height: 1.2;
   min-height: 44px;
 }
+
+/* ===== [v4.158-heavy-c] 上两段的落实层 =====
+   为何要重写一遍带种树：App 自己的样式是运行时插在 document.head 里的，同级时它在后、
+   纯类名选择器会输。因此这里用 `#phone-panel-content .phone-view-current` 把种树抬到能稳定生效，
+   但**仍然只写尺寸与排版**（不写颜色 / 背景 / 阴影），所以不会碰浅底 App 的对比度。 */
+#phone-panel-content .phone-view-current :is(.wechat-header, .weibo-header, .bl-header, .bilibili-header, .xhs-header, .tb-header, .tb-detail-header, .tbo-header) {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+}
+#phone-panel-content .phone-view-current :is(.wechat-header-title, .weibo-header-title, .xhs-header-title, .tb-header-title) {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#phone-panel-content .phone-view-current :is(.wechat-back-btn, .weibo-back-btn, .xhs-back-btn, .tb-back-btn, .tb-detail-back) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 999px;
+}
+#phone-panel-content .phone-view-current :is(.weibo-tab, .bl-nav, .xhs-tab, .tb-tab, .tbo-tab) {
+  box-sizing: border-box;
+  min-height: 44px;
+  line-height: 1.2;
+}
