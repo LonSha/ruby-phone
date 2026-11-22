@@ -1,0 +1,169 @@
+/* ============================================================
+   RubyPhone · 全机 UI 刷新 v4（外壳 + 锁屏 + 102 个 App 的公共语汇）
+   ------------------------------------------------------------
+   作用域：手机根节点带 data-rp-refresh="4" 时命中（theme-controller 挂）。
+           默认开；storage 'phone-refresh-v4'='0' 关闭 —— 一条规则都不命中。
+   层：@layer rp.skins.curated（比 rp.apps 后，不需要 !important）。
+   取法：不按 App 写 102 份，只按**结构角色**写一份公共语汇：
+         顶栏 [class*="-header"] / 导航 [class$="-nav"] / 列表 [class*="-item"]、
+         [class*="-row"] / 卡片 [class*="-card"] / 分段 [class*="-tab"] / 控件 button,input。
+         各 App 自己的配色、图标、布局一概不动，只改字阶 / 圆角 / 发丝线 / 控件手感。
+   ============================================================ */
+@layer rp.skins.curated {
+
+/* ---------- 0. 令牌 ---------- */
+[data-rp-refresh="4"] {
+    --rf-r-card: 16px;
+    --rf-r-ctl: 12px;
+    --rf-r-chip: 9px;
+    --rf-ink: var(--rp-ink, currentColor);
+    --rf-ink2: color-mix(in srgb, currentColor 64%, transparent);
+    --rf-ink3: color-mix(in srgb, currentColor 46%, transparent);
+    --rf-line: color-mix(in srgb, currentColor 11%, transparent);
+    --rf-fill: color-mix(in srgb, currentColor 6%, transparent);
+    --rf-fill2: color-mix(in srgb, currentColor 9%, transparent);
+    --rf-accent: var(--lt-accent-color, var(--rp-accent, #6366F1));
+    --rf-accent-soft: color-mix(in srgb, var(--rf-accent) 14%, transparent);
+    --rf-ease: cubic-bezier(.32, .72, 0, 1);
+}
+
+/* ---------- 1. 外壳：状态栏 / 挖孔 / 底部条 ---------- */
+[data-rp-refresh="4"] .phone-statusbar {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .2px;
+    color: var(--rf-ink);
+}
+[data-rp-refresh="4"] .phone-punch-hole {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent);
+}
+[data-rp-refresh="4"] .cell-bar {
+    min-height: 44px;
+    border-bottom: .5px solid var(--rf-line);
+}
+[data-rp-refresh="4"] .phone-back-button {
+    min-width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    background: var(--rf-fill);
+    color: var(--rf-ink);
+    border: 0;
+}
+[data-rp-refresh="4"] .phone-back-button:active { transform: scale(.94); }
+
+/* ---------- 2. 顶栏与导航：统一发丝底 + 字阶 ---------- */
+[data-rp-refresh="4"] :is([class$="-header"], [class$="-nav"], [class*="-header-"][class*="-bar"]) {
+    border-bottom: .5px solid var(--rf-line);
+}
+[data-rp-refresh="4"] :is([class$="-header"], [class$="-nav"]) :is(h1, h2, h3, [class*="-title"]) {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: .2px;
+    color: var(--rf-ink);
+}
+[data-rp-refresh="4"] :is([class*="-title"], [class*="-name"]) { letter-spacing: .1px; }
+[data-rp-refresh="4"] :is([class*="-meta"], [class*="-sub"], [class*="-time"], [class*="-desc"]) {
+    color: var(--rf-ink3);
+    font-size: 11px;
+}
+
+/* ---------- 3. 列表：只加发丝分隔与行高，不改布局 ---------- */
+[data-rp-refresh="4"] :is([class*="-item"], [class*="-row"], [class*="-entry"], [class*="-cell"]) {
+    border-color: var(--rf-line);
+}
+[data-rp-refresh="4"] :is([class*="-item"], [class*="-row"]) + :is([class*="-item"], [class*="-row"]) {
+    border-top: .5px solid var(--rf-line);
+}
+[data-rp-refresh="4"] :is([class*="-item-text"], [class*="-row-text"], [class*="-text"]) { line-height: 1.5; }
+
+/* ---------- 4. 卡片与面板：大圆角 + 一档底色，不投硬阴影 ---------- */
+[data-rp-refresh="4"] :is([class$="-card"], [class*="-card"], [class$="-panel"], [class$="-sheet"], [class$="-box"]) {
+    border-radius: var(--rf-r-card);
+    border: .5px solid var(--rf-line);
+    box-shadow: none;
+}
+[data-rp-refresh="4"] :is([class*="-bubble"], [class$="-bubble"]) {
+    border-radius: 15px;
+    box-shadow: none;
+}
+
+/* ---------- 5. 控件：按钮 / 输入 / 选择 ---------- */
+[data-rp-refresh="4"] :is(button, .phone-button, [class$="-btn"], [class*="-btn-"]) {
+    border-radius: var(--rf-r-ctl);
+    border-width: 0;
+    font-weight: 600;
+    transition: transform .16s var(--rf-ease), background-color .16s var(--rf-ease);
+}
+[data-rp-refresh="4"] :is(button, .phone-button, [class$="-btn"], [class*="-btn-"]):active { transform: scale(.97); }
+[data-rp-refresh="4"] :is(input, select, textarea) {
+    border-radius: var(--rf-r-ctl);
+    border: .5px solid var(--rf-line);
+    background: var(--rf-fill);
+    color: var(--rf-ink);
+    font-size: 13px;
+}
+[data-rp-refresh="4"] :is(input, select, textarea):focus {
+    outline: none;
+    border-color: var(--rf-accent);
+    box-shadow: 0 0 0 3px var(--rf-accent-soft);
+}
+[data-rp-refresh="4"] :is(input, textarea)::placeholder { color: var(--rf-ink3); }
+
+/* ---------- 6. 分段 / 页签 / 胶囊 ---------- */
+[data-rp-refresh="4"] :is([class*="-tab"], [class*="-seg"], [class*="-chip"], [class*="-pill"]) {
+    border-radius: var(--rf-r-chip);
+}
+[data-rp-refresh="4"] :is([class*="-tab"], [class*="-seg"]) :is(.on, .active, [aria-selected="true"]) {
+    background: var(--rf-accent-soft);
+    color: var(--rf-accent);
+    font-weight: 700;
+}
+
+/* ---------- 7. 锁屏 ---------- */
+[data-rp-refresh="4"] .pls-hello {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .3px;
+    color: var(--rf-ink2);
+}
+[data-rp-refresh="4"] .pls-time {
+    font-variant-numeric: tabular-nums;
+    font-weight: 200;
+    letter-spacing: -2px;
+}
+[data-rp-refresh="4"] .pls-date { font-size: 12px; color: var(--rf-ink2); letter-spacing: .3px; }
+[data-rp-refresh="4"] .pls-note {
+    border-radius: 14px;
+    background: var(--rf-fill2);
+    border: .5px solid var(--rf-line);
+}
+[data-rp-refresh="4"] .pls-notes-head { font-size: 11px; color: var(--rf-ink3); letter-spacing: .4px; }
+[data-rp-refresh="4"] .pls-track {
+    border-radius: 14px;
+    background: var(--rf-fill2);
+}
+[data-rp-refresh="4"] .pls-hint { font-size: 10.5px; color: var(--rf-ink3); }
+
+/* ---------- 8. 桌面：与 rp-desktop-v2 同语汇的微调 ---------- */
+[data-rp-refresh="4"] .home-screen .app-icon { border-radius: 15px; }
+[data-rp-refresh="4"] .home-screen .dock {
+    border-radius: 24px;
+    backdrop-filter: blur(14px);
+    background: var(--rf-fill2);
+    border: .5px solid var(--rf-line);
+}
+
+/* ---------- 9. 深色：只调透明度，不改色相 ---------- */
+[data-rp-refresh="4"][data-lonsha-theme="dark"] {
+    --rf-line: color-mix(in srgb, currentColor 15%, transparent);
+    --rf-fill: color-mix(in srgb, currentColor 9%, transparent);
+    --rf-fill2: color-mix(in srgb, currentColor 13%, transparent);
+}
+
+/* ---------- 10. 窄屏：缩字号不缩结构 ---------- */
+@media (max-width: 380px) {
+    [data-rp-refresh="4"] :is([class$="-header"], [class$="-nav"]) :is(h1, h2, h3, [class*="-title"]) { font-size: 15px; }
+    [data-rp-refresh="4"] :is(input, select, textarea) { font-size: 12.5px; }
+}
+
+} /* @layer rp.skins.curated */

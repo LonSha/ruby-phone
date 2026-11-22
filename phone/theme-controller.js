@@ -62,6 +62,7 @@ const KEYS = {
     seed: 'phone-theme-seed',      // v2：Material You 种子色缓存（hex）
     ios: 'phone-ios-version',      // v3：'3' 开启 iOS 拟真外观
     icons: 'phone-icon-style',     // v3：default | dark | clear
+    refresh: 'phone-refresh-v4',   // v4：'1' 开启全机 UI 刷新（默认开）
 };
 
 function parseRgb(str) {
@@ -141,6 +142,8 @@ export function createThemeController({ storage, getRoots, getWallpaper, doc = (
     /* 设计系统收编：v3 外观**默认开**（新装即生效）；用户显式关过（存 '1'）才回落旧外观。
        判据：默认值从 '1' 改为 '3'，语义仍是「存储值为 '3' 才开」，只是没存过时算开。 */
     const isIosV3 = () => isUiV2() && get(KEYS.ios, '3') === '3';
+    /* v4：全机刷新默认开（'1'），不依赖 ds/ui/ios 闸门；存 '0' 即完全退回旧外观 */
+    const isRefreshV4 = () => get(KEYS.refresh, '1') === '1';
     const getIconStyle = () => { const s = get(KEYS.icons, 'default'); return ICON_STYLES.includes(s) ? s : 'default'; };
     let iconBridge = null;          // { detach } —— v3 图标桥接（动态加载，默认不加载）
     let iconBridgeToken = 0;
@@ -219,6 +222,9 @@ export function createThemeController({ storage, getRoots, getWallpaper, doc = (
             if (ui) el.setAttribute('data-rp-ui', '2'); else el.removeAttribute('data-rp-ui');
             if (ios) el.setAttribute('data-rp-ios', '3'); else el.removeAttribute('data-rp-ios');
             if (ios && iconStyle !== 'default') el.setAttribute('data-rp3-icons', iconStyle); else el.removeAttribute('data-rp3-icons');
+            /* v4：全机 UI 刷新（外壳 / 锁屏 / 102 个 App 的公共语汇），默认开 */
+            const rf = isRefreshV4();
+            if (rf) el.setAttribute('data-rp-refresh', '4'); else el.removeAttribute('data-rp-refresh');
             el.setAttribute('data-lonsha-theme', scheme);
             if (pack === 'default') el.removeAttribute('data-rp-pack'); else el.setAttribute('data-rp-pack', pack);
             if (ui && accent !== 'default') el.setAttribute('data-lt-accent', accent); else el.removeAttribute('data-lt-accent');
@@ -241,7 +247,7 @@ export function createThemeController({ storage, getRoots, getWallpaper, doc = (
             }));
         } catch (_e) { /* 忽略 */ }
         syncSkinRuntime(ios);
-        return { scheme, pack, ds, ui, accent, ios, iconStyle };
+        return { scheme, pack, ds, ui, accent, ios, iconStyle, refresh: isRefreshV4() };
     }
 
     function applyCharacterVarsTo(el) {
@@ -303,6 +309,9 @@ export function createThemeController({ storage, getRoots, getWallpaper, doc = (
         enableIosV3(on = true) { set(KEYS.ios, on ? '3' : '1'); if (on) { set(KEYS.ui, '2'); set(KEYS.ds, '2'); } return apply(); },
         getIconStyle,
         setIconStyle(s) { set(KEYS.icons, ICON_STYLES.includes(s) ? s : 'default'); return apply(); },
+        /* ---- v4 ---- */
+        isRefreshV4,
+        enableRefreshV4(on = true) { set(KEYS.refresh, on ? '1' : '0'); return apply(); },
         /* ---- v3.3 ---- */
         /** openApp 时调用：v3 打开则立刻并行取该 App 的皮肤；v3 关着什么也不做（返回 null） */
         ensureAppSkin(appId) {
