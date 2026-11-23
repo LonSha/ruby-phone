@@ -11,6 +11,7 @@
  * ======================================================== */
 'use strict';
 
+import { safeArr } from './array-face.js';
 const RA_STORAGE_KEY = 'ra_anchor_state_v1';
 export const RA_MAX_ANCHORS = 50;
 
@@ -31,7 +32,6 @@ export const ANCHOR_STATUS = Object.freeze({
 });
 
 function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }
-function safeArr(v) { return Array.isArray(v) ? v : []; }
 
 /**
  * 规格化锚点状态

@@ -9,6 +9,7 @@
  *     ④ 会话隔离，严格纯函数。
  * ======================================================== */
 
+import { safeArr } from './array-face.js';
 export const DIFF_DECISION = Object.freeze({
     ACCEPT: 'accept',
     KEEP_OLD: 'keep_old',
@@ -23,7 +24,6 @@ export const DEFAULT_DIFF_EDITOR_STATE = Object.freeze({
 });
 
 function safeStr(v) { return String(v == null ? '' : v).trim(); }
-function safeArr(v) { return Array.isArray(v) ? v : []; }
 
 export function normalizeDiffEditorState(raw) {
     if (!raw || typeof raw !== 'object') return { ...DEFAULT_DIFF_EDITOR_STATE };

@@ -38,6 +38,7 @@
  */
 'use strict';
 import { numOrNull } from './num-gate.js';
+import { safeArr } from './array-face.js';
 
 /* ---------- 状态词表（判据按此表逐词核，防随口新词） ---------- */
 export const TX_STATUS = Object.freeze({
@@ -71,7 +72,6 @@ function safeNum(v, d) {
     const n = numOrNull(v);
     return n === null ? d : n;
 }
-function safeArr(v) { return Array.isArray(v) ? v : []; }
 
 /* ---------- 纯映射 ---------- */
 /**

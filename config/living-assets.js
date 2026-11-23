@@ -10,6 +10,7 @@
  * ======================================================== */
 'use strict';
 
+import { safeArr } from './array-face.js';
 const LA_STORAGE_KEY = 'la_living_assets_v1';
 const LA_MAX_ASSETS = 30;
 
@@ -21,7 +22,6 @@ export const LIVING_ASSET_KINDS = Object.freeze({
 });
 
 function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }
-function safeArr(v) { return Array.isArray(v) ? v : []; }
 
 export function normalizeLivingAssetState(raw) {
     if (!raw || typeof raw !== 'object') {

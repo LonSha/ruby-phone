@@ -489,13 +489,29 @@ function brokenSource(rel, pairs) {
 function brokenCopy(rel, pairs, outName) {
   const src = brokenSource(rel, pairs);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_x7_'));
-  const deps = new Set();
-  const re = /from\s+'\.\/([^']+)'/g;
-  let m;
-  while ((m = re.exec(src)) !== null) deps.add(m[1]);
-  for (const dep of deps) {
-    const from = path.join(ROOT, 'config', dep);
-    if (fs.existsSync(from)) fs.copyFileSync(from, path.join(dir, dep));
+  /* [v4.195.0 修正] 原来只做**一级依赖**：bridge 的 `./usage-paradigm.js` 被拷了，
+     但 usage-paradigm 自己的 `./array-face.js` 是二级依赖，没被拷 ⇒
+     副本缺依赖报 ERR_MODULE_NOT_FOUND 假红（加载器限制，不是判据转红）。
+     改成**闭包传递拷贝**：拷一个文件时连带拷它的静态依赖，直到没有新依赖为止。
+     依赖来源目录按文件实际所在目录解析（config 单源不够：apps 下的件 import 形是
+     `../../config/xxx`，而 config 下的件是 `./xxx`）。 */
+  const copied = new Set();
+  const queue = [rel];
+  while (queue.length) {
+    const cur = queue.shift();
+    if (copied.has(cur)) continue;
+    copied.add(cur);
+    const abs = path.join(ROOT, cur);
+    if (!fs.existsSync(abs)) continue;
+    const body = cur === rel ? src : fs.readFileSync(abs, 'utf8');
+    fs.copyFileSync(abs, path.join(dir, path.basename(cur)));
+    const re2 = /from\s+'\.\/([^']+)'|from\s+'\.\.\/\.\.\/config\/([^']+)'/g;
+    let mm;
+    while ((mm = re2.exec(body)) !== null) {
+      const name = mm[1] || mm[2];
+      const next = cur.startsWith('config/') ? 'config/' + name : rel.replace(/[^/]+$/, '') + name;
+      if (!copied.has(next)) queue.push(next);
+    }
   }
   const file = path.join(dir, outName);
   fs.writeFileSync(file, src, 'utf8');

@@ -9,6 +9,7 @@
  *     ④ 会话隔离，严格纯函数。
  * ======================================================== */
 import { rand } from './random-source.js';
+import { safeArr } from './array-face.js';
 
 export const DEFAULT_LIFE_PROGRAM_STATE = Object.freeze({
     programs: {}, // id -> lifeProgram
@@ -18,7 +19,6 @@ export const DEFAULT_LIFE_PROGRAM_STATE = Object.freeze({
 export const STORAGE_KEY = 'lpr_program_replay_v1';
 
 function safeStr(v) { return String(v == null ? '' : v).trim(); }
-function safeArr(v) { return Array.isArray(v) ? v : []; }
 
 export function normalizeLifeProgramState(raw) {
     if (!raw || typeof raw !== 'object') return { ...DEFAULT_LIFE_PROGRAM_STATE };

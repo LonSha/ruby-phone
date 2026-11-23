@@ -10,6 +10,7 @@
  * ======================================================== */
 'use strict';
 
+import { safeArr } from './array-face.js';
 const UE_STORAGE_KEY = 'ue_urban_economy_v1';
 
 const ASSET_TYPES = Object.freeze({
@@ -25,7 +26,6 @@ function safeNum(v, fallback = 0) {
     const n = Number(v);
     return Number.isFinite(n) ? n : fallback;
 }
-function safeArr(v) { return Array.isArray(v) ? v : []; }
 
 export function normalizeEconomyState(raw) {
     if (!raw || typeof raw !== 'object') {

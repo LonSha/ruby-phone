@@ -10,11 +10,11 @@
  * ======================================================== */
 'use strict';
 
+import { safeArr } from './array-face.js';
 const CD_STORAGE_KEY = 'cd_dwelling_state_v1';
 export const CD_MAX_ITEMS = 25;
 
 function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }
-function safeArr(v) { return Array.isArray(v) ? v : []; }
 
 export function normalizeDwellingState(raw) {
     if (!raw || typeof raw !== 'object') {

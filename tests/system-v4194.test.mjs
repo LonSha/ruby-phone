@@ -187,16 +187,32 @@ test('C2 两处不同口径刻意未动（affairs / comms 的 trim 形不是同�
 });
 
 /* ══════════ V 组 · 版本锚 ══════════ */
-test('V1 五源版本号抬到 4.194.0', () => {
+// [v4.195.0 修正] 刚性版本锚改成下限形（同 v4.193.0 那次）：
+//   原来写死 assert.equal(pkg.version, '4.194.0')，于是每往后抬一版，
+//   这条就红一次 —— 判据钉的是「本版已交付」这个历史事实，不该随
+//   后续抬版漂移。改为「不低于 4.194.0」，用语义化版本逐段比较。
+function cmp(a, b) {
+    const pa = String(a).split('.').map(Number);
+    const pb = String(b).split('.').map(Number);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const x = pa[i] || 0, y = pb[i] || 0;
+        if (x !== y) return x < y ? -1 : 1;
+    }
+    return 0;
+}
+
+test('V1 五源版本号不低于 4.194.0', () => {
     const pkg = JSON.parse(read('package.json'));
-    assert.equal(pkg.version, '4.194.0', 'package.json');
+    assert.ok(cmp(pkg.version, '4.194.0') >= 0, 'package.json 必须不低于 4.194.0，当前 ' + pkg.version);
     const man = JSON.parse(read('manifest.json'));
-    assert.equal(man.version, '4.194.0', 'manifest.json');
+    assert.ok(cmp(man.version, '4.194.0') >= 0, 'manifest.json 必须不低于 4.194.0，当前 ' + man.version);
     const ul = JSON.parse(read('update-log.json'));
     assert.ok(ul.versions['4.194.0'], 'update-log.json 必须有 4.194.0 条目');
-    assert.equal(ul.latest, '4.194.0', 'update-log.json latest');
+    assert.ok(cmp(ul.latest, '4.194.0') >= 0, 'update-log.json latest 必须不低于 4.194.0');
     const idx = read('index.js');
-    assert.ok(idx.indexOf("'4.194.0'") >= 0, 'index.js 必须出现 4.194.0');
+    const mVer = idx.match(/ST_PHONE_VERSION\s*=\s*'([^']+)'/);
+    assert.ok(mVer, 'index.js 必须能取到 ST_PHONE_VERSION 常量');
+    assert.ok(cmp(mVer[1], '4.194.0') >= 0, 'index.js 的 ST_PHONE_VERSION 必须不低于 4.194.0，当前 ' + mVer[1]);
     const iter = read('ITERATION_LOG.md');
     assert.ok(iter.indexOf('4.194.0') >= 0, 'ITERATION_LOG.md 必须出现 4.194.0');
 });

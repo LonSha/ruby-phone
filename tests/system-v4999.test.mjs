@@ -597,7 +597,10 @@ function brokenBridgeCopy(pairs, outName) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_x9_'));
   /* [R26-X5b] 三件内核现各自静态导入 config/random-source.js（含其 num-gate 叶子）：破坏副本必须带齐依赖，
      否则以 ERR_MODULE_NOT_FOUND 假红（加载器限制，不是判据转红）。 */
-  for (const dep of ['life-program-replay.js', 'replayable-phone-program.js', 'smart-gallery-vault.js', 'random-source.js', 'num-gate.js']) {
+  /* [v4.195.0 修正] 同族先例（R26-X5b / v4.194.0 五套负控制）：本清单是**手工白名单**，
+     新增 config import 不跟上就报 ERR_MODULE_NOT_FOUND 假红（加载器限制，不是判据转红）。
+     本轮 life-program-replay.js 转调 config/array-face.js，故补上它。 */
+  for (const dep of ['life-program-replay.js', 'replayable-phone-program.js', 'smart-gallery-vault.js', 'random-source.js', 'num-gate.js', 'array-face.js']) {
     fs.copyFileSync(path.join(ROOT, 'config', dep), path.join(dir, dep));
   }
   const file = path.join(dir, outName);

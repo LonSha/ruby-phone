@@ -9,6 +9,7 @@
  *     ④ 会话隔离，严格纯函数。
  * ======================================================== */
 import { rand } from './random-source.js';
+import { safeArr } from './array-face.js';
 
 export const STORAGE_KEY = 'cbe_creator_bundle_v1';
 
@@ -18,7 +19,6 @@ export const DEFAULT_BUNDLE_ECOSYSTEM_STATE = Object.freeze({
 });
 
 function safeStr(v) { return String(v == null ? '' : v).trim(); }
-function safeArr(v) { return Array.isArray(v) ? v : []; }
 
 export function normalizeBundleEcosystemState(raw) {
     if (!raw || typeof raw !== 'object') return { ...DEFAULT_BUNDLE_ECOSYSTEM_STATE };

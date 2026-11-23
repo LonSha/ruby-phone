@@ -34,6 +34,7 @@ import {
     executeTransaction,
     evaluateTransaction
 } from '../../config/urban-economy.js';
+import { safeArr } from '../../config/array-face.js';
 import {
     normalizeLivingAssetState,
     mintAsset,
@@ -80,7 +81,6 @@ function safeNum(v, d) {
     const n = Number(v);
     return Number.isFinite(n) ? n : d;
 }
-function safeArr(v) { return Array.isArray(v) ? v : []; }
 
 export class EconomyStore {
     /**

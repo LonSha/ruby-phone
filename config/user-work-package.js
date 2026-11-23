@@ -10,6 +10,7 @@
  *     ④ 会话隔离，严格纯函数。
  * ======================================================== */
 import { rand } from './random-source.js';
+import { safeArr } from './array-face.js';
 
 export const WORK_PACKAGE_STEP_STATUS = Object.freeze({
     PENDING: 'pending',
@@ -28,7 +29,6 @@ export const DEFAULT_WORK_PACKAGE_STATE = Object.freeze({
 });
 
 function safeStr(v) { return String(v == null ? '' : v).trim(); }
-function safeArr(v) { return Array.isArray(v) ? v : []; }
 
 export function normalizeWorkPackageState(raw) {
     if (!raw || typeof raw !== 'object') return { ...DEFAULT_WORK_PACKAGE_STATE };

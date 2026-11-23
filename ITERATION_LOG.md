@@ -1,3 +1,13 @@
+迭代 311 · v4.195.0 · 20 版 60 只 App 重构第五批：跨 App 重复口径收敛第三炮 —— 数组读取面 safeArr（2026-11-23）
+
+- 【版本升至 4.195.0（五源同源）】沿用第四批的「同名函数体指纹扫描」，重扫 v4.194.0 后新基线：产品码内 `safeArr` 实测 **16 处 / 1 变体** `function safeArr(v) { return Array.isArray(v) ? v : []; }`（15 个 config + 1 个 apps/wallet），零分簇成本，是当时最干净的等价簇。调用点合计 49 处，实参全是属性访问、变量或逻辑表达式。
+- `config/array-face.js`（44 行，纯函数内核）：唯一导出 `safeArr(v)`。三条立场：① **只认真数组** —— `{length:3}` / `{items:[1,2]}` / 'abc' 一律空数组，刻意不扩展成类数组或 items 解包（那是 `listOf` 的宽口径，不同族，合成即造假等价）；② **原样返回不拷贝** —— `safeArr(orig) === orig` 同一引用，刻意不改成 `.slice()`（性能口径变更，不是等价转调）；③ 空数组是如实回答不是兜底值。与 `text-face.js` / `num-face.js` 分工：分别是「这一格是不是字符串」「是不是数组」「数画成人看的串长什么样」。
+- 转调 14 处：删本地定义 + import，各留调用点（economy-store 2 点、action-stack 1、character-dwelling 1、creator-bundle-ecosystem 16、diff-editor-desk 1、economy-face-bridge 6、joint-media-studio 1、life-program-replay 3、living-assets 1、resume-anchor 1、rule-theatre 6、urban-economy 1、usage-paradigm 8、user-work-package 1）。import 路径：`config/*` 用 `./array-face.js`，`apps/wallet/economy-store.js` 用 `../../config/array-face.js`。
+- 清出 `config/recovery-hub.js` 与 `config/response-cadence.js` 两处**零调用死定义**（`git show HEAD:` 确认全文 `safeArr` 仅出现 1 次即定义本身，与 v4.193.0 `sullydesk-view.js` 同病），按「内核不留零消费出口」纪律把定义与 import 一并清净，判据 B3 钉住这两处全文不该再出现 `safeArr`。
+- **修正转调脚本第三类缺陷**：不许插进另一条多行 import 块中间。16 处落盘后 `syntax` 门当场报 `apps/wallet/economy-store.js` 出错 —— 插入点落在第 42 行 `import {` 与第 43 行之间，import 被截断；修法是先删错插行、再定位以 `} from` 结尾的多行 import 块结束行之后插入。至此三类缺陷（插进块注释 / 漏删函数体尾巴 / 插进多行 import 中间）都由 `syntax` 门抓住而未流入提交。
+- 新增判据 `tests/system-v4195.test.mjs` 11 条（A 组 4 / B 组 3 / C 组 2 / V 组 1）；16 用例对拍 0 diff，并断言 `NEW(orig) === orig` 确认「原样返回不拷贝」同一引用口径；C2 钉住 `listOf` 宽口径变体（`Array.isArray(v.items)`）至少 2 处仍在场、不许被错误收敛。
+- 纯函数内核新增 1 个文件（`config/array-face.js`），无新增副作用文件。下一批候选（已盘点未动）：`safeStr` 36 处 / 4 变体（15 份逐字等价、11 份带 fallback 参数，需分「有无 fallback」两形）、`str` 43 处 / 12 变体（23 份逐字等价但整体分簇复杂）、`esc` 35 处 / 12 变体（18 份逐字相同但 12 变体间行为不等价，需先分簇再抽）、`listOf` 18 处 / 4 变体（15 处等价 + 2 处 items 解包宽口径）、`isPlain` 15 处 / 4 变体（14 处语义等价）。
+
 # 迭代 310 · v4.194.0 · 20 版 60 只 App 重构第四批：跨 App 重复口径收敛第二炮 —— 文本读取面 toStr（2026-11-23）
 
 - 【版本升至 4.194.0（五源同源）】选件方法沿用第三批的「同名函数体指纹扫描」，重扫 v4.193.0 后新基线：产品码 4535 个函数名中跨 ≥3 文件出现 87 个，逐组比对函数体变体数。`toStr` 33 处 / 4 变体，其中 **31 处逐字等价** `(typeof v === 'string') ? v : ''`，是最大且语义最单一的等价簇；调用点合计 545 处，实参全是属性访问、变量或逻辑表达式。

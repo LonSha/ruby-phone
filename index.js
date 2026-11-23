@@ -476,7 +476,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.194.0';
+const ST_PHONE_VERSION = '4.195.0';
 const ST_PHONE_CSS_REVISION = '20261122-wechat-v4';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -724,13 +724,15 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-23",
     items: [
-        "【版本升至 4.194.0（五源同源）】20 版 60 只 App 重构计划第四批：跨 App 重复口径收敛第二炮 —— 文本读取面 `toStr`。本版重做全仓同名函数体指纹扫描（v4.193.0 后新基线），产品码内 4535 个函数名中跨 ≥3 文件出现的 87 个，逐组比对函数体变体数后选定 `toStr`：33 处 / 4 变体，其中 **31 处逐字等价** `(typeof v === 'string') ? v : ''`，是当时最大且语义最单一的等价簇。调用点合计 545 处，实参全部是属性访问、变量或逻辑表达式（从存储读出来的字段）。",
-        "`config/text-face.js`（52 行，纯函数内核）：唯一导出 `toStr(v)`。三条立场写进内核注释与判据：① **类型严格** —— 只收 string，非串（含 null/undefined/数字/布尔/对象）一律空串，刻意不改成 `String(v == null ? '' : v)`（那会让数字 5 变成 '5'、对象变成 '[object Object]'，是放宽口径不是等价转调）；② **不 trim** —— 仓内既有调用点（如 archive-app.js 的 `toStr(o.projectId).trim()`）就是显式 trim 的，把 trim 并进来会让「调用侧已 trim」变成双重 trim；③ 空串是**如实回答**不是兜底值。",
-        "转调分两形：**12 处 export 形**删本地定义、import 内核并保留 `export { toStr };` re-export —— 实测无任何文件用 `import { toStr }` 具名导入，但 `tests/freehome_min.test.mjs` 与 `tests/sullydesk_min.test.mjs` 经 `import * as M` 命名空间消费 `M.toStr(...)`，所以导出面必须留；**19 处私有形**删定义、只加 import。另清出 `apps/affairs/affairs-app.js` 与 `apps/comms/comms-app.js` 两处**不同口径**（`String(v == null ? '' : v).trim()`），刻意不动并在判据 C2 钉住不许被错误收敛。",
-        "`tests/system-v4194.test.mjs`（195 行，11 条判据）：A 组 4 条内核纯度与等价性（A1 源码面零副作用；A2 22 用例对拍 0 diff；A3 三条立场；A4 只一个具名出口、`toStrLoose`/`trimmed`/`strOr` 不许复活）；B 组 4 条转调（B1/B2 分形、B3 每文件仍有调用点、B4 import 不许落进块注释）；C1 全仓 apps+config 无第二份同口径定义；C2 两处异口径保留；V1 五源版本锚。",
-        "本版修掉一个**真实的自伤缺陷**并立成判据 B4：转调脚本对「无 import 段的文件」用「逐行找注释头」定位插入点，结果把 import 插进了块注释内部（`freehome-data.js` / `stickerdesk-data.js` / `group-vote-handoff.js` 三个文件），import 语句被注释吞掉、`M.toStr is not a function`。同批还因只删多行定义的首行、漏删函数体尾巴，在 10 个文件里留下裸露 `return ...; }`，`syntax` 门报 Illegal return statement。两条都靠门禁当场抓住。",
-        "**五处测试的副本树白名单补齐**（`stageTree()` / `WS_FILES`）：pvdesk / archive / cotdesk / diagdesk / uterus 五套负控制测试用「拷源文件到临时目录再 import」的方式做工，config 依赖是手工白名单。本轮新增的 `text-face.js` 依赖不跟上就会报 `MODULE_NOT_FOUND`，七至十三条破坏类负控制**假红**（判据根本没跑到）。已按各套件既有注释预警的形态补齐（v4.157.0 补 phone-feedback.js、v4.109.0 补 empty-face.js 的同族先例）。补齐后 v3450/v3460/v3470 回到 HEAD 基线水位，v3480 恢复全绿，v3430 的七条假红消除。",
-        "纯函数内核新增 1 个文件（`config/text-face.js`），无新增副作用文件。19 道静态门禁复跑通过（browser 层按规矩显式声明本次未执行）。下一批候选（已盘点未动）：`safeStr` 36 处 / 4 变体（15 份 `(typeof v === 'string') ? v.trim() : ''` 逐字等价，11 份带 fallback 参数）、`esc` 35 处 / 12 变体（18 份 split/join 形逐字相同，但 12 变体间**行为不等价**，需先分簇）、`safeNum` 19 处 / 5 变体（16 份是 `Number(val)` 弱口径，收敛时须改走 `numOrNull`，属行为变更需单独一批）。"
+        "【版本升至 4.195.0（五源同源）】20 版 60 只 App 重构计划第五批：跨 App 重复口径收敛第三炮 —— 数组读取面 `safeArr`。本版重做全仓同名函数体指纹扫描（v4.194.0 后新基线），产品码内 `safeArr` 实测 **16 处 / 1 变体** `function safeArr(v) { return Array.isArray(v) ? v : []; }`（15 个 config + 1 个 apps/wallet），零分簇成本，是当时最干净的等价簇。调用点合计 49 处，实参全部是属性访问、变量或逻辑表达式（从存储读出来的字段）。",
+        "`config/array-face.js`（44 行，纯函数内核）：唯一导出 `safeArr(v)`。三条立场写进内核注释与判据：① **只认真数组** —— `{length:3}`、`{items:[1,2]}`、`'abc'` 一律空数组，刻意不扩展成类数组或 items 解包（那是 `listOf` 的宽口径，不同族，合成即造假等价）；② **原样返回不拷贝** —— `safeArr(orig) === orig` 同一引用，刻意不改成 `.slice()`（那是性能口径变更，不是等价转调）；③ 空数组是**如实回答**不是兜底值。与 `text-face.js`（这一格是不是字符串）/ `num-face.js`（数画成人看的串长什么样）分工。",
+        "转调 **14 处**：删本地定义、import 内核，各留调用点（economy-store 2 点、action-stack 1、character-dwelling 1、creator-bundle-ecosystem 16、diff-editor-desk 1、economy-face-bridge 6、joint-media-studio 1、life-program-replay 3、living-assets 1、resume-anchor 1、rule-theatre 6、urban-economy 1、usage-paradigm 8、user-work-package 1）。import 路径：`config/*` 用 `./array-face.js`，`apps/wallet/economy-store.js` 用 `../../config/array-face.js`。",
+        "另清出 `config/recovery-hub.js` 与 `config/response-cadence.js` 两处**零调用死定义**（`git show HEAD:` 确认全文 `safeArr` 仅出现 1 次即定义本身，与 v4.193.0 `sullydesk-view.js` 同病），按「内核不留零消费出口」纪律把定义与 import 一并清净，判据 B3 钉住这两处全文不该再出现 `safeArr`。",
+        "`tests/system-v4195.test.mjs`（11 条判据）：A 组 4 条内核纯度与等价性（A1 源码面零副作用；A2 16 用例对拍 0 diff；A3 三条立场；A4 只一个具名出口、`safeArrLoose`/`arrOr`/`safeList` 不许复活）；B 组 3 条转调（B1 14 文件定义已删+import 在场+仍有调用点；B2 import 不许落进块注释且必须完整语句；B3 两处死定义清净）；C1 apps+config 无第二份同口径定义；C2 `listOf` 宽口径变体（`Array.isArray(v.items)`）至少 2 处仍在场、不许被错误收敛；V1 五源版本锚。",
+        "**本版自己抓到的缺陷**：转调脚本第三类自伤 —— **不许插进另一条多行 import 块中间**。16 处落盘后 `syntax` 门当场报 `apps/wallet/economy-store.js` 出错（`Unexpected token 'export'` 一族），根因是插入点落在第 42 行 `import {` 与第 43 行之间，import 被截断；修法是先删错插行、再定位以 `} from` 结尾的多行 import 块结束行之后插入。至此三类缺陷（插进块注释 / 漏删函数体尾巴 / 插进多行 import 中间）都由 `syntax` 门抓住而未流入提交。",
+        "**交棒改写（下限形）**：`tests/system-v4194.test.mjs` 的 V1 原本把版本号写死成 `assert.equal(pkg.version, '4.194.0')`，抬到 4.195.0 后当场转红。按 v4.193.0 立下的同族先例改成**下限形**（新增语义化版本比较 `cmp(a,b)`），并把 `index.js 必须出现 '4.194.0'` 这条改成读 `ST_PHONE_VERSION` 常量做下限比较 —— 版本号字面量只会出现在当版公告块里，抬版即消失，写死它等于每抬一版必红。判据钉的是「本版已交付」这个历史事实，不该随后续抬版漂移。",
+        "**运行时验证边界**：本版门禁取数改由 `tools/refresh_doc_readings.py --write` 现场真跑 `scripts/syntax-check.mjs` 与 `scripts/import-resolve-check.mjs` 而非读常量，实测 syntax=1690 / import=948 文件 1838 条，与文档既有读数（1688 / 947 / 1824）的漂移当场暴露并写入；browser 层仍按该门自身规矩以 `SKIP_BROWSER=1` 显式声明本次未执行，不假装跑过。",
+        "纯函数内核新增 1 个文件（`config/array-face.js`），无新增副作用文件；19 道静态门禁复跑通过。下一批候选（已盘点未动）：`safeStr` 36 处 / 4 变体（15 份 `(typeof v === 'string') ? v.trim() : ''` 逐字等价，11 份带 fallback 参数，需分「有无 fallback」两形）、`str` 43 处 / 12 变体（23 份 `String(v == null ? '' : v).trim()` 逐字等价但整体分簇复杂）、`esc` 35 处 / 12 变体（18 份 split/join 形逐字相同，但 12 变体间**行为不等价**，需先分簇再抽）。",
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

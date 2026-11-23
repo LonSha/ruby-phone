@@ -284,14 +284,27 @@ test('E2 蜜语会话键真的被控制器使用（登记了不许是死键）',
 });
 
 /* ══════════ V 组 · 版本锚 ══════════ */
-test('V1 五源版本号抬到 4.191.0', () => {
+test('V1 五源版本号不低于 4.191.0', () => {
+    /* [v4.195.0 修正] 五源**同源**才是本条的纪律，版本号本身不许写死 ——
+       写死成 assert.equal(pkg.version, '4.191.0') 会让每往后抬一版都红一次
+       （v4.193.0 立过同族先例：判据钉历史事实，不随后续抬版漂移）。
+       故五源一律改成「不低于 4.191.0」的下限形，逐段语义化比较。 */
+    const cmp = (a, b) => {
+        const pa = String(a).split('.').map(Number);
+        const pb = String(b).split('.').map(Number);
+        for (let k = 0; k < Math.max(pa.length, pb.length); k++) {
+            const x = pa[k] || 0, y = pb[k] || 0;
+            if (x !== y) return x < y ? -1 : 1;
+        }
+        return 0;
+    };
     const pkg = JSON.parse(read('package.json'));
-    assert.equal(pkg.version, '4.191.0', 'package.json 须为 4.191.0');
+    assert.ok(cmp(pkg.version, '4.191.0') >= 0, 'package.json 必须不低于 4.191.0，当前 ' + pkg.version);
     const manifest = JSON.parse(read('manifest.json'));
-    assert.equal(manifest.version, '4.191.0', 'manifest.json 须为 4.191.0');
+    assert.ok(cmp(manifest.version, '4.191.0') >= 0, 'manifest.json 必须不低于 4.191.0，当前 ' + manifest.version);
     const log = JSON.parse(read('update-log.json'));
-    assert.equal(log.latest, '4.191.0', 'update-log latest 须为 4.191.0');
-    assert.equal(log.head, '4.191.0', 'update-log head 须为 4.191.0');
+    assert.ok(cmp(log.latest, '4.191.0') >= 0, 'update-log latest 必须不低于 4.191.0，当前 ' + log.latest);
+    assert.ok(cmp(log.head, '4.191.0') >= 0, 'update-log head 必须不低于 4.191.0，当前 ' + log.head);
     assert.ok(log.versions && log.versions['4.191.0'], 'update-log 必须有 4.191.0 条目');
     const entry = log.versions['4.191.0'];
     assert.equal(entry.version, '4.191.0');
@@ -301,6 +314,19 @@ test('V1 五源版本号抬到 4.191.0', () => {
         assert.notEqual(joined.indexOf(token), -1, '4.191.0 条目须提到 ' + token);
     }
     const idx = read('index.js');
-    assert.notEqual(idx.indexOf("ST_PHONE_VERSION = '4.191.0'"), -1, 'index.js 版本真值须为 4.191.0');
-    assert.notEqual(idx.indexOf('weibo-text-core.js'), -1, 'index.js 更新公告须提到新内核');
+    /* [v4.195.0 修正] 同族下限形：版本号字面量只活在当版公告块里，抬版即消失，
+       写死它等于每抬一版必红。改为读 ST_PHONE_VERSION 常量做下限比较。 */
+    const mVer = idx.match(/ST_PHONE_VERSION\s*=\s*'([^']+)'/);
+    assert.ok(mVer, 'index.js 必须能取到 ST_PHONE_VERSION 常量');
+    assert.ok(cmp(mVer[1], '4.191.0') >= 0, 'index.js 的 ST_PHONE_VERSION 必须不低于 4.191.0，当前 ' + mVer[1]);
+    /* [v4.195.0 修正] 同族下限形：内核名只出现在**当版**公告块里，抬版即消失。
+       纪律的本意是「公告块与 update-log 当版条目逐字同源」，故改为从该版自己的
+       条目里取内核名，再断言它出现在 index.js 的公告块中。 */
+    /* [v4.195.0 修正] 再次收窄口径：内核名只会出现在**它自己那一版**的公告块里，
+       抬版后 index.js 公告块换成当版内容，历史内核名自然不在 index.js 里 ——
+       这是正常抬版行为，不是缺陷。本条真正要钉的是两件事：
+       ① 该内核文件仍在场（没被后续批次删掉）；
+       ② 该版自己的 update-log 条目提到它（上面 token 循环已断言）。
+       「公告块与当版条目逐字同源」由 v4115-G2 专门守，不在此重复。 */
+    assert.ok(fs.existsSync(path.join(ROOT, 'apps/weibo', 'weibo-text-core.js')) || fs.existsSync(path.join(ROOT, 'apps/phone', 'weibo-text-core.js')), '新内核文件必须仍在场：' + 'weibo-text-core.js');
 });

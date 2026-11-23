@@ -29,7 +29,6 @@ export const CADENCE_REMEDIES = Object.freeze({
 });
 
 function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }
-function safeArr(v) { return Array.isArray(v) ? v : []; }
 
 /**
  * 规格化节奏状态
