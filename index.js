@@ -476,8 +476,8 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.158.4';
-const ST_PHONE_CSS_REVISION = '20261122-app-accent';
+const ST_PHONE_VERSION = '4.187.0';
+const ST_PHONE_CSS_REVISION = '20261122-wechat-v4';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
 /* [v4.92.0] 像素皮肤：独立于 phone.css 的 pixel-skin.css（复古掌机 OS 视觉）。
@@ -534,6 +534,8 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'avatarFrameApp', // [v3.27.0] 头像框：有未保存草稿（_mountsDirty），换会话必须丢草稿重取，必须进表
     'shopApp',        // [v3.27.0] 商城：读数现取，但仍进表（下帧现取，防将来加缓存时漏重绑）
     'blockApp',       // [v3.27.0] 拉黑：读数现取，但仍进表（下帧现取，防将来加缓存时漏重绑）
+    'iotApp',         // [v4.186.0] 智能家居：有 destroy 出口且读数随会话走，必须进表
+    'shareApp',       // [v4.187.0] 近场快传：有 destroy 出口且读数随会话走，必须进表
     'weatherApp',     // [v3.27.0] 天气：读数现取，但仍进表（下帧现取，防将来加缓存时漏重绑）
     'widgetApp',      // [v3.28.0] 自定义组件：有未保存草稿（widget_draft）与选中态，换会话必须丢草稿重取，必须进表
     'taobaoApp',      // [v3.29.0] 桃宝：有展开的物流面板（_openLogi，视图态），换会话必须收起重取，必须进表
@@ -706,18 +708,17 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-11-16",
+    date: "2026-11-23",
     items: [
-        "【版本升至 4.157.0（五源同源）】R22 统一反馈出口交付：新增 config/phone-feedback.js，收口通知、确认与输入的产品反馈边界；迁移历史 App 与手机层的宿主 alert/confirm/prompt 调用，业务数据键、保存协议与会话隔离保持不变。",
-        "【缺陷形态】本版自己抓到并当场修掉的一处自伤：批量迁移宿主反馈调用时误改了 apps/wechat/group-vote.js 的业务方法 GroupVote.confirm（它是业务协议方法，不是浏览器确认 API）—— 处置是恢复原方法，并把静态扫描规则收窄为宿主限定形，避免把业务方法误报或误改。",
-        "【交棒改写】把历史判据从「某一版的专有词」改写成**形态锚与下限形**：版本锚一律取 update-log.latest 与 manifest 同源，不再把某一版号写死进判据；公告条目按「缺陷形态 / 交棒改写 / 运行时验证边界」三条形态自证，抬版不再让判据集体转红。",
-        "【运行时验证边界】本版判据为静态接线断言、反馈模块单测与历史定向套件；真机上页内异步对话框的观感、焦点循环在真实移动端浏览器里的表现，以及「看起来没坏但显示不对」那一类形态仍不能保证 —— 本版只验到 role/aria 属性、Esc 取消与焦点归还这些可断言的层面。",
-        "【页内异步交互】提供 phoneConfirmAsync 与 phonePromptAsync；对话框具备 role=dialog、aria-modal、标题/描述关联、Esc 取消、Tab 焦点循环、遮罩取消与焦点归还，提示使用 status/live 语义。",
-        "【安全降级】无 PhoneShell 或无 DOM 时，确认与输入 fail-closed，提示返回可诊断的失败结果；破坏性操作不会因为宿主能力缺失而默认放行。",
-        "【同步兼容边界】旧事件处理器先通过同步兼容出口完成调用面收口，不把几十个保存与导航路径一次性改成 async；后续页面可按批次切换真正的异步页内交互。",
-        "【业务方法保护】批量迁移只替换宿主对象上的原生反馈调用，保留 GroupVote.confirm 等业务协议方法；反馈静态扫描同步收窄为宿主限定形，避免把业务方法误报或误改。",
-        "【门禁边界】本版继续保留全量测试、零消费导出审计与历史版本台账的独立门禁；并发 Promise 生命周期、旧版本测试与既有审计债务不得通过放宽断言或伪登记掩盖。",
-        "【回归判据】反馈模块、编辑缓冲、设置、微信、Honey、回收站、会话隔离、朋友圈可见性与 R22 定向测试合计 102 条通过；syntax、import-resolve、named-import 与 diff-check 同步通过。"
+        "【版本升至 4.187.0（五源同源）】近场快传（share）重构落地：把两个从未接线的死内核（`nfc-airdrop-proximity-exchange.js` 的类持 Map + 自算 status、`universal-sharesheet-intent-bus.js` 的内拼 intentId + 编造 handlerUri）合成 `apps/share/` 四件套 —— `share-data.js`（纯函数内核 182 行）/ `share-app.js`（控制器 112 行）/ `share-view.js`（148 行）/ `share.css`（109 行），并接进五处接线（图标 / 懒加载路由 / 会话前缀 `^share_` / 键登记 `share_nearby_v1` / 重绑表 `shareApp`）。",
+        "源里三块「本仓不能有」的东西逐条改掉：① 阈值不看就收（源里 signalStrength 直接写死 98 满格）→ 改成 `NEARBY_LIMITS.minSignal = 60` 真判，信号不够就是不在范围；② 热心兜底（源里 `soundscapeProfiles[scenario] || HEAVY_RAIN_FLEEING` 把认不出的场景悄悄换成默认）→ 载荷种类改成封闭词表，表外一律 `unknown_kind` 拒答（连 `constructor` / `toString` 这种原型链名字也不认）；③ 自己产叙事 → 注入面只报读数。",
+        "内核五条硬纪律：不在范围不发（`out_of_range`，且不落流水）；同一台重复碰只认第一次（`already_nearby`，旧读数就是当时的事实，不被后来者盖掉）；坏档归一不抛且不把半截数据当好档（没 id 的设备、种类认不出的流水全丢）；`Date.now` 一律由调用方传入（内核零时间依赖，同一输入结果恒定）；所有函数不改入参。",
+        "判据 `tests/system-v4187.test.mjs` 18 门（A 内核 8 / B 注入面 3 / C 负控制 3 / E 接线 3 / V 版本锚 1）：C1 往注入面掺一句「对方手温还留在机身上」必须让 B1 抓出来；C2 把阈值检查改成 `if (false)` 后 A4 必须转红（写临时模块真跑，不是嘴上说说）；C3 词表自证。",
+        "本版**自己抓到的缺陷**有三处，都不是门禁先报的：① `SHARE_FACE` 导出的是大写键（IDLE/NEARBY/HISTORY），视图却写 `SHARE_FACE.nearby` —— 面态永远落到 fallback，界面会一直显示「空档」而不报错；② `share-view.js` 的流水行里混进一个 U+FFFD 替换字符（写入通道把箭头吃掉了），会把「名片 → 苏离的机」渲染成乱码；③ 上一版收尾把 `tests/r23_o1_file_size_ceiling.test.mjs` 的块注释插进了行中间，整份判据 `SyntaxError` —— 已合并回独立注释块并重跑 14 门全绿。",
+        "**交棒改写**（不是静默通过）：nfc 内核的 `devicesInRange` Map 与 `status` 字段没搬过来（状态改成普通对象 + PhoneStorage，换会话不串味）；`handlerUri` 一律不编 —— 源里那行 `app.id://share_receive` 全仓没有任何监听者。",
+        "读数跟着交付物走：`.js` 文件数 942 → 948（本版 +3、上版 iot +3；`tests/r23_o1_file_size_ceiling` 基线同步抬到 948，**不是放宽判据**，是文件计数跟着真新增 .js 走）；`tests/audit/` 台账与三本生成器（status-ledger / file-size / refresh-doc）重签。",
+        "**运行时验证边界**（与 `docs/runtime-verification-boundary.md` 同一句标志语）：本件只在进程内跑过内核与判据，**不能保证**真机上的观感 —— 「碰一碰」在真实触控里没有传感器，是界面按钮模拟；窄屏（≤340px）下按钮换行的排布、以及「看起来没坏但显示不对」这一类仍未验证。",
+        "剩余未重构的 app 清单继续收窄：`keyboard 30 / social 95 / daily 100 / call 100`（`call` 有两件内核 31 + 69，可能一次成型）；`iot / share` 本版已补完。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

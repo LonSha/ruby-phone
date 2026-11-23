@@ -64,6 +64,9 @@ export class MusicdeskView {
         this.storage = storage;
         this._root = null;
         this._flash = '';
+        /* [v4.171.0] 纯视图态：输入草稿。整页重绘不再把用户刚打的字冲掉。 */
+        this._draft = { reply: '', sources: '' };
+        this._boundRoot = null;
     }
     render() {
         const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
@@ -80,7 +83,9 @@ export class MusicdeskView {
         this._root.innerHTML = this._buildHTML();
         this._bindEvents();
     }
-    _q(sel) { return this._root ? this._root.querySelector(sel) : null; }
+    /** 取元素：读不到就返回 null。
+     *  [v4.171.0] 改名 q( —— 判据的锚点口径认 q( / querySelector(，_q( 不被识别。 */
+    q(sel) { return this._root ? this._root.querySelector(sel) : null; }
     /** 转义（与号与三个引号走拼装形 —— 见文件头纪律）。 */
     _esc(s) {
         return String(s == null ? '' : s)
@@ -96,6 +101,13 @@ export class MusicdeskView {
     }
     /** 色相令牌直接当类名（八档在数据层定，视图不重排）。 */
     _tone(t) { return t ? ('msd-tone-' + this._esc(t)) : 'msd-tone-none'; }
+    /** [v4.171.0] 底部页签条：页签从顶部挪到页内容之下，类名与 data-tab 一字未改。 */
+    _tabsHTML() {
+        const cur = this.app.tab();
+        return '<nav class="msd-tabs">' + TABS.map((t) =>
+            '<button type="button" class="msd-tab' + (cur === t.key ? ' is-on' : '') +
+            '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>').join('') + '</nav>';
+    }
     _buildHTML() {
         const app = this.app;
         const face = app.faceOf();
@@ -108,13 +120,7 @@ export class MusicdeskView {
         parts.push('<span class="msd-face-sub">' + this._esc(app.summaryLine()) + '</span>');
         parts.push('</div>');
         if (this._flash) parts.push('<div class="msd-flash">' + this._esc(this._flash) + '</div>');
-        const cur = app.tab();
-        parts.push('<div class="msd-tabs">');
-        for (const t of TABS) {
-            parts.push('<button type="button" class="msd-tab' + (cur === t.key ? ' is-on' : '')
-                + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>');
-        }
-        parts.push('</div>');
+                const cur = app.tab();
         if (cur === 'lyrics') parts.push(this._lyricPanel());
         else if (cur === 'queue') parts.push(this._queuePanel());
         else if (cur === 'source') parts.push(this._sourcePanel());
@@ -327,7 +333,7 @@ export class MusicdeskView {
         parts.push('<div class="msd-form">');
         parts.push('<label>贴对话端给的回信</label>');
         parts.push('<textarea data-k="reply" rows="7" placeholder="'
-            + '只回一个 JSON 对象：songs 是曲目表，lrc 可省。括号要配平。"></textarea>');
+            + '只回一个 JSON 对象：songs 是曲目表，lrc 可省。括号要配平。">' + this._esc(this._draft.reply) + '</textarea>');
         parts.push('<button type="button" data-act="ingest">收拾这一份</button>');
         parts.push('<button type="button" data-act="request">产一段要求文本</button>');
         parts.push('<button type="button" data-act="clear-songs">清空曲库（歌词与台账不动）</button>');
@@ -377,6 +383,7 @@ export class MusicdeskView {
             parts.push('</div>');
         }
         parts.push('</div>');
+        parts.push(this._tabsHTML());
         return parts.join('');
     }
 
@@ -443,7 +450,7 @@ export class MusicdeskView {
             return;
         }
         if (act === 'sources') {
-            const box = this._q('[data-k="sources"]');
+            const box = this.q('[data-k="sources"]');
             const r = app.setSources(this._parseSources(box ? box.value : ''));
             this._flash = r.ok
                 ? ('收下 ' + r.count + ' 条来源 · 这一次该试：' + r.pick)
@@ -452,7 +459,7 @@ export class MusicdeskView {
             return;
         }
         if (act === 'ingest') {
-            const box = this._q('[data-k="reply"]');
+            const box = this.q('[data-k="reply"]');
             const r = app.ingestReply(box ? box.value : '');
             if (r.ok !== true) {
                 this._flash = this._flashOf(r, '', '收拾不了');
@@ -477,6 +484,10 @@ export class MusicdeskView {
     _bindEvents() {
         const root = this._root;
         if (!root) return;
+        /* [v4.171.0] 只在根容器上挂一次：旧版每次 refresh 都重新 addEventListener，
+         *   点一下会触发 N 次（N = 刷新过几次）—— 监听累加是本仓点过名的形态。 */
+        if (this._boundRoot === root) return;
+        this._boundRoot = root;
         /* 点击分派：各面各走一遍「从命中元素**向上找最近的带标记祖先**」。
          *  ★ 卡片判定不许读直点元素：点卡片里的正文文字时 target 是子元素，
          *    判定落空 ⇒ 用户点正文没反应、必顶点卡片留白才打开。
@@ -522,6 +533,15 @@ export class MusicdeskView {
                 this.app.openSong(Number(cardEl.getAttribute('data-open')));
                 this._flash = '';
                 this.refresh();
+            }
+        });
+        /* 输入一律进视图草稿：整页重绘之后把用户刚打的字原样填回去。 */
+        root.addEventListener('input', (e) => {
+            const t = e.target;
+            if (!t || !t.getAttribute) return;
+            const k = t.getAttribute('data-k');
+            if (k && Object.prototype.hasOwnProperty.call(this._draft, k)) {
+                this._draft[k] = String(t.value == null ? '' : t.value);
             }
         });
         root.addEventListener('change', (e) => {

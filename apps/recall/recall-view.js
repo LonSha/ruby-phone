@@ -78,6 +78,7 @@ export class RecallView {
         this.shell = shell;
         this.storage = storage;
         this._root = null;
+        this._boundRoot = null;
         this._flash = '';
         this._draft = { snapshot: '', extra: '' };
         /* [v4.111.0 · R13-X8] 复述的输入与上次结果（页内态，不落盘 —— 纯读面）。 */
@@ -99,7 +100,7 @@ export class RecallView {
         this._root.innerHTML = this._buildHTML();
         this._bindEvents();
     }
-    _q(sel) { return this._root ? this._root.querySelector(sel) : null; }
+    q(sel) { return this._root ? this._root.querySelector(sel) : null; }
     _qa(sel) { return this._root ? this._root.querySelectorAll(sel) : []; }
     /** 转义（`&` 与双引号走拼装形 —— 见文件头纪律）。 */
     _esc(s) {
@@ -124,17 +125,24 @@ export class RecallView {
         parts.push('</div>');
         if (this._flash) parts.push('<div class="rcl-flash">' + this._esc(this._flash) + '</div>');
         const cur = app.tab();
-        parts.push('<div class="rcl-tabs">');
-        for (const t of TABS) {
-            parts.push('<button type="button" class="rcl-tab' + (cur === t.key ? ' is-on' : '')
-                + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>');
-        }
-        parts.push('</div>');
         if (cur === 'channels') parts.push(this._channelsPanel());
         else if (cur === 'fusion') parts.push(this._fusionPanel());
         else if (cur === 'ledger') parts.push(this._ledgerPanel());
         else if (cur === 'narrate') parts.push(this._narratePanel());
         else parts.push(this._policyPanel());
+        parts.push(this._tabsHTML());
+        return parts.join('');
+    }
+    /** 页签条：**放在内容之下** —— 先把这一页给你，再让你换页。
+     *  类名与 data-tab 一字未改（样式与 click 分派都按旧键面找得到）。 */
+    _tabsHTML() {
+        const cur = this.app.tab();
+        const parts = ['<div class="rcl-tabs">'];
+        for (const t of TABS) {
+            parts.push('<button type="button" class="rcl-tab' + (cur === t.key ? ' is-on' : '')
+                + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>');
+        }
+        parts.push('</div>');
         return parts.join('');
     }
     /* ---------- 面板 ①：四路 ---------- */
@@ -548,6 +556,10 @@ export class RecallView {
     _bindEvents() {
         const root = this._root;
         if (!root) return;
+        /* 两个监听只在根容器挂一次：根在 refresh 之间是同一个元素，旧写法每次重挂
+         *   就会在同一根上叠一份（换过几次页签后点一下触发好几次）。 */
+        if (this._boundRoot === root) return;
+        this._boundRoot = root;
         root.addEventListener('click', (e) => {
             const t = e.target;
             if (!t || !t.getAttribute) return;

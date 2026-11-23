@@ -363,3 +363,32 @@
   resize: none;
   outline: none;
 }
+
+/* [v4.166.0] 三页签（发现 / 消息 / 我）与开合状态
+ *   开合不再写行内 style：data-open 是机器可读的状态位，is-open 是显示位，
+ *   两个断点分开的好处是「关着」与「没渲染」在 DOM 上分得清。 */
+.xhs-header-title { flex: 1; text-align: center; font-size: 14px; font-weight: 600; color: #fff; }
+.xhs-navbar { display: flex; border-top: 1px solid rgba(255, 255, 255, 0.08); background: rgba(15, 15, 17, 0.96); }
+.xhs-nav { flex: 1; padding: 9px 0 11px; border: 0; background: none; color: #8b8b93; font-size: 12px; cursor: pointer; }
+.xhs-nav.is-on { color: #ff2442; font-weight: 600; }
+.xhs-list { padding: 10px 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+.xhs-list-head { font-size: 11px; color: #8b8b93; }
+.xhs-msg { display: flex; flex-direction: column; gap: 2px; text-align: left; color: #e6e6ea; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.04); border-radius: 10px; padding: 8px 10px; }
+.xhs-msg-who { font-size: 12px; font-weight: 600; color: #ff8a9c; }
+.xhs-msg-text { font-size: 12px; line-height: 1.5; }
+.xhs-msg-meta { font-size: 10px; color: #8b8b93; }
+.xhs-me-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 36, 66, 0.18), rgba(255, 36, 66, 0.04));
+  border: 1px solid rgba(255, 36, 66, 0.25); }
+.xhs-me-name { font-size: 15px; font-weight: 700; }
+.xhs-me-stats { display: flex; gap: 14px; font-size: 11px; color: #b9b9c2; }
+.xhs-me-stats b { color: #fff; font-size: 14px; }
+.xhs-me-post { align-self: flex-start; border: 0; border-radius: 9px; padding: 6px 14px; font-size: 12px;
+  background: #ff2442; color: #fff; cursor: pointer; }
+.xhs-mine { display: flex; justify-content: space-between; gap: 8px; text-align: left; color: #e6e6ea; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.03); border-radius: 10px; padding: 8px 10px; }
+.xhs-mine-title { font-size: 12px; }
+.xhs-mine-meta { font-size: 10px; color: #8b8b93; }
+.xhs-detail-modal[data-open="0"], .xhs-compose-drawer[data-open="0"] { display: none; }
+.xhs-detail-modal.is-open, .xhs-compose-drawer.is-open { display: flex; }

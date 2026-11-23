@@ -1,11 +1,11 @@
 {
-  "version": "4.157.0",
+  "version": "4.185.0",
   "scannedFiles": 897,
   "contractSize": 26,
   "events": [
     {
       "event": "phone:goHome",
-      "emit": 35,
+      "emit": 34,
       "on": 3,
       "onFiles": [
         "apps/music/music-app.js",
@@ -17,7 +17,6 @@
         "apps/album/album-app.js",
         "apps/album/album-view.js",
         "apps/asset/asset-view.js",
-        "apps/bilibili/bili-view.js",
         "apps/calendar/calendar-app.js",
         "apps/chars/chars-view.js",
         "apps/diary/diary-app.js",

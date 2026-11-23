@@ -70,6 +70,7 @@ export class LofterView {
         this.shell = shell;
         this.storage = storage;
         this._root = null;
+        this._boundRoot = null;
         this._myFace = 'liked';
         this._article = '';
         this._collection = '';
@@ -547,6 +548,48 @@ export class LofterView {
         return parts.join('\n');
     }
     /* ---------- 事件绑定 ---------- */
+    /** 根容器委派：按元素身上的标记分派到原来的动作（顺序与原循环一致）。 */
+    _onDelegated(e) {
+        const app = this.app;
+        const t = e && e.target;
+        const el = (t && t.closest) ? t.closest('.lof-tab,.lof-subtab,[data-open],[data-like],[data-fav],[data-later],[data-follow],[data-subcol],[data-untag],[data-tag],[data-reply],[data-colpick]') : null;
+        if (!el) return;
+        const ds = el.dataset || {};
+        if (ds.tab) { app.setTab(ds.tab); this._article = ''; app.clearRef(); this.refresh(); return; }
+        if (ds.myface) { this._myFace = ds.myface; this.refresh(); return; }
+        if (ds.open) {
+            const id = ds.open;
+            if (this._article === id) { this._article = ''; this.refresh(); return; }
+            app.openArticle(id);
+            this._article = id;
+            this._replyTo = '';
+            this.refresh();
+            return;
+        }
+        if (ds.like) { app.toggleLike(ds.like); this.refresh(); return; }
+        if (ds.fav) { app.toggleFavorite(ds.fav); this.refresh(); return; }
+        if (ds.later) { app.toggleReadLater(ds.later); this.refresh(); return; }
+        if (ds.follow) { this._flashOf(app.toggleFollowAuthor(ds.follow)); this.refresh(); return; }
+        if (ds.subcol) { this._flashOf(app.toggleSubscribeCollection(ds.subcol)); this.refresh(); return; }
+        if (ds.untag) { app.unsubscribeTag(ds.untag); this.refresh(); return; }
+        if (ds.tag) {
+            const tg = ds.tag;
+            const r = app.subscribeTag(tg);
+            this._flash = r.ok ? ('订阅了 #' + tg + (r.dropped ? ('（超上限，丢了最早的 ' + r.dropped + ' 个）') : '')) : ('# ' + tg + ' 已经在订阅里了');
+            this.refresh();
+            return;
+        }
+        if (ds.reply) { this._replyTo = (this._replyTo === ds.reply) ? '' : ds.reply; this.refresh(); return; }
+        if (ds.colpick) {
+            this._collection = (this._collection === ds.colpick) ? '' : ds.colpick;
+            this.refresh();
+        }
+    }
+    /** 回执人话（与 _bindEvents 里的 flash 同一口径，委派分支要用）。 */
+    _flashOf(r, okText) {
+        if (r && r.ok) this._flash = okText || '好了';
+        else this._flash = (r && r.error) ? r.error : '没成';
+    }
     _bindEvents() {
         const app = this.app;
         const self = this;
@@ -554,53 +597,15 @@ export class LofterView {
             if (r && r.ok) self._flash = okText || '好了';
             else self._flash = (r && r.error) ? r.error : '没成';
         };
-        for (const b of this._qa('.lof-tab')) {
-            b.addEventListener('click', () => { app.setTab(b.dataset.tab); this._article = ''; app.clearRef(); this.refresh(); });
-        }
-        for (const b of this._qa('.lof-subtab')) {
-            b.addEventListener('click', () => { this._myFace = b.dataset.myface; this.refresh(); });
-        }
-        for (const b of this._qa('[data-open]')) {
-            b.addEventListener('click', () => {
-                const id = b.dataset.open;
-                if (this._article === id) { this._article = ''; this.refresh(); return; }
-                app.openArticle(id);
-                this._article = id;
-                this._replyTo = '';
-                this.refresh();
-            });
-        }
-        for (const b of this._qa('[data-like]')) {
-            b.addEventListener('click', () => { app.toggleLike(b.dataset.like); this.refresh(); });
-        }
-        for (const b of this._qa('[data-fav]')) {
-            b.addEventListener('click', () => { app.toggleFavorite(b.dataset.fav); this.refresh(); });
-        }
-        for (const b of this._qa('[data-later]')) {
-            b.addEventListener('click', () => { app.toggleReadLater(b.dataset.later); this.refresh(); });
-        }
-        for (const b of this._qa('[data-follow]')) {
-            b.addEventListener('click', () => { flash(app.toggleFollowAuthor(b.dataset.follow)); this.refresh(); });
-        }
-        for (const b of this._qa('[data-subcol]')) {
-            b.addEventListener('click', () => { flash(app.toggleSubscribeCollection(b.dataset.subcol)); this.refresh(); });
-        }
-        for (const b of this._qa('[data-untag]')) {
-            b.addEventListener('click', () => { app.unsubscribeTag(b.dataset.untag); this.refresh(); });
-        }
-        for (const b of this._qa('[data-tag]')) {
-            b.addEventListener('click', () => {
-                const t = b.dataset.tag;
-                const r = app.subscribeTag(t);
-                this._flash = r.ok ? ('订阅了 #' + t + (r.dropped ? ('（超上限，丢了最早的 ' + r.dropped + ' 个）') : '')) : ('# ' + t + ' 已经在订阅里了');
-                this.refresh();
-            });
-        }
-        for (const b of this._qa('[data-reply]')) {
-            b.addEventListener('click', () => {
-                this._replyTo = (this._replyTo === b.dataset.reply) ? '' : b.dataset.reply;
-                this.refresh();
-            });
+        /* 点击收成根容器一次委派：旧写法给 .lof-tab / .lof-subtab / [data-open] /
+         *   [data-like] / [data-fav] / [data-later] / [data-follow] / [data-subcol] /
+         *   [data-untag] / [data-tag] / [data-reply] / [data-colpick] 十二组元素各循环
+         *   挂一遍（十四处 addEventListener）。根在 refresh 之间是同一个元素，每次重挂
+         *   就会在同一根上叠一份（点一下触发好几次）—— 按 _boundRoot 只挂一次。 */
+        const root = this._root;
+        if (root && this._boundRoot !== root) {
+            this._boundRoot = root;
+            root.addEventListener('click', (e) => this._onDelegated(e));
         }
         const cancel = this._q('#lof-reply-cancel');
         if (cancel) cancel.addEventListener('click', () => { this._replyTo = ''; this.refresh(); });
@@ -656,12 +661,6 @@ export class LofterView {
             if (r.ok) this._collection = r.id;
             this.refresh();
         });
-        for (const b of this._qa('[data-colpick]')) {
-            b.addEventListener('click', () => {
-                this._collection = (this._collection === b.dataset.colpick) ? '' : b.dataset.colpick;
-                this.refresh();
-            });
-        }
         const chp = this._q('#lof-chapter-prompt');
         if (chp) chp.addEventListener('click', () => {
             const r = app.promptChapterText(chp.dataset.cid);

@@ -61,6 +61,7 @@ export class DoujinView {
         this.shell = shell;
         this.storage = storage;
         this._root = null;
+        this._boundRoot = null;
         this._flash = '';
         this._shopInput = '';
         this._listingInput = '';
@@ -484,18 +485,24 @@ export class DoujinView {
         if (this._flash) parts.push('<div class="djn-flash">' + this._esc(this._flash) + '</div>');
 
         const cur = app.tab();
-        parts.push('<div class="djn-tabs">');
+        if (cur === 'shop') parts.push(this._shopPanel());
+        else if (cur === 'market') parts.push(this._marketPanel());
+        else if (cur === 'cart') parts.push(this._cartPanel());
+        else parts.push(this._shelfPanel());
+        parts.push(this._tabsHTML());
+        return parts.join('');
+    }
+    /** 页签条：**放在内容之下** —— 先把这一页给你，再让你换页。
+     *  类名与 data-tab 一字未改（样式与 click 分派都按旧键面找得到）。 */
+    _tabsHTML() {
+        const cur = this.app.tab();
+        const parts = ['<div class="djn-tabs">'];
         for (let i = 0; i < TABS.length; i++) {
             const t = TABS[i];
             parts.push('<button class="djn-tab' + (t.key === cur ? ' on' : '') + '" data-tab="' + this._esc(t.key) + '">'
                 + this._esc(t.label) + '<span class="djn-tab-n">' + this._esc(String(this._tabCount(t.key))) + '</span></button>');
         }
         parts.push('</div>');
-
-        if (cur === 'shop') parts.push(this._shopPanel());
-        else if (cur === 'market') parts.push(this._marketPanel());
-        else if (cur === 'cart') parts.push(this._cartPanel());
-        else parts.push(this._shelfPanel());
         return parts.join('');
     }
     _tabCount(key) {
@@ -522,18 +529,19 @@ export class DoujinView {
                 else if (k === 'price_new') this._priceNew = el.value;
             });
         }
-        const tabs = root.querySelectorAll('[data-tab]');
-        for (let i = 0; i < tabs.length; i++) {
-            const t = tabs[i];
-            t.addEventListener('click', () => {
-                this.app.setTab(t.getAttribute('data-tab'));
-                this.refresh();
+        /* 点击收成根容器一次委派：旧写法给 [data-tab] 与 [data-act] 两组元素各循环挂一遍，
+         *   元素一多监听就散成一片；且根在 refresh 之间是同一个元素，旧写法每次重挂
+         *   就会在同一根上叠一份（点一下触发好几次）—— 按 _boundRoot 只挂一次。 */
+        if (this._boundRoot !== root) {
+            this._boundRoot = root;
+            root.addEventListener('click', (e) => {
+                const t = e.target;
+                const el = (t && t.closest) ? t.closest('[data-tab],[data-act]') : null;
+                if (!el) return;
+                const tab = el.getAttribute('data-tab');
+                if (tab) { this.app.setTab(tab); this.refresh(); return; }
+                this._onAct(el.getAttribute('data-act'), el.getAttribute('data-id'));
             });
-        }
-        const btns = root.querySelectorAll('[data-act]');
-        for (let i = 0; i < btns.length; i++) {
-            const b = btns[i];
-            b.addEventListener('click', () => this._onAct(b.getAttribute('data-act'), b.getAttribute('data-id')));
         }
     }
     _onAct(act, id) {

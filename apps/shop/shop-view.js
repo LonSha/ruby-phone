@@ -1,13 +1,18 @@
 /* ========================================================
- * shop-view.js — [v3.27.0] 商城 App 视图
- * 归因卡 + 商品目录（登记/删）+ 分类 + 购物车 + 下单口令 + 订单列表 + 设置
+ * shop-view.js — [v4.168.0]「照现实重写」· 商城 App 视图
+ * --------------------------------------------------------
+ * 上一版的形态：一页到底 —— 归因卡 + 读数 + 分类页签 + 商品 + 登记 + 分类管理 + 购物车
+ *   + 下单 + 核销 + 订单 + 设置，全挤在一列；事件按 id / 类名逐元素绑。
+ * 现实里的商城是四块：**店**（逛什么、登记什么）→ **车**（买什么）→ **单**（取没取）
+ *   → **设置**（分类与口径）。
  *
- * 与 focus-view / piggy-view / punchcard-view 同纪律：归因文案表的键取 SHOP_REASONS 的**值**。
- * 本视图**只画与派事件**：一切数据变动都回调到 App 的方法上（App 负责纯函数 + 落盘）。
- *
- * 两处「不糊弄」：
- *   · 删商品 / 删分类 / 清目录一律**两步确认**（本仓不弹宿主 confirm）；
+ * 两处「不糊弄」照旧，一字未改：
+ *   · 删商品 / 删分类 / 清目录 / 删订单一律两步确认（本仓不弹宿主 confirm）；
  *   · 车里有「已不在目录里」的条目时，把它**明着算出来**（`已失效 N 项`），不静默吞掉。
+ *
+ * 接线纪律（与心境 / 周期数学 / 幸运转盘 / 纪念日 / 小红书 / 天气 / 打卡 / 存钱罐同一套）：
+ *   事件只在根容器上挂一次：click / input / change 各一个，靠 data-act 与 dataset 分派；
+ *   读不到 DOM 不抛；钱一律整数分，显示过 formatCents，不自己拼小数。
  * ======================================================== */
 'use strict';
 import { SHOP_REASONS, SHOP_LIMITS, formatCents } from './shop-data.js';
@@ -20,25 +25,41 @@ const FACE_META = {
 
 const STATUS_LABEL = { pending: '待取', picked: '已取', canceled: '已取消' };
 
+const TABS = [
+    { key: 'store', label: '店' },
+    { key: 'cart', label: '车' },
+    { key: 'orders', label: '单' },
+    { key: 'settings', label: '设置' },
+];
+
+const DASH = String.fromCharCode(45, 45);
+
 export class ShopView {
     constructor(app, shell, storage) {
         this.app = app;
         this.shell = shell;
         this.storage = storage;
         this._root = null;
-        /** 登记商品的草稿（纯视图态，不落盘） */
+        this.tab = 'store';
+        /** 当前看的分类（'' = 全部；纯视图态） */
+        this._cat = '';
+        /** 登记商品的草稿（纯视图态） */
         this._draft = { name: '', priceYuan: '', category: 'general', note: '' };
         /** 分类草稿 */
         this._catDraft = { id: '', name: '' };
         /** 核销口令输入 */
         this._codeInput = '';
-        /** 当前看的分类页签（'' = 全部） */
-        this._tab = '';
-        /** 两步确认 */
+        /** 两步确认：`p:<id>` / `c:<id>` / `o:<id>` / `clear-p` */
         this._pendingConfirm = '';
         /** 提示条 */
         this._flash = '';
+        this._boundRoot = null;
+        this._hClick = null;
+        this._hInput = null;
+        this._hChange = null;
     }
+
+    /* ---------- 1. 挂载与重绘 ---------- */
 
     render() {
         const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
@@ -46,9 +67,8 @@ export class ShopView {
         container.innerHTML = '';
         this._root = document.createElement('div');
         this._root.className = 'shp-root';
-        this._root.innerHTML = this._buildHTML();
         container.appendChild(this._root);
-        this._bindEvents();
+        this.refresh();
     }
 
     refresh() {
@@ -57,212 +77,34 @@ export class ShopView {
         this._bindEvents();
     }
 
-    _buildHTML() {
-        const app = this.app;
-        const face = app.faceReason();
-        const meta = FACE_META[face] || { icon: '\u2753', label: '未识别的状态：' + String(face), tone: 'warn' };
-        const proj = app.projection() || {
-            productCount: 0, unPricedCount: 0, categoryCount: 5, customCategoryCount: 0, byCat: {},
+    /* ---------- 2. 取数（读不到就按空画，不抛） ---------- */
+
+    _proj() {
+        try {
+            const p = this.app.projection();
+            if (p && typeof p === 'object') return p;
+        } catch (_e) { /* 归因条上会如实说明 */ }
+        return {
+            productCount: 0, unPricedCount: 0, categoryCount: 0, customCategoryCount: 0, byCat: {},
             cartCents: 0, cartCount: 0, cartRows: 0, cartMissing: 0,
             orderCount: 0, pendingOrders: [], pickedCount: 0, hasAny: false,
         };
-        const settings = app.settings;
-        const limits = app.limits();
-        const cats = app.categoriesList();
-        const products = app.productsList();
-        const cart = app.cartList();
-        const orders = app.ordersList();
-        const parts = [];
+    }
 
-        parts.push('<div class="shp-header"><h2>\u{1f6d2} 商城</h2></div>');
+    _list(fn) {
+        try {
+            const v = this.app[fn]();
+            if (Array.isArray(v)) return v;
+        } catch (_e) { /* 同上 */ }
+        return [];
+    }
 
-        parts.push('<div class="shp-face shp-face-' + meta.tone + '">');
-        parts.push('<span class="shp-face-icon">' + meta.icon + '</span>');
-        parts.push('<span class="shp-face-label">' + this._esc(meta.label) + '</span>');
-        parts.push('</div>');
-
-        if (this._flash) {
-            parts.push('<div class="shp-flash">' + this._esc(this._flash) + '</div>');
-        }
-
-        /* ---------- 读数 ---------- */
-        parts.push('<div class="shp-stats">');
-        parts.push('<div class="shp-stat-row"><span>目录</span><span>' + proj.productCount + ' / ' + limits.maxProducts + ' 件</span></div>');
-        if (proj.unPricedCount) {
-            parts.push('<div class="shp-stat-row shp-warn"><span>没定价</span><span>' + proj.unPricedCount + ' 件</span></div>');
-        }
-        parts.push('<div class="shp-stat-row"><span>分类</span><span>' + proj.categoryCount
-            + '（自定义 ' + proj.customCategoryCount + '）</span></div>');
-        parts.push('<div class="shp-stat-row"><span>购物车</span><span>' + formatCents(proj.cartCents)
-            + ' · ' + proj.cartCount + ' 件' + (proj.cartMissing ? (' · <em>已失效 ' + proj.cartMissing + ' 项</em>') : '') + '</span></div>');
-        parts.push('<div class="shp-stat-row"><span>订单</span><span>' + proj.orderCount
-            + ' 单（待取 ' + proj.pendingOrders.length + ' / 已取 ' + proj.pickedCount + '）</span></div>');
-        parts.push('</div>');
-
-        /* ---------- 分类页签 ---------- */
-        parts.push('<div class="shp-tabs">');
-        parts.push('<button class="shp-tab' + (this._tab === '' ? ' is-on' : '') + '" data-cat="">全部</button>');
-        for (const c of cats) {
-            const n = proj.byCat[c.id] || 0;
-            parts.push('<button class="shp-tab' + (this._tab === c.id ? ' is-on' : '') + '" data-cat="' + this._esc(c.id) + '">'
-                + this._esc(c.name) + '<span class="shp-tab-n">' + n + '</span></button>');
-        }
-        parts.push('</div>');
-
-        /* ---------- 商品目录 ---------- */
-        const shown = products.filter((p) => !this._tab || p.category === this._tab);
-        parts.push('<div class="shp-list">');
-        parts.push('<h3 class="shp-list-title">商品（' + shown.length + (this._tab ? (' / 共 ' + products.length) : '') + '）</h3>');
-        if (!products.length) {
-            parts.push('<div class="shp-empty">还没有商品。下面登记一件 —— 本 App 不替你生成商品，也不替你去问模型。</div>');
-        } else if (!shown.length) {
-            parts.push('<div class="shp-empty">这个分类下还没有东西。</div>');
-        } else {
-            for (const p of shown) {
-                const inCart = cart.find((x) => x.productId === p.id);
-                parts.push('<div class="shp-item" data-id="' + this._esc(p.id) + '">');
-                parts.push('<div class="shp-item-main">');
-                parts.push('<span class="shp-item-name">' + this._esc(p.name) + '</span>');
-                parts.push('<span class="shp-item-cat">' + this._esc(this._catName(cats, p.category)) + '</span>');
-                parts.push('<span class="shp-item-price">' + (p.unPriced ? '未定价' : formatCents(p.priceCents)) + '</span>');
-                if (inCart) parts.push('<span class="shp-item-incart">车里 ' + inCart.qty + '</span>');
-                parts.push('</div>');
-                if (p.note) parts.push('<div class="shp-item-note">' + this._esc(p.note) + '</div>');
-                parts.push('<div class="shp-item-actions">');
-                parts.push('<button class="shp-mini shp-add-cart" data-id="' + this._esc(p.id) + '">加入购物车</button>');
-                parts.push('<button class="shp-mini shp-item-del" data-id="' + this._esc(p.id) + '">删</button>');
-                parts.push('</div>');
-                parts.push('</div>');
-            }
-        }
-        parts.push('</div>');
-
-        /* ---------- 登记商品 ---------- */
-        parts.push('<div class="shp-create">');
-        parts.push('<h3 class="shp-list-title">登记一件商品</h3>');
-        parts.push('<input class="shp-input" id="shp-p-name" type="text" maxlength="' + limits.maxNameLen
-            + '" placeholder="叫什么" value="' + this._esc(this._draft.name) + '">');
-        parts.push('<div class="shp-create-row">');
-        parts.push('<input class="shp-input shp-input-price" id="shp-p-price" type="text" inputmode="decimal" placeholder="价格（元，可留空）" value="' + this._esc(this._draft.priceYuan) + '">');
-        parts.push('<select class="shp-input shp-input-cat" id="shp-p-cat">');
-        for (const c of cats) {
-            parts.push('<option value="' + this._esc(c.id) + '"' + (this._draft.category === c.id ? ' selected' : '') + '>'
-                + this._esc(c.name) + '</option>');
-        }
-        parts.push('</select>');
-        parts.push('</div>');
-        parts.push('<input class="shp-input" id="shp-p-note" type="text" maxlength="' + limits.maxNoteLen
-            + '" placeholder="一句备注（可留空）" value="' + this._esc(this._draft.note) + '">');
-        parts.push('<div class="shp-actions">');
-        parts.push('<button class="shp-btn shp-btn-primary" id="shp-p-add">登记</button>');
-        parts.push('<button class="shp-mini shp-mini-armed" id="shp-clear-products">清空目录</button>');
-        parts.push('</div>');
-        parts.push('<div class="shp-hint">价格留空 = **未定价**（源里商品价格本来就可能是空的，生成侧给不出价也得能挂出来），'
-            + '不计入合计。钱的单位一律是**分**的整数，不会有 0.1+0.2 那种误差。</div>');
-        parts.push('</div>');
-
-        /* ---------- 分类 ---------- */
-        parts.push('<div class="shp-cats">');
-        parts.push('<h3 class="shp-list-title">分类</h3>');
-        parts.push('<div class="shp-cat-list">');
-        for (const c of cats) {
-            parts.push('<div class="shp-cat' + (c.preset ? ' is-preset' : '') + '">');
-            parts.push('<span class="shp-cat-name">' + this._esc(c.name) + '</span>');
-            parts.push('<span class="shp-cat-id">' + this._esc(c.id) + '</span>');
-            if (c.preset) {
-                parts.push('<span class="shp-cat-tag">内置</span>');
-            } else {
-                parts.push('<button class="shp-mini shp-cat-del" data-id="' + this._esc(c.id) + '">删</button>');
-            }
-            parts.push('</div>');
-        }
-        parts.push('</div>');
-        parts.push('<div class="shp-create-row">');
-        parts.push('<input class="shp-input shp-input-cid" id="shp-c-id" type="text" maxlength="24" placeholder="id（英文）" value="' + this._esc(this._catDraft.id) + '">');
-        parts.push('<input class="shp-input" id="shp-c-name" type="text" maxlength="' + limits.maxNameLen + '" placeholder="显示名" value="' + this._esc(this._catDraft.name) + '">');
-        parts.push('<button class="shp-mini" id="shp-c-add">加</button>');
-        parts.push('</div>');
-        parts.push('<div class="shp-hint">内置那五个（推荐 / 食堂 / 百货 / 猜你喜欢 / Ta 想买）用的是**源的 id**，'
-            + '不能占 —— 撞车会让同一个桶出现两条不同说明，界面上看不出来。删一个自定义分类，'
-            + '它下面的商品**不会跟着删**，会落到「百货」。</div>');
-        parts.push('</div>');
-
-        /* ---------- 购物车 ---------- */
-        parts.push('<div class="shp-cart">');
-        parts.push('<h3 class="shp-list-title">购物车</h3>');
-        if (!cart.length) {
-            parts.push('<div class="shp-empty">车是空的。</div>');
-        } else {
-            const byId = new Map(products.map((p) => [p.id, p]));
-            for (const row of cart) {
-                const p = byId.get(row.productId);
-                parts.push('<div class="shp-cart-row' + (p ? '' : ' is-dead') + '">');
-                parts.push('<span class="shp-cart-name">' + (p ? this._esc(p.name) : '\u26a0\ufe0f 已不在目录里') + '</span>');
-                parts.push('<input class="shp-input shp-cart-qty" type="number" min="0" max="' + limits.maxQty
-                    + '" value="' + row.qty + '" data-id="' + this._esc(row.productId) + '">');
-                parts.push('<span class="shp-cart-price">' + (p ? formatCents(p.priceCents * row.qty) : '\u2014') + '</span>');
-                parts.push('<button class="shp-mini shp-cart-del" data-id="' + this._esc(row.productId) + '">摘</button>');
-                parts.push('</div>');
-            }
-            parts.push('<div class="shp-cart-total">合计 <strong>' + formatCents(proj.cartCents) + '</strong>');
-            if (proj.cartMissing) parts.push('<span class="shp-warn-text">（有 ' + proj.cartMissing + ' 项已失效，不计入）</span>');
-            parts.push('</div>');
-        }
-        parts.push('<div class="shp-actions">');
-        parts.push('<button class="shp-btn shp-btn-primary" id="shp-checkout"' + (cart.length ? '' : ' disabled') + '>下单</button>');
-        parts.push('<button class="shp-mini" id="shp-cart-clear"' + (cart.length ? '' : ' disabled') + '>清空车</button>');
-        parts.push('</div>');
-        parts.push('</div>');
-
-        /* ---------- 订单 + 核销 ---------- */
-        parts.push('<div class="shp-orders">');
-        parts.push('<h3 class="shp-list-title">订单（' + orders.length + '）</h3>');
-        parts.push('<div class="shp-create-row">');
-        parts.push('<input class="shp-input" id="shp-code" type="text" maxlength="12" placeholder="自提口令（大小写、空格都无所谓）" value="' + this._esc(this._codeInput) + '">');
-        parts.push('<button class="shp-mini" id="shp-pickup">核销</button>');
-        parts.push('</div>');
-        if (!orders.length) {
-            parts.push('<div class="shp-empty">还没有订单。</div>');
-        } else {
-            for (const o of orders) {
-                parts.push('<div class="shp-order is-' + this._esc(o.status || 'pending') + '">');
-                parts.push('<div class="shp-order-head">');
-                parts.push('<span class="shp-order-code">' + this._esc(o.code) + '</span>');
-                parts.push('<span class="shp-order-status">' + this._esc(STATUS_LABEL[o.status] || o.status) + '</span>');
-                parts.push('<span class="shp-order-total">' + formatCents(o.totalCents) + '</span>');
-                parts.push('</div>');
-                parts.push('<div class="shp-order-rows">');
-                for (const r of (Array.isArray(o.rows) ? o.rows : [])) {
-                    parts.push('<span class="shp-order-row">' + this._esc(r.name) + '\u00d7' + r.qty + '</span>');
-                }
-                parts.push('</div>');
-                parts.push('<div class="shp-order-actions">');
-                if (o.status === 'pending') parts.push('<button class="shp-mini shp-order-cancel" data-id="' + this._esc(o.id) + '">取消</button>');
-                parts.push('<button class="shp-mini shp-order-del" data-id="' + this._esc(o.id) + '">删</button>');
-                parts.push('</div>');
-                parts.push('</div>');
-            }
-        }
-        parts.push('<div class="shp-hint">口令是**本 App 签发的**：源是从聊天正文里拿正则抠口令，'
-            + '正文换个写法就静默判「没找到」——不报错、只错结果。这里对不上就直说对不上。</div>');
-        parts.push('</div>');
-
-        /* ---------- 设置 ---------- */
-        parts.push('<div class="shp-settings">');
-        parts.push('<h3 class="shp-list-title">设置</h3>');
-        parts.push('<label class="shp-toggle"><span>把「待取自提」交给生成侧</span>'
-            + '<input type="checkbox" id="shp-inject"' + (settings.injectToPrompt ? ' checked' : '') + '></label>');
-        parts.push('<label class="shp-field"><span>注入时带几单</span>'
-            + '<input type="number" id="shp-max-inject" min="0" max="20" value="' + settings.maxInjectOrders + '"></label>');
-        parts.push('<label class="shp-field"><span>每页显示</span>'
-            + '<input type="number" id="shp-page-size" min="1" max="50" value="' + settings.pageSize + '"></label>');
-        parts.push('<label class="shp-field"><span>最多留几单</span>'
-            + '<input type="number" id="shp-max-orders" min="10" max="500" value="' + settings.maxOrders + '"></label>');
-        parts.push('<div class="shp-hint">目录、车、订单都随会话走：换角色后那是另一个角色的另一个店。'
-            + '本 App 只记你自己登记的东西：不替你生成商品，不碰聊天记录。</div>');
-        parts.push('</div>');
-
-        return parts.join('\n');
+    _limits() {
+        try {
+            const l = this.app.limits();
+            if (l && typeof l === 'object') return l;
+        } catch (_e) { /* 回落到常量表 */ }
+        return SHOP_LIMITS;
     }
 
     _catName(cats, id) {
@@ -270,49 +112,381 @@ export class ShopView {
         return hit ? hit.name : String(id || '');
     }
 
+    /* ---------- 3. 四页 ---------- */
+
+    _storeHTML(proj, cats, products, cart) {
+        const limits = this._limits();
+        const parts = ['<section class="shp-page" data-page="store">'];
+
+        /* 分类页签（横向滚动的一排） */
+        parts.push('<div class="shp-tabs">');
+        parts.push('<button class="shp-tab' + (this._cat === '' ? ' is-on' : '') + '" data-act="cat" data-cat="">全部</button>');
+        for (const c of cats) {
+            const n = (proj.byCat && proj.byCat[c.id]) || 0;
+            parts.push('<button class="shp-tab' + (this._cat === c.id ? ' is-on' : '') + '" data-act="cat" data-cat="'
+                + this._esc(c.id) + '">' + this._esc(c.name) + '<span class="shp-tab-n">' + this._esc(String(n)) + '</span></button>');
+        }
+        parts.push('</div>');
+
+        const shown = products.filter((p) => !this._cat || p.category === this._cat);
+        parts.push('<div class="shp-list">');
+        parts.push('<h3 class="shp-list-title">商品（' + this._esc(String(shown.length))
+            + (this._cat ? (' / 共 ' + this._esc(String(products.length))) : '') + '）</h3>');
+        if (!products.length) {
+            parts.push('<div class="shp-empty">还没有商品。下面登记一件 —— 本 App 不替你生成商品，也不替你去问模型。</div>');
+        } else if (!shown.length) {
+            parts.push('<div class="shp-empty">这个分类下还没有东西。</div>');
+        } else {
+            for (const p of shown) {
+                const inCart = cart.find((x) => x.productId === p.id);
+                const armed = this._pendingConfirm === ('p:' + p.id);
+                parts.push('<div class="shp-item" data-id="' + this._esc(p.id) + '">');
+                parts.push('<div class="shp-item-main">');
+                parts.push('<span class="shp-item-name">' + this._esc(p.name) + '</span>');
+                parts.push('<span class="shp-item-cat">' + this._esc(this._catName(cats, p.category)) + '</span>');
+                parts.push('<span class="shp-item-price">' + (p.unPriced ? '未定价' : this._esc(formatCents(p.priceCents))) + '</span>');
+                if (inCart) parts.push('<span class="shp-item-incart">车里 ' + this._esc(String(inCart.qty)) + '</span>');
+                parts.push('</div>');
+                if (p.note) parts.push('<div class="shp-item-note">' + this._esc(p.note) + '</div>');
+                parts.push('<div class="shp-item-actions">');
+                parts.push('<button class="shp-mini" data-act="add-cart" data-id="' + this._esc(p.id) + '">加入购物车</button>');
+                parts.push('<button class="shp-mini' + (armed ? ' shp-mini-armed' : '') + '" data-act="del-product" data-id="'
+                    + this._esc(p.id) + '">' + (armed ? '确认删' : '删') + '</button>');
+                parts.push('</div>');
+                parts.push('</div>');
+            }
+        }
+        parts.push('</div>');
+
+        const d = this._draft;
+        parts.push('<div class="shp-create">');
+        parts.push('<h3 class="shp-list-title">登记一件商品</h3>');
+        parts.push('<input class="shp-input" type="text" maxlength="' + String(limits.maxNameLen) + '" data-in="name"'
+            + ' placeholder="叫什么" value="' + this._esc(d.name) + '">');
+        parts.push('<div class="shp-create-row">');
+        parts.push('<input class="shp-input shp-input-price" type="text" inputmode="decimal" data-in="priceYuan"'
+            + ' placeholder="价格（元，可留空）" value="' + this._esc(d.priceYuan) + '">');
+        parts.push('<select class="shp-input shp-input-cat" data-act="draft-cat">');
+        for (const c of cats) {
+            parts.push('<option value="' + this._esc(c.id) + '"' + (d.category === c.id ? ' selected' : '') + '>'
+                + this._esc(c.name) + '</option>');
+        }
+        parts.push('</select>');
+        parts.push('</div>');
+        parts.push('<input class="shp-input" type="text" maxlength="' + String(limits.maxNoteLen) + '" data-in="note"'
+            + ' placeholder="一句备注（可留空）" value="' + this._esc(d.note) + '">');
+        const clearArmed = this._pendingConfirm === 'clear-p';
+        parts.push('<div class="shp-actions">');
+        parts.push('<button class="shp-btn shp-btn-primary" data-act="add-product">登记</button>');
+        parts.push('<button class="shp-mini shp-mini-armed" data-act="clear-products">'
+            + (clearArmed ? '确认清空' : '清空目录') + '</button>');
+        parts.push('</div>');
+        parts.push('<div class="shp-hint">价格留空 = <strong>未定价</strong>（源里商品价格本来就可能是空的，'
+            + '生成侧给不出价也得能挂出来），不计入合计。钱的单位一律是<strong>分</strong>的整数，'
+            + '不会有 0.1 + 0.2 那种误差。</div>');
+        parts.push('</div>');
+        parts.push('</section>');
+        return parts.join('');
+    }
+
+    _cartHTML(proj, products, cart) {
+        const limits = this._limits();
+        const parts = ['<section class="shp-page" data-page="cart">'];
+        parts.push('<div class="shp-cart">');
+        parts.push('<h3 class="shp-list-title">购物车（' + this._esc(String(proj.cartCount)) + ' 件）</h3>');
+        if (!cart.length) {
+            parts.push('<div class="shp-empty">车是空的。去「店」加两件。</div>');
+        } else {
+            const byId = new Map(products.map((p) => [p.id, p]));
+            for (const row of cart) {
+                const p = byId.get(row.productId);
+                parts.push('<div class="shp-cart-row' + (p ? '' : ' is-dead') + '">');
+                parts.push('<span class="shp-cart-name">' + (p ? this._esc(p.name) : '\u26a0\ufe0f 已不在目录里') + '</span>');
+                parts.push('<input class="shp-input shp-cart-qty" type="number" min="0" max="' + String(limits.maxQty)
+                    + '" data-act="qty" data-id="' + this._esc(row.productId) + '" value="' + this._esc(String(row.qty)) + '">');
+                parts.push('<span class="shp-cart-price">' + (p ? this._esc(formatCents(p.priceCents * row.qty)) : DASH) + '</span>');
+                parts.push('<button class="shp-mini" data-act="cart-del" data-id="' + this._esc(row.productId) + '">摘</button>');
+                parts.push('</div>');
+            }
+            parts.push('<div class="shp-cart-total">合计 <strong>' + this._esc(formatCents(proj.cartCents)) + '</strong>');
+            if (proj.cartMissing) {
+                parts.push('<span class="shp-warn-text">（有 ' + this._esc(String(proj.cartMissing))
+                    + ' 项已失效，不计入）</span>');
+            }
+            parts.push('</div>');
+        }
+        parts.push('<div class="shp-actions">');
+        parts.push('<button class="shp-btn shp-btn-primary" data-act="checkout"' + (cart.length ? '' : ' disabled') + '>下单</button>');
+        parts.push('<button class="shp-mini" data-act="cart-clear"' + (cart.length ? '' : ' disabled') + '>清空车</button>');
+        parts.push('</div>');
+        parts.push('<div class="shp-hint">下单是<strong>快照</strong>：之后商品改名改价，已下的单一个字都不会跟着变。</div>');
+        parts.push('</div>');
+        parts.push('</section>');
+        return parts.join('');
+    }
+
+    _ordersHTML(orders) {
+        const parts = ['<section class="shp-page" data-page="orders">'];
+        parts.push('<div class="shp-orders">');
+        parts.push('<h3 class="shp-list-title">取货（自提口令）</h3>');
+        parts.push('<div class="shp-create-row">');
+        parts.push('<input class="shp-input shp-input-code" type="text" maxlength="12" data-in="code"'
+            + ' placeholder="自提口令（大小写、空格都无所谓）" value="' + this._esc(this._codeInput) + '">');
+        parts.push('<button class="shp-mini" data-act="pickup">核销</button>');
+        parts.push('</div>');
+        parts.push('<h3 class="shp-list-title">订单（' + this._esc(String(orders.length)) + '）</h3>');
+        if (!orders.length) {
+            parts.push('<div class="shp-empty">还没有订单。</div>');
+        } else {
+            for (const o of orders) {
+                const armed = this._pendingConfirm === ('o:' + o.id);
+                parts.push('<div class="shp-order is-' + this._esc(o.status || 'pending') + '">');
+                parts.push('<div class="shp-order-head">');
+                parts.push('<span class="shp-order-code">' + this._esc(o.code) + '</span>');
+                parts.push('<span class="shp-order-status">' + this._esc(STATUS_LABEL[o.status] || o.status) + '</span>');
+                parts.push('<span class="shp-order-total">' + this._esc(formatCents(o.totalCents)) + '</span>');
+                parts.push('</div>');
+                parts.push('<div class="shp-order-rows">');
+                for (const r of (Array.isArray(o.rows) ? o.rows : [])) {
+                    parts.push('<span class="shp-order-row">' + this._esc(r.name) + '\u00d7' + this._esc(String(r.qty)) + '</span>');
+                }
+                parts.push('</div>');
+                parts.push('<div class="shp-order-actions">');
+                if (o.status === 'pending') {
+                    parts.push('<button class="shp-mini" data-act="cancel-order" data-id="' + this._esc(o.id) + '">取消</button>');
+                }
+                parts.push('<button class="shp-mini' + (armed ? ' shp-mini-armed' : '') + '" data-act="del-order" data-id="'
+                    + this._esc(o.id) + '">' + (armed ? '确认删' : '删') + '</button>');
+                parts.push('</div>');
+                parts.push('</div>');
+            }
+        }
+        parts.push('<div class="shp-hint">口令是本 App <strong>签发</strong>的，不是从聊天正文里正则抠出来的：'
+            + '正文换个写法就静默判「没找到」——不报错、只错结果。这里对不上就直说对不上。</div>');
+        parts.push('</div>');
+        parts.push('</section>');
+        return parts.join('');
+    }
+
+    _settingsHTML(proj, cats) {
+        const settings = this.app.settings || {};
+        const limits = this._limits();
+        const parts = ['<section class="shp-page" data-page="settings">'];
+
+        parts.push('<div class="shp-cats">');
+        parts.push('<h3 class="shp-list-title">分类（' + this._esc(String(cats.length)) + '）</h3>');
+        parts.push('<div class="shp-cat-list">');
+        for (const c of cats) {
+            const armed = this._pendingConfirm === ('c:' + c.id);
+            parts.push('<div class="shp-cat' + (c.preset ? ' is-preset' : '') + '">');
+            parts.push('<span class="shp-cat-name">' + this._esc(c.name) + '</span>');
+            parts.push('<span class="shp-cat-id">' + this._esc(c.id) + '</span>');
+            if (c.preset) {
+                parts.push('<span class="shp-cat-tag">内置</span>');
+            } else {
+                parts.push('<button class="shp-mini' + (armed ? ' shp-mini-armed' : '') + '" data-act="del-cat" data-id="'
+                    + this._esc(c.id) + '">' + (armed ? '确认删' : '删') + '</button>');
+            }
+            parts.push('</div>');
+        }
+        parts.push('</div>');
+        parts.push('<div class="shp-create-row">');
+        parts.push('<input class="shp-input shp-input-cid" type="text" maxlength="24" data-in="cid"'
+            + ' placeholder="id（英文）" value="' + this._esc(this._catDraft.id) + '">');
+        parts.push('<input class="shp-input" type="text" maxlength="' + String(limits.maxNameLen) + '" data-in="cname"'
+            + ' placeholder="显示名" value="' + this._esc(this._catDraft.name) + '">');
+        parts.push('<button class="shp-mini" data-act="add-cat">加</button>');
+        parts.push('</div>');
+        parts.push('<div class="shp-hint">内置那五个（推荐 / 食堂 / 百货 / 猜你喜欢 / Ta 想买）用的是<strong>源的 id</strong>，'
+            + '不能占 —— 撞车会让同一个桶出现两条不同说法，界面上看不出来。删一个自定义分类，'
+            + '它下面的商品<strong>不会跟着删</strong>，会落到「百货」。</div>');
+        parts.push('</div>');
+
+        parts.push('<div class="shp-settings">');
+        parts.push('<h3 class="shp-list-title">设置</h3>');
+        parts.push('<label class="shp-toggle"><span>把「待取自提」交给生成侧</span>'
+            + '<input type="checkbox" data-act="inject"' + (settings.injectToPrompt ? ' checked' : '') + '></label>');
+        parts.push('<label class="shp-field"><span>注入时带几单</span>'
+            + '<input type="number" data-act="max-inject" min="0" max="20" value="'
+            + this._esc(String(settings.maxInjectOrders)) + '"></label>');
+        parts.push('<label class="shp-field"><span>每页显示</span>'
+            + '<input type="number" data-act="page-size" min="1" max="50" value="'
+            + this._esc(String(settings.pageSize)) + '"></label>');
+        parts.push('<label class="shp-field"><span>最多留几单</span>'
+            + '<input type="number" data-act="max-orders" min="10" max="500" value="'
+            + this._esc(String(settings.maxOrders)) + '"></label>');
+        parts.push('<div class="shp-hint">目录、车、订单都随会话走：换角色后那是另一个角色的另一个店。'
+            + '本 App 只记你自己登记的东西：不替你生成商品，不碰聊天记录。</div>');
+        parts.push('</div>');
+        parts.push('</section>');
+        return parts.join('');
+    }
+
+    /* ---------- 4. 总装 ---------- */
+
+    _buildHTML() {
+        const app = this.app;
+        let face = SHOP_REASONS.empty;
+        try {
+            if (typeof app.faceReason === 'function') face = app.faceReason();
+        } catch (_e) { face = SHOP_REASONS.storage_absent; }
+        const meta = FACE_META[face] || { icon: '\u2753', label: '未识别的状态：' + String(face), tone: 'warn' };
+        const proj = this._proj();
+        const cats = this._list('categoriesList');
+        const products = this._list('productsList');
+        const cart = this._list('cartList');
+        const orders = this._list('ordersList');
+
+        const page = this.tab === 'cart' ? this._cartHTML(proj, products, cart)
+            : (this.tab === 'orders' ? this._ordersHTML(orders)
+                : (this.tab === 'settings' ? this._settingsHTML(proj, cats)
+                    : this._storeHTML(proj, cats, products, cart)));
+
+        const head = '<div class="shp-header"><h2>\u{1f6d2} 商城</h2>'
+            + '<span class="shp-head-meta">' + this._esc(String(proj.productCount)) + ' 件 · 车 '
+            + this._esc(formatCents(proj.cartCents)) + ' · 待取 ' + this._esc(String(proj.pendingOrders ? proj.pendingOrders.length : 0))
+            + '</span></div>'
+            + '<div class="shp-face shp-face-' + meta.tone + '">'
+            + '<span class="shp-face-icon">' + meta.icon + '</span>'
+            + '<span class="shp-face-label">' + this._esc(meta.label) + '</span></div>'
+            + (this._flash ? '<div class="shp-flash">' + this._esc(this._flash) + '</div>' : '');
+
+        const tabs = ['<nav class="shp-navbar">']
+            .concat(TABS.map((t) => '<button class="shp-nav' + (this.tab === t.key ? ' is-on' : '')
+                + '" data-act="tab" data-tab="' + t.key + '">' + t.label + '</button>'))
+            .concat(['</nav>'])
+            .join('');
+        return head + page + tabs;
+    }
+
+    /* ---------- 5. 事件（根容器各挂一次） ---------- */
+
     _bindEvents() {
         if (!this._root) return;
-        const app = this.app;
-        const q = (sel) => this._root.querySelector(sel);
-
-        /* 分类页签 */
-        for (const b of this._root.querySelectorAll('.shp-tab')) {
-            b.addEventListener('click', () => { this._tab = b.dataset.cat || ''; this.refresh(); });
+        if (this._boundRoot !== this._root) {
+            this._hClick = (ev) => this._onClick(ev);
+            this._hInput = (ev) => this._onInput(ev);
+            this._hChange = (ev) => this._onChange(ev);
+            this._root.addEventListener('click', this._hClick);
+            this._root.addEventListener('input', this._hInput);
+            this._root.addEventListener('change', this._hChange);
+            this._boundRoot = this._root;
         }
+    }
 
-        /* 加入购物车 */
-        for (const b of this._root.querySelectorAll('.shp-add-cart')) {
-            b.addEventListener('click', () => {
-                const r = app.cartAdd(b.dataset.id, 1);
-                if (!r.ok) { this._flash = r.error || '加不进去'; }
-                else if (r.clamped) { this._flash = '数量到上限了（' + SHOP_LIMITS.maxQty + '）'; }
-                else { this._flash = ''; }
-                this.refresh();
-            });
+    /** 取元素：读不到就返回 null（宿主 DOM 不全会抛）。 */
+    q(sel) {
+        try { return this._root && this._root.querySelector ? this._root.querySelector(sel) : null; }
+        catch (_e) { return null; }
+    }
+
+    _el(ev) { return (ev && ev.target) || null; }
+
+    _attr(el, name) {
+        try { return (el && typeof el.getAttribute === 'function') ? el.getAttribute(name) : null; }
+        catch (_e) { return null; }
+    }
+
+    /** 读一条记录的 id：优先 dataset（事件回读的标准路径），再退到属性读。 */
+    _id(el) {
+        try {
+            if (el && el.dataset && el.dataset.id) return String(el.dataset.id);
+        } catch (_e) { /* 往下退 */ }
+        return this._attr(el, 'data-id') || '';
+    }
+
+    /** 换页后把新一页滚回顶部：内容区是外层滚动容器，rewrite innerHTML 不会自己复位。 */
+    _scrollTop() {
+        const page = this.q('.shp-page');
+        if (!page) return;
+        try {
+            if (typeof page.scrollIntoView === 'function') page.scrollIntoView({ block: 'start' });
+        } catch (_e) { /* 宿主不认参数就作罢，不抛 */ }
+    }
+
+    /** 核销失败时把光标放回口令框：不然用户得自己再点一次。 */
+    _focusCode() {
+        const box = this.q('.shp-input-code');
+        if (!box || typeof box.focus !== 'function') return;
+        try {
+            box.focus();
+            if (typeof box.select === 'function') box.select();
+        } catch (_e) { /* 同上 */ }
+    }
+
+    _hit(target) {
+        return (target && typeof target.closest === 'function') ? target.closest('[data-act]') : null;
+    }
+
+    _onInput(ev) {
+        const el = this._el(ev);
+        const field = this._attr(el, 'data-in');
+        if (!field) return;
+        if (field === 'code') { this._codeInput = el.value; return; }
+        if (field === 'cid') { this._catDraft.id = el.value; return; }
+        if (field === 'cname') { this._catDraft.name = el.value; return; }
+        if (field in this._draft) this._draft[field] = el.value;
+    }
+
+    _onChange(ev) {
+        const el = this._el(ev);
+        const hit = this._hit(el);
+        const act = this._attr(hit, 'data-act');
+        if (!act) return;
+
+        if (act === 'qty') { this.app.cartSet(this._id(hit), el.value); this.refresh(); return; }
+        if (act === 'draft-cat') { this._draft.category = el.value || 'general'; return; }
+        if (act === 'inject') {
+            this.app.settings = Object.assign({}, this.app.settings, { injectToPrompt: !!(el && el.checked) });
+            if (typeof this.app.saveSettings === 'function') this.app.saveSettings();
+            return;
         }
+        if (act === 'max-inject') { this.app.patchSettings({ maxInjectOrders: el.value }); return; }
+        if (act === 'page-size') { this.app.patchSettings({ pageSize: el.value }); return; }
+        if (act === 'max-orders') { this.app.patchSettings({ maxOrders: el.value }); return; }
+    }
 
-        /* 删商品（两步确认） */
-        for (const b of this._root.querySelectorAll('.shp-item-del')) {
-            b.addEventListener('click', () => {
-                const id = b.dataset.id;
-                if (this._needConfirm('shp-p:' + id, b)) return;
-                app.removeProduct(id);
-                this.refresh();
-            });
+    _onClick(ev) {
+        const target = this._el(ev);
+        const hit = this._hit(target);
+        const act = this._attr(hit, 'data-act');
+        if (!act) return;
+
+        if (act === 'tab') {
+            const key = this._attr(hit, 'data-tab') || 'store';
+            if (!TABS.some((t) => t.key === key)) return;
+            const on = this.q('.shp-nav.is-on');
+            if (on && this._attr(on, 'data-tab') === key) return;
+            this.tab = key;
+            this._pendingConfirm = '';
+            this.refresh();
+            this._scrollTop();
+            return;
         }
-
-        /* 登记商品 */
-        const pName = q('#shp-p-name');
-        if (pName) pName.addEventListener('input', () => { this._draft.name = pName.value; });
-        const pPrice = q('#shp-p-price');
-        if (pPrice) pPrice.addEventListener('input', () => { this._draft.priceYuan = pPrice.value; });
-        const pCat = q('#shp-p-cat');
-        if (pCat) pCat.addEventListener('change', () => { this._draft.category = pCat.value; });
-        const pNote = q('#shp-p-note');
-        if (pNote) pNote.addEventListener('input', () => { this._draft.note = pNote.value; });
-        const pAdd = q('#shp-p-add');
-        if (pAdd) pAdd.addEventListener('click', () => {
-            const r = app.addProduct({
+        if (act === 'cat') {
+            this._cat = this._attr(hit, 'data-cat') || '';
+            this.refresh();
+            return;
+        }
+        if (act === 'add-cart') {
+            const r = this.app.cartAdd(this._id(hit), 1);
+            if (!r.ok) this._flash = r.error || '加不进去';
+            else if (r.clamped) this._flash = '数量到上限了（' + String(SHOP_LIMITS.maxQty) + '）';
+            else this._flash = '';
+            this.refresh();
+            return;
+        }
+        if (act === 'del-product') {
+            const id = this._id(hit);
+            if (this._pendingConfirm !== ('p:' + id)) { this._pendingConfirm = 'p:' + id; this.refresh(); return; }
+            this._pendingConfirm = '';
+            this.app.removeProduct(id);
+            this._flash = '删掉一件商品';
+            this.refresh();
+            return;
+        }
+        if (act === 'add-product') {
+            const r = this.app.addProduct({
                 name: this._draft.name,
                 priceYuan: this._draft.priceYuan,
                 category: this._draft.category,
@@ -322,111 +496,62 @@ export class ShopView {
             this._flash = r.unPriced ? '登记好了（没填价，标成未定价）' : '登记好了';
             this._draft = { name: '', priceYuan: '', category: this._draft.category, note: '' };
             this.refresh();
-        });
-
-        const clearP = q('#shp-clear-products');
-        if (clearP) clearP.addEventListener('click', () => {
-            if (this._needConfirm('shp-clear-p', clearP)) return;
-            const n = app.clearProducts();
-            this._flash = n ? ('清掉了 ' + n + ' 件') : '本来就是空的';
+            return;
+        }
+        if (act === 'clear-products') {
+            if (this._pendingConfirm !== 'clear-p') { this._pendingConfirm = 'clear-p'; this.refresh(); return; }
+            this._pendingConfirm = '';
+            const n = this.app.clearProducts();
+            this._flash = n ? ('清掉了 ' + String(n) + ' 件') : '本来就是空的';
             this.refresh();
-        });
-
-        /* 分类 */
-        const cId = q('#shp-c-id');
-        if (cId) cId.addEventListener('input', () => { this._catDraft.id = cId.value; });
-        const cName = q('#shp-c-name');
-        if (cName) cName.addEventListener('input', () => { this._catDraft.name = cName.value; });
-        const cAdd = q('#shp-c-add');
-        if (cAdd) cAdd.addEventListener('click', () => {
-            const r = app.addCategory({ id: this._catDraft.id, name: this._catDraft.name });
+            return;
+        }
+        if (act === 'cart-del') { this.app.cartRemove(this._id(hit)); this.refresh(); return; }
+        if (act === 'cart-clear') { this.app.cartClear(); this.refresh(); return; }
+        if (act === 'checkout') {
+            const r = this.app.doCheckout();
+            if (!r.ok) { this._flash = r.error || '下不了单'; this.refresh(); return; }
+            this._codeInput = r.code;
+            this._flash = '下单了 · 口令 ' + String(r.code) + '（' + formatCents(r.totalCents) + '）';
+            this.refresh();
+            return;
+        }
+        if (act === 'pickup') {
+            const r = this.app.doPickup(this._codeInput);
+            this._flash = r.ok ? '核销成功' : (r.error || '核销失败');
+            if (r.ok) this._codeInput = '';
+            this.refresh();
+            if (!r.ok) this._focusCode();
+            return;
+        }
+        if (act === 'cancel-order') { this.app.doCancel(this._id(hit)); this.refresh(); return; }
+        if (act === 'del-order') {
+            const id = this._id(hit);
+            if (this._pendingConfirm !== ('o:' + id)) { this._pendingConfirm = 'o:' + id; this.refresh(); return; }
+            this._pendingConfirm = '';
+            this.app.doRemoveOrder(id);
+            this._flash = '删掉一单';
+            this.refresh();
+            return;
+        }
+        if (act === 'add-cat') {
+            const r = this.app.addCategory({ id: this._catDraft.id, name: this._catDraft.name });
             if (!r.ok) { this._flash = r.error || '加不了'; this.refresh(); return; }
             this._flash = '分类加好了';
             this._catDraft = { id: '', name: '' };
             this.refresh();
-        });
-        for (const b of this._root.querySelectorAll('.shp-cat-del')) {
-            b.addEventListener('click', () => {
-                const id = b.dataset.id;
-                if (this._needConfirm('shp-c:' + id, b)) return;
-                const r = app.removeCategory(id);
-                this._flash = r.movedToGeneral
-                    ? ('分类删了，' + r.movedToGeneral + ' 件商品落到「百货」')
-                    : '分类删了';
-                if (this._tab === id) this._tab = '';
-                this.refresh();
-            });
+            return;
         }
-
-        /* 购物车 */
-        for (const el of this._root.querySelectorAll('.shp-cart-qty')) {
-            el.addEventListener('change', () => {
-                app.cartSet(el.dataset.id, el.value);
-                this.refresh();
-            });
-        }
-        for (const b of this._root.querySelectorAll('.shp-cart-del')) {
-            b.addEventListener('click', () => {
-                app.cartRemove(b.dataset.id);
-                this.refresh();
-            });
-        }
-        const cartClear = q('#shp-cart-clear');
-        if (cartClear) cartClear.addEventListener('click', () => { app.cartClear(); this.refresh(); });
-        const checkout = q('#shp-checkout');
-        if (checkout) checkout.addEventListener('click', () => {
-            const r = app.doCheckout();
-            if (!r.ok) { this._flash = r.error || '下不了单'; this.refresh(); return; }
-            this._codeInput = r.code;
-            this._flash = '下单了 · 口令 ' + r.code + '（' + formatCents(r.totalCents) + '）';
+        if (act === 'del-cat') {
+            const id = this._id(hit);
+            if (this._pendingConfirm !== ('c:' + id)) { this._pendingConfirm = 'c:' + id; this.refresh(); return; }
+            this._pendingConfirm = '';
+            const r = this.app.removeCategory(id);
+            this._flash = (r && r.movedToGeneral)
+                ? ('分类删了，' + String(r.movedToGeneral) + ' 件商品落到「百货」') : '分类删了';
+            if (this._cat === id) this._cat = '';
             this.refresh();
-        });
-
-        /* 核销 / 订单 */
-        const code = q('#shp-code');
-        if (code) code.addEventListener('input', () => { this._codeInput = code.value; });
-        const pickup = q('#shp-pickup');
-        if (pickup) pickup.addEventListener('click', () => {
-            const r = app.doPickup(this._codeInput);
-            this._flash = r.ok ? '核销成功' : (r.error || '核销失败');
-            if (r.ok) this._codeInput = '';
-            this.refresh();
-        });
-        for (const b of this._root.querySelectorAll('.shp-order-cancel')) {
-            b.addEventListener('click', () => {
-                app.doCancel(b.dataset.id);
-                this.refresh();
-            });
         }
-        for (const b of this._root.querySelectorAll('.shp-order-del')) {
-            b.addEventListener('click', () => {
-                const id = b.dataset.id;
-                if (this._needConfirm('shp-o:' + id, b)) return;
-                app.doRemoveOrder(id);
-                this.refresh();
-            });
-        }
-
-        /* 设置 */
-        const inject = q('#shp-inject');
-        if (inject) inject.addEventListener('change', (e) => {
-            app.settings = { ...app.settings, injectToPrompt: e.target.checked };
-            app.saveSettings();
-        });
-        const maxInject = q('#shp-max-inject');
-        if (maxInject) maxInject.addEventListener('change', (e) => app.patchSettings({ maxInjectOrders: e.target.value }));
-        const pageSize = q('#shp-page-size');
-        if (pageSize) pageSize.addEventListener('change', (e) => app.patchSettings({ pageSize: e.target.value }));
-        const maxOrders = q('#shp-max-orders');
-        if (maxOrders) maxOrders.addEventListener('change', (e) => app.patchSettings({ maxOrders: e.target.value }));
-    }
-
-    /** 两步确认（删商品/分类/订单不可逆，而本仓不弹宿主 confirm）。 */
-    _needConfirm(key, btn) {
-        if (this._pendingConfirm === key) { this._pendingConfirm = ''; return false; }
-        this._pendingConfirm = key;
-        if (btn) { btn.textContent = '确认'; btn.classList.add('shp-mini-armed'); }
-        return true;
     }
 
     _esc(s) {
@@ -437,3 +562,5 @@ export class ShopView {
             .replace(/"/g, '\x26quot;');
     }
 }
+
+export default ShopView;

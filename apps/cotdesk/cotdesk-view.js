@@ -61,6 +61,7 @@ export class CotdeskView {
         this.shell = shell;
         this.storage = storage;
         this._root = null;
+        this._boundRoot = null;
         this._flash = '';
         this._itemsInput = '';
         this._cfgInput = '';
@@ -83,7 +84,7 @@ export class CotdeskView {
         this._root.innerHTML = this._buildHTML();
         this._bindEvents();
     }
-    _q(sel) { return this._root ? this._root.querySelector(sel) : null; }
+    q(sel) { return this._root ? this._root.querySelector(sel) : null; }
     /** 转义（与号与三个引号走拼装形 —— 见文件头纪律）。 */
     _esc(s) {
         return String(s == null ? '' : s)
@@ -144,13 +145,14 @@ export class CotdeskView {
         const why = this.app.whyText();
         if (why) parts.push('<div class="cd-why">' + this._esc(why) + '</div>');
         parts.push('</div>');
-        parts.push(this._tabsBlock());
         const tab = this.app.tab();
         if (tab === 'items') parts.push(this._itemsPanel());
         else if (tab === 'config') parts.push(this._configPanel());
         else if (tab === 'sides') parts.push(this._sidesPanel());
         else parts.push(this._ledgerPanel());
         if (this._flash) parts.push('<div class="cd-flash">' + this._esc(this._flash) + '</div>');
+        /* 页签条放在内容之下 —— 先把这一页给你，再让你换页；类名与 data-act/data-key 一字未改。 */
+        parts.push(this._tabsBlock());
         return parts.join('');
     }
     _tabsBlock() {
@@ -492,15 +494,19 @@ export class CotdeskView {
         const root = this._root;
         if (!root) return;
         const self = this;
-        const acts = root.querySelectorAll('[data-act]');
-        for (let i = 0; i < acts.length; i++) {
-            const el = acts[i];
-            el.addEventListener('click', function (ev) {
-                const act = el.getAttribute('data-act');
-                if (act === 'tab') self._onTab(el, ev);
-                else self._onAction(act, el, ev);
-            });
-        }
+        /* 点击只在根容器挂一次（_boundRoot 去重）：旧写法给每个 [data-act] 元素
+         *   各挂一个监听，元素一多就散成一片；且换过几次页签后若根没被换掉，
+         *   同一元素会带着好几份监听，点一下触发好几次。 */
+        if (this._boundRoot === root) return;
+        this._boundRoot = root;
+        root.addEventListener('click', function (ev) {
+            const t = ev.target;
+            const el = (t && t.closest) ? t.closest('[data-act]') : null;
+            if (!el) return;
+            const act = el.getAttribute('data-act');
+            if (act === 'tab') self._onTab(el, ev);
+            else self._onAction(act, el, ev);
+        });
         const areas = root.querySelectorAll('[data-in]');
         for (let i = 0; i < areas.length; i++) {
             const el = areas[i];

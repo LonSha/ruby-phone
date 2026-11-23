@@ -262,6 +262,11 @@ const ms = (t0) => Math.round((Number(process.hrtime.bigint() - t0) / 1e6) * 100
      *   rp2-jiggle  —— 桌面图标「编辑态」抖动（编辑态由按钮与布局自己说明，抖动只是强调）。
      * 两者在 phone-components.css 的 still 覆盖段里按名停掉。 */
     'rp2-breathe', 'rp2-jiggle',
+    /* [v4.182.0] 桌面 v2 图标「编辑态」抖动（rp-dv2-wob）：与 rp2-jiggle 同属装饰类 ——
+     *   编辑态由按钮与布局自己说明，抖动只是强调。修前它带 infinite 却没进任何一张表，
+     *   于是 L8 的分类闭合与按名覆盖两处都漏它（探针实测 unclassified=rp-dv2-wob）。
+     *   覆盖选择器在 phone.css 的 ① 装饰类段里按原选择器逐字列出。 */
+    'rp-dv2-wob',
 ];
 const MOTION_STATE = [
     'voiceArcBlink', 'phone-typing-dots', 'phone-sms-typing-pulse',
@@ -307,11 +312,27 @@ const MOTION_STATE = [
   }
   cssFiles.sort();
 
+function stripCssComments(text) {
+  let out = '';
+  let i = 0;
+  while (i < text.length) {
+    const two = text.slice(i, i + 2);
+    if (two === '/*') { const end = text.indexOf('*/', i + 2); i = end < 0 ? text.length : end + 2; continue; }
+    out += text[i]; i += 1;
+  }
+  return out;
+}
+
   let cssJoined = '';
   const decls = [];
   for (const f of cssFiles) {
     let t = '';
     try { t = fs.readFileSync(path.join(ROOT, f), 'utf8'); } catch (_e) { t = ''; }
+    /* [v4.182.0] 解析前先剥注释：L8 按**选择器文本**做子串比对，而选择器文本取自
+     *   「上一个 } 到 {」之间的原文 —— 段名注释（如「---------- 9. 编辑态：抖动 ----------」）
+     *   会被算进选择器里，于是作者在覆盖规则里按原选择器逐字列出也匹配不上
+     *   （rp-dv2-wob 就是这么被判成 decorUncovered 的）。两侧同源剥掉，比对才比的是选择器。 */
+    t = stripCssComments(t);
     cssJoined += t + String.fromCharCode(10);
     const re = /animation(?:-name)?\s*:\s*([A-Za-z_][A-Za-z0-9_-]*)([^;}]*)/g;
     let m;

@@ -470,6 +470,75 @@ export function recordGrab(grabs, tier, doll, now, maxGrabs) {
     return { grabs: all.slice(0, cap), entry, capped };
 }
 
+/* ---------- 首页：搜索 / 排序 / 勾选合计（视图要的三个纯函数） ---------- */
+/**
+ * 关键字搜索 —— 只看**名字**与**备注**两处，`toLowerCase` 后 `includes`。
+ * 空词（或纯空白）原样返回整张目录：搜索框空着时不该把商品流清空。
+ * 不做拼音、不做模糊、不做分词 —— 本仓没有词库，编一套假的相关性排序
+ * 只会让「搜不到」变成「搜到错的」。
+ */
+export function searchProducts(products, kw) {
+    const list = normalizeProducts(products);
+    const q = String(kw == null ? '' : kw).trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((x) => {
+        const name = String(x.name || '').toLowerCase();
+        const note = String(x.note || '').toLowerCase();
+        return name.includes(q) || note.includes(q);
+    });
+}
+/**
+ * 排序 —— 四键：`default`（原序）/ `sales`（销量）/ `priceUp` / `priceDown`。
+ *
+ * **`sales` 如实退回原序**：数据层根本没有销量字段（商品是用户自己上架的，
+ * 没有成交计数），拿「购物车行数」冒充销量是造假。宁可点了没反应，也不编一个
+ * 数字出来。
+ *
+ * 未定价（`unPriced` / 没有 `priceCents`）一律排在**最后**，不参与金额比较 ——
+ * 视界里它们是「面议」，把它当 0 元排到最便宜那头会误导。
+ */
+export function sortProducts(products, key) {
+    const list = normalizeProducts(products);
+    const k = String(key || 'default');
+    if (k !== 'priceUp' && k !== 'priceDown') return list.slice();
+    const priced = (x) => x.unPriced !== true && Number.isFinite(x.priceCents);
+    const dir = (k === 'priceUp') ? 1 : -1;
+    return list.slice().sort((a, b) => {
+        const pa = priced(a); const pb = priced(b);
+        if (!pa && !pb) return 0;
+        if (!pa) return 1;
+        if (!pb) return -1;
+        if (a.priceCents === b.priceCents) return 0;
+        return (a.priceCents - b.priceCents) * dir;
+    });
+}
+/**
+ * 勾选合计 —— 只算**被勾上**的行。返回 `{ cents, count, missing, rows }`：
+ *   · `cents`   勾选行的金额合计（分）；
+ *   · `count`   勾选行的件数合计（不是行数）；
+ *   · `missing` 勾了但已不在目录里的行数（单独计数，不静默吞）；
+ *   · `rows`    实际参与合计的行数。
+ *
+ * 勾选集合里那些**不在车里**的 id 一律忽略（用户删了商品，勾选残留不该复活它）。
+ */
+export function cartCheckedTotals(cart, checked, products) {
+    const list = normCart(cart);
+    const mark = new Set((Array.isArray(checked) ? checked : []).map((x) => String(x)));
+    const byId = new Map(normalizeProducts(products).map((x) => [x.id, x]));
+    let cents = 0;
+    let count = 0;
+    let missing = 0;
+    let rows = 0;
+    for (const row of list) {
+        if (!mark.has(row.productId)) continue;
+        rows += 1;
+        count += row.qty;
+        const p = byId.get(row.productId);
+        if (!p) missing += 1;
+        else cents += p.priceCents * row.qty;
+    }
+    return { cents, count, missing, rows };
+}
 /* ---------- 投影 / 归因 / 注入 ---------- */
 
 export function readTaobaoFace(probe) {

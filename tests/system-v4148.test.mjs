@@ -62,7 +62,11 @@ test('A2 扫描面与契约读数落真仓实值', () => {
 });
 
 test('A3 事件方向读数抽点逐字对账（松窗修复后的真读数）', () => {
-    assert.equal(findEv('phone:goHome').emit, 35);
+    /* ★ [v4.163.0 交棒改写] 35 → 34：v4.162.0 的 B 站三层重写把 bili-view.js 里**两处重复的**
+     *   phone:goHome 派发收敛成一处（同一个返回动作不再派两遍），emitFiles 里该文件仍在。
+     *   读数由官方生成器 `node tools/audit-event-subscribers.mjs --write` 重生成，本行跟着交付物走；
+     *   订阅面（onFiles 三点）一个字没动 —— 收紧的是「重复派发」，不是判据。 */
+    assert.equal(findEv('phone:goHome').emit, 34);
     assert.deepEqual(findEv('phone:goHome').onFiles,
         ['apps/music/music-app.js', 'phone/lifecycle-engines-mount.js', 'index.js'],
         'goHome 订阅恰三点：music-app 捕获守卫+处理器 / mount 助手 / index.js 宿主');

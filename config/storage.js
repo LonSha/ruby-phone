@@ -63,6 +63,7 @@ export class PhoneStorage {
             /^sv_videos_/,
             /^vfs_files_/,
 
+            /^iot_/,              // [v4.186.0] 智能家居中枢（设备读数随会话隔离）
             /^wechat_/,           // 微信数据
             /^rp22_/,             // [v4.157.0 · R22] 会话级产品状态（主题/分组/剪贴板/免打扰）
             /^app_change_/,       // App 离开/返回剧情游标

@@ -1241,10 +1241,11 @@ export class MemoryView {
       '    <h2 class="mem-title"><i class="fa-solid fa-brain"></i> 记忆</h2>',
       '    <button class="mem-sleep" id="mem-sleep" title="立即巩固"><i class="fa-solid fa-moon"></i></button>',
       '  </header>',
-      this._tabsHtml(),
       '  <div class="mem-body">',
       body,
       '  </div>',
+      /* [v4.179.0] 分页条挑到内容之下：拇指够得到，正文也不再被一条横向标签顶下 40px。 */
+      this._tabsHtml(),
       '  <div class="mem-footer">',
       '    <label class="mem-toggle"><input type="checkbox" id="mem-auto" ' + (autoOn ? 'checked' : '') + ' /><span><i class="fa-solid fa-wand-magic-sparkles"></i> 自动注入 AI 上下文</span></label>',
       '    <button class="mem-danger" id="mem-clear"><i class="fa-solid fa-trash"></i> 清空当前聊天记忆</button>',
@@ -1301,9 +1302,12 @@ export class MemoryView {
       try { this.app.data?.clearCurrentChat?.(); } catch (_e) { /* 忽略 */ }
       this._draw();
     });
-    // 容器级委托（幂等：只挂一次，避免重复 render 叠加监听）
-    if (!this._delegated) {
-      this._delegated = true;
+    /* 容器级委托：幂等标志记**节点身份**而不是布尔。
+     *   [v4.179.0] 布尔版在宿主换过容器节点之后仍然为 true（离开再回来可能新建一层），
+     *   委派就再也不挂 —— 整屏按钮变成「点了没反应」，而控制台一声不响。
+     *   节点身份版：同一个节点只挂一次，换了节点自动重挂。 */
+    if (this._delegatedHost !== this.container) {
+      this._delegatedHost = this.container;
       this.container.addEventListener('click', (e) => {
         // 分页切换
         const tab = e.target.closest('.mem-tab');

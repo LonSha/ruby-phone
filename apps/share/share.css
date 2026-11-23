@@ -1,0 +1,108 @@
+/* ============================================================
+ * share.css — [v4.187.0] 近场快传 · 样式
+ * 只用 var() 接宿主主题，没接上就先走回退值（不在样式里硬编品牌色）。
+ * ============================================================ */
+.share-root {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    box-sizing: border-box;
+    height: 100%;
+    overflow-y: auto;
+    font-size: 14px;
+    color: var(--rp-text, #e6e6e6);
+    background: var(--rp-bg, #12141a);
+}
+.share-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.share-back {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 20px;
+    line-height: 1;
+    padding: 2px 8px;
+    cursor: pointer;
+}
+.share-title { font-weight: 600; font-size: 16px; flex: 1; }
+.share-face {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    border: 1px solid currentColor;
+    opacity: 0.85;
+    white-space: nowrap;
+}
+.share-face-ok { color: #38bdf8; }
+.share-face-warn { color: #f59e0b; }
+.share-face-idle { color: #6b7280; }
+.share-flash {
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+}
+.share-sec-t {
+    font-size: 12px;
+    opacity: 0.6;
+    margin-top: 4px;
+}
+.share-cards { display: flex; flex-direction: column; gap: 8px; }
+.share-card {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.share-card-head { display: flex; align-items: baseline; gap: 8px; }
+.share-name { font-weight: 600; flex: 1; }
+.share-signal { font-size: 11px; opacity: 0.6; }
+.share-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.share-btn {
+    border: 1px solid rgba(56, 189, 248, 0.5);
+    background: rgba(56, 189, 248, 0.12);
+    color: inherit;
+    font: inherit;
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.share-btn-ghost {
+    border-color: rgba(255, 255, 255, 0.16);
+    background: transparent;
+    opacity: 0.75;
+}
+.share-empty {
+    font-size: 12px;
+    opacity: 0.55;
+    padding: 10px 2px;
+}
+.share-hist { display: flex; flex-direction: column; gap: 6px; }
+.share-hrow {
+    display: flex;
+    gap: 8px;
+    font-size: 12px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+}
+.share-hk { opacity: 0.7; white-space: nowrap; }
+.share-hd { opacity: 0.9; }
+.share-foot { margin-top: auto; padding-top: 8px; }
+.share-reset {
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+}

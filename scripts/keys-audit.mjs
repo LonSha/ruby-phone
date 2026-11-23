@@ -464,6 +464,8 @@ const KEY_REGISTRY = [
   { key: 'image_receipt_ledger', scope: 'chat', note: '[v3.71.0] 多角色生图回执账本（幂等键 sessionKey:characterId:sceneTag/角色被删标记陈旧；上限 200）' },
   { key: 'block_settings', scope: 'chat', note: '[v3.27.0] 拉黑设置（注入开关 / 风控间隔 / 自动回绝开关）' },
   { key: 'block_state', scope: 'chat', note: '[v3.27.0] 拉黑两本账（我拉黑谁 / 谁拉黑我 + 双向申请与历史）' },
+  { key: 'iot_state', scope: 'chat', note: '[v4.186.0] 智能家居中枢设备读数（场景 + 灯/空调/窗帘）' },
+  { key: 'share_nearby_v1', scope: 'chat', note: '[v4.187.0] 近场快传：在范围设备 + 已发生流水（随会话隔离）' },
   { key: 'weather_settings', scope: 'chat', note: '[v3.27.0] 天气设置（注入开关 / 新鲜度小时数 / 注入条数）' },
   { key: 'weather_state', scope: 'chat', note: '[v3.27.0] 天气观测（角色与用户两槽；温度以整数存，过期标「未必是当下的」）' },
     { key: 'widget_settings', scope: 'chat', note: '[v3.28.0] 自定义组件设置（注入开关 / 注入条数 / 新建默认尺寸）' },
@@ -705,6 +707,12 @@ const KEY_REGISTRY = [
   { key: 'phone-card-time-image', scope: 'global', note: '时间卡片背景图路径（相册 / 设置页 / 上传器读写）' },
   { key: 'phone-font-scale', scope: 'global', note: '全局字体缩放百分比（设置页 / font-scale 读写）' },
   { key: 'phone-frame-color', scope: 'global', note: '手机壳颜色（设置页 / font-scale 读写）' },
+  /* [v4.160.0 · keys 清红] 两个外观开关此前只在注释里出现过、从没登记：
+   *   K1 在本次收口时抓出来（`home-screen.js` / `memory-view.js` 直接
+   *   `storage.get('lit')`）。两者都是**这台手机的偏好**，不是某段剧情的状态，
+   *   故 scope 一律 global。 */
+  { key: 'phone-desktop-v2', scope: 'global', note: '桌面外观 v2 开关（home-screen 读；存 0 回旧桌面）' },
+  { key: 'memory-panel-v4', scope: 'global', note: '记忆面板外观 v4 开关（memory-view 读；存 0 回 v3 外观）' },
   { key: 'phone-global-text', scope: 'global', note: '全局文字颜色（设置页 / font-scale 读写）' },
   { key: 'phone-home-layout', scope: 'global', note: '桌面布局（图标 / 卡片；设置页写 / 桌面与外壳读）' },
   { key: 'phone-honey-tts-cache-enabled', scope: 'global', note: '蜜语相关设置' },

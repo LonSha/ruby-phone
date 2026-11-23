@@ -141,9 +141,16 @@ function mkStorage(seed = {}) {
     ok('index 实例化后立即注入横幅回调', /bindBannerInteractions\(phoneShell\)/.test(idx));
     ok('index 注入 onBannerDismiss（标已读）', /shell\.onBannerDismiss = \(notif\) =>/.test(idx));
     ok('index 注入 onBannerAction（跳 App）', /shell\.onBannerAction = \(appId\) =>/.test(idx));
-    // 不绑定具体 revision 值（每次样式更新都会 bump）；只断言「已升级到 v2170 之后」
+    // 不绑定具体 revision 值（每次样式更新都会 bump）；只断言「已升级到 v2170 之后」。
+    /* [v4.162.0] 原写法虽自称「不绑定具体值」，实际仍用 /v21(7|8)0/ 钉代号 —— 代号一变就红，
+     *   而它要说的其实是「revision 是**在 v2170 之后**刷的」。改为结构性判据：
+     *     `YYYYMMDD-<slug>` 形 + 日期不早于 v2170 发版日（20260917）。
+     *   这不是放宽：早于那天的 revision 依旧会红，只是不再要求下一个人把代号写成 v2180。 */
     const revMatch = idx.match(/ST_PHONE_CSS_REVISION = '([^']+)'/);
-    ok('CSS 缓存版本号已升级（含 v2170-v2180 代号）', !!revMatch && /v21(7|8)0/.test(revMatch[1]), revMatch && revMatch[1]);
+    const rev = revMatch ? revMatch[1] : '';
+    const revDate = /^(\d{8})-([a-z0-9][a-z0-9-]*)$/.test(rev) ? rev.slice(0, 8) : '';
+    ok('CSS 缓存版本号已升级（YYYYMMDD-slug 形，且不早于 20260917）',
+        !!revDate && revDate >= '20260917', rev);
 }
 
 // ========== 6. 接线断言：角标消费（index.js） ==========

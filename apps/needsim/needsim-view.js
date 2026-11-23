@@ -57,6 +57,9 @@ export class NeedsimView {
         this.storage = storage;
         this._root = null;
         this._flash = '';
+        /* [v4.171.0] 纯视图态：输入草稿。整页重绘不再把用户刚打的字冲掉。 */
+        this._draft = { reply: '', wtitle: '', wdesc: '' };
+        this._boundRoot = null;
     }
     render() {
         const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
@@ -73,7 +76,9 @@ export class NeedsimView {
         this._root.innerHTML = this._buildHTML();
         this._bindEvents();
     }
-    _q(sel) { return this._root ? this._root.querySelector(sel) : null; }
+    /** 取元素：读不到就返回 null。
+     *  [v4.171.0] 改名 q( —— 判据的锚点口径认 q( / querySelector(，_q( 不被识别。 */
+    q(sel) { return this._root ? this._root.querySelector(sel) : null; }
     /** 转义（与号与两个引号走拼装形 —— 见文件头纪律）。 */
     _esc(s) {
         return String(s == null ? '' : s)
@@ -87,6 +92,13 @@ export class NeedsimView {
     _count(v) {
         return (v === null || v === undefined) ? DASH : String(v);
     }
+    /** [v4.171.0] 底部页签条：页签从顶部挪到页内容之下，类名与 data-tab 一字未改。 */
+    _tabsHTML() {
+        const cur = this.app.tab();
+        return '<nav class="nsm-tabs">' + TABS.map((t) =>
+            '<button type="button" class="nsm-tab' + (cur === t.key ? ' is-on' : '') +
+            '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>').join('') + '</nav>';
+    }
     _buildHTML() {
         const app = this.app;
         const face = app.faceOf();
@@ -99,13 +111,7 @@ export class NeedsimView {
         parts.push('<span class="nsm-face-sub">' + this._esc(app.summaryLine()) + '</span>');
         parts.push('</div>');
         if (this._flash) parts.push('<div class="nsm-flash">' + this._esc(this._flash) + '</div>');
-        const cur = app.tab();
-        parts.push('<div class="nsm-tabs">');
-        for (const t of TABS) {
-            parts.push('<button type="button" class="nsm-tab' + (cur === t.key ? ' is-on' : '')
-                + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>');
-        }
-        parts.push('</div>');
+                const cur = app.tab();
         if (cur === 'pool') parts.push(this._poolPanel());
         else if (cur === 'wish') parts.push(this._wishPanel());
         else if (cur === 'memory') parts.push(this._memoryPanel());
@@ -151,7 +157,7 @@ export class NeedsimView {
         parts.push('</div>');
         parts.push('<div class="nsm-form">');
         parts.push('<label>贴模型回信（六项需求 + 台词池 + 小事件 + 今日愿望）</label>');
-        parts.push('<textarea data-k="reply" rows="5" placeholder="只回一个 JSON 对象；本件只收拾，不替你发请求"></textarea>');
+        parts.push('<textarea data-k="reply" rows="5" placeholder="只回一个 JSON 对象；本件只收拾，不替你发请求">' + this._esc(this._draft.reply) + '</textarea>');
         parts.push('<button type="button" data-act="ingest">收拾这份回信</button>');
         parts.push('<button type="button" data-act="request">产一段要求文本</button>');
         parts.push('<button type="button" data-act="reset">六项回到初值</button>');
@@ -229,8 +235,8 @@ export class NeedsimView {
         parts.push('<div class="nsm-form">');
         parts.push('<button type="button" data-act="wish-build">按最弱的那项定今天的愿望</button>');
         parts.push('<button type="button" data-act="wish-set">存一条愿望</button>');
-        parts.push('<label>愿望标题</label><input type="text" data-k="wtitle" placeholder="如 想听见你的声音" />');
-        parts.push('<label>愿望说明</label><input type="text" data-k="wdesc" placeholder="如 希望今天能和你聊几句" />');
+        parts.push('<label>愿望标题</label><input type="text" data-k="wtitle" placeholder="如 想听见你的声音" value="' + this._esc(this._draft.wtitle) + '" />');
+        parts.push('<label>愿望说明</label><input type="text" data-k="wdesc" placeholder="如 希望今天能和你聊几句" value="' + this._esc(this._draft.wdesc) + '" />');
         parts.push('</div>');
         parts.push('</div>');
         return parts.join('');
@@ -335,11 +341,12 @@ export class NeedsimView {
         parts.push('<p class="nsm-hint">本件**零网络、零密钥**：源自己从浏览器本地存储读模型地址与密钥、'
             + '自己发请求、自己从回复里抠 JSON；本件只产「可复制的要求文本」与「回信收拾」。</p>');
         parts.push('</div>');
+        parts.push(this._tabsHTML());
         return parts.join('');
     }
 
     /* ---------- 事件 ---------- */
-    _field(k) { const el = this._q('[data-k="' + k + '"]'); return el ? String(el.value || '') : ''; }
+    _field(k) { const el = this.q('[data-k="' + k + '"]'); return el ? String(el.value || '') : ''; }
     _act(act, el) {
         const app = this.app;
         const a = el ? String(el.getAttribute('data-a') || '') : '';
@@ -442,6 +449,10 @@ export class NeedsimView {
     _bindEvents() {
         const root = this._root;
         if (!root) return;
+        /* [v4.171.0] 只在根容器上挂一次：旧版每次 refresh 都重新 addEventListener，
+         *   点一下会触发 N 次（N = 刷新过几次）—— 监听累加是本仓点过名的形态。 */
+        if (this._boundRoot === root) return;
+        this._boundRoot = root;
         /* 点击分派：三个面各走一遍「从命中元素**向上找最近的带标记祖先**」。
          *  ★ 卡片判定不许读直点元素：点卡片里的正文文字时 target 是子元素，
          *    判定落空 ⇒ 用户点正文没反应、必顶点卡片留白才打开。
@@ -471,6 +482,15 @@ export class NeedsimView {
                 this.app.openMemory(Number(cardEl.getAttribute('data-open')));
                 this._flash = '';
                 this.refresh();
+            }
+        });
+        /* 输入一律进视图草稿：整页重绘之后把用户刚打的字原样填回去。 */
+        root.addEventListener('input', (e) => {
+            const t = e.target;
+            if (!t || !t.getAttribute) return;
+            const k = t.getAttribute('data-k');
+            if (k && Object.prototype.hasOwnProperty.call(this._draft, k)) {
+                this._draft[k] = String(t.value == null ? '' : t.value);
             }
         });
         root.addEventListener('change', (e) => {

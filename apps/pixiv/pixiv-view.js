@@ -18,6 +18,7 @@ import {
  *  ★ 本仓判据共用的剥注释器（`stripComments`）是字符状态机、**不解析正则字面量**：
  *    正则字面量里一旦出现半个引号，剥器就把它当成字符串的起头，从那一行往后块注释再也剥不掉。
  *    v3.31.0 在 date-view 上当场踩到，本件一律照 date / lofter 的写法抄。 */
+const DELEGATE_KEYS = ['tab', 'myface', 'read', 'chap', 'chlike', 'fav', 'following', 'followauthor', 'tag', 'untag', 'author', 'reply', 'illfav', 'illdel', 'illprompt', 'styletog', 'styledel'];
 const DQUOTE = '"';
 /* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。 */
 import { FACE_ATTR } from '../../config/empty-face.js';
@@ -75,6 +76,7 @@ export class PixivView {
         this.shell = shell;
         this.storage = storage;
         this._root = null;
+        this._boundRoot = null;
         this._myFace = 'favorites';
         this._open = '';
         this._replyTo = '';
@@ -644,78 +646,117 @@ export class PixivView {
         return parts.join('\n');
     }
     /* ---------- 事件 ---------- */
-    _bindEvents() {
+    /** 根容器委派：按元素身上的标记分派到原来的动作（顺序与原循环逐条对齐）。 */
+    _onDelegated(e) {
+        const app = this.app;
+        const root = this._root;
+        if (!root) return;
+        let el = e && e.target;
+        while (el && el !== root
+            && !(el.getAttribute && DELEGATE_KEYS.some((k) => el.getAttribute('data-' + k) !== null))) {
+            el = el.parentNode;
+        }
+        if (!el || el === root) return;
+        const gl = (k) => el.getAttribute('data-' + k);
+        const tab = gl('tab');
+        if (tab) { app.setTab(tab); this._open = ''; app.clearRef(); this.refresh(); return; }
+        const myface = gl('myface');
+        if (myface) { this._myFace = myface; this.refresh(); return; }
+        const read = gl('read');
+        if (read) {
+            if (this._open === read) { this._open = ''; app.clearRef(); this.refresh(); return; }
+            const r = app.openNovel(read);
+            if (!r.ok) { this._flash = r.error || '打不开'; this.refresh(); return; }
+            this._open = read;
+            this._replyTo = '';
+            this.refresh();
+            return;
+        }
+        const chap = gl('chap');
+        if (chap) { app.setCurrentChapter(chap); this._replyTo = ''; this.refresh(); return; }
+        const chlike = gl('chlike');
+        if (chlike) {
+            const r = app.toggleChapterLike(this._open, chlike);
+            this._flashOf(r, r.ok ? ('这一話现在 ' + String.fromCharCode(9825) + ' ' + r.hearts) : '');
+            this.refresh();
+            return;
+        }
+        const fav = gl('fav');
+        if (fav) { this._flashOf(app.toggleFavorite(fav), '收进收藏了'); this.refresh(); return; }
+        const fol = gl('following');
+        if (fol) { this._flashOf(app.toggleFollowing(fol), '追更了'); this.refresh(); return; }
+        const fa = gl('followauthor');
+        if (fa) { this._flashOf(app.toggleFollowAuthor(fa)); this.refresh(); return; }
+        const tag = gl('tag');
+        if (tag) {
+            const r = app.subscribeTag(tag);
+            this._flash = r.ok
+                ? ('订阅了 ' + tag + (r.dropped ? ('（超上限，丢了最早的 ' + r.dropped + ' 个）') : ''))
+                : (tag + ' 已经在订阅里了');
+            this.refresh();
+            return;
+        }
+        const untag = gl('untag');
+        if (untag) { app.unsubscribeTag(untag); this.refresh(); return; }
+        const au = gl('author');
+        if (au) {
+            this._tabAuthor = au;
+            const a = app.authorById(au);
+            this._flash = a ? ('「' + a.name + '」常写的方向：' + (a.contentTags || []).join('・')) : '找不到这位';
+            this.refresh();
+            return;
+        }
+        const reply = gl('reply');
+        if (reply) { this._replyTo = (this._replyTo === reply) ? '' : reply; this.refresh(); return; }
+        const illfav = gl('illfav');
+        if (illfav) { this._flashOf(app.toggleIllustFavorite(illfav)); this.refresh(); return; }
+        const illdel = gl('illdel');
+        if (illdel) { app.removeIllust(illdel); this.refresh(); return; }
+        const illp = gl('illprompt');
+        if (illp) {
+            const it = app.illustById(illp);
+            if (!it) return;
+            const r = app.copyPrompt('illust', {
+                prompt: it.prompt, negativePrompt: it.negativePrompt, size: it.size, count: it.count,
+            });
+            this._promptFor = '出图要求 · ' + it.prompt.slice(0, 12);
+            this._promptText = r.ok ? r.text : (r.error || '');
+            this.refresh();
+            return;
+        }
+        const styletog = gl('styletog');
+        if (styletog) {
+            const r = app.toggleStyle(styletog);
+            this._flash = r.ok
+                ? ((r.enabled ? '开着了' : '关掉了') + '（现在 ' + r.enabledCount + ' 款开着）')
+                : (r.error || '没成');
+            this.refresh();
+            return;
+        }
+        const styledel = gl('styledel');
+        if (styledel) { this._flashOf(app.removeStyle(styledel), '删了'); this.refresh(); }
+    }
+    /** 回执人话（与 _bindEvents 里的 flash 同一口径）。 */
+    _flashOf(r, okText) {
+        if (r && r.ok) this._flash = okText || '好了';
+        else this._flash = (r && r.error) ? r.error : '没成';
+    }
+    _bindEvents() {        /* 点击收成根容器一次委派：旧写法给十七组元素各循环挂一遍。根在 refresh 之间是
+         *   同一个元素，每次重挂就会在同一根上叠一份（点一下触发好几次）—— 按 _boundRoot 只挂一次。 */
+        const root = this._root;
+        if (root && this._boundRoot !== root) {
+            this._boundRoot = root;
+            root.addEventListener('click', (e) => this._onDelegated(e));
+        }
+
         const app = this.app;
         const self = this;
         const flash = (r, okText) => {
             if (r && r.ok) self._flash = okText || '好了';
             else self._flash = (r && r.error) ? r.error : '没成';
         };
-        for (const b of this._qa('.pxv-tab')) {
-            b.addEventListener('click', () => { app.setTab(b.dataset.tab); this._open = ''; app.clearRef(); this.refresh(); });
-        }
-        for (const b of this._qa('.pxv-subtab')) {
-            b.addEventListener('click', () => { this._myFace = b.dataset.myface; this.refresh(); });
-        }
-        for (const b of this._qa('[data-read]')) {
-            b.addEventListener('click', () => {
-                const id = b.dataset.read;
-                if (this._open === id) { this._open = ''; app.clearRef(); this.refresh(); return; }
-                const r = app.openNovel(id);
-                if (!r.ok) { this._flash = r.error || '打不开'; this.refresh(); return; }
-                this._open = id;
-                this._replyTo = '';
-                this.refresh();
-            });
-        }
         const rc = this._q('#pxv-reader-close');
         if (rc) rc.addEventListener('click', () => { this._open = ''; this._replyTo = ''; app.clearRef(); this.refresh(); });
-        for (const b of this._qa('[data-chap]')) {
-            b.addEventListener('click', () => { app.setCurrentChapter(b.dataset.chap); this._replyTo = ''; this.refresh(); });
-        }
-        for (const b of this._qa('[data-chlike]')) {
-            b.addEventListener('click', () => {
-                const r = app.toggleChapterLike(this._open, b.dataset.chlike);
-                flash(r, r.ok ? ('这一話现在 \u2661 ' + r.hearts) : '');
-                this.refresh();
-            });
-        }
-        for (const b of this._qa('[data-fav]')) {
-            b.addEventListener('click', () => { flash(app.toggleFavorite(b.dataset.fav), '收进收藏了'); this.refresh(); });
-        }
-        for (const b of this._qa('[data-following]')) {
-            b.addEventListener('click', () => { flash(app.toggleFollowing(b.dataset.following), '追更了'); this.refresh(); });
-        }
-        for (const b of this._qa('[data-followauthor]')) {
-            b.addEventListener('click', () => { flash(app.toggleFollowAuthor(b.dataset.followauthor)); this.refresh(); });
-        }
-        for (const b of this._qa('[data-tag]')) {
-            b.addEventListener('click', () => {
-                const t = b.dataset.tag;
-                const r = app.subscribeTag(t);
-                this._flash = r.ok
-                    ? ('订阅了 ' + t + (r.dropped ? ('（超上限，丢了最早的 ' + r.dropped + ' 个）') : ''))
-                    : (t + ' 已经在订阅里了');
-                this.refresh();
-            });
-        }
-        for (const b of this._qa('[data-untag]')) {
-            b.addEventListener('click', () => { app.unsubscribeTag(b.dataset.untag); this.refresh(); });
-        }
-        for (const b of this._qa('[data-author]')) {
-            b.addEventListener('click', () => {
-                this._tabAuthor = b.dataset.author;
-                const a = app.authorById(b.dataset.author);
-                this._flash = a ? ('「' + a.name + '」常写的方向：' + (a.contentTags || []).join('・')) : '找不到这位';
-                this.refresh();
-            });
-        }
-        for (const b of this._qa('[data-reply]')) {
-            b.addEventListener('click', () => {
-                this._replyTo = (this._replyTo === b.dataset.reply) ? '' : b.dataset.reply;
-                this.refresh();
-            });
-        }
         const rcx = this._q('#pxv-reply-cancel');
         if (rcx) rcx.addEventListener('click', () => { this._replyTo = ''; this.refresh(); });
         const cmt = this._q('#pxv-cmt-text');
@@ -816,24 +857,6 @@ export class PixivView {
             this.refresh();
         });
         /* 插画登记 */
-        for (const b of this._qa('[data-illfav]')) {
-            b.addEventListener('click', () => { flash(app.toggleIllustFavorite(b.dataset.illfav)); this.refresh(); });
-        }
-        for (const b of this._qa('[data-illdel]')) {
-            b.addEventListener('click', () => { app.removeIllust(b.dataset.illdel); this.refresh(); });
-        }
-        for (const b of this._qa('[data-illprompt]')) {
-            b.addEventListener('click', () => {
-                const it = app.illustById(b.dataset.illprompt);
-                if (!it) return;
-                const r = app.copyPrompt('illust', {
-                    prompt: it.prompt, negativePrompt: it.negativePrompt, size: it.size, count: it.count,
-                });
-                this._promptFor = '出图要求 · ' + it.prompt.slice(0, 12);
-                this._promptText = r.ok ? r.text : (r.error || '');
-                this.refresh();
-            });
-        }
         const ig = (id, setter) => {
             const el = this._q(id);
             if (el) el.addEventListener('input', (e) => { setter(e.target.value); });
@@ -897,18 +920,6 @@ export class PixivView {
             if (r.ok) { this._draft.styleName = ''; this._draft.styleRules = ''; }
             this.refresh();
         });
-        for (const b of this._qa('[data-styletog]')) {
-            b.addEventListener('click', () => {
-                const r = app.toggleStyle(b.dataset.styletog);
-                this._flash = r.ok
-                    ? ((r.enabled ? '开着了' : '关掉了') + '（现在 ' + r.enabledCount + ' 款开着）')
-                    : (r.error || '没成');
-                this.refresh();
-            });
-        }
-        for (const b of this._qa('[data-styledel]')) {
-            b.addEventListener('click', () => { flash(app.removeStyle(b.dataset.styledel), '删了'); this.refresh(); });
-        }
         ig('#pxv-au-name', (v) => { this._draft.authorName = v; });
         ig('#pxv-au-bio', (v) => { this._draft.authorBio = v; });
         ig('#pxv-au-tags', (v) => { this._draft.authorTags = v; });

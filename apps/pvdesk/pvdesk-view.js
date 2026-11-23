@@ -65,6 +65,7 @@ export class PvdeskView {
         this.shell = shell;
         this.storage = storage;
         this._root = null;
+        this._boundRoot = null;
         this._flash = '';
     }
     render() {
@@ -84,7 +85,7 @@ export class PvdeskView {
         this._root.innerHTML = this._buildHTML();
         this._bindEvents();
     }
-    _q(sel) { return this._root ? this._root.querySelector(sel) : null; }
+    q(sel) { return this._root ? this._root.querySelector(sel) : null; }
     /** 转义（与号与三个引号走拼装形 —— 见文件头纪律）。 */
     _esc(s) {
         return String(s == null ? '' : s)
@@ -142,19 +143,26 @@ export class PvdeskView {
         parts.push(this._gaugeBlock());
         if (this._flash) parts.push('<div class="pvd-flash">' + this._esc(this._flash) + '</div>');
         const cur = app.tab();
-        parts.push('<div class="pvd-tabs">');
-        for (let i = 0; i < TABS.length; i++) {
-            const t = TABS[i];
-            parts.push('<button type="button" class="pvd-tab' + (cur === t.key ? ' is-on' : '')
-                + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>');
-        }
-        parts.push('</div>');
         if (cur === 'shots') parts.push(this._shotsPanel());
         else if (cur === 'cast') parts.push(this._castPanel());
         else if (cur === 'lyrics') parts.push(this._lyricsPanel());
         else if (cur === 'compose') parts.push(this._composePanel());
         else if (cur === 'shelf') parts.push(this._shelfPanel());
         else parts.push(this._briefPanel());
+        parts.push(this._tabsHTML());
+        return parts.join('');
+    }
+    /** 页签条：**放在内容之下** —— 先把这一页给你，再让你换页。
+     *  类名与 data-tab 一字未改（样式与 click 分派都按旧键面找得到）。 */
+    _tabsHTML() {
+        const cur = this.app.tab();
+        const parts = ['<div class="pvd-tabs">'];
+        for (let i = 0; i < TABS.length; i++) {
+            const t = TABS[i];
+            parts.push('<button type="button" class="pvd-tab' + (cur === t.key ? ' is-on' : '')
+                + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>');
+        }
+        parts.push('</div>');
         return parts.join('');
     }
     /** 余量面：四项上限一律画「读数 / 上限」，取不出来画横线。 */
@@ -537,7 +545,7 @@ export class PvdeskView {
         if (name === 'tab-brief') { app.setTab('brief'); this._flash = ''; this.refresh(); return; }
         if (name === 'close-item') { app.closeItem(); this._flash = ''; this.refresh(); return; }
         if (name === 'ingest') {
-            const box = this._q('[data-k="reply"]');
+            const box = this.q('[data-k="reply"]');
             const r = app.ingestReply(box ? box.value : '');
             if (r.ok !== true) {
                 this._flash = '没收下（' + (r.why ? app.whyTextOf(r.why) : '没落下去') + '）';
@@ -554,14 +562,14 @@ export class PvdeskView {
             return;
         }
         if (name === 'ingest-lyrics') {
-            const box = this._q('[data-k="lyrics"]');
+            const box = this.q('[data-k="lyrics"]');
             const r = app.ingestLyrics(box ? box.value : '');
             this._flash = writeLanded(r) ? ('收下歌词：' + app.lyricsModeText() + ' · 成句 ' + r.cues) : '歌词是空的，没记';
             this.refresh();
             return;
         }
         if (name === 'compose') {
-            const box = this._q('[data-k="frames"]');
+            const box = this.q('[data-k="frames"]');
             const frames = box ? Number(box.value) : 0;
             const r = app.composeText({ frameCount: frames > 0 ? frames : 0 });
             if (r.ok !== true) {
@@ -635,6 +643,10 @@ export class PvdeskView {
             }
             return null;
         };
+        /* 根容器在 refresh 之间是同一个元素：旧写法每次重挂就在同一根上叠一份
+         *   （换过几次页签后点一下触发好几次）—— 按 _boundRoot 只挂一次。 */
+        if (this._boundRoot === root) return;
+        this._boundRoot = root;
         root.addEventListener('click', (e) => {
             const t = e.target;
             if (!t || !t.getAttribute) return;

@@ -1,4 +1,6 @@
-/* [v3.25.0] 存钱罐 App（.pg-*） */
+/* ---------- [v3.25.0] 存钱罐 App（.pg-*） ---------- */
+/* [v4.167.0] 四页签（罐 / 流水 / 卡 / 设置）重写：补页容器、页头读数、页签条与提示条。
+ * 旧规则一条不删（余额、统计、表单、流水、亲属卡、设置都还在用）。 */
 .pg-root { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
 .pg-header h2 { font-size: 18px; margin: 0; color: #f0f0f0; }
 .pg-face { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
@@ -51,3 +53,11 @@
 .pg-toggle, .pg-field { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; font-size: 12px; color: #cbd5e1; }
 .pg-field input[type="number"] { width: 68px; padding: 4px 6px; border-radius: 7px; border: 1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.25); color: #e5e7eb; font-size: 12px; }
 .pg-hint { font-size: 11px; color: #64748b; margin-top: 8px; line-height: 1.5; }
+
+.pg-header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.pg-head-meta { font-size: 11px; color: #64748b; font-family: 'Times New Roman', serif; }
+.pg-flash { background: rgba(13,148,136,.16); color: #2dd4bf; border-radius: 8px; padding: 8px 12px; font-size: 12px; }
+.pg-page { display: flex; flex-direction: column; gap: 12px; }
+.pg-tabbar { display: flex; gap: 6px; border-top: 1px solid rgba(255,255,255,.06); padding-top: 10px; }
+.pg-tab { flex: 1; border: none; border-radius: 9px; padding: 9px 4px; font-size: 12px; cursor: pointer; background: rgba(255,255,255,.05); color: #94a3b8; }
+.pg-tab.is-on { background: rgba(234,88,12,.22); color: #fdba74; }

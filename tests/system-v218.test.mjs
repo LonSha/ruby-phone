@@ -127,7 +127,11 @@ function mkSwitchableStorage() {
     ok('音乐卡可点光标', /\.phone-lockscreen \.pls-track \{ cursor: pointer; \}/.test(css));
     ok('音乐卡按压反馈', /\.phone-lockscreen \.pls-track:active/.test(css));
     const idx = fs.readFileSync(path.join(root, 'index.js'), 'utf8');
-    ok('CSS revision 升级到 v2180 代号', /ST_PHONE_CSS_REVISION = '20260917-v2180-session-isolation'/.test(idx));
+    /* [v4.162.0] 原写法把整串代号硬编码进判据 ⇒ 每次刷 revision 都红，而它要说的只是
+     *   「revision 已从 v2180 之前的旧值刷过」。改判结构：`YYYYMMDD-slug` 形且日期 >= 20260917。 */
+    const _rev = (idx.match(/ST_PHONE_CSS_REVISION = '([^']+)'/) || [, ''])[1];
+    ok('CSS revision 已是 YYYYMMDD-slug 形且不早于 v2180 发版日',
+        /^\d{8}-[a-z0-9][a-z0-9-]*$/.test(_rev) && _rev.slice(0, 8) >= '20260917', _rev);
 }
 
 // ========== 7. reset 方法本体契约（system-notifications.js 文本） ==========

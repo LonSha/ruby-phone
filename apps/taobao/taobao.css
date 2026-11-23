@@ -1,87 +1,165 @@
-/* [v3.29.0] 桃宝 App（.tbo-*） */
-.tbo-root { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
-.tbo-header h2 { font-size: 18px; margin: 0; color: #f0f0f0; }
-.tbo-face { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
-.tbo-face-ok { background: rgba(34,197,94,.12); color: #4ade80; }
-.tbo-face-warn { background: rgba(251,191,36,.12); color: #fbbf24; }
-.tbo-face-err { background: rgba(239,68,68,.12); color: #f87171; }
-.tbo-face-icon { font-size: 18px; }
-.tbo-face-label { flex: 1; }
-.tbo-flash { background: rgba(249,115,22,.14); color: #fb923c; border-radius: 8px; padding: 8px 12px; font-size: 12px; }
+/* [v4.163.0] 桃宝 App（.tbo-*）样式源
+ * 本文件是桃宝样式的**唯一来源**：phone.css 的 `[v4.163.0] 桃宝 App` 段由此同步（门禁 F3 逐字比对）。
+ * 版式按「照现实重写」后的六页结构排：外壳 → 顶部栏 → 页签栏 → 首页（搜索/金刚区/商品流）
+ * → 详情 → 购物车 → 订单 → 物流 → 我的。色板沿用 App 的深底 + 橙主色。
+ */
 
-.tbo-stats { background: rgba(255,255,255,.03); border-radius: 10px; padding: 12px; }
-.tbo-stat-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; color: #cbd5e1; border-bottom: 1px solid rgba(255,255,255,.04); }
-.tbo-stat-row span:last-child { color: #e2e8f0; }
-.tbo-stat-row em { color: #fb923c; font-style: normal; }
-.tbo-stat-row.tbo-warn span:last-child { color: #fbbf24; }
+/* ---------- 外壳 / 顶部栏 / 页签栏 / 吐司 ---------- */
+.tbo-app { position: relative; display: flex; flex-direction: column; height: 100%; overflow: hidden; background: #0b0f14; color: #e2e8f0; font-size: 13px; }
+.tbo-page { flex: 1; overflow-y: auto; padding: 12px 12px 16px; display: flex; flex-direction: column; gap: 12px; }
+.tbo-page-home, .tbo-page-detail, .tbo-page-cart, .tbo-page-orders, .tbo-page-logi, .tbo-page-mine { min-height: 100%; }
+.tbo-top { position: sticky; top: 0; z-index: 6; display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: rgba(11, 15, 20, .94); border-bottom: 1px solid rgba(255, 255, 255, .06); }
+.tbo-top-btn { flex: 0 0 auto; width: 30px; height: 30px; border: 0; border-radius: 9px; background: rgba(255, 255, 255, .06); color: #cbd5e1; font-size: 13px; line-height: 30px; text-align: center; cursor: pointer; }
+.tbo-top-btn:hover { background: rgba(255, 255, 255, .12); color: #f8fafc; }
+.tbo-title { flex: 1; font-size: 15px; font-weight: 600; text-align: center; color: #f1f5f9; letter-spacing: .5px; }
+.tbo-top-mid { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tbo-tabbar { flex: 0 0 auto; display: flex; border-top: 1px solid rgba(255, 255, 255, .07); background: #0d1218; }
+.tbo-tab { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 10px; border: 0; background: none; color: #64748b; font-size: 11px; cursor: pointer; }
+.tbo-tab.is-on { color: #fb923c; }
+.tbo-tab-label { line-height: 1.1; }
+.tbo-tab-badge { position: absolute; top: 3px; left: 54%; min-width: 14px; padding: 0 4px; border-radius: 7px; background: #ef4444; color: #fff; font-size: 10px; line-height: 14px; text-align: center; }
+.tbo-toast { position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); max-width: 78%; padding: 7px 14px; border-radius: 18px; background: rgba(15, 23, 42, .95); color: #f8fafc; font-size: 12px; box-shadow: 0 6px 18px rgba(0, 0, 0, .45); z-index: 20; pointer-events: none; }
 
-.tbo-next { background: rgba(56,189,248,.1); border-left: 3px solid rgba(56,189,248,.6); border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #7dd3fc; }
-.tbo-next-when { color: #94a3b8; margin-left: 8px; font-size: 11px; }
+/* ---------- 通用小件：空态 / 提示 / 表单 / 按钮 ---------- */
+.tbo-empty { padding: 28px 14px; border-radius: 12px; background: rgba(255, 255, 255, .03); color: #64748b; font-size: 12px; text-align: center; line-height: 1.7; }
+.tbo-hint { color: #64748b; font-size: 11px; line-height: 1.6; }
+.tbo-warn { color: #fbbf24; font-size: 11px; line-height: 1.6; }
+.tbo-field { display: flex; align-items: center; gap: 8px; }
+.tbo-input { flex: 1; min-width: 0; padding: 7px 10px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 8px; background: rgba(255, 255, 255, .04); color: #e2e8f0; font-size: 12px; outline: none; }
+.tbo-input:focus { border-color: rgba(251, 146, 60, .6); }
+.tbo-name-input, .tbo-price-input, .tbo-note-input { width: 100%; }
+.tbo-check { width: 18px; height: 18px; flex: 0 0 auto; accent-color: #fb923c; }
+.tbo-toggle { width: 18px; height: 18px; flex: 0 0 auto; accent-color: #fb923c; }
+.tbo-mini { padding: 4px 9px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 8px; background: rgba(255, 255, 255, .04); color: #cbd5e1; font-size: 11px; cursor: pointer; }
+.tbo-mini:hover { border-color: rgba(251, 146, 60, .5); color: #fdba74; }
+.tbo-row2 { display: flex; gap: 8px; }
+.tbo-row2 > * { flex: 1; min-width: 0; }
+.tbo-btn { padding: 9px 12px; border: 0; border-radius: 10px; font-size: 13px; cursor: pointer; }
+.tbo-btn-primary { background: linear-gradient(135deg, #fb923c, #f97316); color: #1a1206; font-weight: 600; }
+.tbo-btn-ghost { background: rgba(255, 255, 255, .06); color: #cbd5e1; }
+.tbo-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-.tbo-list { display: flex; flex-direction: column; gap: 8px; }
-.tbo-list-title { font-size: 13px; margin: 0 0 8px; color: #94a3b8; }
-.tbo-empty { font-size: 12px; color: #64748b; padding: 8px 0; }
+/* ---------- 首页：归因 / 读数 / 搜索 / 金刚区 / 排序 / 商品流 ---------- */
+.tbo-face { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 10px; font-size: 12px; background: rgba(255, 255, 255, .04); }
+.tbo-face-icon { flex: 0 0 auto; font-size: 15px; }
+.tbo-face-label { flex: 1; min-width: 0; line-height: 1.5; }
+.tbo-stats { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 10px; background: rgba(255, 255, 255, .03); }
+.tbo-stat { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; font-size: 12px; color: #cbd5e1; border-bottom: 1px solid rgba(255, 255, 255, .04); }
+.tbo-stat:last-child { border-bottom: 0; }
+.tbo-next { padding: 8px 12px; border-left: 3px solid rgba(56, 189, 248, .6); border-radius: 8px; background: rgba(56, 189, 248, .1); color: #7dd3fc; font-size: 12px; line-height: 1.6; }
+.tbo-next-text { color: #7dd3fc; }
+.tbo-next-when { display: block; margin-top: 2px; color: #94a3b8; font-size: 11px; }
+.tbo-search { display: flex; align-items: center; gap: 6px; padding: 0 10px; border-radius: 18px; background: rgba(255, 255, 255, .05); }
+.tbo-search-icon { flex: 0 0 auto; color: #64748b; font-size: 12px; }
+.tbo-search-input { flex: 1; min-width: 0; padding: 8px 0; border: 0; background: none; color: #e2e8f0; font-size: 12px; outline: none; }
+.tbo-search-clear { flex: 0 0 auto; border: 0; background: none; color: #64748b; font-size: 12px; cursor: pointer; }
+.tbo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.tbo-grid-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border: 0; border-radius: 10px; background: rgba(255, 255, 255, .04); color: #cbd5e1; font-size: 11px; cursor: pointer; }
+.tbo-grid-item:hover { background: rgba(251, 146, 60, .12); color: #fdba74; }
+.tbo-sorts { display: flex; align-items: center; gap: 6px; }
+.tbo-sort { padding: 5px 10px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 14px; background: none; color: #94a3b8; font-size: 11px; cursor: pointer; }
+.tbo-sort.is-on { border-color: rgba(251, 146, 60, .6); background: rgba(251, 146, 60, .14); color: #fdba74; }
+.tbo-sort-hint { margin-left: auto; color: #475569; font-size: 10px; }
+.tbo-flow { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.tbo-card { display: flex; flex-direction: column; gap: 5px; padding: 0 0 9px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, .04); color: inherit; text-align: left; overflow: hidden; cursor: pointer; }
+.tbo-card:hover { background: rgba(255, 255, 255, .07); }
+.tbo-card-cover { position: relative; display: flex; align-items: center; justify-content: center; height: 84px; background: linear-gradient(135deg, rgba(251, 146, 60, .22), rgba(249, 115, 22, .06)); }
+.tbo-card-glyph { font-size: 30px; }
+.tbo-card-name { padding: 0 9px; color: #e2e8f0; font-size: 12px; font-weight: 600; line-height: 1.4; }
+.tbo-card-meta { display: flex; align-items: baseline; gap: 6px; padding: 0 9px; }
+.tbo-price { color: #fb923c; font-size: 14px; font-weight: 700; }
+.tbo-card-incart { color: #64748b; font-size: 10px; }
+.tbo-card-note { padding: 0 9px; color: #64748b; font-size: 10px; line-height: 1.5; }
 
-.tbo-item { background: rgba(255,255,255,.04); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; }
-.tbo-item-main { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #e2e8f0; flex-wrap: wrap; }
-.tbo-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tbo-item-price { font-family: 'Times New Roman', serif; color: #fdba74; }
-.tbo-item-incart { font-size: 10px; color: #4ade80; }
-.tbo-item-note { font-size: 11px; color: #94a3b8; margin-top: 4px; }
-.tbo-item-actions { display: flex; gap: 6px; margin-top: 6px; }
+/* ---------- 商品详情 ---------- */
+.tbo-hero { display: flex; align-items: center; justify-content: center; height: 130px; border-radius: 12px; background: linear-gradient(135deg, rgba(251, 146, 60, .24), rgba(249, 115, 22, .05)); }
+.tbo-hero-glyph { font-size: 46px; }
+.tbo-detail-body { display: flex; flex-direction: column; gap: 6px; }
+.tbo-detail-price { color: #fb923c; font-size: 20px; font-weight: 700; }
+.tbo-detail-name { color: #f1f5f9; font-size: 15px; font-weight: 600; line-height: 1.45; }
+.tbo-detail-note { color: #94a3b8; font-size: 12px; line-height: 1.65; }
+.tbo-detail-hint { color: #64748b; font-size: 11px; line-height: 1.6; }
+.tbo-spec { border-radius: 10px; background: rgba(255, 255, 255, .03); padding: 4px 10px; }
+.tbo-spec-row { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(255, 255, 255, .04); font-size: 12px; color: #cbd5e1; }
+.tbo-spec-row:last-child { border-bottom: 0; }
+.tbo-detail-bar { display: flex; gap: 8px; }
+.tbo-bar-btn { flex: 1; }
 
-.tbo-create, .tbo-cart, .tbo-orders, .tbo-claw, .tbo-settings { background: rgba(255,255,255,.03); border-radius: 10px; padding: 12px; }
-.tbo-create-row { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
-.tbo-create-row .tbo-input { margin-bottom: 0; }
-.tbo-input-price { flex: 0 0 108px; }
+/* ---------- 购物车 ---------- */
+.tbo-cart-list { display: flex; flex-direction: column; gap: 8px; }
+.tbo-cart-row { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 10px; background: rgba(255, 255, 255, .04); }
+.tbo-cart-thumb { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 9px; background: linear-gradient(135deg, rgba(251, 146, 60, .22), rgba(249, 115, 22, .06)); font-size: 20px; }
+.tbo-cart-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.tbo-cart-name { color: #e2e8f0; font-size: 12px; font-weight: 600; line-height: 1.4; }
+.tbo-cart-sub { color: #fb923c; font-size: 12px; }
+.tbo-qty { display: flex; align-items: center; gap: 4px; }
+.tbo-qty-btn { width: 24px; height: 24px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 7px; background: rgba(255, 255, 255, .04); color: #cbd5e1; font-size: 12px; line-height: 1; cursor: pointer; }
+.tbo-qty-num { min-width: 20px; text-align: center; color: #e2e8f0; font-size: 12px; }
+.tbo-cart-del { flex: 0 0 auto; padding: 4px 8px; border: 0; border-radius: 7px; background: rgba(239, 68, 68, .14); color: #fca5a5; font-size: 11px; cursor: pointer; }
+.tbo-settle { position: sticky; bottom: 0; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(13, 18, 24, .96); border: 1px solid rgba(255, 255, 255, .07); }
+.tbo-settle-left { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tbo-settle-label { color: #64748b; font-size: 10px; }
+.tbo-settle-total { color: #fb923c; font-size: 16px; font-weight: 700; }
+.tbo-settle-count { color: #64748b; font-size: 10px; }
+.tbo-settle-btn { flex: 0 0 auto; padding: 9px 16px; border: 0; border-radius: 10px; background: linear-gradient(135deg, #fb923c, #f97316); color: #1a1206; font-size: 13px; font-weight: 600; cursor: pointer; }
 
-.tbo-input { width: 100%; box-sizing: border-box; padding: 8px 10px; margin-bottom: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.25); color: #e5e7eb; font-size: 13px; }
-.tbo-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-.tbo-btn { border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; background: rgba(255,255,255,.1); color: #e2e8f0; }
-.tbo-btn-primary { background: #f97316; color: #fff; }
-.tbo-btn:disabled, .tbo-mini:disabled { opacity: .38; cursor: default; }
-.tbo-mini { border: none; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; background: rgba(255,255,255,.1); color: #cbd5e1; flex-shrink: 0; }
-.tbo-mini-armed { background: rgba(239,68,68,.22); color: #fca5a5; }
-.tbo-hint { font-size: 11px; color: #64748b; margin-top: 8px; line-height: 1.55; }
-
-.tbo-cart-row { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,.04); border-radius: 10px; padding: 6px 10px; margin-bottom: 6px; }
-.tbo-cart-row.is-dead { border: 1px dashed rgba(251,146,60,.42); }
-.tbo-cart-name { flex: 1; min-width: 0; font-size: 13px; color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tbo-cart-qty { flex: 0 0 60px; width: 60px; margin-bottom: 0; padding: 4px 6px; text-align: center; }
-.tbo-cart-price { font-family: 'Times New Roman', serif; color: #fdba74; font-size: 12px; min-width: 62px; text-align: right; }
-.tbo-cart-total { font-size: 13px; color: #e2e8f0; padding: 6px 0; }
-.tbo-cart-total strong { font-family: 'Times New Roman', serif; color: #fb923c; }
-.tbo-warn-text { font-size: 11px; color: #fb923c; margin-left: 6px; }
-
-.tbo-order { background: rgba(255,255,255,.04); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; border-left: 3px solid rgba(148,163,184,.35); }
-.tbo-order-gray { border-left-color: rgba(148,163,184,.55); }
-.tbo-order-blue { border-left-color: rgba(56,189,248,.6); }
-.tbo-order-orange { border-left-color: rgba(249,115,22,.7); }
-.tbo-order-green { border-left-color: rgba(34,197,94,.6); }
+/* ---------- 订单 ---------- */
+.tbo-otabs { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px; }
+.tbo-otab { flex: 0 0 auto; padding: 6px 11px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 14px; background: none; color: #94a3b8; font-size: 11px; cursor: pointer; }
+.tbo-otab.is-on { border-color: rgba(251, 146, 60, .6); background: rgba(251, 146, 60, .14); color: #fdba74; }
+.tbo-otab-n { margin-left: 4px; color: #64748b; font-size: 10px; }
+.tbo-order-list { display: flex; flex-direction: column; gap: 10px; }
+.tbo-order { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, .04); }
 .tbo-order-head { display: flex; align-items: center; gap: 8px; }
-.tbo-order-status { flex: 1; font-size: 12px; color: #e2e8f0; }
-.tbo-order-total { font-family: 'Times New Roman', serif; font-size: 12px; color: #fdba74; }
-.tbo-order-city { font-size: 11px; color: #64748b; margin-top: 3px; }
-.tbo-order-rows { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; }
-.tbo-order-row { font-size: 11px; color: #94a3b8; }
-.tbo-order-actions { display: flex; gap: 6px; margin-top: 6px; }
+.tbo-order-status { flex: 1; font-size: 12px; font-weight: 600; }
+.tbo-order-total { color: #fb923c; font-size: 12px; }
+.tbo-order-rows { display: flex; flex-direction: column; gap: 3px; }
+.tbo-order-row { display: flex; justify-content: space-between; gap: 8px; color: #94a3b8; font-size: 11px; }
+.tbo-order-route { color: #64748b; font-size: 11px; line-height: 1.6; }
+.tbo-order-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
-.tbo-logi { margin-top: 8px; background: rgba(0,0,0,.22); border-radius: 8px; padding: 8px 10px; }
-.tbo-logi-head { font-size: 12px; color: #e2e8f0; display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
-.tbo-logi-progress { font-family: 'Times New Roman', serif; color: #94a3b8; font-size: 11px; }
-.tbo-logi-step { padding: 5px 0 5px 10px; border-left: 2px solid rgba(148,163,184,.22); }
-.tbo-logi-step.is-done { border-left-color: #f97316; }
-.tbo-logi-text { display: block; font-size: 11px; color: #94a3b8; line-height: 1.5; }
-.tbo-logi-step.is-done .tbo-logi-text { color: #e2e8f0; }
-.tbo-logi-time { display: block; font-family: 'Times New Roman', serif; font-size: 10px; color: #64748b; margin-top: 2px; }
-.tbo-logi-next { font-size: 11px; color: #7dd3fc; margin-top: 6px; }
+/* ---------- 物流详情 ---------- */
+.tbo-logi-head { display: flex; align-items: center; gap: 8px; }
+.tbo-logi-status { flex: 1; color: #f1f5f9; font-size: 14px; font-weight: 600; }
+.tbo-logi-progress { padding: 8px 0; }
+.tbo-progress { position: relative; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.tbo-progress-bar { height: 100%; border-radius: 2px; background: linear-gradient(90deg, #fb923c, #f97316); }
+.tbo-timeline { display: flex; flex-direction: column; gap: 0; list-style: none; margin: 0; padding: 0; }
+.tbo-step { position: relative; display: flex; gap: 10px; padding: 0 0 14px 18px; border-left: 1px solid rgba(255, 255, 255, .1); }
+.tbo-step:last-child { border-left-color: transparent; padding-bottom: 0; }
+.tbo-step-dot { position: absolute; left: -4px; top: 3px; width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, .18); }
+.tbo-step.is-done .tbo-step-dot { background: #fb923c; box-shadow: 0 0 0 3px rgba(251, 146, 60, .16); }
+.tbo-step-text { color: #94a3b8; font-size: 12px; line-height: 1.6; }
+.tbo-step.is-done .tbo-step-text { color: #e2e8f0; }
+.tbo-logi-next { padding: 8px 12px; border-radius: 8px; background: rgba(56, 189, 248, .1); color: #7dd3fc; font-size: 12px; line-height: 1.6; }
 
+/* ---------- 我的：娃娃机 / 上架 / 设置 ---------- */
+.tbo-me { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: rgba(255, 255, 255, .04); }
+.tbo-me-avatar { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #fb923c, #f97316); color: #1a1206; font-size: 18px; }
+.tbo-me-meta { flex: 1; min-width: 0; color: #e2e8f0; font-size: 12px; line-height: 1.5; }
+.tbo-me-stats { display: flex; gap: 8px; }
+.tbo-me-stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border-radius: 10px; background: rgba(255, 255, 255, .03); color: #94a3b8; font-size: 10px; }
+.tbo-sec { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, .03); }
+.tbo-sec-title { display: flex; align-items: center; gap: 6px; color: #f1f5f9; font-size: 13px; font-weight: 600; }
+.tbo-grab { display: flex; align-items: center; gap: 8px; }
+.tbo-grab-label { flex: 1; color: #cbd5e1; font-size: 12px; }
+.tbo-grab-value { color: #fb923c; font-size: 12px; font-weight: 600; }
+.tbo-grabs { display: flex; flex-direction: column; gap: 4px; }
+.tbo-claw-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 10px; background: rgba(251, 146, 60, .14); color: #fdba74; font-size: 11px; }
 .tbo-claw-pool { display: flex; flex-wrap: wrap; gap: 6px; }
-.tbo-claw-chip { font-size: 11px; color: #cbd5e1; background: rgba(255,255,255,.06); border-radius: 999px; padding: 3px 9px; }
-.tbo-grabs { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 6px; }
-.tbo-grab { font-size: 11px; color: #94a3b8; display: inline-flex; gap: 5px; }
-.tbo-grab-label { color: #a78bfa; }
-.tbo-grab-value { font-family: 'Times New Roman', serif; color: #fdba74; }
+.tbo-flash { padding: 8px 12px; border-radius: 8px; background: rgba(249, 115, 22, .14); color: #fb923c; font-size: 11px; line-height: 1.6; }
 
-.tbo-toggle, .tbo-field { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; font-size: 12px; color: #cbd5e1; }
-.tbo-field input[type="number"] { width: 76px; padding: 4px 6px; border-radius: 7px; border: 1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.25); color: #e5e7eb; font-size: 12px; }
+/* ---------- 动态色：归因三态 / 订单四态 / 商品封面六色（类名由模板拼出） ---------- */
+.tbo-face-ok { background: rgba(34, 197, 94, .12); color: #4ade80; }
+.tbo-face-warn { background: rgba(251, 191, 36, .12); color: #fbbf24; }
+.tbo-face-err { background: rgba(239, 68, 68, .12); color: #f87171; }
+.tbo-status-gray { color: #94a3b8; }
+.tbo-status-blue { color: #60a5fa; }
+.tbo-status-orange { color: #fb923c; }
+.tbo-status-green { color: #4ade80; }
+.tbo-cover-0 { background: linear-gradient(135deg, rgba(251, 146, 60, .24), rgba(249, 115, 22, .05)); }
+.tbo-cover-1 { background: linear-gradient(135deg, rgba(56, 189, 248, .22), rgba(14, 116, 144, .05)); }
+.tbo-cover-2 { background: linear-gradient(135deg, rgba(74, 222, 128, .2), rgba(21, 128, 61, .05)); }
+.tbo-cover-3 { background: linear-gradient(135deg, rgba(168, 85, 247, .2), rgba(88, 28, 135, .05)); }
+.tbo-cover-4 { background: linear-gradient(135deg, rgba(244, 114, 182, .2), rgba(157, 23, 77, .05)); }
+.tbo-cover-5 { background: linear-gradient(135deg, rgba(148, 163, 184, .2), rgba(51, 65, 85, .05)); }

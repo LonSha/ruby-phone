@@ -528,13 +528,25 @@ test('v4157 F2. 四座桥都是纯函数：同一输入两次调用结果逐位�
     assert.equal(JSON.stringify(face), faceSnapshot, 'X7 不许改读数');
 });
 
-test('v4157 F3. 版本锚：五源同源到 4.157.0', () => {
+test('v4157 F3. 版本锚（下限形）：五源同源且不低于 4.157.0', () => {
+    /* ★ [v4.163.0 交棒改写] 原判据把 manifest / package 写死等于 '4.157.0'，一抬版即红 ——
+     *   那钉的是「当版读数」而不是本套件要守的历史事实（R21-X6/X7/X8/X9 四座桥在 4.157.0 落地）。
+     *   改成**下限形 + 同源结构性判据**：入口常量必须等于 manifest、package 必须等于 manifest、
+     *   且三者都不得低于 4.157.0。断言一条没删，只是不再随抬版漂移。 */
     const idx = read('index.js');
     const manifest = JSON.parse(read('manifest.json'));
     const pkg = JSON.parse(read('package.json'));
-    assert.match(idx, /4\.157\.0/, 'index.js 里必须出现 4.156.0');
-    assert.equal(manifest.version, '4.157.0', 'manifest 版本必须 4.156.0');
-    assert.equal(pkg.version, '4.157.0', 'package.json 版本必须 4.156.0');
+    const codeVer = (/const ST_PHONE_VERSION = '([^']+)';/.exec(idx) || [])[1];
+    assert.ok(codeVer, 'index.js 的 ST_PHONE_VERSION 必须在场');
+    assert.equal(codeVer, manifest.version, '入口版本常量必须与 manifest 同版');
+    assert.equal(pkg.version, manifest.version, 'package.json 必须与 manifest 同版');
+    const cmp = (a, b) => {
+        const A = a.split('.').map(Number);
+        const B = b.split('.').map(Number);
+        for (let i = 0; i < 3; i++) { if (A[i] !== B[i]) return A[i] - B[i]; }
+        return 0;
+    };
+    assert.ok(cmp(manifest.version, '4.157.0') >= 0, '当前 ' + manifest.version + ' 不得低于本套件成立版本 4.157.0');
 });
 
 test('v4157 F4. 四座桥文件都在册且非空（含头部纪律注释）', () => {

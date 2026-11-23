@@ -75,6 +75,7 @@ export class MagazineView {
         this.shell = shell;
         this.storage = storage;
         this._root = null;
+        this._boundRoot = null;
         this._flash = '';
         this._promptFor = '';
         this._promptText = '';
@@ -118,17 +119,24 @@ export class MagazineView {
         if (this._promptFor) parts.push(this._promptPanel());
         const curId = app.currentId();
         if (cur === 'reader' && curId) parts.push(this._readerPanel(curId));
-        parts.push('<div class="mgz-tabs">');
+        if (cur === 'new') parts.push(this._newPanel());
+        else if (cur === 'search') parts.push(this._searchPanel());
+        else if (cur === 'settings') parts.push(this._settingsPanel());
+        else if (!(cur === 'reader' && curId)) parts.push(this._listPanel());
+        /* 页签条放到内容之下 —— 先把这一页给你，再让你换页。类名与 data-tab 一字未改。 */
+        parts.push(this._tabsHTML());
+        return parts.join('');
+    }
+    /** 页签条（沿用旧键面：mgz-tabs / mgz-tab / mgz-tab-label + data-tab）。 */
+    _tabsHTML() {
+        const cur = this.app.tab();
+        const parts = ['<div class="mgz-tabs">'];
         for (const t of TABS) {
             parts.push('<button class="mgz-tab' + (cur === t.key || (cur === 'reader' && t.key === 'list') ? ' is-on' : '') + '" data-tab="' + t.key + '">');
             parts.push('<span class="mgz-tab-label">' + this._esc(t.label) + '</span>');
             parts.push('</button>');
         }
         parts.push('</div>');
-        if (cur === 'new') parts.push(this._newPanel());
-        else if (cur === 'search') parts.push(this._searchPanel());
-        else if (cur === 'settings') parts.push(this._settingsPanel());
-        else if (!(cur === 'reader' && curId)) parts.push(this._listPanel());
         return parts.join('');
     }
 
@@ -502,46 +510,17 @@ export class MagazineView {
     /* ---------- 事件 ---------- */
     _bindEvents() {
         const app = this.app;
-        for (const el of this._qa('[data-tab]')) {
-            el.addEventListener('click', () => { app.setTab(el.getAttribute('data-tab')); this.refresh(); });
+        const root = this._root;
+        if (!root) return;
+        /* 点击收成**根容器一次委派**：旧写法给 [data-tab] / [data-open] / [data-back] /
+         *   [data-del] / [data-share] / [data-export] / [data-print] / [data-person] 各循环
+         *   挂一遍监听，元素一多监听就散成一片；且根容器在 refresh 之间是同一个，
+         *   每次重挂就会在同一根上叠一份（点一下触发好几次）—— 按 _boundRoot 只挂一次。 */
+        if (this._boundRoot !== root) {
+            this._boundRoot = root;
+            root.addEventListener('click', (ev) => this._onDelegated(ev));
         }
-        for (const el of this._qa('[data-open]')) {
-            el.addEventListener('click', () => { app.openArticle(el.getAttribute('data-open')); this.refresh(); });
-        }
-        const back = this._q('[data-back]');
-        if (back) back.addEventListener('click', () => { app.backToList(); this.refresh(); });
-        for (const el of this._qa('[data-del]')) {
-            el.addEventListener('click', () => {
-                const id = el.getAttribute('data-del');
-                const r = app.removeArticle(id);
-                this._flash = r.removed ? '已删掉这一篇' : '这一篇本来就不在';
-                app.backToList();
-                this.refresh();
-            });
-        }
-        for (const el of this._qa('[data-share]')) {
-            el.addEventListener('click', () => {
-                const r = app.shareText(el.getAttribute('data-share'));
-                this._flash = r.reason === 'ok' ? '分享文本已生成（' + r.text.length + ' 字，可复制）' : '这一篇不在了';
-                this.refresh();
-            });
-        }
-        for (const el of this._qa('[data-export]')) {
-            el.addEventListener('click', () => {
-                const r = app.exportOne(el.getAttribute('data-export'));
-                this._flash = r.reason === 'ok' ? '导出文本已生成（' + r.text.length + ' 字）' : '这一篇不在了';
-                this.refresh();
-            });
-        }
-        for (const el of this._qa('[data-print]')) {
-            el.addEventListener('click', () => {
-                const p = app.printable(el.getAttribute('data-print'));
-                this._flash = p ? ('可打印版 ' + p.rows.length + ' 行'
-                    + (p.unknownBlocks ? '（其中 ' + p.unknownBlocks + ' 行未识别）' : '')) : '这一篇不在了';
-                this.refresh();
-            });
-        }
-        /* 取材面 */
+        /* 取材面 */        /* 取材面 */
         const selType = this._q('#mgz-new-type');
         if (selType) selType.addEventListener('change', (e) => { this._draft.type = e.target.value; this.refresh(); });
         const selFeat = this._q('#mgz-new-feature');
@@ -550,14 +529,6 @@ export class MagazineView {
         if (inTheme) inTheme.addEventListener('input', (e) => { this._draft.theme = e.target.value; });
         const selLang = this._q('#mgz-new-lang');
         if (selLang) selLang.addEventListener('change', (e) => { this._draft.bodyLanguage = e.target.value; this.refresh(); });
-        for (const el of this._qa('[data-person]')) {
-            el.addEventListener('click', () => {
-                const id = el.getAttribute('data-person');
-                const i = this._draft.peopleIds.indexOf(id);
-                if (i >= 0) this._draft.peopleIds.splice(i, 1); else this._draft.peopleIds.push(id);
-                this.refresh();
-            });
-        }
         const mk = this._q('#mgz-make-prompt');
         if (mk) mk.addEventListener('click', () => {
             const r = app.promptBlock(this._draft.type, {
@@ -637,6 +608,56 @@ export class MagazineView {
         });
     }
 
+    /** 根容器委派：按元素身上的 data-* 分派到原来的动作。 */
+    _onDelegated(ev) {
+        const app = this.app;
+        const t = ev && ev.target;
+        const el = (t && t.closest)
+            ? t.closest('[data-tab],[data-open],[data-back],[data-del],[data-share],[data-export],[data-print],[data-person]')
+            : null;
+        if (!el) return;
+        const tab = el.getAttribute('data-tab');
+        if (tab) { app.setTab(tab); this.refresh(); return; }
+        const open = el.getAttribute('data-open');
+        if (open) { app.openArticle(open); this.refresh(); return; }
+        if (el.getAttribute('data-back') !== null) { app.backToList(); this.refresh(); return; }
+        const person = el.getAttribute('data-person');
+        if (person) {
+            const i = this._draft.peopleIds.indexOf(person);
+            if (i >= 0) this._draft.peopleIds.splice(i, 1); else this._draft.peopleIds.push(person);
+            this.refresh();
+            return;
+        }
+        const del = el.getAttribute('data-del');
+        if (del) {
+            const r = app.removeArticle(del);
+            this._flash = r.removed ? '已删掉这一篇' : '这一篇本来就不在';
+            app.backToList();
+            this.refresh();
+            return;
+        }
+        const share = el.getAttribute('data-share');
+        if (share) {
+            const r = app.shareText(share);
+            this._flash = r.reason === 'ok' ? '分享文本已生成（' + r.text.length + ' 字，可复制）' : '这一篇不在了';
+            this.refresh();
+            return;
+        }
+        const exp = el.getAttribute('data-export');
+        if (exp) {
+            const r = app.exportOne(exp);
+            this._flash = r.reason === 'ok' ? '导出文本已生成（' + r.text.length + ' 字）' : '这一篇不在了';
+            this.refresh();
+            return;
+        }
+        const pri = el.getAttribute('data-print');
+        if (pri) {
+            const p = app.printable(pri);
+            this._flash = p ? ('可打印版 ' + p.rows.length + ' 行'
+                + (p.unknownBlocks ? '（其中 ' + p.unknownBlocks + ' 行未识别）' : '')) : '这一篇不在了';
+            this.refresh();
+        }
+    }
     _esc(s) {
         return String(s === null || s === undefined ? '' : s)
             .split(AMP).join(AMP + 'amp;')

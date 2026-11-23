@@ -308,7 +308,8 @@
     gap: 6px;
     padding: 8px 12px;
     background: rgba(255, 255, 255, 0.55);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    /* [v4.179.0] 分页条已挑到正文之下，分隔线跟着改到上边。 */
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
     overflow-x: auto;
     flex-shrink: 0;
 }

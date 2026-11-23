@@ -205,7 +205,16 @@ export class WangxiangView {
                 ${this._renderPaymentDialog()}
             </div>
         `, 'wangxiang-home');
-        requestAnimationFrame(() => this._bindEvents());
+        /* [v4.182.0] 只让最后一次 render 排的回调去挂监听。
+         *   本视图的 onclick 那半天然幂等（赋值覆盖旧处理），可 addEventListener 那半不是：
+         *   同帧两次 render 会让两个 rAF 回调都落在最后那一次的内容上，动作按钮就挂两份
+         *   —— 一次点下去处理器跑两遍（下单弹层开两次、筛选各应用一遍）。
+         *   按节点身份判重在这里无效：换的始终是同一个 .phone-view-current 的子节点。 */
+        const _seq = (this._renderSeq = (Number(this._renderSeq) || 0) + 1);
+        requestAnimationFrame(() => {
+            if (_seq !== this._renderSeq) return;
+            this._bindEvents();
+        });
     }
 
     _renderNavItem(item) {

@@ -115,23 +115,35 @@ export const SKIN_V3 = Object.freeze([
 ].map(Object.freeze));
 
 const INDEX = new Map(SKIN_V3.map((e) => [e.appId, e]));
+/**
+ * 已按「照现实重写」升到 v4 的 App：**v3 皮肤对它们不再生效**。
+ * 为什么还留在 SKIN_V3 里：这份表是「89 个 App 都有皮肤登记」的账本，删条目会让那条自检
+ *   变成一句空话，也会让「某个 App 忘了登记」这种真缺陷失去对照。
+ * 为什么不再出注入计划：v3 皮肤文件只认 `.tb-root` / `.bl-root` 这类旧根节点，v4 换了
+ *   `.tb-app` / `.bl-app`，挂上去就是「加载成功但一行都不命中」——
+ *   这种假成功比不加载更难查（打开皮肤看着没反应，谁也想不到是选择器没中）。
+ * 以后每做完一个 App 的「照现实重写」，就往这里加一条。
+ */
+const SKIN_V3_RETIRED = Object.freeze(['bilibili', 'tieba']);
+const RETIRED = new Set(SKIN_V3_RETIRED);
 /** 前缀表按长度倒序：phone-call 先于 phone，避免短前缀抢先。 */
 const DETECT = SKIN_V3.flatMap((e) => e.detect.map((p) => [p, e.appId])).sort((a, b) => b[0].length - a[0].length);
-
-export function skinEntry(appId) { return INDEX.get(String(appId == null ? '' : appId)) || null; }
-
+export function skinEntry(appId) {
+    const id = String(appId == null ? '' : appId);
+    if (RETIRED.has(id)) return null;
+    return INDEX.get(id) || null;
+}
 /** 从一个元素的 className 认出它属于哪个 App（认不出 => null）。 */
 export function skinAppForClassName(className) {
     const toks = String(className || '').split(/\s+/);
     for (const t of toks) {
         if (!t || t.startsWith('fa-')) continue;
         for (const [p, id] of DETECT) {
-            if (t === p || t.startsWith(p + '-')) return id;
+            if (t === p || t.startsWith(p + '-')) return RETIRED.has(id) ? null : id;
         }
     }
     return null;
 }
-
 /** 一条皮肤注入计划（与 stylePlan 同形：mode = 'skin' | 'none'） */
 export function skinPlan(appId, baseUrl) {
     const e = skinEntry(appId);
@@ -228,5 +240,9 @@ export function skinV3SelfCheck() {
     push('对弈 / 2048 认得出是游戏（games-app gb-app / games-2048-cell）', skinAppForClassName('games-app gb-app') === 'games' && skinAppForClassName('games-2048-cell') === 'games', '');
     push('v3.5 能力检测：cph-root -> caphealth、te-root -> taskentry（v3.3 登记为空）', skinAppForClassName('cph-root') === 'caphealth' && skinAppForClassName('te-root') === 'taskentry', '');
     push('v3.6 版本号', SKIN_V3_VERSION === '3.6.0', SKIN_V3_VERSION);
+    /* v4.162.0：照现实重写过的 App 脱离 v3 皮肤体系 —— 出计划必须是 none，
+     * 前缀识别也必须认不出来（否则打开皮肤时挂一份「一行都不命中」的 CSS）。 */
+    push('v4 重写过的 App 不再出 v3 皮肤计划', SKIN_V3_RETIRED.every((id) => skinPlan(id).mode === 'none' && skinEntry(id) === null), SKIN_V3_RETIRED.join(','));
+    push('v4 重写过的 App 前缀不再被认成 v3 皮肤目标', skinAppForClassName('tb-app') === null && skinAppForClassName('bl-app') === null && skinAppForClassName('tbo-card') !== null, 'tb-app / bl-app / tbo-card');
     return { ok: items.every((i) => i.ok), items };
 }

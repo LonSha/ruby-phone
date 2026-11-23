@@ -185,7 +185,14 @@ export class CalendarView {
         `;
 
         this.app.phoneShell.setContent(html, 'calendar-main');
+        /* [v4.180.0] 只让**最后一次** render 排的回调去挂监听。
+         *   本视图的主屏与设置屏共用同一个 .phone-view-current 节点（setContent 换的是
+         *   它的子节点），所以按节点身份判重在这里无效；同帧两次 render 会让两个 rAF
+         *   回调都落在最后那一次的内容上，监听就挂了两份：主题按钮一次点下去翻两次，
+         *   等于点了没反应，还可能连排两次重绘。渲染序号法只认最后那一个。 */
+        const _seq = (this._renderSeq = (Number(this._renderSeq) || 0) + 1);
         requestAnimationFrame(() => {
+            if (_seq !== this._renderSeq) return;
             this.bindEvents();
             const host = document.querySelector('.phone-view-current .yzp-calendar-main');
             if (host) { const slot = document.createElement('div'); host.appendChild(slot); new ConditionReminderView(this.app).render(slot); }
@@ -472,7 +479,11 @@ export class CalendarView {
         `;
 
         this.app.phoneShell.setContent(html, 'calendar-settings');
-        requestAnimationFrame(() => this.bindEvents());
+        const _seq = (this._renderSeq = (Number(this._renderSeq) || 0) + 1);
+        requestAnimationFrame(() => {
+            if (_seq !== this._renderSeq) return;
+            this.bindEvents();
+        });
     }
 
     renderHolidaySettingRow(holiday) {

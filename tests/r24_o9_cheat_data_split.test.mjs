@@ -40,15 +40,21 @@ ok('每个分片自己也在千行内', shards.every((f) => lines(fs.readFileSyn
  *   不随 HEAD 前进而失效；找不到就如实红，不许静默跳过。 */
 /* 定位基准：**不靠 commit message**（本仓的提交标题写的是「O1-O9」，按 R24-O9 匹配会落空，
  *  而空 baseRef 会让 `git show ':data/cheats.js'` 静默返回 index 里的壳 —— 一个看起来成功、
- *  实际拿错基准的坑）。这里按「文件第一次变成壳（<1000 行）」定位拆分提交，取其父提交。 */
+ *  实际拿错基准的坑）。
+ *
+ *  【v4.185.0 修正】原实现取「第一个变成壳的提交」再拼 ^，等于「壳的上一版」：历史里只有
+ *  一版壳时它恰好是拆分前的完整版，但本仓有两版壳（59 行 / 54 行），且 ^ 取到的父提交里这个
+ *  文件**根本不存在**，于是报「取不到基准」—— 而完整版明明好好躺在历史里。
+ *  改成**直接取拆分前那一刻本身**：从新往旧扫，第一次遇到的 >=1000 行版本就是它。
+ *  不需要 ^，也不受「父对象在不在本地」影响。找不到就如实红，不许静默跳过。 */
 const shas = String(spawnSync('git', ['log', '--format=%H', '--', 'data/cheats.js'], { cwd: ROOT, encoding: 'utf8' }).stdout || '')
     .split(NL).filter(Boolean);
 let baseRef = '';
 for (const sha of shas) {
     const body = String(spawnSync('git', ['show', sha + ':data/cheats.js'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1024 * 1024 * 80 }).stdout || '');
-    if (body && lines(body) < 1000) { baseRef = sha + '^'; break; }
+    if (body && lines(body) >= 1000) { baseRef = sha; break; }
 }
-ok('找得到拆分提交（基准可推导）', !!baseRef, 'data/cheats.js 历史里找不到「变成壳」的那一版');
+ok('找得到拆分前的完整版（基准可推导）', !!baseRef, 'data/cheats.js 历史里找不到完整版');
 
 const show = baseRef
     ? spawnSync('git', ['show', baseRef + ':data/cheats.js'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1024 * 1024 * 80 })

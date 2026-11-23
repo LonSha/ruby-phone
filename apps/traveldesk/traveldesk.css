@@ -24,3 +24,14 @@
 .tv-party-tag { font-size: 11px; padding: 0 4px; border: 1px solid currentColor; border-radius: 8px; margin-left: 4px; }
 .tv-party-advice { color: #7a7468; font-size: 12px; }
 .tv-mini { padding: 1px 6px; font-size: 11px; margin: 0 2px 0 0; }
+/* [v4.169.0] 四页签（账 / 汇 / 行 / 结）的落点：页头读数、页容器、底部页签条、试算口径提示。
+ *   样式落在这里而不是行内 —— 行内样式是上一轮被点名过的形态。 */
+.tv-flash { margin: 0 0 8px; padding: 6px 10px; border-radius: 6px; background: rgba(74,144,217,0.12); font-size: 12px; color: #2a4a6a; }
+.tv-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 0 0 8px; }
+.tv-head h2 { font-size: 15px; margin: 0; color: #2a5a6a; }
+.tv-head-meta { font-size: 11px; color: #7a7468; font-variant-numeric: tabular-nums; }
+.tv-page { display: flex; flex-direction: column; gap: 8px; }
+.tv-navbar { display: flex; gap: 6px; border-top: 1px solid #e8e2d8; padding-top: 8px; margin-top: 4px; }
+.tv-nav { flex: 1; border: 1px solid #d8d2c8; background: #fff; border-radius: 10px; padding: 6px 0; font-size: 12px; color: #2b2b2b; }
+.tv-nav.is-on { background: #2a5a6a; border-color: #2a5a6a; color: #fff; }
+.tv-hint { font-size: 11px; color: #7a7468; line-height: 1.5; padding: 4px 0; }

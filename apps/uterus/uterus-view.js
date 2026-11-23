@@ -91,6 +91,7 @@ export class UterusView {
         this.shell = shell;
         this.storage = storage;
         this._root = null;
+        this._boundRoot = null;
         this._flash = '';
         this._out = '';
         this._pen = null;
@@ -160,7 +161,6 @@ export class UterusView {
         const why = this.app.whyOf();
         if (why) parts.push('<div class="ud-why">' + this._esc(why) + '</div>');
         parts.push('</div>');
-        parts.push(this._tabsBlock());
         const tab = this.app.tab();
         if (tab === 'fetuses') parts.push(this._fetusPanel());
         else if (tab === 'readings') parts.push(this._readingPanel());
@@ -168,6 +168,9 @@ export class UterusView {
         else if (tab === 'extarch') parts.push(this._extarchPanel());
         else parts.push(this._boardPanel());
         if (this._flash) parts.push('<div class="ud-flash">' + this._esc(this._flash) + NL() + '</div>');
+        /* 页签条放在内容之下 —— 先把这一页给你，再让你换页。
+         *   类名与 data-act/data-key 一字未改，样式零改动。 */
+        parts.push(this._tabsBlock());
         return parts.join('');
     }
     _tabsBlock() {
@@ -979,10 +982,15 @@ export class UterusView {
         const root = this._root;
         if (!root) return;
         const self = this;
-        const acts = root.__all('[data-act]');
-        for (let i = 0; i < acts.length; i += 1) {
-            const el = acts[i];
-            el.addEventListener('click', function (ev) {
+        /* 点击只在根容器挂一次（_boundRoot 去重）：旧写法给每个 [data-act] 元素各挂
+         *   一个监听，元素一多就散成一片；且根在 refresh 之间是同一个，重挂会叠份。
+         *   向上找标记祖先走 parentNode —— 最小宿主桩子不一定实现 closest。 */
+        if (this._boundRoot !== root) {
+            this._boundRoot = root;
+            root.addEventListener('click', function (ev) {
+                let el = ev.target;
+                while (el && el !== root && !(el.getAttribute && el.getAttribute('data-act'))) el = el.parentNode;
+                if (!el || el === root) return;
                 const a = el.getAttribute('data-act');
                 if (a === 'tab') self._onTab(el, ev);
                 else self._onAction(a, el, ev);

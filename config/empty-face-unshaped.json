@@ -494,8 +494,8 @@
         "apps/mood/mood-view.js"
       ],
       "emptyTexts": 0,
-      "reason": "no-empty-face",
-      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+      "reason": "view-pending",
+      "note": "v4.164.0 / v4.166.0 照现实重写后心境视图真有了空态文案（「还没有…」类），原登记「无需分形」已与磁盘不符，按口径改登 view-pending 排队"
     },
     {
       "app": "periodmath",
@@ -503,8 +503,8 @@
         "apps/periodmath/periodmath-view.js"
       ],
       "emptyTexts": 0,
-      "reason": "no-empty-face",
-      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+      "reason": "view-pending",
+      "note": "v4.164.0 / v4.166.0 照现实重写后周期数学视图真有了空态文案（「还没有…」类），原登记「无需分形」已与磁盘不符，按口径改登 view-pending 排队"
     },
     {
       "app": "playbook",
@@ -537,8 +537,8 @@
         "apps/weather/weather-view.js"
       ],
       "emptyTexts": 0,
-      "reason": "no-empty-face",
-      "note": "本件没有空态文案（渲染面不产生空列表），无需分形"
+      "reason": "view-pending",
+      "note": "v4.164.0 / v4.166.0 照现实重写后天气视图真有了空态文案（「还没有…」类），原登记「无需分形」已与磁盘不符，按口径改登 view-pending 排队"
     },
     {
       "app": "workflow",

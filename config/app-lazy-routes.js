@@ -51,6 +51,7 @@ export const APP_LAZY_ROUTES = [
     { id: "avatarframe", module: "./apps/avatarframe/avatarframe-app.js", key: "avatarFrameApp", cls: "AvatarFrameApp", errTitle: "头像框App" },
     { id: "shop", module: "./apps/shop/shop-app.js", key: "shopApp", cls: "ShopApp", errTitle: "商城App" },
     { id: "block", module: "./apps/block/block-app.js", key: "blockApp", cls: "BlockApp", errTitle: "拉黑App" },
+        { id: "iot", module: "./apps/iot/iot-app.js", key: "iotApp", cls: "IotApp", errTitle: "智能家居" },
     { id: "weather", module: "./apps/weather/weather-app.js", key: "weatherApp", cls: "WeatherApp", errTitle: "天气App" },
     { id: "taobao", module: "./apps/taobao/taobao-app.js", key: "taobaoApp", cls: "TaobaoApp", errTitle: "桃宝App" },
     { id: "loverspace", module: "./apps/loverspace/loverspace-app.js", key: "loverApp", cls: "LoverSpaceApp", errTitle: "恋爱空间App" },
@@ -104,6 +105,7 @@ export const APP_LAZY_ROUTES = [
      *   故走表驱动装配器；生成侧注入由 App 自己挂 GENERATE_BEFORE_COMBINE_PROMPTS（F1 面）。 */
     { id: "affairs", module: "./apps/affairs/affairs-app.js", key: "affairsApp", cls: "AffairsApp", errTitle: "事务台App" },
     { id: "comms", module: "./apps/comms/comms-app.js", key: "commsApp", cls: "CommsApp", errTitle: "会话台App" },
+    { id: "share", module: "./apps/share/share-app.js", key: "shareApp", cls: "ShareApp", errTitle: "近场快传App" },
 ];
 
 /* 索引（appId → 行）：装配器查表用，一次建好避免每次 openApp 线性扫。 */

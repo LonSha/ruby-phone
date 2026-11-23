@@ -1,0 +1,29 @@
+/* iot.css - v4.186.0 智能家居中枢 */
+.iot-root { padding: 14px 14px 24px; display: flex; flex-direction: column; gap: 10px; }
+.iot-head { display: flex; align-items: center; gap: 8px; }
+.iot-back { border: 0; background: transparent; font-size: 20px; line-height: 1; padding: 4px 6px; cursor: pointer; }
+.iot-title { font-size: 17px; font-weight: 600; flex: 1; }
+.iot-face { font-size: 11px; padding: 3px 8px; border-radius: 10px; }
+.iot-face-ok { background: rgba(34,197,94,.14); color: #15803d; }
+.iot-face-warn { background: rgba(234,179,8,.16); color: #a16207; }
+.iot-face-err { background: rgba(239,68,68,.14); color: #b91c1c; }
+.iot-scenes { display: flex; gap: 8px; flex-wrap: wrap; }
+.iot-scene { border: 1px solid rgba(0,0,0,.1); background: #fff; border-radius: 12px; padding: 7px 12px; font-size: 13px; cursor: pointer; }
+.iot-scene-line { font-size: 12px; color: #6b7280; }
+.iot-flash { font-size: 12px; padding: 6px 10px; border-radius: 10px; background: rgba(59,130,246,.1); color: #1d4ed8; }
+.iot-cards { display: flex; flex-direction: column; gap: 10px; }
+.iot-card { border: 1px solid rgba(0,0,0,.08); border-radius: 14px; padding: 12px; background: #fff; opacity: .72; }
+.iot-card.is-on { opacity: 1; }
+.iot-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.iot-icon { font-size: 18px; }
+.iot-name { font-weight: 600; font-size: 14px; }
+.iot-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 6px; }
+.iot-k { width: 76px; color: #6b7280; }
+.iot-v { min-width: 68px; text-align: center; }
+.iot-range { font-size: 11px; color: #9ca3af; }
+.iot-step { border: 1px solid rgba(0,0,0,.12); background: #f9fafb; border-radius: 8px; width: 30px; height: 26px; cursor: pointer; }
+.iot-switch { border: 0; border-radius: 999px; padding: 5px 14px; font-size: 12px; background: #e5e7eb; color: #374151; cursor: pointer; }
+.iot-switch.is-on { background: #2563eb; color: #fff; }
+.iot-notes { font-size: 12px; color: #a16207; }
+.iot-foot { display: flex; justify-content: flex-end; }
+.iot-reset { border: 1px solid rgba(0,0,0,.12); background: #fff; border-radius: 10px; padding: 6px 12px; font-size: 12px; cursor: pointer; }

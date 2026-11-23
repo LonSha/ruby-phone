@@ -35,6 +35,11 @@ export class AlbumView {
         this._missingImagePaths = new Set();
         this.isDeleting = false;
         this.isBulkDeleting = false;
+        /* [v4.178.0] R25-O3 的四个字段在 ctor 里就位（此前靠 `||` 兜底）：
+         *   一处声明，读的人不必再从 render 里反推 `_mediaLive` 什么时候才有。 */
+        this._mediaLive = new Map();
+        this._mediaReceipts = [];
+        this._mediaReleasedTotal = 0;
         this.activeSource = 'all';
         this.sourceMenuOpen = false;
         /* [v4.99.9 · R11-X9] 回看页的**现场态**（只活在这一屏：换页即丢，不落盘）。
@@ -494,6 +499,11 @@ export class AlbumView {
     bindReplayEvents() {
         const root = (document.querySelector('.phone-view-current') || document).querySelector('.album-app');
         if (!root) return;
+        /* [v4.178.0] 同一批节点只挂一次：同帧两次 render 各排一个 rAF，两个回调都落在
+         *   **最后那一个**新根上。旧写法在这里挂第二份监听：`data-replay-program` 被点一下
+         *   会 render 两遍，幕次按钮同理——观感是「点了一次，页面闪两下」。 */
+        if (this._replayBoundRoot === root) return;
+        this._replayBoundRoot = root;
         root.querySelector('#album-back')?.addEventListener('click', () => {
             this.exitReplay();
         });
@@ -573,6 +583,13 @@ export class AlbumView {
             return;
         }
         if (msg) msg.textContent = String((r && r.message) || '解锁失败（内核没给原因）');
+        /* [v4.178.0] 错一次就清空并聚焦：内核连错 3 次要锁 30 秒，输入框留着上一串错密码时，
+         *   用户再按一次回车就是又白烧一次机会——而他自己看不出这下按的是旧串还是新的。 */
+        const pinEl = root?.querySelector('#album-vault-pin');
+        if (pinEl) {
+            pinEl.value = '';
+            try { pinEl.focus?.(); } catch (_e) { /* 忽略 */ }
+        }
     }
 
     /** 离开回看页：**顺手重新上锁**（保险箱不跟着模式切换一直开着）。 */
@@ -672,6 +689,12 @@ export class AlbumView {
     bindEvents() {
         const root = (document.querySelector('.phone-view-current') || document).querySelector('.album-app');
         if (!root) return;
+        /* [v4.178.0] 同一批节点只挂一次（重绘会换节点，故按根节点身份判重，不必手工解绑）。
+         *   修前同帧两次 render ⇒ 两个 rAF 都绑在同一个新根上：分类按钮里那句
+         *   `this.sourceMenuOpen = !this.sourceMenuOpen` 会翻转两次，等于菜单点不开；
+         *   点照片则会开两遍预览（多登记一个媒体句柄，只能等 FIFO 挤出去）。 */
+        if (this._boundRoot === root) return;
+        this._boundRoot = root;
         root.querySelector('#album-back')?.addEventListener('click', () => {
             if (this.selectionMode) {
                 this.selectionMode = false;
@@ -824,6 +847,9 @@ export class AlbumView {
         const root = (document.querySelector('.phone-view-current') || document).querySelector('.album-app');
         /* 换图先走一遍释放：直接 remove() 旧覆盖层会留下一条「挂过 DOM 但没人摘 src」的句柄。 */
         if (root?.querySelector('.album-preview')) this.releasePreviewMedia();
+        /* [v4.178.0] 开预览前把「分类」浮层收掉：它是原地 toggle 出来的，不经过重绘，
+         *   不剥这一下就会留在覆盖层后面亮着——关掉预览时用户看见一个没点过的菜单。 */
+        this.closeSourceMenu(root);
         root?.querySelector('.album-preview')?.remove();
         /* [R25-O3] 打开预览就把这条媒体登记进台账：**先登记再挂 DOM**，否则「挂上了但没登记」
          *   的句柄永远没人释放（这正是修前那 20 张原图的下场）。超上限的旧句柄按计划当场释放。 */
@@ -1039,7 +1065,10 @@ export class AlbumView {
         } finally {
             this.isDeleting = false;
         }
-        this.previewOpen = false;
+        /* [v4.178.0] 从预览里删掉：先按台账口径把这条媒体的 src 摘掉、写回执，再重绘。
+         *   修前只把 previewOpen 置 false 就 render —— 覆盖层随重绘一起没了，可句柄还挂在
+         *   `_mediaLive` 上：工具条永远显示「有 1 条活着」，而且再没有任何人释放过它。 */
+        this.closePreview();
         this.render();
     }
 

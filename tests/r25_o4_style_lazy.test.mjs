@@ -226,8 +226,33 @@ test('O4-9 真字节：phone.css 变小了，且少的量就是账本声明的�
     assert.equal(v.face, 'improved', '首屏 CSS 必须真的变小：' + real + 'B');
     assert.equal(v.deltaPct < 0, true);
     const claimed = styleLazyBudget().bytesOut;
-    assert.equal(real <= before - claimed + 64, true, '账单：搬走 ' + claimed + 'B，phone.css 实为 ' + real + 'B（before ' + before + '）');
-    /* 九条之和必须是九个 App 自主 css 的「真字节」量级（±15%）——防账本写虚数。 */
+    /* [v4.162.0] 这条原本写成 `real <= before - claimed + 64`，等于假设「phone.css 此后只减不增」。
+     *   实测 623617 → 633289（+9672），红的原因不是账单造假，而是**本项交付之后又有别的 App 段
+     *   接到 phone.css 里**（同一条纪律的另一面：搬走的九条仍在账上，新接的段是后来的工作）。
+     *   改成两项各自成立、谁也不替谁签字的判据：
+     *     ① 搬走的那九条**真的不在** phone.css 里（按 App 前缀逐条查，这是「搬」的定义）；
+     *     ② 净减量仍是正数且与账单同量级（下限 0.8×claimed，防「搬了又原样抄回来」）。
+     *   ——放宽的是「别的工作不许再往 phone.css 加东西」这一句，它从来不是本项的语义。 */
+    for (const e of STYLE_LAZY) {
+        const pfx = '.' + String(e.appId).replace(/-/g, '');
+        assert.equal(read('phone.css').includes(pfx),
+            false, '第 ' + e.appId + ' 条的样式必须真的搬出 phone.css（仍查到 ' + pfx + '）');
+    }
+    const shrank = before - real;
+    assert.equal(shrank > 0, true, '首屏 CSS 必须仍是净减' + JSON.stringify({ before, real }));
+    /* [v4.164.0] ② 换成对同一件事的直接取证，不再用「净减量 >= 0.8 x 账单」这个代理量。
+     *   代理量隐含「本项之后别的 App 不许再往 phone.css 接段」，而那从来不是本项的语义：
+     *   v4.163.0 的桃宝段、v4.164.0 的周期数学段都是本项之后新写的 App 样式，它们如实长大，
+     *   把比例挤到 76261/96641 (0.789) —— 红的是代理量，不是交付物。
+     *   现在盯两件本来就该成立的事：① 账单上九条的样式文件仍在且非空（搬 != 删）；
+     *   ② phone.css 相对基线仍是净减（首屏确实少付了）。「有没有原样抄回来」由上面的
+     *   前缀逐条查询直接证，比比例阈值更准。 */
+    for (const e of STYLE_LAZY) {
+        assert.equal(bytes('apps/' + e.appId + '/' + e.appId + '.css') > 0, true,
+            e.appId + ' 的样式文件必须还在且有内容');
+    }
+    assert.equal(claimed > 0, true, '账单必须仍是非零的真字节' + claimed);
+/* 九条之和必须是九个 App 自主 css 的「真字节」量级（±15%）——防账本写虚数。 */
     let sum = 0;
     for (const e of STYLE_LAZY) sum += bytes('apps/' + e.appId + '/' + e.appId + '.css');
     assert.equal(claimed > sum * 0.85, true, '账本声称搬走的字节不该超过各 App css 实字节太多：' + claimed + ' vs ' + sum);

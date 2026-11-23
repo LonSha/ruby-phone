@@ -145,20 +145,22 @@ test('D2: home-screen 暴露掌机 B 键入口 pressPixelBack', () => {
   assert.ok(src.includes('renderClusterTile'), 'home-screen 必须有 renderClusterTile');
 });
 
-test('D3: pixel-skin.css 隐藏各 App 私有返回按钮', () => {
+test('D3: 像素风已按用户要求移除 —— pixel-skin.css 必须保持空壳', () => {
+  /* 【v4.185.0 交棒改写】本判据原钉「pixel-skin.css 必须隐藏各 App 私有返回按钮」（v4.92.0 像素风全量重绘时成立）。
+   *   2026-11-21 用户明确要求移除像素风，提交 bbd7167 把该文件清成空壳（原内容留在 git 历史）。
+   *   判据钉的应该是**当前决策**，不是写下它那天的状态，故反转为「必须保持空壳」：
+   *   谁想把它填回去，先得删掉这条判据 —— 不许悄悄塞回 !important 把新外观压掉。 */
   const css = read('phone/pixel-skin.css');
-  for (const sel of ['.wechat-back-btn', '.ach-back-btn', '.tb-back-btn', '.hl-back-btn']) {
-    assert.ok(css.includes(sel), 'pixel-skin 必须隐藏 ' + sel);
-  }
-  assert.ok(/display\s*:\s*none\s*!important/.test(css), '私有返回必须 display:none!important');
+  assert.ok(css.length < 600, 'pixel-skin.css 必须保持空壳（实测 ' + css.length + ' 字节）');
+  assert.ok(css.includes('故意留空'), '空壳必须写明「故意留空」的理由（防后人当成漏删又填回去）');
+  assert.equal(/display\s*:\s*none\s*!important/.test(css), false, '本文件不得再用 !important 压制任何 App 私有元素');
 });
 
 /* ══════════════════ E 摄像头不压正文 ══════════════════ */
-test('E1: 灵动岛改左上像素点，z-index 不再悬浮压正文', () => {
+test('E1: 像素风移除后不再定义 .phone-punch-hole（镜头点压制随像素风一起消失）', () => {
+  /* 同上：v4.92.0 曾把灵动岛改成左上 8px 像素点；像素风移除后这条规则不该再存在于本文件。 */
   const css = read('phone/pixel-skin.css');
-  assert.ok(/\.phone-punch-hole\{[^}]*left:8px/.test(css.replace(/\n/g,'')), '镜头点须在左上 left:8px');
-  assert.ok(/\.phone-punch-hole\{[^}]*width:8px/.test(css.replace(/\n/g,'')), '镜头点须 8px');
-  assert.ok(/\.phone-punch-hole\{[^}]*z-index:6/.test(css.replace(/\n/g,'')), '镜头点 z-index 须降到 6（不压正文）');
+  assert.equal(css.indexOf('.phone-punch-hole') < 0, true, '本文件不应再定义镜头点样式（决策已改为移除像素风）');
 });
 
 test('E2: 像素壁纸为合法像素 SVG', () => {

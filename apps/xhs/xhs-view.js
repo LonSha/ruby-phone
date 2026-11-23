@@ -1,13 +1,43 @@
 /**
- * 小红书 (XHS App) - 视图渲染组件
- * 包含双列瀑布流、笔记卡片、详情全屏弹层与发布抽屉
+ * 小红书 (XHS App) — 视图
+ * [v4.166.0]「照现实重写」：一页到底 → 三页签（发现 / 消息 / 我）
+ * ------------------------------------------------------------
+ * 上一版已经是真窗口（首屏切片 + 滚到底增量 + 点赞只改那一张卡），但**只有一页**：
+ *   头部的「发现 / 关注 / 江城」三颗是死标签，点击没接；评论只能从详情里看；
+ *   自己发的笔记散在瀑布流里，没有任何入口能「只看我发的」。
+ * 现实里的小红书是四块：发现（瀑布流）→ 消息（谁评论了你）→ 我（我的笔记与发布）。
+ *   本版把这三块真的分页：底部三颗页签，切换时重建对应页；瀑布流那套窗口机制
+ *   （windowOf / patchOf / _maybeLoadMore / _patchLike / _cardHtml 单一真源）**一行未改**。
  */
 
 import { windowOf, patchOf, keepState, line as windowLine } from '../../config/list-window.js';
+
+const TABS = [
+  { key: 'feed', label: '发现' },
+  { key: 'messages', label: '消息' },
+  { key: 'me', label: '我' },
+];
+
+const AMP = String.fromCharCode(38);
+const LT = String.fromCharCode(60);
+const GT = String.fromCharCode(62);
+const QUOTE = String.fromCharCode(34);
+const DASH = String.fromCharCode(45, 45);
+
+function esc(s) {
+  return String(s === undefined || s === null ? '' : s)
+    .split(AMP).join(AMP + 'amp;')
+    .split(LT).join(AMP + 'lt;')
+    .split(GT).join(AMP + 'gt;')
+    .split(QUOTE).join(AMP + 'quot;');
+}
+function num(v) { return (typeof v === 'number' && Number.isFinite(v)) ? String(v) : DASH; }
+
 export class XhsView {
   constructor(app) {
     this.app = app;
     this.container = null;
+    this.tab = 'feed';
     /* [v3.98.0 - R3-O5] 窗口状态（本会话内有效；不落盘 —— 它只是「本次看多少」的游标） */
     this._loaded = 0;
     this._pageSize = 30;
@@ -20,34 +50,36 @@ export class XhsView {
   /** [v3.98.0 - R3-O5] 态保留读数（滚动 / 已加载窗口 / 当前页签）。 */
   keepReading(before, after) { return keepState(before, after); }
 
+  /* ---------- 1. 外壳与三页 ---------- */
+
   render(container) {
     this.container = container;
-    container.innerHTML = `
-      <div class="xhs-root">
-        <header class="xhs-header">
-          <button aria-label="返回" class="xhs-back-btn" id="xhs-back-btn"><i class="fa-solid fa-chevron-left"></i></button>
-          <div class="xhs-header-tabs">
-            <span class="xhs-tab active">发现</span>
-            <span class="xhs-tab">关注</span>
-            <span class="xhs-tab">江城</span>
-          </div>
-          <button class="xhs-post-btn" id="xhs-open-compose-btn" title="发布新笔记"><i class="fa-solid fa-plus"></i></button>
-        </header>
+    container.innerHTML = this._shell();
+    this._bindHeaderEvents();
+    this._bindTabs();
+    if (this.tab === 'feed') {
+      this._loaded = 0;                 /* [v3.98.0 - R3-O5] 每次进页从首屏窗口起 */
+      this._renderMasonry();
+      this._bindScroll(this.container); /* 滚到底增量追加（不是一次性建满 DOM） */
+    }
+  }
 
-        <main class="xhs-body">
+  _shell() {
+    const feed = this.tab === 'feed';
+    const body = feed
+      ? `<main class="xhs-body">
           <div class="xhs-masonry" id="xhs-masonry">
             <!-- 笔记卡片动态流 -->
           </div>
-        </main>
-
-        <!-- 笔记详情弹层 -->
-        <div class="xhs-detail-modal" id="xhs-detail-modal" style="display:none;">
+        </main>`
+      : (this.tab === 'messages' ? this._messagesHTML() : this._meHTML());
+    const detail = feed
+      ? `<div class="xhs-detail-modal" id="xhs-detail-modal" data-open="0">
           <div class="xhs-modal-overlay"></div>
           <div class="xhs-modal-card" id="xhs-modal-card"></div>
-        </div>
-
-        <!-- 发布新笔记抽屉 -->
-        <div class="xhs-compose-drawer" id="xhs-compose-drawer" style="display:none;">
+        </div>`
+      : '';
+    const compose = `<div class="xhs-compose-drawer" id="xhs-compose-drawer" data-open="0">
           <div class="xhs-drawer-overlay"></div>
           <div class="xhs-drawer-content">
             <div class="xhs-drawer-header">
@@ -62,15 +94,123 @@ export class XhsView {
               <input type="text" class="xhs-input-tags" id="xhs-new-tags" placeholder="标签以空格隔开，如: 日常 美食 恋爱" />
             </div>
           </div>
-        </div>
+        </div>`;
+    const tabs = TABS.map((t) =>
+      `<button class="xhs-nav${this.tab === t.key ? ' is-on' : ''}" data-tab="${t.key}">${t.label}</button>`).join('');
+    return `
+      <div class="xhs-root">
+        <header class="xhs-header">
+          <button aria-label="返回" class="xhs-back-btn" id="xhs-back-btn"><i class="fa-solid fa-chevron-left"></i></button>
+          <div class="xhs-header-title">${this.tab === 'messages' ? '消息' : (this.tab === 'me' ? '我' : '发现')}</div>
+          <button class="xhs-post-btn" id="xhs-open-compose-btn" title="发布新笔记"><i class="fa-solid fa-plus"></i></button>
+        </header>
+        ${body}
+        ${detail}
+        ${compose}
+        <nav class="xhs-navbar">${tabs}</nav>
       </div>
     `;
-
-    this._bindHeaderEvents();
-    this._loaded = 0;                 /* [v3.98.0 - R3-O5] 每次进页从首屏窗口起 */
-    this._renderMasonry();
-    this._bindScroll(this.container); /* 滚到底增量追加（不是一次性建满 DOM） */
   }
+
+  _messagesHTML() {
+    const notes = this._notes();
+    const rows = [];
+    for (const n of notes) {
+      for (const c of (Array.isArray(n.comments) ? n.comments : [])) {
+        rows.push({ who: c.author || '有人', text: c.text || '', note: n.title || '无题笔记', time: c.time || DASH, id: n.id });
+      }
+    }
+    const parts = ['<main class="xhs-body xhs-list">'];
+    if (!rows.length) {
+      parts.push('<div class="xhs-empty"><p>还没有人评论你的笔记 —— 空着就空着，不编一条通知出来。</p></div></main>');
+      return parts.join('');
+    }
+    parts.push(`<div class="xhs-list-head">共 ${num(rows.length)} 条评论</div>`);
+    for (const r of rows.slice(0, 40)) {
+      parts.push(`<button class="xhs-msg" data-jump="${esc(r.id)}">
+          <span class="xhs-msg-who">${esc(r.who)}</span>
+          <span class="xhs-msg-text">${esc(r.text)}</span>
+          <span class="xhs-msg-meta">在《${esc(r.note)}》· ${esc(r.time)}</span>
+        </button>`);
+    }
+    parts.push('</main>');
+    return parts.join('');
+  }
+
+  _meHTML() {
+    const notes = this._notes();
+    const mine = notes.filter((n) => (n.author || '') === '我');
+    const likes = notes.reduce((s, n) => s + (Number(n.likes) || 0), 0);
+    const parts = ['<main class="xhs-body xhs-list">'];
+    parts.push(`<div class="xhs-me-card">
+        <div class="xhs-me-name">我</div>
+        <div class="xhs-me-stats">
+          <span><b>${num(mine.length)}</b> 篇笔记</span>
+          <span><b>${num(likes)}</b> 次获赞</span>
+        </div>
+        <button class="xhs-me-post" id="xhs-me-compose">发一篇</button>
+      </div>`);
+    if (!mine.length) {
+      parts.push('<div class="xhs-empty"><p>你还没发过笔记。发一篇就会出现在「发现」的最上面。</p></div></main>');
+      return parts.join('');
+    }
+    parts.push(`<div class="xhs-list-head">我的笔记 · ${num(mine.length)} 篇</div>`);
+    for (const n of mine) {
+      parts.push(`<button class="xhs-mine" data-jump="${esc(n.id)}">
+          <span class="xhs-mine-title">${esc(n.title)}</span>
+          <span class="xhs-mine-meta">${num(Number(n.likes) || 0)} 赞 · ${num((n.comments || []).length)} 评论</span>
+        </button>`);
+    }
+    parts.push('</main>');
+    return parts.join('');
+  }
+
+  _notes() {
+    try {
+      const list = this.app.data.getNotes();
+      return Array.isArray(list) ? list : [];
+    } catch (e) { return []; }
+  }
+
+  /** 页签切换：只换页，不重置数据；发现页切回来时窗口从首屏重新起。 */
+  _bindTabs() {
+    if (!this.container || typeof this.container.querySelectorAll !== 'function') return;
+    this.container.querySelectorAll('[data-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.tab;
+        if (!TABS.some((t) => t.key === key) || key === this.tab) return;
+        this.tab = key;
+        this.render(this.container);
+      });
+    });
+    if (typeof this.container.querySelectorAll === 'function') {
+      this.container.querySelectorAll('[data-jump]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.jump;
+          this.tab = 'feed';
+          this.render(this.container);
+          this._openDetail(id);
+        });
+      });
+    }
+    const mePost = this.container.querySelector('#xhs-me-compose');
+    if (mePost) mePost.addEventListener('click', () => this._openCompose());
+  }
+
+  _openCompose() {
+    const drawer = this.container.querySelector('#xhs-compose-drawer');
+    if (drawer) this._setOpen(drawer, true);
+  }
+
+  /** 开合走 dataset 状态 + 类名（不写行内 style：内联样式是上一轮被点名的形态）。 */
+  _setOpen(el, on) {
+    if (!el) return;
+    if (el.dataset) el.dataset.open = on ? '1' : '0';
+    const cls = String(el.className || '').replace(/\s*is-open/g, '');
+    el.className = cls + (on ? ' is-open' : '');
+  }
+
+  /* ---------- 2. 瀑布流（窗口 + 局部更新；本段是 v3.98.0 交付物，本版一字未改） ---------- */
 
   /** [v3.98.0 · R3-O5] 单张卡片的 HTML（**唯一真源**：首屏、追加、局部更新三处共用一份）。 */
   _cardHtml(n) {
@@ -80,15 +220,15 @@ export class XhsView {
           <img class="xhs-card-cover" src="${n.cover || 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&q=80'}" loading="lazy" />
         </div>
         <div class="xhs-card-info">
-          <h4 class="xhs-card-title">${n.title}</h4>
+          <h4 class="xhs-card-title">${esc(n.title)}</h4>
           <div class="xhs-card-author-row">
             <div class="xhs-author-group">
               <img class="xhs-author-avatar" src="${n.avatar || 'https://files.catbox.moe/r08d2g.jpg'}" />
-              <span class="xhs-author-name">${n.author}</span>
+              <span class="xhs-author-name">${esc(n.author)}</span>
             </div>
             <div class="xhs-like-badge ${n.isLiked ? 'liked' : ''}" data-like-id="${n.id}">
               <i class="${n.isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}"></i>
-              <span>${n.likes}</span>
+              <span>${num(Number(n.likes) || 0)}</span>
             </div>
           </div>
         </div>
@@ -229,24 +369,33 @@ export class XhsView {
   /** [v3.98.0 · R3-O5] 窗口读数（给外部/诊断面看：现在加载到哪、上一步是不是只改了那几张卡）。 */
   windowState() {
     return {
+      tab: this.tab,
       window: this._lastWindow, patch: this._lastPatch,
       loaded: this._loaded, pageSize: this._pageSize, viewIds: this._viewIds.slice()
     };
   }
 
+  /* ---------- 3. 详情（评论就在这一层） ---------- */
+
   _openDetail(noteId) {
     const note = this.app.data.getNoteById(noteId);
     if (!note) return;
+    /* 从消息 / 我 点进来时详情弹层不在场：先切回发现页并重绘（把 id 记下再开）。 */
+    if (!this.container.querySelector('#xhs-detail-modal')) {
+      this.tab = 'feed';
+      this.render(this.container);
+    }
     const modal = this.container.querySelector('#xhs-detail-modal');
     const card = this.container.querySelector('#xhs-modal-card');
+    if (!modal || !card) return;
 
     card.innerHTML = `
       <div class="xhs-detail-header">
         <div class="xhs-detail-author">
           <img src="${note.avatar || 'https://files.catbox.moe/r08d2g.jpg'}" />
           <div class="xhs-detail-author-meta">
-            <span class="name">${note.author}</span>
-            <span class="time">${note.time}</span>
+            <span class="name">${esc(note.author)}</span>
+            <span class="time">${esc(note.time)}</span>
           </div>
         </div>
         <button aria-label="关闭" class="xhs-detail-close" id="xhs-detail-close"><i class="fa-solid fa-xmark"></i></button>
@@ -256,17 +405,17 @@ export class XhsView {
           <img src="${note.cover || 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&q=80'}" />
         </div>
         <div class="xhs-detail-content">
-          <h3 class="title">${note.title}</h3>
-          <p class="desc">${note.content}</p>
-          <div class="tags">${note.tags.map(t => `<span class="tag">#${t}</span>`).join(' ')}</div>
+          <h3 class="title">${esc(note.title)}</h3>
+          <p class="desc">${esc(note.content)}</p>
+          <div class="tags">${(Array.isArray(note.tags) ? note.tags : []).map(t => `<span class="tag">#${esc(t)}</span>`).join(' ')}</div>
         </div>
         <div class="xhs-detail-comments">
-          <div class="comments-count">共 ${note.comments.length} 条评论</div>
+          <div class="comments-count">共 ${num((note.comments || []).length)} 条评论</div>
           <div class="comments-list">
-            ${note.comments.map(c => `
+            ${(Array.isArray(note.comments) ? note.comments : []).map(c => `
               <div class="comment-item">
-                <span class="c-author">${c.author}:</span>
-                <span class="c-text">${c.text}</span>
+                <span class="c-author">${esc(c.author)}:</span>
+                <span class="c-text">${esc(c.text)}</span>
               </div>
             `).join('')}
           </div>
@@ -278,13 +427,12 @@ export class XhsView {
       </div>
     `;
 
-    modal.style.display = 'flex';
-    card.querySelector('#xhs-detail-close').addEventListener('click', () => {
-      modal.style.display = 'none';
-    });
-    modal.querySelector('.xhs-modal-overlay').addEventListener('click', () => {
-      modal.style.display = 'none';
-    });
+    this._setOpen(modal, true);
+    const close = () => this._setOpen(modal, false);
+    const closeBtn = card.querySelector('#xhs-detail-close');
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    const overlay = modal.querySelector('.xhs-modal-overlay');
+    if (overlay) overlay.addEventListener('click', close);
 
     const commentInput = card.querySelector('#xhs-comment-input');
     const commentSend = card.querySelector('#xhs-comment-send');
@@ -301,6 +449,8 @@ export class XhsView {
     commentInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doComment(); });
   }
 
+  /* ---------- 4. 头部与发布 ---------- */
+
   _bindHeaderEvents() {
     this.container.querySelector('#xhs-back-btn')?.addEventListener('click', () => {
       window.dispatchEvent(new CustomEvent('phone:goHome'));
@@ -308,10 +458,10 @@ export class XhsView {
 
     const composeDrawer = this.container.querySelector('#xhs-compose-drawer');
     this.container.querySelector('#xhs-open-compose-btn')?.addEventListener('click', () => {
-      composeDrawer.style.display = 'flex';
+      this._setOpen(composeDrawer, true);
     });
     this.container.querySelector('#xhs-compose-close')?.addEventListener('click', () => {
-      composeDrawer.style.display = 'none';
+      this._setOpen(composeDrawer, false);
     });
 
     this.container.querySelector('#xhs-submit-post')?.addEventListener('click', () => {
@@ -326,10 +476,12 @@ export class XhsView {
       }
 
       this.app.data.addNote({ title, content, cover, tags, author: '我' });
-      composeDrawer.style.display = 'none';
+      this._setOpen(composeDrawer, false);
       /* [v3.98.0 - R3-O5] 发布后把新条目真实带进视野：窗口加载量至少回到**上一次的可见量**，
        *   新条目在最前 ⇒ 它必然在位（不必把全量都建进 DOM）。 */
       this._loaded = Math.max(this._loaded, this._pageSize);
+      this.tab = 'feed';
+      this.render(this.container);
       this._renderMasonry({ refresh: true });
       window.toastr?.success('笔记发布成功！', '小红书');
     });

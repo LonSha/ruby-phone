@@ -308,7 +308,7 @@ export class ReadingView {
             <div class="rd-excerpt">
                 <div class="rd-excerpt-text" style="font-size:12px">${r ? esc(this._findLine(r)) : '还没找过。**扫全书**，末章与跨段的命中都能找到。'}</div>
             </div>
-            <div class="rd-find-progress rd-excerpt-text" style="font-size:12px">${esc(this._findProgressLine())}</div>
+            <div class="rd-find-progress rd-excerpt-text" data-rd-prog="find" style="font-size:12px">${esc(this._findProgressLine())}</div>
             ${rows}`;
     }
     /**
@@ -325,6 +325,19 @@ export class ReadingView {
         if (p.phase === 'index-reused') return '这本这一版已经建过索引，直接用（' + String(p.total) + ' 章）';
         return '';
     }
+    /** [v4.179.0] 进度只就地改读数行（find / research 各自一格）。
+     *   返回 false 表示这一格在屏上取不到（换页了 / 无头环境）—— 调用方再回落整屏重绘，
+     *   保证「进度停在旧值」这条不会成为一个新的沉默缺陷。 */
+    _paintProgress(which) {
+        const host = this.app?.phoneShell?.screen || (typeof document !== 'undefined' ? document : null);
+        if (!host || typeof host.querySelectorAll !== 'function') return false;
+        const nodes = host.querySelectorAll('[data-rd-prog="' + which + '"]');
+        if (!nodes || !nodes.length) return false;
+        const text = which === 'research' ? this._researchProgressLine() : this._findProgressLine();
+        for (const node of nodes) { if (node) node.textContent = text; }
+        return true;
+    }
+
     /** 取消正在跑的那一轮查找（[v4.34.0 · R5-O7]）。 */
     cancelFind() {
         const r = this.app.cancelFind ? this.app.cancelFind() : { ok: false, why: 'no-task（这一轮没有正在跑的查找）' };
@@ -359,7 +372,14 @@ export class ReadingView {
         try {
             res = await this.app.searchBook(query, {
                 task: task,
-                onProgress: (p) => { this._findProgress = p; if (this.phoneShell?.screen) this.render(); },
+                onProgress: (p) => {
+                    this._findProgress = p;
+                    /* [v4.179.0] 修前这里写的是 `this.phoneShell?.screen` —— 本视图**没有**
+                     *   这个属性（只有 `this.app.phoneShell`），守卫恒假：整轮查找一次都不重绘，
+                     *   用户永远停在「正在建索引…」，看不到 3/120 这种读数。
+                     *   改成只就地改那一行读数：既不整屏重排整章正文，也不再依赖不存在的属性。 */
+                    if (!this._paintProgress('find') && this.app.phoneShell?.screen) this.render();
+                },
             });
         } catch (_e) { res = null; }
         this._findRunning = false;
@@ -551,7 +571,11 @@ export class ReadingView {
         try {
             res = await this.app.researchListAsync({
                 task: task,
-                onProgress: (p) => { this._researchProgress = p; if (this.app.phoneShell?.screen) this.render(); },
+                onProgress: (p) => {
+                    /* [v4.179.0] 同上：核对清单要读几十本书的正文，进度只改读数行，不重排整屏。 */
+                    this._researchProgress = p;
+                    if (!this._paintProgress('research') && this.app.phoneShell?.screen) this.render();
+                },
             });
         } catch (_e) { res = null; }
         this._researchRunning = false;
@@ -863,7 +887,7 @@ export class ReadingView {
                 <div class="rd-excerpt">
                     <div class="rd-excerpt-text" style="font-size:12px">${esc(this.researchText())}</div>
                 </div>
-                <div class="rd-find-progress rd-excerpt-text" style="font-size:12px">${esc(this._researchProgressLine())}</div>
+                <div class="rd-find-progress rd-excerpt-text" data-rd-prog="research" style="font-size:12px">${esc(this._researchProgressLine())}</div>
                 <div class="rd-shelf-head" style="margin-top:18px">
                     <h2>🗂 跨书专题夹</h2>
                     <span style="font-size:11px;color:${tc.sub}">原句 / 我的解释 / 反证 三栏</span>

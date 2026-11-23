@@ -146,7 +146,13 @@ test('B1: 应用库入口在 dock 上真存在，且点击链路指向 openLibra
     assert.ok(/renderLibraryDockTile\(\)\s*\{/.test(home), 'renderLibraryDockTile 必须定义');
     /* 入口格带 data-app=__library ⇒ 走 openApp 的伪 id 分支。 */
     assert.ok(home.includes('data-app="${APP_LIBRARY_ENTRY_ID}"'), '入口格必须带伪 id 供点击分流');
-    assert.equal(countOf(home, 'this.openLibrary()'), 1, 'openLibrary 必须恰有一处真调用');
+    /* [v4.182.0 交棒改写] 由「恰有一处」改为「两处，且两处都点名」：dock 的库入口格一处、搜索按钮一处。
+     *   钉 1 处是在搜索按钮接进来之前写的；接进来之后这条就读成了「死代码检查失败」，
+     *   而它要守的本意是「不是死代码」，不是「只许一个入口」。将来加第三个入口必须改这一行。 */
+    const libCalls = countOf(home, 'this.openLibrary()');
+    assert.equal(libCalls, 2, 'openLibrary 必须恰有两处真调用（dock 库入口 + 搜索按钮）');
+    assert.ok(home.indexOf("searchBtn.addEventListener('click', () => this.openLibrary())") >= 0, '搜索按钮那处必须仍是点击直连');
+    assert.ok(home.indexOf('this.openLibrary();') >= 0, 'dock 入口那处必须仍在');
     /* openApp 的伪 id 分流仍在。 */
     assert.ok(/appId === APP_LIBRARY_ENTRY_ID/.test(home), 'openApp 必须保留伪 id 分流');
 });

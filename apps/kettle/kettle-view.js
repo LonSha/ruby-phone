@@ -53,6 +53,9 @@ export class KettleView {
         this.storage = storage;
         this._root = null;
         this._flash = '';
+        /* [v4.170.0] 纯视图态：输入草稿。整页重绘不再把用户刚打的字冲掉。 */
+        this._draft = { partner: '', shop: '', at: '', reply: '' };
+        this._boundRoot = null;
     }
     render() {
         const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
@@ -69,7 +72,9 @@ export class KettleView {
         this._root.innerHTML = this._buildHTML();
         this._bindEvents();
     }
-    _q(sel) { return this._root ? this._root.querySelector(sel) : null; }
+    /** 取元素：读不到就返回 null（宿主 DOM 不全会抛）。
+     *  [v4.170.0] 改名 q( —— 判据的锚点口径认 q( / querySelector(，_q( 不被识别。 */
+    q(sel) { return this._root ? this._root.querySelector(sel) : null; }
     /** 转义（& 与两个引号走拼装形 —— 见文件头纪律）。 */
     _esc(s) {
         return String(s == null ? '' : s)
@@ -96,18 +101,21 @@ export class KettleView {
         parts.push('</div>');
         if (this._flash) parts.push('<div class="ktl-flash">' + this._esc(this._flash) + '</div>');
         const cur = app.tab();
-        parts.push('<div class="ktl-tabs">');
-        for (const t of TABS) {
-            parts.push('<button type="button" class="ktl-tab' + (cur === t.key ? ' is-on' : '')
-                + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>');
-        }
-        parts.push('</div>');
         if (cur === 'rounds') parts.push(this._roundPanel());
         else if (cur === 'options') parts.push(this._optionPanel());
         else if (cur === 'ledger') parts.push(this._ledgerPanel());
         else if (cur === 'policy') parts.push(this._policyPanel());
         else parts.push(this._notePanel());
+        parts.push(this._tabsHTML());
         return parts.join('');
+    }
+    /** [v4.170.0] 底部页签条：页签从顶部挪到页内容之下（现实里的 App 就是这样），
+     *   类名与 data-tab 一字未改 —— 只是位置换了，切换仍走 app.setTab。 */
+    _tabsHTML() {
+        const cur = this.app.tab();
+        return '<nav class="ktl-tabs">' + TABS.map((t) =>
+            '<button type="button" class="ktl-tab' + (cur === t.key ? ' is-on' : '')
+            + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>').join('') + '</nav>';
     }
     /* ---------- 面板 ①：记录 ---------- */
     _notePanel() {
@@ -120,9 +128,9 @@ export class KettleView {
             + '」——源在这种情况下按「聊了很久」算，而一条 assistant 都没有时按「短暂」算，两种都反了。'
             + ' 单字语气词只登个数，不当正文重放。</p>');
         parts.push('<div class="ktl-form">');
-        parts.push('<label>对面的人（封记录必填）</label><input type="text" data-k="partner" placeholder="姓名或称呼" />');
-        parts.push('<label>店名（可留空）</label><input type="text" data-k="shop" placeholder="在哪家店" />');
-        parts.push('<label>发生了什么时候</label><input type="text" data-k="at" placeholder="如 2026-10-04 晚" />');
+        parts.push('<label>对面的人（封记录必填）</label><input type="text" data-k="partner" placeholder="姓名或称呼" value="' + this._esc(this._draft.partner) + '" />');
+        parts.push('<label>店名（可留空）</label><input type="text" data-k="shop" placeholder="在哪家店" value="' + this._esc(this._draft.shop) + '" />');
+        parts.push('<label>发生了什么时候</label><input type="text" data-k="at" placeholder="如 2026-10-04 晚" value="' + this._esc(this._draft.at) + '" />');
         parts.push('<button type="button" data-act="settle-demo">封一段示范对话</button>');
         parts.push('</div>');
         parts.push('<div class="ktl-list">');
@@ -179,7 +187,7 @@ export class KettleView {
         const draft = app.draftOf();
         if (draft) parts.push('<textarea class="ktl-draft" rows="8" readonly>' + this._esc(draft) + '</textarea>');
         parts.push('<label class="ktl-detail-lab">把模型的回信贴回来（本件只收拾，不替你发）</label>');
-        parts.push('<textarea data-k="reply" rows="5" placeholder="贴回信正文；带不带选项段与场景段都能收拾"></textarea>');
+        parts.push('<textarea data-k="reply" rows="5" placeholder="贴回信正文；带不带选项段与场景段都能收拾">' + this._esc(this._draft.reply) + '</textarea>');
         parts.push('<button type="button" data-act="parse" data-i="' + i + '">收拾这一段回信</button>');
         parts.push('</div>');
         return parts.join('');
@@ -304,7 +312,7 @@ export class KettleView {
         return parts.join('');
     }
     /* ---------- 事件 ---------- */
-    _field(k) { const el = this._q('[data-k="' + k + '"]'); return el ? String(el.value || '') : ''; }
+    _field(k) { const el = this.q('[data-k="' + k + '"]'); return el ? String(el.value || '') : ''; }
     _act(act, el) {
         const app = this.app;
         const i = el ? Number(el.getAttribute('data-i')) : -1;
@@ -363,6 +371,10 @@ export class KettleView {
     _bindEvents() {
         const root = this._root;
         if (!root) return;
+        /* [v4.170.0] 只在根容器上挂一次：旧版每次 refresh 都重新 addEventListener，
+         *   点一下会触发 N 次（N = 刷新过几次）—— 监听累加是本仓点过名的形态。 */
+        if (this._boundRoot === root) return;
+        this._boundRoot = root;
         /* 点击分派：三个面各走一遍「从命中元素**向上找最近的带标记祖先**」。
          *  ★ 卡片判定不许读直点元素：点卡片里的正文文字时 target 是子元素，
          *    判定落空 ⇒ 用户点正文没反应、必顶点卡片留白才打开。
@@ -392,6 +404,15 @@ export class KettleView {
                 this.app.openNote(Number(cardEl.getAttribute('data-open')));
                 this._flash = '';
                 this.refresh();
+            }
+        });
+        /* 输入一律进视图草稿：整页重绘之后把用户刚打的字原样填回去。 */
+        root.addEventListener('input', (e) => {
+            const t = e.target;
+            if (!t || !t.getAttribute) return;
+            const k = t.getAttribute('data-k');
+            if (k && Object.prototype.hasOwnProperty.call(this._draft, k)) {
+                this._draft[k] = String(t.value == null ? '' : t.value);
             }
         });
         root.addEventListener('change', (e) => {

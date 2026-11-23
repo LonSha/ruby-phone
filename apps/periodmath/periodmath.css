@@ -1,10 +1,39 @@
-/* periodmath.css — [v3.51.0] 周期数学案头 · 样式层 */
-.pm-root { all: initial; }
-.pm-wrap { padding: 12px; font-size: 13px; color: #2b2b2b; }
-.pm-status { padding: 8px 12px; border-radius: 10px; background: #fdeef2; color: #a04a62; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
-.pm-readings { font-size: 12px; color: #6a645c; margin-bottom: 8px; }
-.pm-sec { background: #fff; border: 1px solid #e8e2d8; border-radius: 8px; padding: 8px; margin-bottom: 8px; }
-.pm-sec h3 { font-size: 12px; margin: 0 0 6px; color: #a04a62; }
-.pm-input { width: 100%; min-height: 64px; border: 1px solid #d8d2c8; border-radius: 6px; font-size: 12px; padding: 6px; box-sizing: border-box; }
-.pm-btn { padding: 3px 10px; border-radius: 10px; border: 1px solid #d8d2c8; background: #fff; font-size: 12px; margin: 4px 4px 0 0; }
-.pm-row { display: flex; gap: 8px; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed #eee8de; }
+/* periodmath.css — [v4.164.0] 周期数学案头 · 样式层
+ * 本文件是周期数学样式的**唯一来源**：phone.css 的 [v4.164.0] 周期数学段由本文件逐字拼入。
+ * 三页（今天 / 记录 / 设置）共用一套 .pm-* 命名，不写行内 style。 */
+.pm-root { position:relative; display:flex; flex-direction:column; height:100%; box-sizing:border-box;
+  background:#111a1f; color:#e6eef2; font-family:system-ui; overflow:hidden; }
+.pm-root * { box-sizing:border-box; }
+.pm-top { display:flex; align-items:center; gap:8px; padding:10px 12px 8px; }
+.pm-title { flex:1; font-size:15px; font-weight:600; color:#f2f8fb; }
+.pm-top-meta { font-size:11px; color:#7c94a1; }
+.pm-page { flex:1; overflow-y:auto; padding:0 12px 12px; display:flex; flex-direction:column; gap:10px; }
+.pm-tabbar { display:flex; border-top:1px solid rgba(255,255,255,.07); background:#0d151a; }
+.pm-tab { flex:1; padding:10px 0 12px; border:0; background:none; color:#6f8794; font-size:12px; cursor:pointer; }
+.pm-tab.is-on { color:#f472b6; }
+.pm-face { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:10px; font-size:12px;
+  background:rgba(255,255,255,.04); color:#93a9b5; }
+.pm-hero { border-radius:14px; padding:16px; background:linear-gradient(135deg, rgba(244,114,182,.2), rgba(244,114,182,.04));
+  border:1px solid rgba(244,114,182,.25); }
+.pm-hero-kind { font-size:11px; color:#f9a8d4; letter-spacing:.5px; }
+.pm-hero-text { margin-top:6px; font-size:22px; font-weight:700; color:#fdf2f8; }
+.pm-hero-phase { margin-top:4px; font-size:12px; color:#fbcfe8; }
+.pm-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+.pm-cell { background:#16222a; border-radius:10px; padding:10px; }
+.pm-cell b { display:block; font-size:18px; color:#f2f8fb; font-variant-numeric:tabular-nums; }
+.pm-cell span { font-size:11px; color:#7c94a1; }
+.pm-sec { background:#16222a; border-radius:12px; padding:12px; }
+.pm-sec-title { font-size:13px; font-weight:600; color:#c5d6df; margin-bottom:8px; }
+.pm-row { display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:7px 0; font-size:12px; color:#c5d6df; border-bottom:1px solid rgba(255,255,255,.05); }
+.pm-row:last-child { border-bottom:0; }
+.pm-row em { font-style:normal; color:#7c94a1; font-size:11px; }
+.pm-row .pm-live { color:#f9a8d4; }
+.pm-btn { width:100%; padding:10px 12px; margin-top:8px; border:0; border-radius:10px; font-size:13px; cursor:pointer; }
+.pm-btn-primary { background:linear-gradient(135deg,#f472b6,#ec4899); color:#2a0716; font-weight:600; }
+.pm-btn-ghost { background:rgba(255,255,255,.06); color:#c5d6df; }
+.pm-btn-danger { background:rgba(239,68,68,.16); color:#fca5a5; }
+.pm-input { width:100%; min-height:96px; margin-top:8px; padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.04); color:#e6eef2; font-size:12px; font-family:ui-monospace,monospace; resize:vertical; }
+.pm-hint { font-size:11px; color:#7c94a1; line-height:1.65; }
+.pm-empty { padding:20px; text-align:center; color:#7c94a1; font-size:12px; line-height:1.7; background:#16222a; border-radius:12px; }

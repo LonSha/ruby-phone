@@ -65,6 +65,7 @@ export class SoundkitView {
         this.shell = shell;
         this.storage = storage;
         this._root = null;
+        this._boundRoot = null;
         this._flash = '';
         this._draft = {
             key: '', label: '', volume: 0.6,
@@ -87,7 +88,7 @@ export class SoundkitView {
         this._root.innerHTML = this._buildHTML();
         this._bindEvents();
     }
-    _q(sel) { return this._root ? this._root.querySelector(sel) : null; }
+    q(sel) { return this._root ? this._root.querySelector(sel) : null; }
     _qa(sel) { return this._root ? this._root.querySelectorAll(sel) : []; }
 
     /** 转义（`&` 与双引号走拼装形 —— 见文件头纪律）。 */
@@ -114,16 +115,23 @@ export class SoundkitView {
         parts.push('</div>');
         if (this._flash) parts.push('<div class="snd-flash">' + this._esc(this._flash) + '</div>');
         const cur = app.tab();
-        parts.push('<div class="snd-tabs">');
+        if (cur === 'slots') parts.push(this._slotsPanel());
+        else if (cur === 'editor') parts.push(this._editorPanel());
+        else if (cur === 'share') parts.push(this._sharePanel());
+        else parts.push(this._settingsPanel());
+        parts.push(this._tabsHTML());
+        return parts.join('');
+    }
+    /** 页签条：**放在内容之下** —— 先把这一页给你，再让你换页。
+     *  类名与 data-tab 一字未改（样式与事件都按旧键面找得到）。 */
+    _tabsHTML() {
+        const cur = this.app.tab();
+        const parts = ['<div class="snd-tabs">'];
         for (const t of TABS) {
             parts.push('<button type="button" class="snd-tab' + (cur === t.key ? ' is-on' : '')
                 + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>');
         }
         parts.push('</div>');
-        if (cur === 'slots') parts.push(this._slotsPanel());
-        else if (cur === 'editor') parts.push(this._editorPanel());
-        else if (cur === 'share') parts.push(this._sharePanel());
-        else parts.push(this._settingsPanel());
         return parts.join('');
     }
 
@@ -380,6 +388,9 @@ export class SoundkitView {
     _bindEvents() {
         if (!this._root) return;
         const root = this._root;
+        /* 监听只在根容器挂一次：旧写法每次 refresh 都重挂一份，换过 N 次页签点一下就触发 N 次。 */
+        if (this._boundRoot === root) return;
+        this._boundRoot = root;
         root.addEventListener('click', (e) => {
             const t = e.target;
             const tab = t && t.getAttribute ? t.getAttribute('data-tab') : null;
@@ -495,7 +506,10 @@ export class SoundkitView {
             const i = t.getAttribute('data-i');
             if (k === 'master') {
                 this.app.setMasterVolume(t.value);
-                this.refresh();
+                /* 拖动滑杆只改数、不重绘整页 —— 旧写法每次 input 都 refresh，
+                 *   拖到一半控件就被重画一遍（焦点与拖动位置全丢）。 */
+                const mv = this.q('.snd-range-val');
+                if (mv) mv.textContent = String(t.value);
                 return;
             }
             if (k === 'slot-volume') {
@@ -513,7 +527,7 @@ export class SoundkitView {
                 const v = (k === 'type') ? t.value : Number(t.value);
                 n[k] = v;
                 const s = this._draftCheck();
-                const el = this._q('.snd-warn');
+                const el = this.q('.snd-warn');
                 if (el) el.textContent = s.dropped ? ('有 ' + s.dropped + ' 个音符放不了') : '';
                 return;
             }

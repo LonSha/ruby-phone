@@ -1,4 +1,6 @@
-/* [v3.26.0] 打卡 App（.pch-*） */
+/* ---------- [v3.26.0] 打卡 App（.pch-*） ---------- */
+/* [v4.167.0] 三页签（今天 / 历史 / 设置）重写：补页容器、页头读数、页签条、提示条
+ * 与几个删除按钮的落点。旧规则一条不删（读数、清单、表单、历史、设置都还在用）。 */
 .pch-root { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
 .pch-header h2 { font-size: 18px; margin: 0; color: #f0f0f0; }
 .pch-face { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
@@ -52,3 +54,14 @@
 .pch-hist-meta { flex: 1; font-size: 11px; color: #94a3b8; }
 .pch-hist-item { font-size: 12px; color: #cbd5e1; padding: 3px 0 3px 6px; border-left: 2px solid rgba(255,255,255,.08); margin-top: 4px; }
 .pch-hist-item em { color: #94a3b8; font-style: normal; }
+
+.pch-head-meta { font-size: 11px; color: #64748b; font-family: 'Times New Roman', serif; }
+.pch-header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.pch-flash { background: rgba(13,148,136,.16); color: #2dd4bf; border-radius: 8px; padding: 8px 12px; font-size: 12px; }
+.pch-page { display: flex; flex-direction: column; gap: 12px; }
+.pch-tabbar { display: flex; gap: 6px; border-top: 1px solid rgba(255,255,255,.06); padding-top: 10px; }
+.pch-tab { flex: 1; border: none; border-radius: 9px; padding: 9px 4px; font-size: 12px; cursor: pointer; background: rgba(255,255,255,.05); color: #94a3b8; }
+.pch-tab.is-on { background: rgba(124,58,237,.22); color: #c4b5fd; }
+.pch-item-check { flex-shrink: 0; }
+.pch-item-del, .pch-hist-del, .pch-draft-del { border: none; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; background: rgba(255,255,255,.1); color: #cbd5e1; flex-shrink: 0; }
+.pch-item-del.pch-mini-armed, .pch-hist-del.pch-mini-armed { background: rgba(239,68,68,.22); color: #fca5a5; }

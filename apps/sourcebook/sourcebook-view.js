@@ -70,6 +70,9 @@ export class SourcebookView {
         this.storage = storage;
         this._root = null;
         this._flash = '';
+        /* [v4.170.0] 纯视图态：输入草稿。整页重绘不再把用户刚打的字冲掉。 */
+        this._draft = { message: '', openDate: '', createdAt: '', mood: '', roleId: '', echo: '' };
+        this._boundRoot = null;
     }
     render() {
         const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
@@ -86,7 +89,9 @@ export class SourcebookView {
         this._root.innerHTML = this._buildHTML();
         this._bindEvents();
     }
-    _q(sel) { return this._root ? this._root.querySelector(sel) : null; }
+    /** 取元素：读不到就返回 null（宿主 DOM 不全会抛）。
+     *  [v4.170.0] 改名 q( —— 判据的锚点口径认 q( / querySelector(，_q( 不被识别。 */
+    q(sel) { return this._root ? this._root.querySelector(sel) : null; }
     /** 转义（& 与两个引号走拼装形 —— 见文件头纪律）。 */
     _esc(s) {
         return String(s == null ? '' : s)
@@ -114,18 +119,20 @@ export class SourcebookView {
         parts.push('</div>');
         if (this._flash) parts.push('<div class="sbr-flash">' + this._esc(this._flash) + '</div>');
         const cur = app.tab();
-        parts.push('<div class="sbr-tabs">');
-        for (const t of TABS) {
-            parts.push('<button type="button" class="sbr-tab' + (cur === t.key ? ' is-on' : '')
-                + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>');
-        }
-        parts.push('</div>');
         if (cur === 'span') parts.push(this._spanPanel());
         else if (cur === 'tone') parts.push(this._tonePanel());
         else if (cur === 'ledger') parts.push(this._ledgerPanel());
         else if (cur === 'policy') parts.push(this._policyPanel());
         else parts.push(this._shelfPanel());
+        parts.push(this._tabsHTML());
         return parts.join('');
+    }
+    /** [v4.170.0] 底部页签条：页签从顶部挪到页内容之下，类名与 data-tab 一字未改。 */
+    _tabsHTML() {
+        const cur = this.app.tab();
+        return '<nav class="sbr-tabs">' + TABS.map((t) =>
+            '<button type="button" class="sbr-tab' + (cur === t.key ? ' is-on' : '')
+            + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>').join('') + '</nav>';
     }
     /* ---------- 面板 ①：书架 ---------- */
     _shelfPanel() {
@@ -138,11 +145,11 @@ export class SourcebookView {
             + ' 源把这两种都当成「今天封的」，于是「刚写」与「三年前写」在跨度上同形。'
             + '</p>');
         parts.push('<div class="sbr-form">');
-        parts.push('<label>正文</label><textarea data-k="message" rows="3" placeholder="要写给未来的自己或 TA 的话"></textarea>');
-        parts.push('<label>拆开日期</label><input type="text" data-k="openDate" placeholder="YYYY-MM-DD" />');
-        parts.push('<label>封存时间</label><input type="text" data-k="createdAt" placeholder="YYYY-MM-DD（留空就是「没填」）" />');
-        parts.push('<label>心情（可留空）</label><input type="text" data-k="mood" placeholder="留空与填了默认值不同形" />');
-        parts.push('<label>保管的角色（可留空）</label><input type="text" data-k="roleId" placeholder="留空 = 写给未来的自己" />');
+        parts.push('<label>正文</label><textarea data-k="message" rows="3" placeholder="要写给未来的自己或 TA 的话">' + this._esc(this._draft.message) + '</textarea>');
+        parts.push('<label>拆开日期</label><input type="text" data-k="openDate" placeholder="YYYY-MM-DD" value="' + this._esc(this._draft.openDate) + '" />');
+        parts.push('<label>封存时间</label><input type="text" data-k="createdAt" placeholder="YYYY-MM-DD（留空就是「没填」）" value="' + this._esc(this._draft.createdAt) + '" />');
+        parts.push('<label>心情（可留空）</label><input type="text" data-k="mood" placeholder="留空与填了默认值不同形" value="' + this._esc(this._draft.mood) + '" />');
+        parts.push('<label>保管的角色（可留空）</label><input type="text" data-k="roleId" placeholder="留空 = 写给未来的自己" value="' + this._esc(this._draft.roleId) + '" />');
         parts.push('<button type="button" data-act="seal">存一封信</button>');
         parts.push('</div>');
         parts.push('<div class="sbr-shelf">');
@@ -204,7 +211,7 @@ export class SourcebookView {
         const draft = app.draftOf();
         if (draft) parts.push('<textarea class="sbr-draft" rows="9" readonly>' + this._esc(draft) + '</textarea>');
         parts.push('<label class="sbr-detail-lab">把模型的回信（JSON）贴回来</label>');
-        parts.push('<textarea data-k="echo" rows="5" placeholder="回信四段：title / roleMessage / receiptNote / keywords；违反两条硬约束会被拒收"></textarea>');
+        parts.push('<textarea data-k="echo" rows="5" placeholder="回信四段：title / roleMessage / receiptNote / keywords；违反两条硬约束会被拒收">' + this._esc(this._draft.echo) + '</textarea>');
         parts.push('<button type="button" data-act="accept" data-i="' + i + '">校验并入库</button>');
         parts.push('</div>');
         return parts.join("");
@@ -326,7 +333,7 @@ export class SourcebookView {
         return parts.join("");
     }
     /* ---------- 事件 ---------- */
-    _field(k) { const el = this._q('[data-k="' + k + '"]'); return el ? String(el.value || "") : ""; }
+    _field(k) { const el = this.q('[data-k="' + k + '"]'); return el ? String(el.value || "") : ""; }
     _act(act, el) {
         const app = this.app;
         const i = el ? Number(el.getAttribute('data-i')) : -1;
@@ -401,6 +408,10 @@ export class SourcebookView {
     _bindEvents() {
         const root = this._root;
         if (!root) return;
+        /* [v4.170.0] 只在根容器上挂一次：旧版每次 refresh 都重新 addEventListener，
+         *   点一下会触发 N 次（N = 刷新过几次）—— 监听累加是本仓点过名的形态。 */
+        if (this._boundRoot === root) return;
+        this._boundRoot = root;
         /* 点击分派：三个面各走一遍「从命中元素**向上找最近的带标记祖先**」。
          *  ★ 修前的实缺陷：卡片判定读 ev.target.className，点卡片里的**正文文字**时
          *    target 是子元素（sbr-cap-msg 等），判定落空 ⇒ 用户点正文没反应，
@@ -431,6 +442,15 @@ export class SourcebookView {
                 this.app.openCapsule(Number(cardEl.getAttribute('data-open')));
                 this._flash = "";
                 this.refresh();
+            }
+        });
+        /* 输入一律进视图草稿：整页重绘之后把用户刚打的字原样填回去。 */
+        root.addEventListener('input', (e) => {
+            const t = e.target;
+            if (!t || !t.getAttribute) return;
+            const k = t.getAttribute('data-k');
+            if (k && Object.prototype.hasOwnProperty.call(this._draft, k)) {
+                this._draft[k] = String(t.value == null ? '' : t.value);
             }
         });
         root.addEventListener('change', (e) => {

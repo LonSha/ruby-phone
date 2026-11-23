@@ -1247,6 +1247,28 @@ export const APPS = [
         badge: 0,
         data: {},
     },
+    {
+        // [v4.186.0] 智能家居中枢：重构自 apps/iot/smart-home-ambient-iot-hub.js 的 40 行内核。
+        //   源把状态放在类字段、自己产叙事与 prompt 指令 —— 本件改为纯函数内核 + PhoneStorage，
+        //   注入只给读数。会话键走 ^iot_ 前缀，随会话隔离。
+        id: 'iot',
+        name: '智能家居',
+        icon: '🏠',
+        color: '#0ea5e9',
+        badge: 0,
+        data: {},
+    },
+    {
+        // [v4.187.0] 近场快传：重构自 apps/share/ 的两个死内核（nfc-airdrop-proximity-exchange
+        //   类持有 Map 自算 status / universal-sharesheet-intent-bus 编造 handlerUri 而无人监听）。
+        //   本件改为纯函数内核 + PhoneStorage，注入只给读数；会话键走 ^share_ 前缀。
+        id: 'share',
+        name: '近场快传',
+        icon: '📶',
+        color: '#38bdf8',
+        badge: 0,
+        data: {},
+    },
 ];
 
 /* [v4.87.0] 桌面分层：核心 20 → 桌面直接可见；其余 → 「应用库」按类目收纳。

@@ -392,7 +392,11 @@ test('E4 翻页手势：真调 bindIconPager 注册的监听器，横滑翻页�
         parentElement: { querySelector: () => null },
         querySelectorAll: () => [],
     };
-    ctx.phoneShell = { screen: { querySelector: () => pager } };
+    /* [v4.185.0 交棒改写] 桩从「任何选择器都返回 pager」改成「按选择器给」：
+     *  v4.182.0 给主屏加了搜索入口（bindIconPager 开头 `#rp-home-search` + dataset.searchBound 去重），
+     *  旧桩会让该段拿到 pager 这个普通对象，报 searchBtn.addEventListener is not a function ——
+     *  那是桩过期，不是产品缺陷（产品侧走 ?. 可选链，取不到就跳过）。 */
+    ctx.phoneShell = { screen: { querySelector: (sel) => (sel === '.app-grid-pager' ? pager : null) } };
     ctx._rt = { addListener: (target, type, handler, opts, tag) => { listeners.push({ type, tag, handler }); } };
     const moves = [];
     ctx.goIconPage = (page) => { moves.push(page); return true; };

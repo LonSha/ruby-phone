@@ -445,6 +445,13 @@ export class LoverSpaceView {
 
     /* ---------- 事件 ---------- */
 
+    /** 切面后回到顶部：旧行为切完面停在半页，新面比旧面短时先看到大片空白。 */
+    _scrollTop() {
+        const root = this._root;
+        if (!root || typeof root.scrollIntoView !== 'function') return;
+        try { root.scrollIntoView({ block: 'start' }); }
+        catch (_e) { /* 宿主不认参数就作罢，不抛 */ }
+    }
     _bindEvents() {
         if (!this._root) return;
         const app = this.app;
@@ -452,7 +459,7 @@ export class LoverSpaceView {
 
         /* 面切换 */
         for (const b of this._root.querySelectorAll('.lov-tab')) {
-            b.addEventListener('click', () => { this._face = b.dataset.face; this.refresh(); });
+            b.addEventListener('click', () => { this._face = b.dataset.face; this.refresh(); this._scrollTop(); });
         }
 
         /* 天数面 */
