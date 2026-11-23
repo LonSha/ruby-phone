@@ -13,6 +13,7 @@
  * ======================================================== */
 'use strict';
 
+import { safeStr } from './str-face.js';
 import { rand } from './random-source.js';
 import { writeReceipt } from './write-receipt.js';
 
@@ -47,7 +48,6 @@ export const AR_REASONS = Object.freeze({
     WRITE_THREW: 'write-threw'
 });
 
-function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }
 
 /**
  * 补救方案构造器

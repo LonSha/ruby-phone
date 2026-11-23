@@ -37,6 +37,7 @@
  *   回滚后行**仍在**，带 rolledBackAt 与补偿计划条数 —— 用户看得见「这笔被撤销了」。
  */
 'use strict';
+import { safeStr } from './str-face.js';
 import { numOrNull } from './num-gate.js';
 import { safeArr } from './array-face.js';
 
@@ -64,7 +65,6 @@ export const BALANCE_REASONS = Object.freeze({
     BAD_SHAPE: 'bad_shape'
 });
 
-function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }
 function safeNum(v, d) {
     /* [v4.99.4] 走全仓唯一取值门 numOrNull：本地再写一份 `Number.isFinite(Number(v))`
      *   就是弱口径副本（`Number(null) === 0`：「没给」与「给了 0」塔成一个读数），

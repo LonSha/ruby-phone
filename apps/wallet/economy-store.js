@@ -29,6 +29,7 @@
  *   「钱扣了但资产没登记」。故 save() 一次写三键，restore() 一次读回。
  * ============================================================ */
 'use strict';
+import { safeStr } from '../../config/str-face.js';
 import {
     normalizeEconomyState,
     executeTransaction,
@@ -76,7 +77,6 @@ export const COMPENSATION_ACTIONS = Object.freeze({
 });
 const MAX_TX = 60;
 
-function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }
 function safeNum(v, d) {
     const n = Number(v);
     return Number.isFinite(n) ? n : d;

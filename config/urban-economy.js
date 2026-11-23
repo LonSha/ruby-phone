@@ -10,6 +10,7 @@
  * ======================================================== */
 'use strict';
 
+import { safeStr } from './str-face.js';
 import { safeArr } from './array-face.js';
 const UE_STORAGE_KEY = 'ue_urban_economy_v1';
 
@@ -21,7 +22,6 @@ const ASSET_TYPES = Object.freeze({
     SLOT: 'slot'
 });
 
-function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }
 function safeNum(v, fallback = 0) {
     const n = Number(v);
     return Number.isFinite(n) ? n : fallback;

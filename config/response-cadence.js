@@ -11,6 +11,7 @@
  * ======================================================== */
 'use strict';
 
+import { safeStr } from './str-face.js';
 const RC_STORAGE_KEY = 'rc_cadence_state_v1';
 
 export const CADENCE_STATES = Object.freeze({
@@ -28,7 +29,6 @@ export const CADENCE_REMEDIES = Object.freeze({
     URGENT_PING: 'urgent_ping'          // 标记紧急拍一拍
 });
 
-function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }
 
 /**
  * 规格化节奏状态

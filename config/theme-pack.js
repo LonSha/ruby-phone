@@ -10,6 +10,7 @@
  * ======================================================== */
 'use strict';
 
+import { safeStr } from './str-face.js';
 const TP_STORAGE_KEY = 'tp_theme_state_v1';
 
 export const THEME_PRESETS = Object.freeze({
@@ -69,7 +70,6 @@ export const THEME_PRESETS = Object.freeze({
     }
 });
 
-function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }
 
 /**
  * 校验主题包规范（严禁恶意脚本与非安全键）

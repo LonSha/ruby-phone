@@ -12,6 +12,7 @@
  * ======================================================== */
 'use strict';
 
+import { safeStr } from './str-face.js';
 import { safeArr } from './array-face.js';
 const UP_STORAGE_KEY = 'up_paradigm_state_v1';
 
@@ -77,7 +78,6 @@ export const DEFAULT_PARADIGMS = Object.freeze({
     }
 });
 
-function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }
 
 /**
  * 状态规格化（纯函数）

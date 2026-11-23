@@ -10,6 +10,7 @@
  * ======================================================== */
 'use strict';
 
+import { safeStr } from './str-face.js';
 import { safeArr } from './array-face.js';
 const AS_STORAGE_KEY = 'as_action_stack_v1';
 export const AS_MAX_STACK = 40;
@@ -21,7 +22,6 @@ export const ACTION_STATUS = Object.freeze({
     IRREVERSIBLE: 'irreversible'
 });
 
-function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }
 
 export function normalizeActionStack(raw) {
     if (!raw || typeof raw !== 'object') {

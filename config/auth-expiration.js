@@ -11,6 +11,7 @@
  * ======================================================== */
 'use strict';
 
+import { safeStr } from './str-face.js';
 const AE_STORAGE_KEY = 'ae_auth_expire_v1';
 
 export const GRANT_STATUS = Object.freeze({
@@ -26,7 +27,6 @@ export const AUTH_SCOPES = Object.freeze({
     MANAGE_TASK: 'manage_task'
 });
 
-function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }
 
 export function normalizeAuthState(raw) {
     if (!raw || typeof raw !== 'object') {

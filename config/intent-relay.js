@@ -12,6 +12,7 @@
  * ======================================================== */
 'use strict';
 
+import { safeStr } from './str-face.js';
 import { rand } from './random-source.js';
 import { buildOpenRef } from './open-ref.js';
 import { writeReceipt } from './write-receipt.js';
@@ -55,7 +56,6 @@ export const IR_REASONS = Object.freeze({
     WRITE_THREW: 'write-threw'
 });
 
-function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }
 
 /**
  * 结构归一：确保步骤字段完整合规

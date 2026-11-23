@@ -1,3 +1,13 @@
+迭代 312 · v4.196.0 · 20 版 60 只 App 重构第六批：跨 App 重复口径收敛第四炮 —— 字符串规整读取面 safeStr（2026-11-23）
+
+- 【版本升至 4.196.0（五源同源）】沿用第五批的「同名函数体指纹扫描」，重扫 v4.195.0 后新基线：产品码内 `safeStr` 实测 **15 处 / 1 变体** `function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }`，零分簇成本。调用点约 166 处。与 v4.194.0 的 `text-face.js` 唯一差别就是 trim —— 这正是仓内把它与 `toStr` 分成两个名字的原因。
+- `config/str-face.js`（59 行，纯函数内核）：唯一导出 `safeStr(v)`。三条立场：① 只收字符串，非串一律空串，刻意不改成 `String(v == null ? '' : v).trim()`（会让数字 5 变 '5'，是放宽不是等价）；② **trim 在本口径之内** —— 这 15 份复制件本来就 trim，并进来是等价，反之若为了与 toStr 一致而拿掉 trim 才是行为变更；调用侧不许再 `.trim()`（双重 trim），需要原文用 toStr；③ 空串是如实回答不是兜底值 —— 「读不出时该给什么」是 fallback 形（第二个入参）的事，强行并进来会让两种语义共用一条实现。
+- 转调 15 处：删本地定义 + import，各留调用点（economy-store 23、action-receipt 14、action-stack 7、auth-expiration 10、character-dwelling 13、economy-face-bridge 21、intent-relay 21、living-assets 12、recovery-hub 5、response-cadence 9、resume-anchor 13、rule-theatre 13、theme-pack 7、urban-economy 4、usage-paradigm 9）。本批 15 处**全部有真实调用点**，无零调用死定义（上一批的 recovery-hub / response-cadence 在 safeArr 面是死定义，在 safeStr 面不是）。
+- **另 3 种不同口径刻意未动**（判据 C2 钉住）：11 份 fallback 形（多一个「读不出时给什么」的入参，不是同一签名）、9 份宽口径 `String(v == null ? '' : v).trim()`（会把数字 5 变成 '5'）、1 份空串也走 fallback 的严格形。四种口径混在一处收敛就是造假等价。
+- **本版自己抓到的缺陷（第三类插入点错误的修正版）**：转调脚本向前找未闭合 `import {` 后直接返回 `j+1`（`import {` 行的下一行），把 import 插进了另一条多行 import 块中间（economy-store.js 第 33 行），`syntax` 门报 `Unexpected reserved word`。修法是找到未闭合 `import {` 后必须继续走到以 `} from` 结尾的块结束行之后。已整体撤回 15 处到 HEAD 逐字原状后重做，未把半成品留在工作树里。
+- 新增判据 `tests/system-v4196.test.mjs` 9 条（A 组 4 / B 组 2 / C 组 2 / V 组 1）；18 用例对拍 0 diff；C1 需排除内核自身（内核就是这条口径的唯一实现，不是残留复制件）。
+- 纯函数内核新增 1 个文件（`config/str-face.js`），无新增副作用文件。下一批候选（已盘点未动）：`str` 44 处 / 11 变体（24 份逐字等价但分簇复杂）、`esc` 35 处 / 12 变体（18 份逐字相同但 12 变体间行为不等价，须先分簇）、`listOf` 18 处 / 4 变体（15 处等价 + 2 处 items 解包宽口径）、`isPlain` 15 处 / 4 变体（14 处语义等价）。
+
 迭代 311 · v4.195.0 · 20 版 60 只 App 重构第五批：跨 App 重复口径收敛第三炮 —— 数组读取面 safeArr（2026-11-23）
 
 - 【版本升至 4.195.0（五源同源）】沿用第四批的「同名函数体指纹扫描」，重扫 v4.194.0 后新基线：产品码内 `safeArr` 实测 **16 处 / 1 变体** `function safeArr(v) { return Array.isArray(v) ? v : []; }`（15 个 config + 1 个 apps/wallet），零分簇成本，是当时最干净的等价簇。调用点合计 49 处，实参全是属性访问、变量或逻辑表达式。

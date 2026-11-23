@@ -10,10 +10,10 @@
  * ======================================================== */
 'use strict';
 
+import { safeStr } from './str-face.js';
 const RH_STORAGE_KEY = 'rh_recovery_hub_v1';
 export const RH_MAX_SNAPSHOTS = 10;
 
-function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }
 
 export function normalizeRecoveryState(raw) {
     if (!raw || typeof raw !== 'object') {

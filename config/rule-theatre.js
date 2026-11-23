@@ -10,6 +10,7 @@
  *     ⑤ 会话隔离，支持单条规则暂停、执行计数与测试回放。
  * ======================================================== */
 'use strict';
+import { safeStr } from './str-face.js';
 import { safeArr } from './array-face.js';
 const RT_STORAGE_KEY = 'rt_rules_state_v1';
 /** 规则条数上限。[v4.96.0 · R11-O3 批次2] 由 `const` 改 `export`：
@@ -41,7 +42,6 @@ export const RULE_ACTIONS = Object.freeze({
     TAG_RELATION: 'tag_relation'
 });
 
-function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }
 
 /**
  * 校验规则规格（纯声明式白名单）
