@@ -2950,7 +2950,7 @@ renderChatRoom(chat) {
                         </div>
                         <div class="chat-input-wrapper" style="flex: 1; margin: 0;">
                             <input type="text" class="chat-input" id="chat-input"
-                                   style="background: rgba(255, 255, 255, 0.42) !important; border: 0.5px solid rgba(255, 255, 255, 0.58) !important; color: #111111 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;"
+                                   style=""
                                    placeholder="${this._escapeHtml(this._getQuickReplyInputPlaceholder())}" value="${this._escapeHtml(this.inputText)}">
                         </div>
                         <div style="display: flex; align-items: center; gap: 0px;">
