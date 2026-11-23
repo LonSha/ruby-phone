@@ -1336,6 +1336,41 @@ export const APPS = [
         badge: 0,
         data: {},
     },
+    {
+        // [v4.190.0] 谁是卧底规则：从 apps/games/undercover/undercover-data.js 那 724 行类里
+        //   抽出规则面（_shuffle/_advanceTurn/_resolveVotes/_splitSpeechSegments/...）。
+        //   源类散落 6 处 Math.random，本件内核一律 rng 由调用方传：同一输入 => 同一局。
+        id: 'ucrules',
+        name: '谁是卧底规则',
+        icon: '🕵',
+        color: '#64748b',
+        badge: 0,
+        data: {},
+    },
+    {
+        // [v4.190.0] B站 换算：从 apps/bilibili/bili-data.js 那 1365 行类里抽出换算面
+        //   （fmtCount/fmtDur/timeAgo/makeBvid/makeMid/parseCount/parseDur/wallStampText/
+        //   compactText/hash32/b62/seededInt/makeLocalBilibiliUrl）。源类持 state 直写
+        //   storage，是有副作用的编排；本件只包纯换算，时间由调用方给。
+        id: 'bilifmt',
+        name: 'B站换算',
+        icon: '📺',
+        color: '#fb7299',
+        badge: 0,
+        data: {},
+    },
+    {
+        // [v4.190.0] 音乐 歌词/播放模式：从 apps/music/music-data.js 那 1514 行类里抽出
+        //   **可纯化**的两块（_parseLrc 与播放模式闭环）。源类构造器里就 new Audio()，
+        //   还持 _playlist/_favorites 懒加载、_lyricCache、十来个 fetch 音乐源 Promise，
+        //   不能整只搬；本件只包「一段 LRC -> 时间轴歌词」与「模式怎么循环」。
+        id: 'musiccore',
+        name: '歌词与模式',
+        icon: '🎵',
+        color: '#22d3ee',
+        badge: 0,
+        data: {},
+    },
 ];
 
 /* [v4.87.0] 桌面分层：核心 20 → 桌面直接可见；其余 → 「应用库」按类目收纳。

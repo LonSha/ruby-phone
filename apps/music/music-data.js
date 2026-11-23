@@ -18,6 +18,13 @@ const MUSIC_VOLUME_STORAGE_KEY = 'global_music_volume';
 /* [v4.104.0 · R13-O8] 删歌先落回收站（唯一软删实现在 config/recycle-bin.js）。 */
 import * as recycleBin from '../../config/recycle-bin.js';
 
+/* [v4.190.0] 播放模式 / LRC 解析的唯一实现已下沉到 music-core.js（纯函数内核）。
+   这里保留旧方法名：getPlaybackMode / setPlaybackMode / cyclePlaybackMode /
+   getRepeatOne / setRepeatOne / _parseLrc 全部改为调用内核，删掉本地重复实现。 */
+import {
+    normalizePlaybackMode, nextPlaybackMode, shouldLoop, modeFromRepeatOne, parseLrc
+} from './music-core.js';
+
 export class MusicData {
     constructor(storage) {
         this.storage = storage;
@@ -851,8 +858,8 @@ export class MusicData {
     }
 
     getPlaybackMode() {
-        const savedMode = String(this.storage.get('music_playback_mode', '') || '').trim();
-        if (['once', 'repeat-one', 'repeat-all'].includes(savedMode)) return savedMode;
+        const savedMode = normalizePlaybackMode(String(this.storage.get('music_playback_mode', '') || '').trim());
+        if (savedMode !== 'once') return savedMode;
 
         const legacyRepeatOne = this.storage.get('music_repeat_one', null);
         if (legacyRepeatOne === true || legacyRepeatOne === 'true') return 'repeat-one';
@@ -863,28 +870,26 @@ export class MusicData {
     }
 
     setPlaybackMode(mode) {
-        const nextMode = ['once', 'repeat-one', 'repeat-all'].includes(mode) ? mode : 'once';
+        const nextMode = normalizePlaybackMode(mode);
         this.storage.set('music_playback_mode', nextMode);
         this.storage.set('music_repeat_one', nextMode === 'repeat-one');
-        this.audioPlayer.loop = nextMode === 'repeat-one';
+        this.audioPlayer.loop = shouldLoop(nextMode);
         this._notifyStateChange();
         return nextMode;
     }
 
     cyclePlaybackMode() {
         const currentMode = this.getPlaybackMode();
-        const nextMode = currentMode === 'once'
-            ? 'repeat-one'
-            : currentMode === 'repeat-one' ? 'repeat-all' : 'once';
+        const nextMode = nextPlaybackMode(currentMode);
         return this.setPlaybackMode(nextMode);
     }
 
     getRepeatOne() {
-        return this.getPlaybackMode() === 'repeat-one';
+        return shouldLoop(this.getPlaybackMode());
     }
 
     setRepeatOne(enabled) {
-        return this.setPlaybackMode(enabled === true || enabled === 'true' ? 'repeat-one' : 'repeat-all');
+        return this.setPlaybackMode(modeFromRepeatOne(enabled));
     }
 
     // ========== Music API ==========
@@ -1411,31 +1416,7 @@ export class MusicData {
     }
 
     _parseLrc(text) {
-        const lines = [];
-        const timeRegex = /\[(\d+):(\d+)(\.\d+)?\]/g;
-
-        String(text || '').split(/\r?\n/).forEach(rawLine => {
-            const line = rawLine.trim();
-            if (!line) return;
-
-            const matches = [...line.matchAll(timeRegex)];
-            if (matches.length === 0) return;
-
-            const lyricText = line.replace(timeRegex, '').trim();
-            if (!lyricText) return;
-
-            matches.forEach(match => {
-                const minutes = parseInt(match[1], 10);
-                const seconds = parseInt(match[2], 10);
-                const fraction = match[3] ? parseFloat(`0${match[3]}`) : 0;
-                lines.push({
-                    t: minutes * 60 + seconds + fraction,
-                    txt: lyricText
-                });
-            });
-        });
-
-        return lines.sort((a, b) => a.t - b.t);
+        return parseLrc(text);
     }
 
     // ========== 卡片数据 ==========

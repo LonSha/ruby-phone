@@ -160,6 +160,21 @@ APP_GLYPHS = {
     'sourcebook': 'book', 'archive': 'doc', 'cotdesk': 'list', 'memtable': 'grid',
     'lexiscore': 'chart', 'summdesk': 'doc', 'creationdesk': 'flame',
 
+    # [v4.190.0] 本版三件内核的试算器（与 v4.189.0 的 pokereval / wwrules 同族，
+    #   同样只包纯函数面，给一座可试算的空桌）。
+    #   ucrules -> person（6 人空桌围坐）/ bilifmt -> chart（计数换算格子）
+    #   musiccore -> music（LRC 时间轴 + 播放模式拨盘）。
+    'ucrules': 'person', 'bilifmt': 'chart', 'musiccore': 'music',
+    # [v4.189.0 与更早遗留] 这 8 个 App 也从未建过字形条目（同族欠账，
+    #   本版一并闭合）：pokereval/wwrules 是 v4.189.0 的两件规则试算器，
+    #   iot/share/callscene/social/daily/keyboard 更早。语义：
+    #   pokereval -> grid（牌面格）/ wwrules -> person（8 人圆桌）
+    #   iot -> grid（家居格子）/ share -> wave（近场波）/ callscene -> chat（通话）
+    #   social -> chat（朋友圈）/ daily -> list（日程清单）/ keyboard -> doc（输入联想）
+    'pokereval': 'grid', 'wwrules': 'person',
+    'iot': 'grid', 'share': 'wave', 'callscene': 'chat',
+    'social': 'chat', 'daily': 'list', 'keyboard': 'doc',
+
     'calendar': 'cal', 'timeweaver': 'clock', 'place': 'map', 'clock': 'clock',
     'focus': 'clock', 'punchcard': 'cal', 'weather': 'drop', 'kettle': 'drop',
     'needsim': 'chart', 'taskentry': 'list', 'workflow': 'grid',
@@ -194,6 +209,10 @@ BG_OVERRIDE = {
     'album': PAL['ltblue'], 'games': PAL['pink'],
 
     'mofo': PAL['dkblue'], 'diary': PAL['yellow'], 'memory': PAL['blue'],
+    'ucrules': PAL['dkbrown'], 'bilifmt': PAL['pink'], 'musiccore': PAL['dkblue'],
+    'pokereval': PAL['red'], 'wwrules': PAL['dkblue'],
+    'iot': PAL['blue'], 'share': PAL['dkgreen'], 'callscene': PAL['green'],
+    'social': PAL['green'], 'daily': PAL['yellow'], 'keyboard': PAL['gray'],
     'graph': PAL['dkblue'], 'playbook': PAL['pink'], 'achievement': PAL['yellow'],
     'plotline': PAL['green'], 'recall': PAL['orange'], 'sourcebook': PAL['cream'],
     'archive': PAL['gray'], 'cotdesk': PAL['blue'], 'memtable': PAL['dkblue'],

@@ -157,7 +157,26 @@ export const APP_CATEGORY = Object.freeze({
     widget: 'system',
     backupdesk: 'system',
     sullydesk: 'system',
-    accessdesk: 'system'
+    accessdesk: 'system',
+
+    /* [v4.190.0] 补齐 11 个从未登记的 App（v4.189.0 与更早遗留的欠账，
+     *   缺登记会被 appCategory 静默折成 system，把聚合壳撑破上限 12）。
+     *   按语义归类，不图省事全塞 system —— 壳内每个成员都必须真属 system。 */
+    /* —— 内容与阅读（游戏/试算/换算，纯函数内核那几件的试算器）—— */
+    pokereval: 'content',
+    wwrules: 'content',
+    ucrules: 'content',
+    bilifmt: 'content',
+    musiccore: 'content',
+    /* —— 生活与时间 —— */
+    iot: 'life',
+    daily: 'life',
+    /* —— 社交与形象 —— */
+    social: 'social',
+    keyboard: 'social',
+    callscene: 'social',
+    /* —— 系统与诊断（真系统能力）—— */
+    share: 'system'
 });
 
 /** 应用库入口的伪 appId（**不**进入 APPS：它没有自己的模块与路由，

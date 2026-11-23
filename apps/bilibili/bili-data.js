@@ -39,6 +39,14 @@ import { storyNowWallFallback, wallNow } from '../../config/time-source.js';
  * 这样 `null` / `''` / `[]` / `true` 仍按「没给」处理，不会被读成 0。 */
 import { numOrNull } from '../../config/num-gate.js';
 
+/* [v4.190.0] 文本 / 计数 / 时间 / 标识 的纯函数一律取自唯一内核 bili-format.js，
+ *   本文件不再保留第二份实现（判据 system-v4190 的 C2 逐条钉住这一点）。 */
+import {
+    hash32 as fmtHash32, b62 as fmtB62, makeBvid, makeMid, seededInt,
+    compactText, parseCount, fmtCount, fmtDur, parseDur,
+    timeAgo, wallStampText, makeLocalBilibiliUrl, isBilibiliEntryUrl
+} from './bili-format.js';
+
 /* ---------- 0. 常量 ---------- */
 const STORAGE_KEY = 'bili_entries_v1';
 const MAX_ENTRIES = 24;          // 一批最多留多少条
@@ -48,7 +56,6 @@ const COIN_DAILY = 2;            // 每日登录赠送
 const EXP_PER_COIN = 10;
 const LEVEL_STEP = 200;
 
-const B62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
 /* 分区 → 图标（没有封面图时的程序化封面要用它）。
  * 现实 B站 每个分区都有自己的视觉气质，这里用图标 + 渐变色块表达，
@@ -60,155 +67,6 @@ const TNAME_EMOJI = {
 };
 
 /* ---------- 1. 基础纯函数 ---------- */
-
-/** 宿主窗口（数据层可能在 node 单测下跑，绝不能直接摸 window）。 */
-function hostWin() {
-    return (typeof window !== 'undefined' && window) ? window : globalThis;
-}
-
-/** FNV-1a 32 位：同一字符串永远同一哈希（bvid 因此稳定，点赞不会因为刷新丢失）。 */
-function hash32(str) {
-    const s = String(str == null ? '' : str);
-    let h = 2166136261 >>> 0;
-    for (let i = 0; i < s.length; i += 1) {
-        h ^= s.charCodeAt(i);
-        h = Math.imul(h, 16777619) >>> 0;
-    }
-    return h >>> 0;
-}
-
-/** 固定长度 base62（确定性：同种子同结果）。 */
-function b62(num, len) {
-    let n = Number(num) >>> 0;
-    let out = '';
-    for (let i = 0; i < len; i += 1) {
-        out += B62[n % 62];
-        n = (Math.floor(n / 62) + Math.imul(i + 1, 2654435761)) >>> 0;
-    }
-    return out;
-}
-
-/** BV 号：`BV1` + 10 位（与现实同形，便于界面与文案里直接展示）。 */
-function makeBvid(seed) {
-    return 'BV1' + b62(hash32('a|' + seed), 7) + b62(hash32('b|' + seed), 3);
-}
-
-/** UID：现实 B站 UID 是纯数字。 */
-function makeMid(seed) {
-    return String(3000000 + (hash32('mid|' + seed) % 96000000));
-}
-
-/** 紧凑文本：折叠空白 + 截断。 */
-function compactText(value, max = 0) {
-    const text = String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
-    return (max > 0 && text.length > max) ? (text.slice(0, max) + '...') : text;
-}
-
-/** 数值门（**纯转发**到全仓唯一实现）：读不到时如实返回调用方给的默认值。 */
-function numOr(value, dflt = 0) {
-    const n = numOrNull(value);
-    return n === null ? dflt : n;
-}
-
-/** 计数解析：'12.8万' / '1.2亿' / '1832' / 128000 → 数字。 */
-function parseCount(value) {
-    if (typeof value === 'number') return Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
-    const s = String(value == null ? '' : value).trim().replace(/,/g, '').replace(/\s+/g, '');
-    if (!s) return 0;
-    const m = s.match(/^([0-9]+(?:\.[0-9]+)?)\s*(万|亿|w|W)?/);
-    if (!m) return 0;
-    const base = Number(m[1]);
-    if (!Number.isFinite(base)) return 0;
-    const unit = m[2];
-    if (unit === '万' || unit === 'w' || unit === 'W') return Math.round(base * 10000);
-    if (unit === '亿') return Math.round(base * 100000000);
-    return Math.round(base);
-}
-
-/** 计数显示：B站 口径（1.2万 / 123.4万 / 1.2亿）。 */
-export function fmtCount(value) {
-    const v = parseCount(value);
-    if (v <= 0) return '0';
-    if (v < 10000) return String(v);
-    if (v < 100000000) {
-        const w = v / 10000;
-        return (w >= 100 ? w.toFixed(0) : w.toFixed(1)).replace(/\.0$/, '') + '万';
-    }
-    const y = v / 100000000;
-    return (y >= 100 ? y.toFixed(0) : y.toFixed(1)).replace(/\.0$/, '') + '亿';
-}
-
-/** 秒 → '12:34' / '1:02:33'；0 返回 '直播中' 由调用方决定，这里只给 '0:00'。 */
-export function fmtDur(seconds) {
-    const s = Math.max(0, Math.round(numOr(seconds, 0)));
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const ss = s % 60;
-    const p = (x) => String(x).padStart(2, '0');
-    return h > 0 ? (h + ':' + p(m) + ':' + p(ss)) : (m + ':' + p(ss));
-}
-
-/** '12:34' / '1:02:33' / 754 → 秒。 */
-function parseDur(value) {
-    if (typeof value === 'number') return Math.max(0, Math.round(value));
-    const s = String(value == null ? '' : value).trim();
-    if (!s) return 0;
-    const parts = s.split(':').map((x) => Number(x));
-    if (parts.some((x) => !Number.isFinite(x))) return 0;
-    if (parts.length === 2) return Math.max(0, Math.round(parts[0] * 60 + parts[1]));
-    if (parts.length === 3) return Math.max(0, Math.round(parts[0] * 3600 + parts[1] * 60 + parts[2]));
-    return Math.max(0, Math.round(parts[0] || 0));
-}
-
-/** 相对时间文案：以「剧情现在」为基准（用户读的是剧情时间，不是本机时间）。 */
-export function timeAgo(ts, nowMs) {
-    const t = Number(ts);
-    const n = Number(nowMs);
-    if (!Number.isFinite(t) || t <= 0 || !Number.isFinite(n) || n <= 0) return '';
-    const diff = n - t;
-    if (diff < 0) return '刚刚';
-    const sec = Math.floor(diff / 1000);
-    if (sec < 60) return '刚刚';
-    const min = Math.floor(sec / 60);
-    if (min < 60) return min + '分钟前';
-    const hour = Math.floor(min / 60);
-    if (hour < 24) return hour + '小时前';
-    const day = Math.floor(hour / 24);
-    if (day === 1) return '昨天';
-    if (day < 30) return day + '天前';
-    const d = new Date(t);
-    const nd = new Date(n);
-    if (d.getFullYear() === nd.getFullYear()) return (d.getMonth() + 1) + '-' + d.getDate();
-    return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
-}
-
-/** 墙钟时刻 → 「今天 12:30」/「昨天 21:04」/「11-20 09:12」。 */
-function wallStampText(atMs, nowMs) {
-    const t = Number(atMs);
-    const n = Number(nowMs);
-    if (!Number.isFinite(t) || t <= 0) return '';
-    const d = new Date(t);
-    const p = (x) => String(x).padStart(2, '0');
-    const hm = p(d.getHours()) + ':' + p(d.getMinutes());
-    if (!Number.isFinite(n) || n <= 0) return hm;
-    const dayDiff = Math.floor((n - t) / 86400000);
-    if (dayDiff <= 0) return '今天 ' + hm;
-    if (dayDiff === 1) return '昨天 ' + hm;
-    return (d.getMonth() + 1) + '-' + d.getDate() + ' ' + hm;
-}
-
-function seededInt(seed, min, max) {
-    const lo = Math.ceil(min);
-    const hi = Math.floor(max);
-    if (hi <= lo) return lo;
-    return lo + (hash32(String(seed)) % (hi - lo + 1));
-}
-
-/** 内容时间轴的「现在」：剧情钟优先，读不到时 time-source 显式降级到墙钟。 */
-function storyNowMs() {
-    const s = storyNowWallFallback(hostWin());
-    return numOr(s && s.ms, 0) || wallNow();
-}
 
 /* ---------- 2. 内容池 ---------- */
 /* 【为什么是池而不是噪声拼串】噪声拼出来的标题读一眼就假。这里每个分区给
@@ -490,28 +348,22 @@ const SEARCH_HOT = [
 
 const DANMAKU_COLORS = ['#FFFFFF', '#FFFFFF', '#FF8C9E', '#7FE0FF', '#FFD970'];
 
+/* 内容时间轴的「现在」：剧情钟优先，读不到时 time-source 显式降级到墙钟。
+ *   这一个不属于 bili-format.js：它读宿主环境，不是纯函数。 */
+function storyNowMs() {
+    const s = storyNowWallFallback(hostWin());
+    return numOr(s && s.ms, 0) || wallNow();
+}
+
+function hostWin() {
+    return (typeof window !== 'undefined' && window) ? window : globalThis;
+}
+
 /* ---------- 3. 归一化 ---------- */
 
-/** 是否是 B站 域 / 本地模拟地址（保留旧导出名）。 */
-export function isBilibiliEntryUrl(url) {
-    const raw = String(url == null ? '' : url).trim();
-    if (!raw) return false;
-    if (raw.startsWith('phone://bilibili/')) return true;
-    try {
-        const parsed = new URL(raw);
-        const host = parsed.hostname;
-        return host === 'www.bilibili.com' || host === 'bilibili.com'
-            || host === 'm.bilibili.com' || host === 'search.bilibili.com'
-            || host === 'space.bilibili.com' || host === 'live.bilibili.com';
-    } catch (_e) {
-        return false;
-    }
-}
+/* [v4.190.0] 保留旧导出名：实现已下沉到 bili-format.js（唯一内核）。 */
+export { isBilibiliEntryUrl } from './bili-format.js';
 
-function makeLocalBilibiliUrl(seed, index) {
-    const slug = encodeURIComponent(String(seed || 'bilibili').trim().replace(/\s+/g, '-') || 'bilibili');
-    return 'phone://bilibili/' + slug + '-' + (index + 1);
-}
 
 /** 弹幕归一：允许字符串数组（旧格式）或 {t,text,color} 对象数组。 */
 function normalizeDanmaku(list, seed, durSec) {

@@ -36,7 +36,7 @@
  *   · 不自己算时间：内容时间戳全部来自数据层（剧情钟/墙钟的归属在
  *     `bili-data.js` 顶部逐字段写明），本文件不出现任何取钟调用。
  * ============================================================ */
-import { fmtCount, fmtDur } from './bili-data.js';
+import { fmtCount, fmtDur } from './bili-format.js';
 
 /* 图标统一收在一处：换图标只改这里，不用在十几个模板串里找。 */
 const ICON = {

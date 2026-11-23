@@ -1,0 +1,112 @@
+/* music-core.css — [v4.190.0] 音乐 歌词/播放模式 试算台 · 样式
+ * 只挂 .mc-root 根类，不碰手机外壳、不碰 screen 元素。
+ * 窄屏（≤340px）把两列按钮压成一列。
+ */
+.mc-root {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    font-size: 13px;
+    color: var(--text-strong, #eaeaea);
+}
+
+.mc-head {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mc-title {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.mc-sub {
+    font-size: 11px;
+    opacity: 0.65;
+}
+
+.mc-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.mc-grid button {
+    padding: 10px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border-weak, rgba(255, 255, 255, 0.12));
+    background: var(--surface-weak, rgba(255, 255, 255, 0.05));
+    color: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.mc-grid button:active {
+    background: var(--surface-strong, rgba(255, 255, 255, 0.12));
+}
+
+.mc-flash {
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--surface-weak, rgba(255, 255, 255, 0.05));
+    border: 1px solid var(--border-weak, rgba(255, 255, 255, 0.12));
+    font-size: 12px;
+    word-break: break-all;
+}
+
+.mc-empty {
+    padding: 12px;
+    text-align: center;
+    font-size: 12px;
+    opacity: 0.55;
+}
+
+.mc-lines {
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-weak, rgba(255, 255, 255, 0.12));
+}
+
+.mc-line {
+    display: flex;
+    gap: 10px;
+    padding: 6px 10px;
+    font-size: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mc-line:last-child {
+    border-bottom: none;
+}
+
+.mc-line.mc-cur {
+    background: rgba(251, 114, 153, 0.16);
+    color: var(--accent-strong, #fb7299);
+    font-weight: 600;
+}
+
+.mc-t {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    opacity: 0.7;
+    min-width: 62px;
+}
+
+.mc-x {
+    flex: 1;
+    word-break: break-all;
+}
+
+.mc-meta {
+    font-size: 11px;
+    opacity: 0.6;
+}
+
+@media (max-width: 340px) {
+    .mc-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

@@ -1,0 +1,128 @@
+/* undercover-rules.css — [v4.190.0] 谁是卧底规则试算台样式
+ * 只挂 .uc-root 根类，不碰手机外壳 screen。 */
+.uc-root {
+    padding: 12px;
+    font-size: 13px;
+    color: var(--rp-text, #eee);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.uc-head .uc-title {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.uc-head .uc-sub {
+    font-size: 11px;
+    opacity: 0.65;
+    margin-top: 2px;
+}
+
+.uc-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.uc-bar button,
+.uc-word button {
+    padding: 5px 10px;
+    border: 1px solid var(--rp-border, #444);
+    border-radius: 6px;
+    background: var(--rp-surface, #222);
+    color: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.uc-bar .uc-state {
+    margin-left: auto;
+    font-size: 11px;
+    opacity: 0.75;
+}
+
+.uc-flash {
+    padding: 5px 8px;
+    border-radius: 6px;
+    background: rgba(255, 200, 80, 0.14);
+    font-size: 11px;
+}
+
+.uc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.uc-table th,
+.uc-table td {
+    border-bottom: 1px solid var(--rp-border, #333);
+    padding: 5px 4px;
+    text-align: left;
+}
+
+.uc-table th {
+    font-size: 11px;
+    opacity: 0.7;
+    font-weight: 500;
+}
+
+.uc-table tr.uc td {
+    color: #ff8c9e;
+}
+
+.uc-table tr.dead td {
+    opacity: 0.45;
+    text-decoration: line-through;
+}
+
+.uc-table button {
+    padding: 2px 6px;
+    margin-right: 2px;
+    border: 1px solid var(--rp-border, #444);
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.uc-foot {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.uc-word {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+}
+
+.uc-word input {
+    width: 90px;
+    padding: 4px 6px;
+    border: 1px solid var(--rp-border, #444);
+    border-radius: 5px;
+    background: var(--rp-surface, #1c1c1c);
+    color: inherit;
+    font-size: 12px;
+}
+
+@media (max-width: 340px) {
+    .uc-table th:nth-child(2),
+    .uc-table td:nth-child(2) {
+        display: none;
+    }
+
+    .uc-word input {
+        width: 72px;
+    }
+}

@@ -1,0 +1,75 @@
+/* bili-format.css — [v4.190.0] B站 换算试算台 · 样式
+ * 只挂 .bf-root 根类，不碰手机外壳、不碰 screen 元素。
+ * 窄屏（≤340px）把两列格子压成一列。
+ */
+.bf-root {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    font-size: 13px;
+    color: var(--text-strong, #eaeaea);
+}
+
+.bf-head {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.bf-title {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.bf-sub {
+    font-size: 11px;
+    opacity: 0.65;
+}
+
+.bf-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.bf-grid button {
+    padding: 10px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border-weak, rgba(255, 255, 255, 0.12));
+    background: var(--surface-weak, rgba(255, 255, 255, 0.05));
+    color: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.bf-grid button:active {
+    background: var(--surface-strong, rgba(255, 255, 255, 0.12));
+}
+
+.bf-flash {
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--surface-weak, rgba(255, 255, 255, 0.05));
+    border: 1px solid var(--border-weak, rgba(255, 255, 255, 0.12));
+    font-size: 12px;
+    word-break: break-all;
+}
+
+.bf-out {
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.25);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+    opacity: 0.85;
+}
+
+@media (max-width: 340px) {
+    .bf-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

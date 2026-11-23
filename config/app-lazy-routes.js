@@ -112,6 +112,9 @@ export const APP_LAZY_ROUTES = [
     { id: "keyboard", module: "./apps/keyboard/keyboard-app.js", key: "keyboardApp", cls: "KeyboardApp", errTitle: "口癖联想App" },
     { id: "pokereval", module: "./apps/games/poker/poker-eval-app.js", key: "pokerEvalApp", cls: "PokerEvalApp", errTitle: "牌型评估App" },
     { id: "wwrules", module: "./apps/games/werewolf/werewolf-rules-app.js", key: "wwRulesApp", cls: "WerewolfRulesApp", errTitle: "狼人杀规则App" },
+    { id: "ucrules", module: "./apps/games/undercover/undercover-rules-app.js", key: "ucRulesApp", cls: "UndercoverRulesApp", errTitle: "谁是卧底规则App" },
+    { id: "bilifmt", module: "./apps/bilibili/bili-format-app.js", key: "biliFmtApp", cls: "BiliFormatApp", errTitle: "B站换算App" },
+    { id: "musiccore", module: "./apps/music/music-core-app.js", key: "musicCoreApp", cls: "MusicCoreApp", errTitle: "歌词与模式App" },
 ];
 
 /* 索引（appId → 行）：装配器查表用，一次建好避免每次 openApp 线性扫。 */

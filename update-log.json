@@ -1,6 +1,23 @@
 {
-  "latest": "4.189.0",
+  "latest": "4.190.0",
   "versions": {
+    "4.190.0": {
+      "version": "4.190.0",
+      "date": "2026-11-23",
+      "items": [
+        "【版本升至 4.190.0（五源同源）】大件工程第二炮：undercover / bilibili / music 三件的**可纯化部分**一次抽成独立内核。三件源都是 700~1500 行的类（undercover-data 724 行 / bili-data 1365 行 / music-data 1514 行），类里绝大多数方法在动 this.state 或自持状态并直写 storage —— 那是**有副作用的编排**，不该在本仓「纯函数内核 + 控制器 + 视图」纪律下整只搬。因此本版只抽规则面 / 换算面 / 歌词与模式面，源类一行未动（music 只把 6 个方法体改成转调内核，B1 判据逐条钉住源类仍是类、仍 new Audio()、仍持 _playlist）。",
+        "`apps/games/undercover/undercover-rules.js`（465 行，纯函数内核）：PLAYER_COUNT=6 / FALLBACK_WORD_PAIRS 5 对 / FALLBACK_AI_PROFILES 5 个 / ROLES / PHASES / UC_REJECT（13 条封闭拒绝原因）/ SPEECH_LIMITS（52/42/8/7）+ normalizeWordHistory / usedWordSet / normalizeWordPair（rng 由调用方给，兜底池挑哪对也由 rng 定）/ rememberWordPair / normalizeContactIds / pickInvitedContacts / shuffle（Fisher-Yates，**不改入参**）/ seatPlayers（6 座空位留 pending）/ pickUndercoverSeat / buildAiProfiles / splitSpeechSegments（长句按阈值切碎）/ nextSpeaker（环形找未发言人，全员说完转 voting）/ resolveVotes（**平票无人出局、最高票唯一才出局**、弃票由 rng 兜、卧底全灭平民胜、活人 <=2 卧底胜）/ voteResultText / isValidGame（必须有且只有一个用户）/ alivePlayers。源类里 6 处自己造随机全部改成 rng 由调用方传。",
+        "`apps/bilibili/bili-format.js`（198 行，纯函数内核）：把 bili-data 里「公开三个、私有十个」的换算族整族提出 —— hash32 / b62 / makeBvid / makeMid / seededInt / compactText / parseCount / fmtCount / parseDur / fmtDur / timeAgo（**nowMs 一律由调用方传**，用户读的是剧情时间不是本机时间）/ wallStampText / makeLocalBilibiliUrl / isBilibiliEntryUrl。源文件 `bili-data.js` 同步改造：删掉本地重复实现，`isBilibiliEntryUrl` 改为 export 转发（旧导入方零改动）。",
+        "`apps/music/music-core.js`（138 行，纯函数内核）：PLAYBACK_MODES 三模式封闭词表 + PLAYBACK_MODE_LABELS / PLAYBACK_MODE_ICONS + MUSIC_REJECT + LRC_LIMITS（一行最多 16 个时间戳 / 全文最多 4000 行）+ normalizePlaybackMode（认不出归 once）/ nextPlaybackMode / modeFromRepeatOne（旧布尔开关双向映射）/ shouldLoop / parseLrc（一行多时间戳逐个成条、元数据行自然剔除、坏档返回 [] 不抛）/ currentLyricIndex / hasLyrics。源文件 `music-data.js` 同步改造：`_parseLrc` 与播放模式一族 6 个方法体改为转调内核，删掉本地 25 行 LRC 实现。",
+        "三件四件套齐：控制器 `undercover-rules-app.js`（deal / setWordPair / toggleAlive / setRole / speak / vote / verdict / aliveSeats / check，STATE_KEY `games_uc_rules_v1`）+ `bili-format-app.js`（count / dur / ago / id / text 五个试算口，STATE_KEY `bili_format_v1`，DEMO_NOW 固定时刻）+ `music-core-app.js`（lrc / seek / cycle / setMode / migrate，STATE_KEY `music_core_v1`，DEMO_SECONDS 固定进度）；视图 `undercover-rules-view.js`（6 人空桌 + 死活/设身份/发言/结算/设词对）+ `bili-format-view.js`（计数/时长/时间/标识四个换算格子 + JSON 输出）+ `music-core-view.js`（LRC 试算 + 时间轴歌词列表 + 播放模式拨盘）；样式三件。视图一律 `_boundRoot === root` 去重 + data-act 委派 + CSS 自注入，零定时器零网络。",
+        "五处接线：`config/apps.js` 加 `ucrules` / `bilifmt` / `musiccore` 三条；`config/app-lazy-routes.js` 加三行懒加载；`config/storage.js` 加 `^games_uc_rules_` / `^bili_format_` / `^music_core_` 三个会话前缀；`scripts/keys-audit.mjs` 登记 `games_uc_rules_v1` / `bili_format_v1` / `music_core_v1`；`index.js` 重绑表加 `ucRulesApp` / `biliFmtApp` / `musicCoreApp`。三个控制器落盘**只走 writeReceipt**，零 `storage.set(` 直写。",
+        "判据 `tests/system-v4190.test.mjs` 19 门（A 内核纯度与行为 8 / B 源库不动 3 / C 控制器 2 / D 视图样式 3 / E 接线 2 / V 版本锚 1）。A 组逐条钉住三件内核零 Math.random / 零 Date.now / 零类 / 零 DOM / 零存储，并跑行为面（同一 rng 序列发同一桌、同一 ts 配不同 nowMs 给不同文案、同一段 LRC + 同一秒永远同一句）。B3 是负控制：同一份判据在平票时必须判「无人出局」，在唯一最高票下必须判「出局」—— 证明「出不出局」真由票数决定而不是写死。",
+        "本版**自己抓到的缺陷**（都不是门禁先报的）：① `bili-format-app.js` / `music-core-app.js` 的 write-receipt 相对路径写成 `../../../`（多退一层，apps/bilibili 只需 `../../`），import-resolve-check 报 2 条无法解析后改齐；② 三件内核头注释里写着「不碰 Math.random / 不取 Date.now」这种字面量，反而让判据的 indexOf 扫描误报（本仓判据不用正则），改成「不碰随机源 / 不自己读系统时钟」的行为描述；③ undercover 内核的注释也有一处 `源里是 Math.random 自己挑`，同样改掉；④ **11 个 App 从未登记 `APP_CATEGORY`**（v4.189.0 的 pokereval/wwrules 与更早的 iot/share/callscene/social/daily/keyboard，加本版 ucrules/bilifmt/musiccore）—— 缺登记会被 `appCategory` 静默折成 system，把聚合壳撑到 20 个（上限 12）。本版按语义补齐类目；⑤ 同族欠账：这 11 个 App 也从未建过像素图标条目（`APP_GLYPHS`），桌面网格上 emoji 与像素方块混排。本版给 `tools/gen_pixel_icons.py` 补 11 条字形 + 底色并重跑生成器（92 → 100 个 SVG），`config/pixel-icons.generated.js` 清单随之从 93 涨到 101 ids。",
+        "读数跟着交付物走：`.js` 文件数 968 → 972（本版新增 5 个 .js + 3 个 CSS）；`tests/audit/` 台账与三本生成器（status-ledger / file-size / refresh-doc）重签。**不是放宽判据**，是基准随本版真实交付抬了。",
+        "**运行时验证边界**（与 `docs/runtime-verification-boundary.md` 同一句标志语）：三件都只在进程内跑过内核与判据，**不能保证**真机上的观感 —— 6 人空桌在窄屏（≤340px）下第二列被隐藏后的可读性、四个换算格子按钮的热区、以及「看起来没坏但显示不对」这一类仍未验证。",
+        "剩余大件清单：`undercover`（规则面已抽，源类 724 行未动）、`bilibili`（换算面已抽且源文件已接入，源类 BiliData 未动）、`music`（歌词与模式面已抽且源文件已接入，源类 MusicData 未动）、`uterus`（早已是纯函数内核，无需重构）。三件的源类其余方法仍是有副作用的编排面，若要整只重构需单独一版立项。"
+      ]
+    },
     "4.189.0": {
       "version": "4.189.0",
       "date": "2026-11-23",
@@ -6679,5 +6696,5 @@
       ]
     }
   },
-  "head": "4.189.0"
+  "head": "4.190.0"
 }
