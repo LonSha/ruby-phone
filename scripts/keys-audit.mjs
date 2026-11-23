@@ -471,6 +471,8 @@ const KEY_REGISTRY = [
   { key: 'daily_fabric_v1', scope: 'chat', note: '[v4.188.0] 生活织机：跨 App 事件流水（随会话隔离）' },
   { key: 'ime_profile_v1', scope: 'chat', note: '[v4.188.0] 输入法口癖表（角色专属，随会话隔离）' },
   { key: 'ime_draft_v1', scope: 'chat', note: '[v4.188.0] 输入法草稿（单键，不散拼 ime_draft_*）' },
+  { key: 'games_poker_eval_v1', scope: 'chat', note: '[v4.189.0] 牌型评估：最近一次试算的选牌快照（随会话隔离）' },
+  { key: 'games_ww_rules_v1', scope: 'chat', note: '[v4.189.0] 狼人杀规则：试算桌的身份/死活快照（随会话隔离）' },
   { key: 'weather_settings', scope: 'chat', note: '[v3.27.0] 天气设置（注入开关 / 新鲜度小时数 / 注入条数）' },
   { key: 'weather_state', scope: 'chat', note: '[v3.27.0] 天气观测（角色与用户两槽；温度以整数存，过期标「未必是当下的」）' },
     { key: 'widget_settings', scope: 'chat', note: '[v3.28.0] 自定义组件设置（注入开关 / 注入条数 / 新建默认尺寸）' },

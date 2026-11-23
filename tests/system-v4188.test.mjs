@@ -283,8 +283,14 @@ test('E3 三个内核都不取 now、不 Math.random（时间由调用方给）'
 });
 
 /* ══════════ V 版本锚 ══════════ */
-test('V1 版本锚：package.json 已抬到 4.188.0', () => {
+test('V1 版本锚：4.188.0 已进版本史（不错位到当前版本）', () => {
     const pkg = JSON.parse(read('package.json'));
-    assert.equal(pkg.version, '4.188.0');
-    assert.ok(read('index.js').indexOf('4.188.0') > 0);
+    const man = JSON.parse(read('manifest.json'));
+  assert.equal(man.version, pkg.version, '五源同源：package.json 与 manifest.json 必须同版本');
+    const log = JSON.parse(read('update-log.json'));
+  assert.equal(log.latest, pkg.version, '五源同源：update-log latest 必须等于当前版本');
+  assert.equal(log.head, pkg.version, '五源同源：update-log head 必须等于当前版本');
+  assert.ok(Object.prototype.hasOwnProperty.call(log.versions, '4.188.0'), '4.188.0 必须已进版本史');
+  assert.ok(read('index.js').indexOf("const ST_PHONE_VERSION = '" + pkg.version + "';") > 0, 'index.js 版本常量必须跟着抬版');
+  assert.ok(read('ITERATION_LOG.md').indexOf('迭代 304') > 0, '迭代日志必须留下 4.188.0 那一次');
 });

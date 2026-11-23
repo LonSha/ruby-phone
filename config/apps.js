@@ -1313,6 +1313,29 @@ export const APPS = [
         badge: 0,
         data: {},
     },
+    {
+        // [v4.189.0] 牌型评估：从 apps/games/poker/poker-data.js 那 1038 行类里抽出
+        //   **唯一可纯化**的评估面（_createDeck/_shuffle/_rankFive/_compareHands/...
+        //   十个方法全是给定牌->给定结论）。类的其余 69 个方法动 this.state 做
+        //   下注轮/盲注/AI/侧池，是有副作用的编排，本件只包无副作用的评估面。
+        id: 'pokereval',
+        name: '牌型评估',
+        icon: '🃏',
+        color: '#f43f5e',
+        badge: 0,
+        data: {},
+    },
+    {
+        // [v4.189.0] 狼人杀规则：从 apps/games/werewolf/werewolf-data.js 那 1100 行类里
+        //   抽出规则面（_assignRoles/_advanceNightStep/_checkWinCondition/...）。
+        //   类持 state 且 _persist，是编排面；本件只做规则判定，一座 8 人空桌试算。
+        id: 'wwrules',
+        name: '狼人杀规则',
+        icon: '🌚',
+        color: '#8b5cf6',
+        badge: 0,
+        data: {},
+    },
 ];
 
 /* [v4.87.0] 桌面分层：核心 20 → 桌面直接可见；其余 → 「应用库」按类目收纳。

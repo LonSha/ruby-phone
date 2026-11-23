@@ -1,0 +1,24 @@
+/* ============================================================
+ * poker-eval.css — [v4.189.0] 牌型评估 · 样式
+ * ============================================================ */
+.pe-root { display:flex; flex-direction:column; gap:10px; padding:12px; box-sizing:border-box; height:100%; overflow-y:auto; font-size:14px; color:var(--rp-text,#e6e6e6); background:var(--rp-bg,#12141a); }
+.pe-head { display:flex; align-items:center; gap:8px; }
+.pe-back { border:0; background:transparent; color:inherit; font-size:20px; line-height:1; padding:2px 8px; cursor:pointer; }
+.pe-title { font-weight:600; font-size:16px; flex:1; }
+.pe-count { font-size:11px; padding:2px 8px; border-radius:10px; border:1px solid currentColor; opacity:.8; }
+.pe-flash { font-size:12px; padding:6px 10px; border-radius:8px; background:rgba(255,255,255,.06); }
+.pe-picked { font-size:15px; letter-spacing:1px; min-height:24px; }
+.pe-result { font-size:16px; font-weight:600; }
+.pe-score { font-size:12px; opacity:.7; font-weight:400; }
+.pe-cards { font-size:13px; opacity:.8; letter-spacing:1px; }
+.pe-none { font-size:12px; opacity:.55; }
+.pe-sec-t { font-size:12px; opacity:.6; }
+.pe-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:5px; }
+.pe-card { display:flex; flex-direction:column; align-items:center; gap:1px; border:1px solid rgba(255,255,255,.14); background:transparent; color:inherit; font:inherit; padding:5px 2px; border-radius:7px; cursor:pointer; }
+.pe-card.is-on { border-color:rgba(56,189,248,.7); background:rgba(56,189,248,.16); }
+.pe-suit { font-size:14px; line-height:1; }
+.pe-rank { font-size:10px; opacity:.75; }
+.pe-red { color:#f87171; } .pe-black { color:var(--rp-text,#e6e6e6); }
+.pe-foot { margin-top:auto; padding-top:8px; display:flex; gap:6px; }
+.pe-btn { border:1px solid rgba(56,189,248,.5); background:rgba(56,189,248,.12); color:inherit; font:inherit; font-size:12px; padding:6px 12px; border-radius:8px; cursor:pointer; }
+.pe-btn-ghost { border-color:rgba(255,255,255,.16); background:transparent; opacity:.75; }

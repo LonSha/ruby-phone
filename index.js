@@ -476,7 +476,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.188.0';
+const ST_PHONE_VERSION = '4.189.0';
 const ST_PHONE_CSS_REVISION = '20261122-wechat-v4';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -540,6 +540,8 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'socialApp',      // [v4.188.0] 朋友圈：有 destroy 出口且读数随会话走，必须进表
     'dailyApp',       // [v4.188.0] 生活织机：有 destroy 出口且读数随会话走，必须进表
     'keyboardApp',    // [v4.188.0] 口癖联想：有 destroy 出口且读数随会话走，必须进表
+    'pokerEvalApp',   // [v4.189.0] 牌型评估：有 destroy 出口且读数随会话走，必须进表
+    'wwRulesApp',     // [v4.189.0] 狼人杀规则：有 destroy 出口且读数随会话走，必须进表
     'weatherApp',     // [v3.27.0] 天气：读数现取，但仍进表（下帧现取，防将来加缓存时漏重绑）
     'widgetApp',      // [v3.28.0] 自定义组件：有未保存草稿（widget_draft）与选中态，换会话必须丢草稿重取，必须进表
     'taobaoApp',      // [v3.29.0] 桃宝：有展开的物流面板（_openLogi，视图态），换会话必须收起重取，必须进表
@@ -714,17 +716,16 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-23",
     items: [
-        "【版本升至 4.188.0（五源同源）】四件小 App 一次重构完：`call` 情境通话声场 / `social` 自主朋友圈 / `daily` 跨 App 生活织机 / `keyboard` 口癖联想。四件源内核都是同一个病（类持状态 + 自己 Date.now/Math.random + 认不出就悄悄兜默认 + 叙事写死在描述里），逐件改成「纯函数内核 + PhoneStorage + 视图」四件套，共落 12 个新文件（4 × data/app/view/css）。",
-        "`call`：源 `contextual-cellular-call-acoustic-modulator.js` 用 environment.includes 拼场景、自己写「窗外呼啸狂风与密集雨点打在玻璃上的噼啪声」还拼 directivePrompt；`dynamic-context-call-soundscape.js` 类持 activeCall、自己 Date.now、`soundscapeProfiles[scenario] || HEAVY_RAIN_FLEEING` 把认不出的场景悄悄换成暴雨。本件改成四场景封闭词表（全是 lowPassHz/distortion/gain 数值）+ 信号 0~5 档越界夹取记账 + 注入只给「低通 3500Hz | 失真 0.25 | 回声 open_field_damped」这类读数。会话键走 ^call_scene_ 前缀，与既有 phone_call_ 通话记录不撞车。",
-        "`social`：源把认不出的时段兜成 night、moodTag 收任何字面量、自己 Date.now+Math.random 造 id、还三段挂载 globalThis/window/module.exports。本件改成 DAY_PARTS / MOOD_TAGS / ACTIONS 三张封闭词表 + 点赞幂等（同一 actor 再赞要拒）+ 坏档归一丢半截数据 + 注入只给「谁发了几条 / 收赞几次 / 收评几条」计数。",
-        "`daily`：源用四条正则 `/吃|火锅|奶茶|咖啡|夜宵|烤肉|聚餐|餐厅/` 猜事件、命中就编一段「自动在外卖收藏夹中生成附近高分餐厅推介清单」的叙事、自己造 id。本件改成 LIFE_RULES 规则表（ruleId/app/type/keywords 逐条写死可审，App 与事件类型都是封闭词表，判据 C1 逐条断言词表闭合）+ 命中词如实记账 + 一个都没中就拒 + 注入只给「哪条规则触发几次、命中哪个词」。",
-        "`keyboard`：源 `matches.length > 0 ? matches : [p]` 把没匹配也当一条候选（等于输入法在自说自话）、口癖表不是数组就兜底成笨蛋/才没有/听好了三连、还散拼 `ime_draft_${draftKey}` 这种键。本件改成：口癖表不是数组就拒（连空数组也拒，不给兜底机会）、没匹配就如实 empty_query、草稿超长拒收不静默截断、草稿键收敛成单一常量 `ime_draft_v1`（进 keys-audit 登记）。",
-        "判据 `tests/system-v4188.test.mjs` 20 门（A call 5 / B social 4 / C daily 3 / D keyboard 3 / E 接线 3 / V 版本锚 1... 实际含四组负控制口径）：A5 把场景校验改成 `spec.scene = 'rain_fleeing'` 兜底后 A1 必须转红（写临时模块真跑）；E3 逐文件断四个内核零 Date.now、零 Math.random —— 时间一律由调用方传入，同一输入结果恒定。",
-        "本版**自己抓到的缺陷**（都不是门禁先报的）：① `SHARE_FACE` 那类大小写错配在 call 这边一开始也犯了（视图写 `CALL_FACE.active`，内核导出大写 ACTIVE），已按 v4.187.0 的口径一次改齐；② `social-view` 的评论走 prompt 弹层而视图里同时存在 input 禁入纪律 —— 判据 E2 明确只禁 setInterval/setTimeout/fetch，评论交互保留在控制器层，不往视图塞 input 监听；③ 上一版收尾把 `r23_o1` 的块注释插进行中间导致整份判据 SyntaxError，本版同类操作一律合并进独立注释块（已复跑 14 门全绿）。",
-        "读数跟着交付物走：`.js` 文件数 948 → 960（四件各 3 个真新增 .js）；`tests/audit/` 台账与三本生成器（status-ledger / file-size / refresh-doc）重签。**不是放宽判据**，是基准随本版真实交付抬了。",
-        "**交棒改写**（不是静默通过）：social / daily / keyboard 三个内核的 `globalThis.*` / `window.*` / `module.exports` 三段挂载一律没搬过来 —— 本仓模块只走 ESM 导出；原文件保留为「内核来源」的证据，不进路由。",
-        "**运行时验证边界**（与 `docs/runtime-verification-boundary.md` 同一句标志语）：四件都只在进程内跑过内核与判据，**不能保证**真机上的观感 —— 场景按钮与信号步进在真实触控里的热区、窄屏（≤340px）下词表换行的排布、以及「看起来没坏但显示不对」这一类仍未验证。",
-        "未重构的 app 清单已清空：`keyboard / iot / social / daily / call / share` 六件本版与上两版全部补完（iot v4.186.0 / share v4.187.0 / call+social+daily+keyboard v4.188.0）。"
+        "【版本升至 4.189.0（五源同源）】大件工程开工：poker 与 werewolf 两件的**可纯化部分**抽成独立内核。两件源都是 1000+ 行的类（poker-data 1038 行 79 方法 / werewolf-data 1100 行 73 方法），类里绝大多数方法在动 this.state 并直写 storage，那是**有副作用的编排**，不该在本仓「纯函数内核 + 控制器 + 视图」纪律下整只搬。因此本版只抽评估面与规则面，源类一行未动（判据 C1 逐条钉住源类仍是类、仍是 this.state）。",
+        "`poker-eval.js`（212 行，纯函数内核）：SUITS / RANKS / HAND_SCORES / HAND_NAMES 四张封闭词表 + createDeck（52 张不重不漏）+ shuffleDeck（**rng 由调用方给**，同一副 + 同一序列 => 同一结果，判据可写）+ drawCards（**不改入参**，返回 drawn + rest 两份）+ combinations / straightHigh（A 既能当 14 也能当 1）+ rankFive + handLabel + compareHands + evaluateBestHand（**少于五张拒答**，不当默认值用）+ formatCards。",
+        "`werewolf-rules.js`（168 行，纯函数内核）：ROLE_POOL（8 人局固定 2 狼 + 预言家 + 女巫 + 守卫 + 3 民）+ NIGHT_STEPS / NIGHT_STEP_ROLES / NIGHT_STEP_LABELS 三张封闭表 + REVEAL_MODES（hidden / open / self，**认不出返回 null 不兜默认**）+ assignRoles（**人数不等于池长就拒**，不发半副身份）+ roleForStep / advanceNightStep（走完返回 done）+ alivePlayers / aliveWolves / aliveNonWolves + checkWinCondition（狼全灭好人胜 / 狼数>=非狼数狼人胜 / 否则未分）+ firstAliveSeatFrom（环形找活人）/ lastAliveSeat / isUserSeat / isValidState（**必须有且只有一个用户**）+ normalizePotion（只认 antidote / poison）。",
+        "两件四件套齐：控制器 `poker-eval-app.js`（evaluate / demo / fmt / deck）+ `werewolf-rules-app.js`（deal / setRole / toggleAlive / setRevealMode / nextStep / verdict / aliveCount，一座 8 人空桌）；视图 `poker-eval-view.js`（52 张牌点选网格 + 实时评估）+ `werewolf-rules-view.js`（8 座位表格 + 夜晚步骤推进 + 揭示模式切换）；样式 `poker-eval.css` / `werewolf-rules.css`。视图一律 `_boundRoot === root` 去重 + data-act 委派 + CSS 自注入，零定时器零网络。",
+        "五处接线：`config/apps.js` 加 `pokereval` / `wwrules` 两条；`config/app-lazy-routes.js` 加两行懒加载；`config/storage.js` 加 `^games_poker_eval_` / `^games_ww_rules_` 两个会话前缀；`scripts/keys-audit.mjs` 登记 `games_poker_eval_v1` / `games_ww_rules_v1`；`index.js` 重绑表加 `pokerEvalApp` / `wwRulesApp`。两个控制器落盘**只走 writeReceipt**，零 `storage.set(` 直写。",
+        "判据 `tests/system-v4189.test.mjs` 21 门（A poker 7 / B werewolf 8 / C 源库不动 2 / E 接线 3 / V 版本锚 1），含两条负控制：A7 把「少于五张拒答」改成兜一手高牌后 A3 必须转红（写临时模块真跑）；B8 把揭示模式归一改成兜 `hidden` 后 B4 必须转红。",
+        "本版**自己抓到的缺陷**（都不是门禁先报的）：① keys-audit 报红（登记 549 条 vs 使用 547 个）—— 两个新键登记了却没使用点，补上 `_readSnapshot` / `_saveSnapshot` 真读写后才消；② `werewolf-rules-app.js` 头注释还写着「零写盘」，与刚补的快照读写自相矛盾，改成如实描述；③ 判据 A7 一开始在 broken 模块里调了判据自己的辅助函数 spade()，独立文件里不存在，改成字面牌面。",
+        "读数跟着交付物走：`.js` 文件数 960 → 968（两件各 4 个真新增 .js）；`tests/audit/` 台账与三本生成器（status-ledger / file-size / refresh-doc）重签。**不是放宽判据**，是基准随本版真实交付抬了。",
+        "**运行时验证边界**（与 `docs/runtime-verification-boundary.md` 同一句标志语）：两件都只在进程内跑过内核与判据，**不能保证**真机上的观感 —— 52 张牌点选网格在窄屏（≤340px）下的排布与热区、8 座位表格的身份下拉在真实触控里的手感、以及「看起来没坏但显示不对」这一类仍未验证。",
+        "剩余大件清单：`music`（MusicData 类 1514 行，持 new Audio() 与懒加载，纯化难度最高）、`bilibili`（bili-data 已有 7 个纯函数 + BiliData 类，可补完）、`undercover`（undercover-data 724 / undercover-view 996，未盘）。`uterus` 早已是纯函数内核，无需重构。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
