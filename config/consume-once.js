@@ -19,6 +19,7 @@
  *   ⑤ 未知模式一律拒载，不许默认按 deliver（会把预览变成一次性）也不许默认 preview。
  */
 
+import { str } from './loose-str-face.js';
 import { numOrNull } from './num-gate.js';
 
 /** 一次记录在消费面上一共有几种落点。 */
@@ -26,7 +27,7 @@ export const CONSUME_STATES = Object.freeze(['fresh', 'delivered', 'expired', 'r
 /** 交互模式闭集。 */
 export const CONSUME_MODES = Object.freeze(['preview', 'deliver']);
 
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 function asNum(v, fallback) {
     const n = numOrNull(v);
     return n === null ? fallback : n;

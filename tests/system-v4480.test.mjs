@@ -146,8 +146,20 @@ test('A2 纯契约：内核零 DOM / 零定时器 / 零网络 / 零宿主依赖�
     for (const bad of ['document.', 'window.', 'setInterval', 'setTimeout', 'fetch(', 'XMLHttpRequest', 'localStorage', 'import(']) {
         assert.equal(code.indexOf(bad), -1, '纯契约件不得出现 ' + bad);
     }
-    /* 唯一允许的外部接触就是 storage 形参：不 import 任何模块。 */
-    assert.equal(/^\s*import\s/m.test(code), false, '内核不得 import 任何模块');
+    /* v4.197.0 口径修正（不是放低标准）：本版把 24 份逐字等价的 str 复制件收敛成
+     * config/loose-str-face.js，本内核随之转调。原断言「不得 import 任何模块」锤的是**意图**：
+     * 不得接触 DOM / 定时器 / 网络 / 宿主，唯一外部接触是注入的 storage 句柆。
+     * 把「零 import」当成意图本身，每次纯函数面收敛都会误红。新口径：允许 import
+     * 本仓**自身零 import** 的纯函数叶子（num-gate / *-face.js），依然不得接触 storage 以外的任何主机面。 */
+    const imp = code.match(/^\s*import\s[^;]*;/gm) || [];
+    const LEAF_OK = ['./num-gate.js', './loose-str-face.js'];
+    for (const one of imp) {
+        const d = (one.match(/'([^']+)'/) || [])[1];
+        assert.ok(LEAF_OK.indexOf(d) >= 0,
+            '内核只许 import 本仓零 import 纯函数叶子（num-gate / *-face.js），实际：' + d);
+        assert.equal((read('config/' + d.slice(2)).match(/^\s*import\s/m) || []).length > 0, false,
+            '被导入面自身必须零 import，实际 ' + d);
+    }
     /* 读写的唯一收口：全文件只有两处 storage 方法调用。 */
     const calls = (code.match(/storage\s*(?:&&)?[^\n]*\.(?:get|set)\(/g) || []).length;
     assert.equal(calls, 2, '读写口必须只有一组（readAffairs / writeAffairs），实测 ' + calls);

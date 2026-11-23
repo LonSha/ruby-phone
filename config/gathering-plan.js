@@ -34,6 +34,7 @@
  *   · 不替用户选时段：`candidates` 只做集合运算，选哪个由 `confirm(slotId)` 显式点名。
  * ================================================================ */
 'use strict';
+import { str } from './loose-str-face.js';
 import { numOrNull } from './num-gate.js';
 
 /* ---------- 词表（全部冻结；判据按词表逐词核，不按实现核） ---------- */
@@ -97,7 +98,7 @@ export const GP_LIMITS = Object.freeze({
     slotLabel: 60,
 });
 
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 function arr(v) { return Array.isArray(v) ? v : []; }
 function obj(v) { return (v && typeof v === 'object' && !Array.isArray(v)) ? v : null; }
 function clip(s, max) {

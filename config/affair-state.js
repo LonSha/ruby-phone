@@ -46,6 +46,7 @@
 'use strict';
 /* ---------- 词表（受控，判据按此表逐词核） ---------- */
 /** 事务阶段（受控词表：不认识的一律归 unknown 并具名，不猜）。 */
+import { str } from './loose-str-face.js';
 export const AFF_STAGES = Object.freeze({
     PLANNING: 'planning',
     SCHEDULED: 'scheduled',
@@ -93,7 +94,7 @@ export const AFF_LIMITS = Object.freeze({
     note: 200,
 });
 /* ---------- 基础归一（与 open-ref 同口径：纯空白不算 id/不算数） ---------- */
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 function capStr(v, n) {
     const s = str(v);
     return s.length > n ? s.slice(0, n) : s;

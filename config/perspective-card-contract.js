@@ -49,6 +49,7 @@
  *   (`Number(null) === 0` 会把两者塌成同一个数),故引用 `numOrNull` 并局部
  *   命名为 `floorOrNull` 以保留楼层语义(实现唯一,名字本地)。
  *   配套门禁 scripts/weak-coercion-audit.mjs 会守这一面。 */
+import { str } from './loose-str-face.js';
 import { numOrNull as floorOrNull } from './num-gate.js';
 /** 上游插件全局名(与其它契约模块读的是同一个) */
 const LONSHA_PLUGIN_GLOBAL = 'LonShaMemory';
@@ -95,7 +96,7 @@ export const PERSPECTIVE_LIMITS = Object.freeze({
     perSlot: 40,
     fact: 120
 });
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 /** 宿主窗口(注入优先,回落全局) */
 function resolveWin(win) {
     if (win && typeof win === 'object') return win;

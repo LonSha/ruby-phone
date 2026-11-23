@@ -34,6 +34,7 @@
  * ======================================================== */
 'use strict';
 
+import { str } from './loose-str-face.js';
 import { numOrNull } from './num-gate.js';
 
 /* ───────── ① 四段声明 ───────── */
@@ -129,7 +130,7 @@ export const LIB_MIGRATIONS = Object.freeze([]);
 
 /* ───────── ② 引用教学 ───────── */
 
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 
 /**
  * 逐书核四段引用。

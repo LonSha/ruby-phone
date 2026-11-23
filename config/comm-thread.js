@@ -37,6 +37,7 @@
  *   本件**不摸任何 App 存储**，读写只经注入的 storage 句柄上的那一个键。
  * ============================================================ */
 'use strict';
+import { str } from './loose-str-face.js';
 import { rand } from './random-source.js';
 import { numOrNull } from './num-gate.js';
 
@@ -132,7 +133,7 @@ export const COMM_LIMITS = Object.freeze({
 });
 
 /* ---------- 基础归一（与 open-ref / affair-state 同口径：纯空白不算 id） ---------- */
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 function capStr(v, n) {
     const s = str(v);
     return s.length > n ? s.slice(0, n) : s;

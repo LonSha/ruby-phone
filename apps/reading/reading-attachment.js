@@ -49,6 +49,7 @@
 'use strict';
 
 /** 本模块自己的库名与对象仓(不占用会话隔离键:正文不是会话状态,是读者本机的书) */
+import { str } from '../../config/loose-str-face.js';
 const DB_NAME = 'ruby-phone-reading';
 const DB_VERSION = 1;
 const STORE = 'bodies';
@@ -78,7 +79,7 @@ export const ATTACHMENT_LIMITS = Object.freeze({
     books: 60
 });
 
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 
 /** 取宿主里的 indexedDB(注入优先;没有则如实报 unavailable) */
 function idbOf(win) {

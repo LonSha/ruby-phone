@@ -28,6 +28,7 @@
  * ============================================================ */
 
 /** 卡片六态（互不相同：压平任意两态即造出处置相反的处境长得一样）。 */
+import { str } from './loose-str-face.js';
 export const CUSTODY_STATES = Object.freeze({
     ABSENT: 'absent',              // 上游不在场：没有履约面
     UNSUPPORTED: 'unsupported',     // 上游在，但没有履约出口（旧版）
@@ -52,7 +53,7 @@ export const CUSTODY_LIMITS = Object.freeze({
     items: 24,       // 一次最多列几件
 });
 
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 function strList(v, cap) {
     const out = [];
     if (!Array.isArray(v)) return out;

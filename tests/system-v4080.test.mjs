@@ -129,15 +129,37 @@ test('A4 七类纪念页素材齐备,且每类都有中文标签', () => {
         && Object.isFrozen(mod.ALBUM_SCOPE_TEXT) && Object.isFrozen(mod.ALBUM_LIMITS)
         && Object.isFrozen(mod.RELATION_ALBUM_STATES) && Object.isFrozen(mod.RELATION_ALBUM_REASONS));
 });
-test('A5 上限冻结且为正;零依赖边界(只 import num-gate 一处)', () => {
+/**
+ * v4.197.0 起,「零依赖边界」按**意图**判,不按 import 行数判。
+ * 本版把 24 份逐字等价的 str 复制件收敛成 config/loose-str-face.js,
+ * 本内核随之转调 —— import 行数从 1 变 2。原断言「只许 import 一处」
+ * 钉的是意图(内核不碰 IO / 上游桥 / 第三方),不是行数本身;
+ * 把行数当标准,每次纯函数面收敛都会误红一次。
+ * 新口径:每一处 import 都必须是本仓**自身零 import** 的纯函数内核面
+ * (num-gate 与各 *-face.js),且被导入面自身也不许多 import。
+ * 抽成函数是为了让 D 组能对它做负控制(否则放宽即假绿)。
+ */
+const ZERO_IMPORT_FACES = ['./num-gate.js', './loose-str-face.js'];
+const checkZeroImportBoundary = (src, readFn) => {
+    const imports = src.match(/^import .*$/gm) || [];
+    for (const one of imports) {
+        const hit = ZERO_IMPORT_FACES.find((f) => one.includes("'" + f + "'"));
+        assert.ok(hit, '内核只许 import 本仓纯函数内核面(num-gate / *-face.js),实测: ' + one);
+        const face = readFn('config/' + hit.slice(2));
+        const faceImports = face.match(/^import .*$/gm) || [];
+        assert.equal(faceImports.length, 0,
+            '被导入的内核面自身必须零 import(否则依赖会传递),实测 ' + hit + ' 有 ' + faceImports.length + ' 处');
+    }
+    assert.ok(imports.some((one) => one.includes("'./num-gate.js'")),
+        'num-gate 这一处必须在场(上限取值门),实测: ' + JSON.stringify(imports));
+};
+test('A5 上限冻结且为正;零依赖边界(只 import 本仓零 import 纯函数内核面)', () => {
     assert.ok(Object.isFrozen(mod.ALBUM_LIMITS));
     for (const k of ['entries', 'turns', 'label']) {
         assert.equal(typeof mod.ALBUM_LIMITS[k], 'number', '缺上限:' + k);
         assert.ok(mod.ALBUM_LIMITS[k] >= 1);
     }
-    const imports = core.match(/^import .*$/gm) || [];
-    assert.equal(imports.length, 1, '内核只许 import 一处,实测 ' + imports.length);
-    assert.ok(imports[0].includes("'./num-gate.js'"), '那唯一一处必须是 num-gate:' + imports[0]);
+    checkZeroImportBoundary(core, read);
     const c = codeOf(core);
     for (const bad of ['localStorage', 'eval(', 'new Function', 'setTimeout', 'dispatchEvent']) {
         assert.equal(c.indexOf(bad), -1, '内核代码里不得出现 ' + bad);
@@ -378,6 +400,22 @@ test('D3 破坏「无出处不进册」⇒ 对应判据必转红', async () => {
         assert.ok(r.albums.length >= 1, '破坏副本:无出处的也建了册');
         assert.equal(mod.buildRelationAlbum(S({ events: [{ present: ['u', 'B'] }] })).counts.dropped, 1, '原版必须扣下');
     } finally { fs.unlinkSync(p); }
+});
+
+test('D4 给内核塞非法 import ⇒ 零依赖边界判据必转红(放宽不是放低标准)', () => {
+    /* 负控制:v4.197.0 把 A5 从「行数」改成「意图」,必须证明新口径仍然拦得住。
+     * 两个方向都要红:① 塞一个非白名单 import;② 让被导入面自己多 import 一处。 */
+    const badOut = breakOnce("import { str } from './loose-str-face.js';",
+        "import { str } from './loose-str-face.js';\nimport { readChat } from '../apps/wechat/wechat-data.js';");
+    assert.throws(() => checkZeroImportBoundary(badOut, read),
+        '非白名单 import 必须被零依赖边界拦下');
+    const badIn = breakOnce("import { str } from './loose-str-face.js';",
+        "import { str } from './num-clamp.js';");
+    /* num-clamp 自己 import num-gate,属「被导入面非零 import」⇒ 必须红 */
+    assert.throws(() => checkZeroImportBoundary(badIn, read),
+        '被导入面自身非零 import 必须被拦下');
+    /* 原版(未破坏)必须真通过,否则上面两条是空转 */
+    checkZeroImportBoundary(core, read);
 });
 
 /* ---------- E 版本锚(下限形) ---------- */

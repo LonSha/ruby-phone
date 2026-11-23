@@ -22,6 +22,7 @@
  *   ④ 解析端只认自己的版本号与白名单；多出来的键算夹带（smuggled），拒收。
  *   ⑤ 解析完一律给出 clearedHash —— 读完即清，别把凭证留在浏览器历史里（与 X2 同一条纪律）。
  */
+import { str } from './loose-str-face.js';
 import { isSensitiveKey } from './secret-redaction.js';
 import { numOrNull } from './num-gate.js';
 
@@ -60,7 +61,7 @@ function b64UrlDecode(token) {
     return new TextDecoder().decode(bytes);
 }
 
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 
 /**
  * 从分享草案里抽「最小可复原集」。

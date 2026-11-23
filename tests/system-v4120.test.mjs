@@ -433,6 +433,26 @@ function makeAppCopy() {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp_v4120_'));
     temps.push(dir);
     copyTreeSafe(path.join(ROOT, 'apps'), path.join(dir, 'apps'));
+    /* v4.197.0：reading-attachment 转调后 import config/loose-str-face.js。
+     * 沙箱原先只复制 apps/ 树，副本里没有该内核面 ⇒ D 组一定 ERR_MODULE_NOT_FOUND。
+     * 修法：把 apps 代码静态 import 到的 config 面一并复制进来（只复制真被引用的）。 */
+    fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
+    const collect = (rel) => {
+        const src = read(rel);
+        const specs = src.match(/from\s+'([^']+)'/g) || [];
+        for (const sp of specs) {
+            const m = sp.match(/from\s+'([^']+)'/);
+            const t = m[1];
+            if (t.slice(0, 2) !== '..' && t.slice(0, 1) !== '.') continue;
+            const abs = path.resolve(path.dirname(path.join(ROOT, rel)), t);
+            const r = path.relative(ROOT, abs);
+            if (r.slice(0, 7) !== 'config/') continue;
+            if (fs.existsSync(path.join(dir, r))) continue;
+            fs.copyFileSync(abs, path.join(dir, r));
+            collect(r);
+        }
+    };
+    collect('apps/reading/reading-attachment.js');
     return dir;
 }
 process.on('exit', () => {

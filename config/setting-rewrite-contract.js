@@ -54,7 +54,8 @@
  *     去改一件本来无关的事，而那个错误**看不见**。
  * ============================================================ */
 'use strict';
-function str(v) { return String(v == null ? '' : v).trim(); }
+
+import { str } from './loose-str-face.js';
 function strList(v, cap) {
     const out = [];
     if (!Array.isArray(v)) return out;

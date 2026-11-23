@@ -968,6 +968,8 @@ function stageTree() {
     /* [v3.88.0 · R-X4] 存档台新引了跳项目续玩的唯一归一（真源 + 它的数值门），副本树要同步。 */
     fs.copyFileSync(path.join(ROOT, 'config', 'resume-workbench.js'), path.join(dir, 'config', 'resume-workbench.js'));
     fs.copyFileSync(path.join(ROOT, 'config', 'num-gate.js'), path.join(dir, 'config', 'num-gate.js'));
+    /* [v4.197.0] 24 份 str 复制件收敛成 loose-str-face，本仓各套合约件随之转调；副本树必须跟着长（同上面 R4-X4 那条教训）。 */
+    fs.copyFileSync(path.join(ROOT, 'config', 'loose-str-face.js'), path.join(dir, 'config', 'loose-str-face.js'));
     /* [v4.28.0 · R4-X4] 存档台第五页签的取数件引了纯契约件（后者引 num-gate）。
      *   ★ 副本树必须跟着长：少拷一件，appmod 类负控制全部报 MODULE_NOT_FOUND，
      *     判据根本没跑到 —— 破坏有没有发生已经不重要了（典型假红）。 */

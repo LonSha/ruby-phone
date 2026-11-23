@@ -25,6 +25,7 @@
  * ============================================================ */
 
 /** 组级共享面态（互不相同：压平任意两态即造出处置相反的处境长得一样）。 */
+import { str } from './loose-str-face.js';
 export const SHARED_STATES = Object.freeze({
     ABSENT: 'absent',          // 没有知情数据源（判不了任何一件）
     EMPTY: 'empty',            // 有数据源，但一件旧事都没有
@@ -51,7 +52,7 @@ export const SHARED_LIMITS = Object.freeze({
     members: 16,
 });
 
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 function strList(v, cap) {
     const out = [];
     if (!Array.isArray(v)) return out;

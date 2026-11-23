@@ -38,6 +38,7 @@
  *   · 「附出处」指的是**楼层 / 事件 id**,不是一句文字描述；
  *     没有出处的条目不进纪念页(无出处的「共同回忆」与编造无异)。
  * ============================================================ */
+import { str } from './loose-str-face.js';
 import { numOrNull } from './num-gate.js';
 
 'use strict';
@@ -96,7 +97,7 @@ export const ALBUM_LIMITS = Object.freeze({
     label: 24           /* 人物标签截断长度 */
 });
 
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 
 /** 宿主窗口(注入优先,回落全局) */
 function resolveWin(win) {

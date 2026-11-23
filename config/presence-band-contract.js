@@ -22,6 +22,7 @@
  * ============================================================ */
 
 /** 片段的四态（互不相同：压平任意两态即造出处置相反的处境长得一样）。 */
+import { str } from './loose-str-face.js';
 export const BAND_STATES = Object.freeze({
     PRESENT: 'present',      // 有据在场（有出处）
     UNKNOWN: 'unknown',      // 这一段没读到 ⇒ 判不了（**不画连续线**）
@@ -43,7 +44,7 @@ export const BAND_LIMITS = Object.freeze({
     pairs: 12,       // 最多列几对
 });
 
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 
 /**
  * 归一**一个人的在场片段**（有据 / 未知 / 冲突三态分列）。

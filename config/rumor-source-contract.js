@@ -26,6 +26,7 @@
  * ============================================================ */
 
 /** 传闻面态（互不相同：压平任意两态即造出处置相反的处境长得一样）。 */
+import { str } from './loose-str-face.js';
 export const RUMOR_STATES = Object.freeze({
     ABSENT: 'absent',            // 没有溯源面（上游不在场 / 没取数）
     NO_CHAIN: 'no-chain',        // 有面，但这一条**没有可回溯的来源**（不是「没人说过」）
@@ -54,7 +55,7 @@ export const RUMOR_FORBIDDEN_KEYS = Object.freeze([
     'confidence', 'liar', 'rank', 'weight', 'priority',
 ]);
 
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 
 /**
  * 派发相：有溯源面才判；没有则如实报「没有可回溯的来源」。

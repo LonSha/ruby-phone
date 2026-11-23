@@ -43,6 +43,7 @@
  * ============================================================ */
 'use strict';
 /* ★ 数值取值门走**全仓唯一实现**（config/num-gate.js），不在本文件就地再写一份。 */
+import { str } from './loose-str-face.js';
 import { numOrNull as floorOrNull } from './num-gate.js';
 /** 上游插件全局名（与其它契约模块读的是同一个） */
 const LONSHA_PLUGIN_GLOBAL = 'LonShaMemory';
@@ -149,7 +150,7 @@ export const BC_LIMITS = Object.freeze({
     reason: 200,
     note: 200
 });
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 function arr(v) { return Array.isArray(v) ? v : []; }
 function obj(v) { return (v && typeof v === 'object' && !Array.isArray(v)) ? v : null; }
 function clip(s, max) {

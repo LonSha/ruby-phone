@@ -167,6 +167,28 @@ function mkView(app) {
     return v;
 }
 /* ══════════ A ── 口径 ══════════ */
+/**
+ * v4.197.0 起，「零依赖边界」按**意图**判，不按 import 行数判。
+ * 本版把 24 份逐字等价的 str 复制件收敛成 config/loose-str-face.js，
+ * 各内核随之转调，import 行数从 1 变 2。原断言「只许一条 import」
+ * 锤的是意图（不许就地再写第二份取数口径、不碰 IO / 上游桥），不是行数本身。
+ * 新口径：每条 import 都必须是本仓**自身零 import** 的纯函数内核面（num-gate 与各 *-face.js），
+ * 且 num-gate 必须在场。抽成函数是为了让 D99 能对它做负控制（否则放宽即假绿）。
+ */
+const ZERO_IMPORT_FACES = ['./num-gate.js', './loose-str-face.js'];
+const checkZeroImportBoundary = (src, readFn) => {
+    const imports = (src.match(/^import .*$/gm) || []);
+    for (const one of imports) {
+        const hit = ZERO_IMPORT_FACES.find((f) => one.indexOf("'" + f + "'") >= 0);
+        assert.ok(hit, '内核只许 import 本仓零 import 纯函数内核面，实测: ' + one);
+        const face = readFn('config/' + hit.slice(2));
+        assert.equal((face.match(/^import .*$/gm) || []).length, 0,
+            '被导入面自身必须零 import，实测 ' + hit);
+    }
+    assert.ok(imports.some((one) => one.indexOf('num-gate.js') >= 0),
+        'num-gate 必须在场: ' + JSON.stringify(imports));
+};
+
 test('A1 五态两两不同形（没装 / 面不在场 / 读不出 / 真跑过零材料 / 读到）', () => {
     const st = Object.keys(S).map((k) => S[k]);
     assert.equal(new Set(st).size, 5, '五态必须五态不同形');
@@ -185,9 +207,7 @@ test('A1 五态两两不同形（没装 / 面不在场 / 读不出 / 真跑过�
 test('A2 纯内核零副作用：不碰 DOM / 存储 / 网络 / 时钟，且只依赖唯一取数门', () => {
     const src = stripAll(kernelSrc);
     /* 唯一 import：数值取值门（config/num-gate.js）。 */
-    const imports = src.split(NL).filter((l) => /^\s*import\s/.test(l));
-    assert.equal(imports.length, 1, '内核只许一条 import（实测 ' + imports.length + '）：' + imports.join(' | '));
-    assert.ok(imports[0].indexOf('num-gate.js') >= 0, '唯一 import 必须是数值取值门');
+    checkZeroImportBoundary(kernelSrc, read);
     for (const bad of ['localStorage', 'sessionStorage', 'indexedDB', 'document.', 'fetch(', 'XMLHttpRequest', 'setTimeout(', 'Date.now(']) {
         assert.equal(src.indexOf(bad), -1, '内核不得出现 ' + bad);
     }
@@ -641,6 +661,20 @@ test('D7 ★★★ 破坏接线件「空值即清空」⇒ C3 同款判据必转
     const orig = new WIRE.CreationdeskBoard({ _hostWin: () => WIN_OK });
     orig.setTask('');
     assert.equal(orig.task, '', '原版必须清空');
+});
+test('D99 ★★★ 零依赖边界放宽后仍必须拢得位：非白名单 import 必转红（v4.197.0 口径修正的负控制）', () => {
+    /* v4.197.0 把 A2 从「只许一条 import」改成「只许本仓零 import 纯函数内核面」，
+     * 这是放宽口径而不是放低标准。本条负控制证明新口径依然拢得位。 */
+    const badSrc = kernelSrc.replace(/^import .*$/gm,
+        "import { numOrNull } from './num-gate.js';\nimport { readChat } from '../apps/wechat/wechat-data.js';");
+    assert.ok(badSrc !== kernelSrc, '锚点应命中 import 行');
+    assert.throws(() => checkZeroImportBoundary(badSrc, read),
+        '非白名单 import 必须被零依赖边界拢下（否则 v4.197.0 的放宽就是假绿）');
+    const badSrc2 = kernelSrc.replace(/^import .*$/gm,
+        "import { numOrNull } from './num-gate.js';\nimport { clampNum } from './num-clamp.js';");
+    assert.throws(() => checkZeroImportBoundary(badSrc2, read),
+        '被导入面自身非零 import 必须被拢下（依赖传递）');
+    checkZeroImportBoundary(kernelSrc, read);
 });
 /* ══════════ E ── 版本锚 ══════════ */
 test('E1 五源同源（不锁死具体版本值，但必须一致且当版条目在场）', () => {

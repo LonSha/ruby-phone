@@ -21,6 +21,7 @@
  * ============================================================ */
 
 /** 单次例外的三类动作（与「改规则」分列）。 */
+import { str } from './loose-str-face.js';
 export const REC_EXCEPTION = Object.freeze({
     MOVE: 'move',        // 只把这一次改到别的时间
     SKIP: 'skip',        // 只把这一次跳过（系列仍在）
@@ -54,7 +55,7 @@ export const REC_LIMITS = Object.freeze({
     members: 16,
 });
 
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 function strList(v, cap) {
     const out = [];
     if (!Array.isArray(v)) return out;

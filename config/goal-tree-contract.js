@@ -27,6 +27,7 @@
  * ============================================================ */
 
 /** 目标树面态（互不相同：压平任意两态即造出处置相反的处境长得一样）。 */
+import { str } from './loose-str-face.js';
 import { numOrNull } from './num-gate.js';
 
 export const GT_STATES = Object.freeze({
@@ -63,7 +64,7 @@ export const GT_FORBIDDEN_KEYS = Object.freeze([
     'percent', 'percentage', 'progress', 'confidence', 'score', 'probability', 'weight', 'rank', 'priority',
 ]);
 
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 function strList(v, cap) {
     const out = [];
     if (!Array.isArray(v)) return out;

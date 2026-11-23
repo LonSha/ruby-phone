@@ -20,6 +20,7 @@
  * ============================================================ */
 
 /** 追问面四态 + 两格「问不了」(缺件与不认识,与「没开始」分形)。 */
+import { str } from './loose-str-face.js';
 export const ASK_THREAD_PHASES = Object.freeze({
     ABSENT: 'absent',            // 上游插件不在场:没有追问这回事
     UNSUPPORTED: 'unsupported',   // 插件在,但没有追问出口(旧版):如实说,不假装能追
@@ -41,7 +42,7 @@ export const ASK_THREAD_LIMITS = Object.freeze({
     candidates: 8,  // 消歧候选最多列几个
 });
 
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 
 /**
  * 派发相:有追问出口走追问;只有普通出口回落普通并**如实告知没有继承**;

@@ -44,6 +44,7 @@
  * ============================================================ */
 'use strict';
 
+import { str } from './loose-str-face.js';
 import { numOrNull } from './num-gate.js';
 
 /** 两个去向（**穷尽**：本项只交到这两处；不另造第三个 owner 字符串）。 */
@@ -106,7 +107,7 @@ export const MBH_KEYS = Object.freeze({
     pending: 'cw_board_chat_pending'
 });
 
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 /** 楼层取值：**纯转发**到全仓唯一数值门 `numOrNull`（不就地再写一份弱口径 —— 本仓
  *  `Number.isFinite(Number(v))` 那一形态会把 `''` / `[]` / `false` 读成 0，
  *  与「没给」塌成同一读数；门禁 `scripts/weak-coercion-audit.mjs` 常驻守卫）。 */

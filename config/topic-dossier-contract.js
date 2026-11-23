@@ -23,6 +23,7 @@
  * ============================================================ */
 
 /** 专题夹面态。 */
+import { str } from './loose-str-face.js';
 export const DOSSIER_STATES = Object.freeze({
     ABSENT: 'absent',        // 还没有这个专题（或读不到）
     EMPTY: 'empty',          // 有专题但还没引任何段落
@@ -57,7 +58,7 @@ export const DOSSIER_FORBIDDEN_KEYS = Object.freeze([
     'conclusion', 'verdict', 'confidence', 'score', 'percent', 'percentage', 'rank', 'weight',
 ]);
 
-function str(v) { return String(v == null ? '' : v).trim(); }
+
 
 /**
  * 归一一条引用的**来源坐标**（书名 / 章节 / 版本 / 定位）。

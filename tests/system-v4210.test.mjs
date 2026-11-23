@@ -224,8 +224,22 @@ test('A2 包魔标与整机备份刻意不同，且不误用 storage 规则读�
         assert.equal(line.indexOf('apps/') >= 0, false, 'config 不得依赖 apps：' + line);
         assert.equal(line.indexOf('data-backup') >= 0, false, '书库包不得复用整机备份的实现（两种包身份要分开）：' + line);
     }
+    /* v4.197.0 口径修正（不是放低标准）：本版把 24 份逐字等价的 str 复制件收敛成
+     * config/loose-str-face.js，本内核随之转调，依赖面从 1 个变 2 个。原断言 deepEqual 锤的是**意图**：
+     * 不得依赖 apps、不得复用整机备份实现、只许依赖本仓零依赖叶子。
+     * 把集合写死，每次纯函数面收敛都会误红一次。新口径：逐条校上面两条铁律，
+     * 再加「每个依赖面自身必须零 import」与「num-gate 必须在场」。 */
     const deps = imports.map((l) => (l.match(/'([^']+)'/) || [])[1]).filter(Boolean);
-    assert.deepEqual(deps, ['./num-gate.js'], '内核依赖面应恰好是零依赖叶子 num-gate，实际：' + JSON.stringify(deps));
+    const LEAF_OK = ['./num-gate.js', './loose-str-face.js'];
+    for (const d of deps) {
+        assert.ok(LEAF_OK.indexOf(d) >= 0,
+            '内核只许依赖本仓零依赖叶子（num-gate / *-face.js），实际：' + d);
+        const leaf = read('config/' + d.slice(2));
+        assert.equal((leaf.match(/^\s*import[^;]*;/gm) || []).length, 0,
+            '依赖面自身必须零 import（否则依赖伟递），实际 ' + d);
+    }
+    assert.ok(deps.indexOf('./num-gate.js') >= 0,
+        'num-gate 这个零依赖叶子必须在场，实际：' + JSON.stringify(deps));
 });
 
 test('A3 纯内核：零网络 / 零 DOM / 零存储 / 零时钟（判据扫去注释后的代码）', () => {
