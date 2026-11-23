@@ -4,6 +4,7 @@
  * ======================================================== */
 'use strict';
 import { confirmDestroy } from '../../config/destructive-confirm.js';
+import { numeralText } from '../../config/num-face.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -17,7 +18,6 @@ function esc(s) {
         .split(GT).join(AMP + 'gt;')
         .split(QUOTE).join(QUOTE_ESC);
 }
-function num(v) { return (typeof v === 'number' && Number.isFinite(v)) ? String(v) : DASH; }
 
 export class StickerdeskView {
     constructor(app) { this.app = app; this.root = null; }
@@ -42,14 +42,14 @@ export class StickerdeskView {
     _html(vm) {
         const r = vm.readings || {};
         let h = '<div class="sd-wrap">';
-        h += '<div class="sd-head">册 ' + num(r.stickers) + ' / 余 ' + num(r.stickersLeft) + ' · 分类 ' + num(r.categories) + ' · 未分类 ' + num(r.uncategorized) + '</div>';
+        h += '<div class="sd-head">册 ' + numeralText(r.stickers) + ' / 余 ' + numeralText(r.stickersLeft) + ' · 分类 ' + numeralText(r.categories) + ' · 未分类 ' + numeralText(r.uncategorized) + '</div>';
         h += '<div class="sd-sec"><h3>收文本（每行一条：名称 URL）</h3>' +
             '<textarea class="sd-input" data-in="text"></textarea>' +
             '<button class="sd-btn" data-act="intake">解析收下</button>' +
             '<button class="sd-btn" data-act="clear">清空册</button>' +
             '<button class="sd-btn" data-act="clear-ledger">清台账</button>';
         const li = vm.lastIntake;
-        if (li) h += '<div class="sd-intake">新增 ' + num(li.added) + ' · 拒收 ' + num(li.rejected ? li.rejected.length : 0) + '</div>';
+        if (li) h += '<div class="sd-intake">新增 ' + numeralText(li.added) + ' · 拒收 ' + numeralText(li.rejected ? li.rejected.length : 0) + '</div>';
         h += '</div>';
         h += '<div class="sd-sec"><h3>册（前 50 条）</h3>';
         const rows = (vm.stickers || []).slice(0, 50);

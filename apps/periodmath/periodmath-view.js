@@ -12,6 +12,7 @@
  * ======================================================== */
 'use strict';
 import { confirmDestroy } from '../../config/destructive-confirm.js';
+import { numeralText } from '../../config/num-face.js';
 
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
@@ -27,7 +28,6 @@ function esc(s) {
         .split(GT).join(AMP + 'gt;')
         .split(QUOTE).join(QUOTE_ESC);
 }
-function num(v) { return (typeof v === 'number' && Number.isFinite(v)) ? String(v) : DASH; }
 function dayKey(ms) {
     if (typeof ms !== 'number' || !Number.isFinite(ms)) return DASH;
     const d = new Date(ms);
@@ -141,14 +141,14 @@ export class PeriodmathView {
         const st = r.status || {};
         const parts = ['<section class="pm-page" data-page="today">'];
         parts.push('<div class="pm-face">' + (r.cycles
-            ? '本会话共 ' + num(r.cycles) + ' 段周期记录' + (r.enough ? '，均值可用于推算' : '，样本还不足 2 段')
+            ? '本会话共 ' + numeralText(r.cycles) + ' 段周期记录' + (r.enough ? '，均值可用于推算' : '，样本还不足 2 段')
             : '这个会话还没有记录 —— 不是算不出来，是还没有数据') + '</div>');
         parts.push('<div class="pm-hero"><div class="pm-hero-kind">当前状态</div>'
             + '<div class="pm-hero-text">' + esc(st.text || DASH) + '</div>'
             + '<div class="pm-hero-phase">所处阶段：' + esc(PHASE_TEXT[st.phase || ''] || DASH) + '</div></div>');
         parts.push('<div class="pm-grid">'
-            + '<div class="pm-cell"><b>' + num(r.cycleLength) + '</b><span>周期均值（天 / ' + num(r.cycleSamples) + ' 样本）</span></div>'
-            + '<div class="pm-cell"><b>' + num(r.periodLength) + '</b><span>经期均值（天 / ' + num(r.periodSamples) + ' 样本）</span></div>'
+            + '<div class="pm-cell"><b>' + numeralText(r.cycleLength) + '</b><span>周期均值（天 / ' + numeralText(r.cycleSamples) + ' 样本）</span></div>'
+            + '<div class="pm-cell"><b>' + numeralText(r.periodLength) + '</b><span>经期均值（天 / ' + numeralText(r.periodSamples) + ' 样本）</span></div>'
             + '</div>');
         parts.push('<div class="pm-sec"><div class="pm-sec-title">记一段</div>'
             + '<button class="pm-btn pm-btn-primary" data-act="toggle">开始 / 结束当前经期</button>'
@@ -194,7 +194,7 @@ export class PeriodmathView {
             + '<button class="pm-btn pm-btn-primary" data-act="intake">收下记录</button></div>');
         const li = vm.lastIntake;
         parts.push('<div class="pm-sec"><div class="pm-sec-title">上次录入</div><div class="pm-row">'
-            + (li ? '<span>收下 ' + num(li.cycles) + ' 段</span><em>拒收 ' + num(li.rejected) + ' 条</em>' : '<span>还没录过</span>')
+            + (li ? '<span>收下 ' + numeralText(li.cycles) + ' 段</span><em>拒收 ' + numeralText(li.rejected) + ' 条</em>' : '<span>还没录过</span>')
             + '</div></div>');
         parts.push('<div class="pm-sec"><div class="pm-sec-title">清空</div>'
             + '<div class="pm-hint">清空会同时删掉记录与参数（含预警幂等键），要点确认。</div>'

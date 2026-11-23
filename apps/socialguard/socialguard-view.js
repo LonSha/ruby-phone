@@ -7,6 +7,7 @@
 'use strict';
 import { visibleTo, isStoryAlive, seenAtOf } from './socialguard-data.js';
 import { confirmDestroy } from '../../config/destructive-confirm.js';
+import { numeralText } from '../../config/num-face.js';
 
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
@@ -22,7 +23,6 @@ function esc(s) {
         .split(GT).join(AMP + 'gt;')
         .split(QUOTE).join(QUOTE_ESC);
 }
-function num(v) { return (typeof v === 'number' && Number.isFinite(v)) ? String(v) : DASH; }
 
 export class SocialguardView {
     constructor(app) { this.app = app; this.root = null; }
@@ -61,9 +61,9 @@ export class SocialguardView {
         const r = vm.readings || {};
         return '<div class="sg-head"><div class="sg-face">' + esc(vm.face) + '</div>' +
             '<div class="sg-readings">' +
-            this._kv('帖子', num(r.posts)) + this._kv('故事', num(r.stories)) +
-            this._kv('人脉', num(r.contacts)) + this._kv('看过', num(r.seenCount)) +
-            this._kv('赞', num(r.likeCount)) + this._kv('评论', num(r.commentCount)) +
+            this._kv('帖子', numeralText(r.posts)) + this._kv('故事', numeralText(r.stories)) +
+            this._kv('人脉', numeralText(r.contacts)) + this._kv('看过', numeralText(r.seenCount)) +
+            this._kv('赞', numeralText(r.likeCount)) + this._kv('评论', numeralText(r.commentCount)) +
             '</div></div>';
     }
     _kv(k, v) { return '<div class="sg-kv"><span>' + esc(k) + '</span><span>' + esc(v) + '</span></div>'; }

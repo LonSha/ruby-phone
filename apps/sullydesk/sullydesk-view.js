@@ -17,7 +17,6 @@ function esc(s) {
         .split(GT).join(AMP + 'gt;')
         .split(QUOTE).join(QUOTE_ESC);
 }
-function num(v) { return (typeof v === 'number' && Number.isFinite(v)) ? String(v) : DASH; }
 
 export class SullydeskView {
     constructor(app) { this.app = app; this.root = null; }

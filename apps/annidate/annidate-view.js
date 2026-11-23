@@ -15,6 +15,7 @@
 'use strict';
 import { daysOf } from './annidate-data.js';
 import { confirmDestroy } from '../../config/destructive-confirm.js';
+import { numeralText } from '../../config/num-face.js';
 
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
@@ -30,7 +31,6 @@ function esc(s) {
         .split(GT).join(AMP + 'gt;')
         .split(QUOTE).join(QUOTE_ESC);
 }
-function num(v) { return (typeof v === 'number' && Number.isFinite(v)) ? String(v) : DASH; }
 
 /** 一件纪念日的天数说法：只在视图这一处拼，口径来自数据层的 daysOf。 */
 function wordOf(it, nowMs) {
@@ -154,7 +154,7 @@ export class AnnidateView {
         const parts = ['<section class="ad-page" data-page="today">'];
         parts.push(this._focusHTML(vm.focus));
         parts.push('<div class="ad-face">' + (Number.isFinite(r.items)
-            ? '一共 ' + num(r.items) + ' 条纪念日，其中 ' + num(r.starred) + ' 条标了星'
+            ? '一共 ' + numeralText(r.items) + ' 条纪念日，其中 ' + numeralText(r.starred) + ' 条标了星'
             : '条目册读不到 —— 数据层这不回话，先说清楚再谈天数') + '</div>');
         const ms = vm.lastMatches;
         if (ms === undefined || ms === null) {
@@ -168,7 +168,7 @@ export class AnnidateView {
         } else {
             const rows = ms.map((m) => '<div class="ad-row"><span>' + esc(m.text) + '</span>'
                 + '<em>' + esc(m.kind) + '</em></div>');
-            parts.push('<div class="ad-sec"><div class="ad-sec-title">今天 ' + num(ms.length) + ' 条</div>'
+            parts.push('<div class="ad-sec"><div class="ad-sec-title">今天 ' + numeralText(ms.length) + ' 条</div>'
                 + rows.join('') + '<button class="ad-btn ad-btn-ghost" data-act="check">再查一次</button></div>');
         }
         const la = vm.lastAlert;
@@ -207,8 +207,8 @@ export class AnnidateView {
             return '<div class="ad-row"><span>' + esc(it.title) + '</span>'
                 + '<em>' + esc(wordOf(it, nowMs)) + '</em></div>';
         });
-        parts.push('<div class="ad-sec"><div class="ad-sec-title">全部 ' + num(items.length) + ' 条'
-            + (items.length > rows.length ? '（先显示前 ' + num(rows.length) + ' 条）' : '') + '</div>'
+        parts.push('<div class="ad-sec"><div class="ad-sec-title">全部 ' + numeralText(items.length) + ' 条'
+            + (items.length > rows.length ? '（先显示前 ' + numeralText(rows.length) + ' 条）' : '') + '</div>'
             + rows.join('') + '</div>');
         parts.push('</section>');
         return parts.join('');
@@ -226,7 +226,7 @@ export class AnnidateView {
         const li = this._lastIntake;
         parts.push('<div class="ad-sec"><div class="ad-sec-title">上次录入</div><div class="ad-row">'
             + (li && li.ok
-                ? '<span>收下 ' + num(li.items) + ' 条</span><em>拒收 ' + num(li.rejected) + ' 条</em>'
+                ? '<span>收下 ' + numeralText(li.items) + ' 条</span><em>拒收 ' + numeralText(li.rejected) + ' 条</em>'
                 : (li ? '<span>没收下：' + esc(li.why) + '</span>' : '<span>还没录过</span>'))
             + '</div></div>');
         parts.push('<div class="ad-sec"><div class="ad-sec-title">清空</div>'
@@ -248,7 +248,7 @@ export class AnnidateView {
             .concat(['</nav>'])
             .join('');
         return '<div class="ad-top"><div class="ad-title">纪念日</div>'
-            + '<span class="ad-top-meta">' + num(r.items) + ' 条</span></div>'
+            + '<span class="ad-top-meta">' + numeralText(r.items) + ' 条</span></div>'
             + page + tabs;
     }
 }

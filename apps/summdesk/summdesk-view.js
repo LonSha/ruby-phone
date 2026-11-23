@@ -4,6 +4,7 @@
  * ======================================================== */
 'use strict';
 import { confirmDestroy } from '../../config/destructive-confirm.js';
+import { numeralText } from '../../config/num-face.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -17,7 +18,6 @@ function esc(s) {
         .split(GT).join(AMP + 'gt;')
         .split(QUOTE).join(QUOTE_ESC);
 }
-function num(v) { return (typeof v === 'number' && Number.isFinite(v)) ? String(v) : DASH; }
 
 export class SummdeskView {
     constructor(app) { this.app = app; this.root = null; }
@@ -53,7 +53,7 @@ export class SummdeskView {
                     : '<span class="sm-focus-why">第 ' + esc(String(f.index + 1)) + ' 条 · ' + esc(f.title) + (f.excerpt ? ' · ' + esc(f.excerpt) : '') + '</span>') +
                 '<button class="sm-btn" data-act="unfocus">收起定位</button></div>';
         }
-        h += '<div class="sm-head">记忆册 ' + num(r.memories) + ' · 普通游标 ' + num(r.cursorNormal) + ' · 向量游标 ' + num(r.cursorTrue) + '</div>';
+        h += '<div class="sm-head">记忆册 ' + numeralText(r.memories) + ' · 普通游标 ' + numeralText(r.cursorNormal) + ' · 向量游标 ' + numeralText(r.cursorTrue) + '</div>';
         h += '<div class="sm-sec"><h3>收总结文本</h3>' +
             '<textarea class="sm-input" data-in="text"></textarea>' +
             '<input class="sm-range" data-in="range" placeholder="条数范围如 1-20（可空）" />' +

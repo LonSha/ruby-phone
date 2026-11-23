@@ -8,6 +8,7 @@
  * ======================================================== */
 'use strict';
 import { confirmDestroy } from '../../config/destructive-confirm.js';
+import { numeralText } from '../../config/num-face.js';
 
 const DASH = String.fromCharCode(45,45);
 
@@ -23,9 +24,6 @@ const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
 const QUOTE = String.fromCharCode(34);
 const QUOTE_ESC = AMP + 'quot;';
-function num(v) {
-    return (typeof v === 'number' && Number.isFinite(v)) ? String(v) : DASH;
-}
 
 
 export class MemtableView {
@@ -72,13 +70,13 @@ export class MemtableView {
                 (vm.whyText ? '<span class="mt-face-why">' + esc(vm.whyText) + '</span>' : '') +
             '</div>' +
             '<div class="mt-readings">' +
-                this._reading('模板', num(r.templates)) +
-                this._reading('表', num(r.tables)) +
-                this._reading('字段', num(r.fields)) +
-                this._reading('行表', num(r.rowsTables)) +
-                this._reading('行', num(r.rows)) +
-                this._reading('锁定', num(r.locked)) +
-                this._reading('历史', num(r.history) + '/' + num(r.historyCap)) +
+                this._reading('模板', numeralText(r.templates)) +
+                this._reading('表', numeralText(r.tables)) +
+                this._reading('字段', numeralText(r.fields)) +
+                this._reading('行表', numeralText(r.rowsTables)) +
+                this._reading('行', numeralText(r.rows)) +
+                this._reading('锁定', numeralText(r.locked)) +
+                this._reading('历史', numeralText(r.history) + '/' + numeralText(r.historyCap)) +
             '</div>' +
         '</div>';
     }
@@ -108,17 +106,17 @@ export class MemtableView {
         h += '<div class="mt-sec"><h3>自动更新游标读数</h3>';
         const c = vm.cursor || {};
         h += '<div class="mt-kv">' +
-            this._kv('间隔', num(c.interval)) +
-            this._kv('游标位', num(c.cursorIndex)) +
-            this._kv('下一起始', num(c.nextStartIndex)) +
-            this._kv('未同步', num(c.unsyncedCount)) +
-            this._kv('成批数', num(c.completedBatchCount)) +
+            this._kv('间隔', numeralText(c.interval)) +
+            this._kv('游标位', numeralText(c.cursorIndex)) +
+            this._kv('下一起始', numeralText(c.nextStartIndex)) +
+            this._kv('未同步', numeralText(c.unsyncedCount)) +
+            this._kv('成批数', numeralText(c.completedBatchCount)) +
         '</div></div>';
         h += '<div class="mt-sec"><h3>上限余量</h3><div class="mt-kv">' +
-            this._kv('模板余量', num(vm.limits && vm.limits.templatesLeft)) +
-            this._kv('历史余量', num(vm.limits && vm.limits.historyLeft)) +
-            this._kv('每表行上限', num(vm.limits && vm.limits.rowsCap)) +
-            this._kv('原文上限', num(vm.limits && vm.limits.textCap)) +
+            this._kv('模板余量', numeralText(vm.limits && vm.limits.templatesLeft)) +
+            this._kv('历史余量', numeralText(vm.limits && vm.limits.historyLeft)) +
+            this._kv('每表行上限', numeralText(vm.limits && vm.limits.rowsCap)) +
+            this._kv('原文上限', numeralText(vm.limits && vm.limits.textCap)) +
         '</div></div>';
         return h + '</div>';
     }
@@ -205,12 +203,12 @@ export class MemtableView {
     _plan(vm) {
         const plan = vm.plan;
         let h = '<div class="mt-sec"><h3>逐条计划（' +
-            '更新 ' + num(plan.updateCount) + ' / 计划 ' + num((plan.plans || []).length) + ' / 坏 ' + num((plan.errors || []).length) + '）</h3>';
+            '更新 ' + numeralText(plan.updateCount) + ' / 计划 ' + numeralText((plan.plans || []).length) + ' / 坏 ' + numeralText((plan.errors || []).length) + '）</h3>';
         if (plan.intakeWhy) h += '<div class="mt-why-err">' + esc(vm.whyText || plan.intakeWhy) + '</div>';
         const errors = plan.errors || [];
         for (let e = 0; e < errors.length; e++) {
             h += '<div class="mt-plan-row mt-tone-err"><span class="mt-plan-code">解析坏</span>' +
-                '<span class="mt-plan-detail">' + esc(errors[e].why) + ' @' + num(errors[e].pos) + '</span></div>';
+                '<span class="mt-plan-detail">' + esc(errors[e].why) + ' @' + numeralText(errors[e].pos) + '</span></div>';
         }
         const plans = plan.plans || [];
         for (let i = 0; i < plans.length; i++) {
@@ -243,14 +241,14 @@ export class MemtableView {
             const e = history[i];
             h += '<div class="mt-hist-row"><span class="mt-hist-at">' + esc(vm.stampOf(e.timestamp)) + '</span>' +
                 '<span class="mt-hist-src">' + esc(e.source) + '</span>' +
-                '<span class="mt-hist-n">' + num(e.changedCount) + ' 条变更</span></div>';
+                '<span class="mt-hist-n">' + numeralText(e.changedCount) + ' 条变更</span></div>';
         }
         return h + '</div>';
     }
     _ledger(vm) {
         let h = '<div class="mt-ledger">';
         h += '<div class="mt-actions"><button class="mt-btn" data-act="clear-ledger">清台账</button>' +
-            (vm.dropped > 0 ? '<span class="mt-dropped">台账挤掉 ' + num(vm.dropped) + ' 条</span>' : '') + '</div>';
+            (vm.dropped > 0 ? '<span class="mt-dropped">台账挤掉 ' + numeralText(vm.dropped) + ' 条</span>' : '') + '</div>';
         const ledger = vm.ledger || [];
         if (ledger.length === 0) h += '<div class="mt-empty">还没有台账。</div>';
         for (let i = 0; i < ledger.length; i++) {

@@ -11,6 +11,7 @@
  */
 
 import { windowOf, patchOf, keepState, line as windowLine } from '../../config/list-window.js';
+import { numeralText } from '../../config/num-face.js';
 
 const TABS = [
   { key: 'feed', label: '发现' },
@@ -31,7 +32,6 @@ function esc(s) {
     .split(GT).join(AMP + 'gt;')
     .split(QUOTE).join(AMP + 'quot;');
 }
-function num(v) { return (typeof v === 'number' && Number.isFinite(v)) ? String(v) : DASH; }
 
 export class XhsView {
   constructor(app) {
@@ -125,7 +125,7 @@ export class XhsView {
       parts.push('<div class="xhs-empty"><p>还没有人评论你的笔记 —— 空着就空着，不编一条通知出来。</p></div></main>');
       return parts.join('');
     }
-    parts.push(`<div class="xhs-list-head">共 ${num(rows.length)} 条评论</div>`);
+    parts.push(`<div class="xhs-list-head">共 ${numeralText(rows.length)} 条评论</div>`);
     for (const r of rows.slice(0, 40)) {
       parts.push(`<button class="xhs-msg" data-jump="${esc(r.id)}">
           <span class="xhs-msg-who">${esc(r.who)}</span>
@@ -145,8 +145,8 @@ export class XhsView {
     parts.push(`<div class="xhs-me-card">
         <div class="xhs-me-name">我</div>
         <div class="xhs-me-stats">
-          <span><b>${num(mine.length)}</b> 篇笔记</span>
-          <span><b>${num(likes)}</b> 次获赞</span>
+          <span><b>${numeralText(mine.length)}</b> 篇笔记</span>
+          <span><b>${numeralText(likes)}</b> 次获赞</span>
         </div>
         <button class="xhs-me-post" id="xhs-me-compose">发一篇</button>
       </div>`);
@@ -154,11 +154,11 @@ export class XhsView {
       parts.push('<div class="xhs-empty"><p>你还没发过笔记。发一篇就会出现在「发现」的最上面。</p></div></main>');
       return parts.join('');
     }
-    parts.push(`<div class="xhs-list-head">我的笔记 · ${num(mine.length)} 篇</div>`);
+    parts.push(`<div class="xhs-list-head">我的笔记 · ${numeralText(mine.length)} 篇</div>`);
     for (const n of mine) {
       parts.push(`<button class="xhs-mine" data-jump="${esc(n.id)}">
           <span class="xhs-mine-title">${esc(n.title)}</span>
-          <span class="xhs-mine-meta">${num(Number(n.likes) || 0)} 赞 · ${num((n.comments || []).length)} 评论</span>
+          <span class="xhs-mine-meta">${numeralText(Number(n.likes) || 0)} 赞 · ${numeralText((n.comments || []).length)} 评论</span>
         </button>`);
     }
     parts.push('</main>');
@@ -228,7 +228,7 @@ export class XhsView {
             </div>
             <div class="xhs-like-badge ${n.isLiked ? 'liked' : ''}" data-like-id="${n.id}">
               <i class="${n.isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}"></i>
-              <span>${num(Number(n.likes) || 0)}</span>
+              <span>${numeralText(Number(n.likes) || 0)}</span>
             </div>
           </div>
         </div>
@@ -410,7 +410,7 @@ export class XhsView {
           <div class="tags">${(Array.isArray(note.tags) ? note.tags : []).map(t => `<span class="tag">#${esc(t)}</span>`).join(' ')}</div>
         </div>
         <div class="xhs-detail-comments">
-          <div class="comments-count">共 ${num((note.comments || []).length)} 条评论</div>
+          <div class="comments-count">共 ${numeralText((note.comments || []).length)} 条评论</div>
           <div class="comments-list">
             ${(Array.isArray(note.comments) ? note.comments : []).map(c => `
               <div class="comment-item">

@@ -43,6 +43,7 @@ import {
 import { SourcebookView } from './sourcebook-view.js';
 import { writeReceipt } from '../../config/write-receipt.js';
 import { numOrNull } from '../../config/num-gate.js';
+import { numOrSelf } from '../../config/num-face.js';
 
 /* 三条会话键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中
    /^sourcebook_/，否则跨会话串味。源把胶囊写在宿主微信键下（全局）。 */
@@ -58,10 +59,6 @@ const NL = String.fromCharCode(10);
  *  ★ 不走 ?? 兜底：本仓口径里「传了 null」与「没传」都回落，
  *    而 ?? 会让 null 直接返回 null；也**不写** Number.isFinite(Number(v))
  *    （那是弱口径签名，Number(null) 是 0，会把「没给」说成「给了 0」）。 */
-function numOrSelf(v, self) {
-    const n = numOrNull(v);
-    return n === null ? self : n;
-}
 
 function toStr(v) {
     return (typeof v === 'string') ? v : '';

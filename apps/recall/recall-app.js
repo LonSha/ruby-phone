@@ -46,14 +46,11 @@ import { narrate, auditCitations, narrativeLine } from '../../config/recall-narr
 import { RECALL_NARRATIVE_STATES, RECALL_NARRATIVE_GAPS } from '../../config/recall-narrative-terms.js';
 import { writeReceipt } from '../../config/write-receipt.js';
 import { numOrNull } from '../../config/num-gate.js';
+import { numOrSelf } from '../../config/num-face.js';
 /** 覆盖值取值口（topN / floor 共用）：显式传入的**真数字**才认，取不出来就回落实例值。
  *  ★ 不走 `?? ` 兜底：本仓口径里「传了 null」与「没传」都回落（套件钉住这行为），
  *    而 `??` 会让 null 直接返回 null；也不写 `Number.isFinite(Number(v))`
  *    （那是弱口径签名，`Number(null)` 是 0，会把「没给」说成「给了 0」）。 */
-function numOrSelf(v, self) {
-    const n = numOrNull(v);
-    return n === null ? self : n;
-}
 
 /* 三条会话键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 /^recall_/，
    否则跨会话串味。源把状态挂在角色卡与全局对象上（切角色原样留着）。 */

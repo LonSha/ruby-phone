@@ -19,6 +19,7 @@ import { phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
  * ======================================================== */
 'use strict';
 import { confirmDestroy } from '../../config/destructive-confirm.js';
+import { numeralText, moneyText } from '../../config/num-face.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -31,11 +32,6 @@ function esc(s) {
         .split(LT).join(AMP + 'lt;')
         .split(GT).join(AMP + 'gt;')
         .split(QUOTE).join(QUOTE_ESC);
-}
-function num(v) { return (typeof v === 'number' && Number.isFinite(v)) ? String(v) : DASH; }
-function money(v) {
-    const n = (typeof v === 'number' && Number.isFinite(v)) ? v : null;
-    return n === null ? DASH : String(Math.round(n * 100) / 100);
 }
 
 const TABS = [
@@ -93,8 +89,8 @@ export class TraveldeskView {
     _headHtml(vm) {
         const r = vm.readings || {};
         return '<div class="tv-head"><h2>旅行记账</h2>'
-            + '<span class="tv-head-meta">' + num(vm.expenses && vm.expenses.length) + ' 条 · 人均 '
-            + money(r.perPerson) + ' · 公共 ' + money(r.publicTotal) + '</span></div>';
+            + '<span class="tv-head-meta">' + numeralText(vm.expenses && vm.expenses.length) + ' 条 · 人均 '
+            + moneyText(r.perPerson) + ' · 公共 ' + moneyText(r.publicTotal) + '</span></div>';
     }
 
     _focusHtml(vm) {
@@ -108,7 +104,7 @@ export class TraveldeskView {
             + (f.gone
                 ? '<span class="tv-focus-why">这条费用已不在账本里（被删了，或换过会话）</span>'
                 : '<span class="tv-focus-why">第 ' + esc(String(f.index + 1)) + ' 条 · ' + esc(f.payer || DASH)
-                    + ' · ' + money(f.finalCNY) + (f.note ? ' · ' + esc(f.note) : '') + '</span>')
+                    + ' · ' + moneyText(f.finalCNY) + (f.note ? ' · ' + esc(f.note) : '') + '</span>')
             + '<button class="tv-btn tv-mini" data-act="unfocus">收起定位</button></div>';
     }
 
@@ -152,7 +148,7 @@ export class TraveldeskView {
             + '<input class="tv-inline" data-in="rateUnit" placeholder="单位" value="' + esc(d.rateUnit) + '">'
             + '<button class="tv-btn" data-act="quote">试算</button>';
         const q = vm.lastQuote;
-        if (q) h += '<div class="tv-row"><span>折算 CNY</span><span>' + money(q.finalCNY) + '（记录汇率 ' + num(q.recordedRate) + '）</span></div>';
+        if (q) h += '<div class="tv-row"><span>折算 CNY</span><span>' + moneyText(q.finalCNY) + '（记录汇率 ' + numeralText(q.recordedRate) + '）</span></div>';
         h += '<div class="tv-hint">试算只算给你看，<strong>不落账</strong>：落账走「账」页贴回 JSON，或「结」页的结算提交。</div>';
         h += '</div>';
         h += '</section>';
@@ -175,12 +171,12 @@ export class TraveldeskView {
             h += '<div class="tv-empty">还没取到行程板(等下一次剧情时间推进后刷新)</div>';
         } else {
             const rd = vm.partyReadings || null;
-            h += '<div class="tv-row"><span>成员</span><span>' + num(rd && rd.members)
-                + '(参加 ' + num(rd && rd.accepted) + ' · 婉拒 ' + num(rd && rd.declined) + ' · 未答复 ' + num(rd && rd.pending) + ')</span></div>';
-            h += '<div class="tv-row"><span>预计花费(不落账)</span><span>' + money(rd && rd.estimatedTotal) + ' · ' + num(rd && rd.estimatedCount) + ' 笔</span></div>';
-            h += '<div class="tv-row"><span>实际金额</span><span>' + money(rd && rd.actualTotal) + ' · ' + num(rd && rd.actualCount) + ' 笔</span></div>';
-            h += '<div class="tv-row"><span>已生成支出 / 待生成</span><span>' + num(rd && rd.committedCount) + ' / ' + num(rd && rd.pendingCommit) + '</span></div>';
-            h += '<div class="tv-row"><span>地点 / 分工 / 清单</span><span>' + num(rd && rd.stops) + ' · ' + num(rd && rd.tasksDone) + '/' + num(rd && rd.tasks) + ' · ' + num(rd && rd.checksDone) + '/' + num(rd && rd.checks) + '</span></div>';
+            h += '<div class="tv-row"><span>成员</span><span>' + numeralText(rd && rd.members)
+                + '(参加 ' + numeralText(rd && rd.accepted) + ' · 婉拒 ' + numeralText(rd && rd.declined) + ' · 未答复 ' + numeralText(rd && rd.pending) + ')</span></div>';
+            h += '<div class="tv-row"><span>预计花费(不落账)</span><span>' + moneyText(rd && rd.estimatedTotal) + ' · ' + numeralText(rd && rd.estimatedCount) + ' 笔</span></div>';
+            h += '<div class="tv-row"><span>实际金额</span><span>' + moneyText(rd && rd.actualTotal) + ' · ' + numeralText(rd && rd.actualCount) + ' 笔</span></div>';
+            h += '<div class="tv-row"><span>已生成支出 / 待生成</span><span>' + numeralText(rd && rd.committedCount) + ' / ' + numeralText(rd && rd.pendingCommit) + '</span></div>';
+            h += '<div class="tv-row"><span>地点 / 分工 / 清单</span><span>' + numeralText(rd && rd.stops) + ' · ' + numeralText(rd && rd.tasksDone) + '/' + numeralText(rd && rd.tasks) + ' · ' + numeralText(rd && rd.checksDone) + '/' + numeralText(rd && rd.checks) + '</span></div>';
             /* 成员 */
             if (vm.party.members.length) {
                 for (const m of vm.party.members) {
@@ -192,7 +188,7 @@ export class TraveldeskView {
             /* 地点顺序 */
             if (vm.party.stops.length) h += '<div class="tv-note">路线:' + esc(vm.party.stops.map(function (x, i) { return String(i + 1) + '.' + x.place; }).join(' → ')) + '</div>';
             for (const stop of vm.party.stops) {
-                h += '<div class="tv-row"><span>' + esc(stop.place) + ' · ' + esc(stop.progress) + ' · 晚到 ' + num(stop.lateMinutes) + ' 分钟' + (stop.meetWith ? ' · 会合 ' + esc(stop.meetWith) : '') + '</span><span>';
+                h += '<div class="tv-row"><span>' + esc(stop.place) + ' · ' + esc(stop.progress) + ' · 晚到 ' + numeralText(stop.lateMinutes) + ' 分钟' + (stop.meetWith ? ' · 会合 ' + esc(stop.meetWith) : '') + '</span><span>';
                 for (const op of ['current', 'skip', 'late', 'meet', 'reschedule']) h += '<button class="tv-btn tv-mini" data-act="tvp-progress" data-id="' + esc(stop.id) + '" data-op="' + op + '">' + ({ current: '当前站', skip: '跳站', late: '晚到', meet: '会合', reschedule: '重排日期' }[op]) + '</button>';
                 h += '<button class="tv-btn tv-mini" data-act="tvp-calendar" data-id="' + esc(stop.id) + '">关联日历接续</button>'
                     + '<button class="tv-btn tv-mini" data-act="tvp-unlink" data-id="' + esc(stop.id) + '">解除日历关联</button></span></div>';
@@ -203,7 +199,7 @@ export class TraveldeskView {
             /* 共同费用:预计与实际两态显式不同色 */
             for (const c of vm.party.costs) {
                 h += '<div class="tv-row tv-party-cost' + (c.state === 'estimated' ? ' is-est' : ' is-act') + '"><span>' + esc(c.title) + ' · ' + esc(c.payer) + '</span><span>'
-                    + money(c.finalCNY) + ' <span class="tv-party-tag">' + esc(c.state === 'estimated' ? '估算' : (c.state === 'actual' ? '实际' : '已结算')) + '</span>'
+                    + moneyText(c.finalCNY) + ' <span class="tv-party-tag">' + esc(c.state === 'estimated' ? '估算' : (c.state === 'actual' ? '实际' : '已结算')) + '</span>'
                     + '<button class="tv-btn tv-mini" data-act="tvp-cost-state" data-id="' + esc(c.id) + '" data-state="' + (c.state === 'actual' ? 'estimated' : 'actual') + '">' + (c.state === 'actual' ? '改回估算' : '标实际') + '</button></span></div>';
             }
             const dec = [];
@@ -234,20 +230,20 @@ export class TraveldeskView {
         const ls = vm.lastSummary;
         if (ls) {
             h += '<div class="tv-row"><span>平衡</span><span class="' + (ls.balanced ? 'tv-ok' : 'tv-bad') + '">' + (ls.balanced ? '已平' : '未平') + '</span></div>';
-            for (const t of (ls.transfers || [])) h += '<div class="tv-row"><span>' + esc(t.from) + ' → ' + esc(t.to) + '</span><span>' + money(t.amount) + '</span></div>';
+            for (const t of (ls.transfers || [])) h += '<div class="tv-row"><span>' + esc(t.from) + ' → ' + esc(t.to) + '</span><span>' + moneyText(t.amount) + '</span></div>';
             if (!(ls.transfers || []).length) h += '<div class="tv-row"><span>无内部转账</span><span>' + DASH + '</span></div>';
-            for (const e of (ls.external || [])) h += '<div class="tv-row"><span>外部 ' + esc(e.from) + ' → ' + esc(e.to) + '</span><span>' + money(e.amount) + '</span></div>';
+            for (const e of (ls.external || [])) h += '<div class="tv-row"><span>外部 ' + esc(e.from) + ' → ' + esc(e.to) + '</span><span>' + moneyText(e.amount) + '</span></div>';
         }
         h += '</div>';
         /* [v3.87.0 · 拓展计划 R-X3] 结算提交（四态 + 预览 + 确认/撤销）。 */
         h += '<div class="tv-sec"><h3>结算提交（四态）</h3>' + this._commitHtml();
         h += '</div>';
         h += '<div class="tv-sec"><h3>读数</h3>' +
-            '<div class="tv-row"><span>费用</span><span>' + num(vm.readings && vm.readings.expenses) + '</span></div>' +
-            '<div class="tv-row"><span>人数</span><span>' + num(vm.readings && vm.readings.people) + '</span></div>' +
-            '<div class="tv-row"><span>公共总支出</span><span>' + money(vm.readings && vm.readings.publicTotal) + '</span></div>' +
-            '<div class="tv-row"><span>人均（shared）</span><span>' + money(vm.readings && vm.readings.perPerson) + '</span></div>' +
-            '<div class="tv-row"><span>条目</span><span>' + num(vm.expenses && vm.expenses.length) + '</span></div></div>';
+            '<div class="tv-row"><span>费用</span><span>' + numeralText(vm.readings && vm.readings.expenses) + '</span></div>' +
+            '<div class="tv-row"><span>人数</span><span>' + numeralText(vm.readings && vm.readings.people) + '</span></div>' +
+            '<div class="tv-row"><span>公共总支出</span><span>' + moneyText(vm.readings && vm.readings.publicTotal) + '</span></div>' +
+            '<div class="tv-row"><span>人均（shared）</span><span>' + moneyText(vm.readings && vm.readings.perPerson) + '</span></div>' +
+            '<div class="tv-row"><span>条目</span><span>' + numeralText(vm.expenses && vm.expenses.length) + '</span></div></div>';
         h += '</section>';
         return h;
     }
@@ -285,11 +281,11 @@ export class TraveldeskView {
         if (pv) {
             h += '<div class="tv-row"><span>态</span><span class="tv-fc-state">' + esc(pv.stateLabel || pv.state || '') + '</span></div>';
             h += '<div class="tv-row"><span>来源</span><span>' + esc(pv.sourceLabel || pv.source || '') + '</span></div>';
-            h += '<div class="tv-row"><span>行数 / 参与者</span><span>' + num(pv.lineCount) + ' 行 · ' + esc((pv.participants || []).join('/') || DASH) + '</span></div>';
+            h += '<div class="tv-row"><span>行数 / 参与者</span><span>' + numeralText(pv.lineCount) + ' 行 · ' + esc((pv.participants || []).join('/') || DASH) + '</span></div>';
             if (pv.mixedCurrency === true) {
                 h += '<div class="tv-row"><span>金额</span><span class="tv-fc-warn">' + esc(pv.amountNote || '混合币种不给总额') + '</span></div>';
             } else if (pv.amountTotal !== null && pv.amountTotal !== undefined) {
-                h += '<div class="tv-row"><span>金额</span><span>' + money(pv.amountTotal) + ' ' + esc((pv.currencies || []).join('/')) + '</span></div>';
+                h += '<div class="tv-row"><span>金额</span><span>' + moneyText(pv.amountTotal) + ' ' + esc((pv.currencies || []).join('/')) + '</span></div>';
             }
             if (pv.duplicate && pv.duplicate.isDuplicate === true) {
                 h += '<div class="tv-row"><span>重复风险</span><span class="tv-fc-warn">已提交过（再确认不会重复记账）</span></div>';

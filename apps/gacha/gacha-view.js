@@ -15,6 +15,7 @@
  * ======================================================== */
 'use strict';
 import { QUALITY_META, SINGLE_COST, TEN_COST } from './gacha-data.js';
+import { numeralText } from '../../config/num-face.js';
 
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
@@ -29,7 +30,6 @@ function esc(s) {
     .split(GT).join(AMP + 'gt;')
     .split(QUOTE).join(AMP + 'quot;');
 }
-function num(v) { return (typeof v === 'number' && Number.isFinite(v)) ? String(v) : DASH; }
 
 /** 品质顺序：神话最前、普通最后。数据层给的 order 才是唯一口径。 */
 function qorder(q) {
@@ -201,7 +201,7 @@ export class GachaView {
     if (!pools.length) return '<div class="ga-face">卡池一张都没读到 —— 不是没有池，是数据层这不回话</div>';
     const cells = pools.map((p) => {
       let n = DASH;
-      try { n = num((data.getItemsOfPool(p.id) || []).length); } catch (_e) { n = DASH; }
+      try { n = numeralText((data.getItemsOfPool(p.id) || []).length); } catch (_e) { n = DASH; }
       const on = (p.id === this.selectedPool) ? ' is-on' : '';
       return '<button class="ga-pool' + on + '" data-act="pool" data-pool="' + esc(p.id) + '">'
         + '<b>' + esc(p.name || p.id) + '</b><span>' + n + ' 件道具</span></button>';
@@ -213,8 +213,8 @@ export class GachaView {
     const last = this.lastResult;
     if (!last || !Array.isArray(last.results) || !last.results.length) {
       return '<div class="ga-empty">选一个卡池，按下面那颗按钮开始 🎰<br/>'
-        + '单抽 ' + num(SINGLE_COST) + ' 🪙 · 十连 ' + num(TEN_COST) + ' 🪙（十连省 '
-        + num(SINGLE_COST * 10 - TEN_COST) + '）</div>';
+        + '单抽 ' + numeralText(SINGLE_COST) + ' 🪙 · 十连 ' + numeralText(TEN_COST) + ' 🪙（十连省 '
+        + numeralText(SINGLE_COST * 10 - TEN_COST) + '）</div>';
     }
     const rows = last.results.map((r) => {
       const q = esc(r.quality || '普通');
@@ -225,7 +225,7 @@ export class GachaView {
         + '<div class="ga-t">' + esc(r.type || '道具') + '</div></div>';
     });
     return '<div class="ga-sec"><div class="ga-sec-title">这一把（花 '
-      + num(last.cost) + ' 🪙，余额 ' + num(last.balance) + ' 🪙）</div>'
+      + numeralText(last.cost) + ' 🪙，余额 ' + numeralText(last.balance) + ' 🪙）</div>'
       + '<div class="ga-grid">' + rows.join('') + '</div></div>';
   }
 
@@ -240,19 +240,19 @@ export class GachaView {
     const gap = Number.isFinite(balance) ? Math.max(0, SINGLE_COST - balance) : NaN;
     const parts = ['<section class="ga-body" data-page="gacha">'];
     parts.push('<div class="ga-face">' + (Number.isFinite(balance)
-      ? '余额 ' + num(balance) + ' 🪙 · 累计 ' + num(stats.pullCount) + ' 次 · 背包 ' + num(stats.itemKinds) + ' 种'
+      ? '余额 ' + numeralText(balance) + ' 🪙 · 累计 ' + numeralText(stats.pullCount) + ' 次 · 背包 ' + numeralText(stats.itemKinds) + ' 种'
       : '余额读不到 —— 数据层这不回话，先别按抽卡') + '</div>');
     parts.push('<div class="ga-sec"><div class="ga-sec-title">卡池</div>' + this._poolsHTML() + '</div>');
     parts.push('<div class="ga-actions">'
       + '<button class="ga-btn ga-btn-one" data-act="pull"' + (canOne ? '' : ' disabled') + '>单抽 '
-      + '<span class="ga-cost">' + num(SINGLE_COST) + ' 🪙</span></button>'
+      + '<span class="ga-cost">' + numeralText(SINGLE_COST) + ' 🪙</span></button>'
       + '<button class="ga-btn ga-btn-ten" data-act="pull10"' + (canTen ? '' : ' disabled') + '>十连 '
-      + '<span class="ga-cost">' + num(TEN_COST) + ' 🪙</span></button>'
+      + '<span class="ga-cost">' + numeralText(TEN_COST) + ' 🪙</span></button>'
       + '</div>');
     if (!Number.isFinite(balance)) {
       parts.push('<div class="ga-face">价格照标，但余额读不到，按下去也没法保证扣得对</div>');
     } else if (!canOne) {
-      parts.push('<div class="ga-face">单抽还差 ' + num(gap) + ' 🪙 —— 差多少就说多少，不画一颗假按钮</div>');
+      parts.push('<div class="ga-face">单抽还差 ' + numeralText(gap) + ' 🪙 —— 差多少就说多少，不画一颗假按钮</div>');
     }
     parts.push(this._resultHTML());
     parts.push('</section>');
@@ -275,15 +275,15 @@ export class GachaView {
       groups.get(q).push(it);
     }
     const keys = Array.from(groups.keys()).sort((a, b) => qorder(a) - qorder(b));
-    parts.push('<div class="ga-face">共 ' + num(inv.length) + ' 种 · 合计 '
-      + num(inv.reduce((s, it) => s + (Number(it.count) || 0), 0)) + ' 件</div>');
+    parts.push('<div class="ga-face">共 ' + numeralText(inv.length) + ' 种 · 合计 '
+      + numeralText(inv.reduce((s, it) => s + (Number(it.count) || 0), 0)) + ' 件</div>');
     for (const q of keys) {
       const list = groups.get(q);
       const rows = list.map((it) => '<div class="ga-row"><span>'
         + '<span class="ga-tag" data-tone="' + esc(q) + '" data-color="' + esc(qcolor(q)) + '" style="background:'
         + esc(qcolor(q)) + '">' + esc(q) + '</span> ' + esc(it.name) + '</span>'
-        + '<em class="ga-bag-count">×' + num(it.count) + '</em></div>');
-      parts.push('<div class="ga-sec"><div class="ga-sec-title">' + esc(q) + ' · ' + num(list.length) + ' 种</div>'
+        + '<em class="ga-bag-count">×' + numeralText(it.count) + '</em></div>');
+      parts.push('<div class="ga-sec"><div class="ga-sec-title">' + esc(q) + ' · ' + numeralText(list.length) + ' 种</div>'
         + rows.join('') + '</div>');
     }
     parts.push('</section>');
@@ -304,10 +304,10 @@ export class GachaView {
           + String(when.getHours()).padStart(2, '0') + ':' + String(when.getMinutes()).padStart(2, '0')
         : DASH;
       const got = (Array.isArray(h.got) ? h.got : []).map((g) => '<b>' + esc(g.name) + '</b>').join('、');
-      return '<div class="ga-hist">' + esc(stamp) + ' · 花费 ' + num(h.cost) + ' 🪙 · ' + (got || '没有记录到战果')
+      return '<div class="ga-hist">' + esc(stamp) + ' · 花费 ' + numeralText(h.cost) + ' 🪙 · ' + (got || '没有记录到战果')
         + '</div>';
     });
-    parts.push('<div class="ga-face">只留最近 30 次（数据层的口径），这里显示最近 ' + num(rows.length) + ' 次</div>');
+    parts.push('<div class="ga-face">只留最近 30 次（数据层的口径），这里显示最近 ' + numeralText(rows.length) + ' 次</div>');
     parts.push('<div class="ga-sec">' + rows.join('') + '</div>');
     parts.push('</section>');
     return parts.join('');
@@ -319,7 +319,7 @@ export class GachaView {
     const page = this.tab === 'bag' ? this._bagHTML()
       : (this.tab === 'history' ? this._historyHTML() : this._gachaHTML());
     let balance = DASH;
-    try { balance = num(this.app.data.getBalance()); } catch (_e) { balance = DASH; }
+    try { balance = numeralText(this.app.data.getBalance()); } catch (_e) { balance = DASH; }
     const tabs = ['<nav class="ga-tabbar">']
       .concat(TABS.map((t) => '<button class="ga-tab' + (this.tab === t.key ? ' is-on' : '')
         + '" data-act="tab" data-tab="' + t.key + '">' + t.label + '</button>'))

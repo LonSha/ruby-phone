@@ -1,6 +1,17 @@
 {
-  "latest": "4.192.0",
+  "latest": "4.193.0",
   "versions": {
+    "4.193.0": {
+      "version": "4.193.0",
+      "date": "2026-11-23",
+      "items": [
+        "【版本升至 4.193.0（五源同源）】20 版 60 只 App 重构计划第三批：从「逐只抽内核」改为「跨 App 重复口径收敛」。前两批按 App 抽，剩下的候选越来越难找到「整块可纯化」的逻辑；改做全仓同名函数体指纹扫描，一次定位 44 组跨 ≥3 文件重复的函数名，逐组比对函数体变体数，锁定展示面最集中的三处：`num` 3 变体（18 文件）、`numOrSelf` 5 处逐字相同、`money` 1 处。本版只抽**展示口径**（画给人看的串长什么样），不重造数值面 —— 仓内已有 `config/num-gate.js`（v3.12.0，`numOrNull` 是全仓唯一数值取值门）与 `config/num-clamp.js`（v3.84.0，有界取数），分工是：num-clamp 管「取到的数怎么夹」，num-face 管「取到之后画给人看的串长什么样」。",
+        "`config/num-face.js`（84 行，纯函数内核，4 导出 + 1 default）：`NUMERAL_DASH`（`'--'`，占位符唯一出处）/ `numeralText(v, dash)` / `moneyText(v, dash)` / `numOrSelf(v, self)`。`numeralText` 与 `moneyText` **刻意保留原口径只认真数**（`typeof v === 'number' && Number.isFinite(v)`），不改成 `numOrNull` 供数 —— 实测若改用 `numOrNull`，`'5'` / `'5.5'` / `' 7 '` / `'0'` / `'0x10'` / `'1e3'` 会从 `'--'` 变成数字串，那是**放宽口径**不是等价转调。92 个调用点实参全是 `.length`、数字常量或数字表达式（无一处传字符串），等价性成立，但「碰巧没传」不是保证，故判据 A2 把 `'5'` → `'--'` 钉死。`numOrSelf` 则本来就是 `numOrNull` 的一层包装，直接转调零差异（含 `'12'` → 12）。",
+        "源侧共 18 处本地定义删除并转调：12 个 view（annidate / cardtable / freehome / gacha / lexiscore / memtable / periodmath / socialguard / stickerdesk / summdesk / traveldesk / xhs）删 `function num(v) { ... }` 逐字复制件，import 内核后调用点 `num(` → `numeralText(`；traveldesk 额外删 `money(v)` 并转 `moneyText(`；5 个 app（kettle / musicdesk / needsim / recall / sourcebook）删 `numOrSelf` 定义；另清掉 `sullydesk-view.js` 一份**零调用死定义**。`apps/asset/engine/` 三处 `num` 未动 —— 那是不同语义（返回 number/NaN 供计算用，不是展示串）；`recall-data.js` / `ledger-data.js` 的 `num` 也未动，它们是 `numOrNull` 包装（v3.12.0 取值门，返回 `number|null`）。",
+        "`tests/system-v4193.test.mjs`（196 行，11 条判据）：A 组 5 条内核纯度与等价性（A1 源码面零 `Math.random` / `Date.now` / `class ` / `this.` / localStorage / window / `document.` / `fetch(` / `import.meta.url`；A2 `numeralText` 24 用例对拍 + 三条立场 `0`→`'0'`、`null`→`'--'`、`'5'`→`'--'` 不放宽；A3 `moneyText` 14 用例；A4 `numOrSelf` 20 用例；A5 四出口在场且 `numeralTextLoose` / `countText` 不许复活）；B 组 4 条源文件转调；C1 全仓 apps 下三种展示定义形态零残留；V1 五源版本锚。曾建 `numeralTextLoose` 与 `countText` 两个零消费出口，`dead-exports` 门因基线 35 条冻结未报，按纪律主动删除并在 A5 钉住。",
+        "纯函数内核新增 1 个文件（`config/num-face.js`），无新增副作用文件。19 道静态门禁全量复跑通过；`weak-coercion` 的「族名定义」从 45 降到 44，`method-consuming` 模块入度 440→441，`import-resolve` 文件数 945→946、导入条数 1775→1793。下一批候选（已盘点未动）：`esc` 8 变体（35 文件，但行为不等价 —— 有的不转 `'`、有的带 max 截断）、`toStr` 4 变体（31 文件，29 处逐字等价）、`listOf` 3 变体（15 处，13 处等价）、`isPlain` 4 变体（14 处，11 处等价）。"
+      ]
+    },
     "4.192.0": {
       "version": "4.192.0",
       "date": "2026-11-23",
@@ -6721,5 +6732,5 @@
       ]
     }
   },
-  "head": "4.192.0"
+  "head": "4.193.0"
 }

@@ -4,6 +4,7 @@
  * ======================================================== */
 'use strict';
 import { confirmDestroy } from '../../config/destructive-confirm.js';
+import { numeralText } from '../../config/num-face.js';
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
 const GT = String.fromCharCode(62);
@@ -17,7 +18,6 @@ function esc(s) {
         .split(GT).join(AMP + 'gt;')
         .split(QUOTE).join(QUOTE_ESC);
 }
-function num(v) { return (typeof v === 'number' && Number.isFinite(v)) ? String(v) : DASH; }
 
 export class LexiscoreView {
     constructor(app) { this.app = app; this.root = null; }
@@ -41,7 +41,7 @@ export class LexiscoreView {
     }
     _html(vm) {
         let h = '<div class="ls-wrap">';
-        h += '<div class="ls-head">词条 ' + num(vm.readings && vm.readings.entries) + ' · 台账 ' + num(vm.readings && vm.readings.ledger) + '</div>';
+        h += '<div class="ls-head">词条 ' + numeralText(vm.readings && vm.readings.entries) + ' · 台账 ' + numeralText(vm.readings && vm.readings.ledger) + '</div>';
         h += '<div class="ls-sec"><h3>收词条（JSON 数组）</h3>' +
             '<textarea class="ls-input" data-in="entries"></textarea>' +
             '<button class="ls-btn" data-act="intake">收下词条</button>' +
@@ -51,7 +51,7 @@ export class LexiscoreView {
             '<textarea class="ls-input ls-input-sm" data-in="query"></textarea>' +
             '<button class="ls-btn" data-act="query">查询</button></div>';
         const q = vm.lastQuery;
-        if (q) h += '<div class="ls-sec"><h3>上次查询</h3><div class="ls-row"><span>' + esc(q.text || DASH) + '</span><span>切词 ' + num(q.tokens) + ' · 命中 ' + num(q.hits) + '</span></div></div>';
+        if (q) h += '<div class="ls-sec"><h3>上次查询</h3><div class="ls-row"><span>' + esc(q.text || DASH) + '</span><span>切词 ' + numeralText(q.tokens) + ' · 命中 ' + numeralText(q.hits) + '</span></div></div>';
         h += '<div class="ls-sec"><h3>台账</h3>';
         if (!(vm.ledger || []).length) h += '<div class="ls-empty">台账还没有记录。</div>';
         for (const e of (vm.ledger || [])) h += '<div class="ls-row"><span>' + esc(e.action) + '</span><span>' + esc(e.detail || DASH) + '</span></div>';

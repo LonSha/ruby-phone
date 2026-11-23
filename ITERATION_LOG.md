@@ -1,3 +1,15 @@
+# 迭代 309 · v4.193.0 · 20 版 60 只 App 重构第三批：跨 App 重复口径收敛（num / numOrSelf / money 展示面）（2026-11-23）
+
+- 【版本升至 4.193.0（五源同源）】选件方向从「逐只抽内核」改为「跨 App 重复口径收敛」。前两批按 App 抽，剩余候选越来越难找到「整块可纯化」的逻辑：`apps/health/bio-races.js`（1840 行）/ `surgery-library.js`（1524 行）纯度 0.00 但本就是纯数据件；`apps/memory/`（9599 行）已高度内核化；`wangxiang-app.js`（1976 行）21 个 thisless 方法但构造函数重度有状态。改做全仓同名函数体指纹扫描，一次定位 44 组跨 ≥3 文件重复函数名，逐组比对函数体变体数，锁定展示面最集中的三处。
+- `config/num-face.js`（84 行，纯函数内核）：`NUMERAL_DASH` / `numeralText(v, dash)` / `moneyText(v, dash)` / `numOrSelf(v, self)` + default 导出。与仓内已有权威件分工明确：`config/num-gate.js`（v3.12.0，`numOrNull` 全仓唯一数值取值门）管「数从哪来」，`config/num-clamp.js`（v3.84.0，有界取数）管「取到的数怎么夹」，本件管「画给人看的串长什么样」。
+- **等价性优先的两处决策**：① `numeralText` / `moneyText` 刻意保留原口径只认真数（`typeof v === 'number' && Number.isFinite(v)`），不改成 `numOrNull` 供数。实测 6 类行为差异：`'5'` / `'5.5'` / `' 7 '` / `'0'` / `'0x10'` / `'1e3'` 会从 `'--'` 变成数字串。92 个调用点实参全是 `.length`、数字常量或数字表达式（无一处传字符串），等价性成立，但「碰巧没传」不是保证，故判据 A2 把 `'5'` → `'--'` 钉死。② `numOrSelf` 本来就是 `numOrNull` 的一层包装，直接转调零差异（含 `'12'` → 12）。
+- 源侧 18 处本地定义删除并转调：12 个 view（annidate / cardtable / freehome / gacha / lexiscore / memtable / periodmath / socialguard / stickerdesk / summdesk / traveldesk / xhs）删 `function num(v)` 逐字复制件；traveldesk 额外删 `money(v)`；5 个 app（kettle / musicdesk / needsim / recall / sourcebook）删 `numOrSelf`；另清 `sullydesk-view.js` 一份零调用死定义（其 `const DASH` 仍被 line 61 消费，保留）。
+- 未动的同族（判据刻意收窄到展示面）：`apps/asset/engine/` 三处 `num` 是**不同语义**（返回 number/NaN 供计算用）；`recall-data.js` / `ledger-data.js` 的 `num` 是 `numOrNull` 包装（v3.12.0 取值门，返回 `number|null`）。C1 判据因此只钉「函数体逐字等于那 13 份复制件」+ `numOrSelf(` + `money(v)` 三种形态，不用宽泛的 `function num(v)`。
+- 曾建 `numeralTextLoose` 与 `countText` 两个零消费出口，`dead-exports` 门因基线 35 条冻结未报，按纪律主动删除，并在判据 A5 钉住「不许复活」。`countText` 另与 `apps/health/medical-core.js` 既有同名函数不同语义易混淆。
+- 新增判据 `tests/system-v4193.test.mjs` 11 条（A 组 5 / B 组 4 / C 组 1 / V 组 1）；24 用例对拍三条全 0 diff；19 道静态门禁全量复跑通过。`weak-coercion` 族名定义 45→44，`method-consuming` 模块入度 440→441，`import-resolve` 文件数 945→946、导入条数 1775→1793。
+- 下一批候选（已盘点未动）：`esc` 8 变体（35 文件，行为不等价 —— 有的不转 `'`、有的带 max 截断，需先分簇再抽）、`toStr` 4 变体（31 文件，29 处逐字等价为 `(typeof v === 'string') ? v : ''`）、`listOf` 3 变体（15 处，13 处等价）、`isPlain` 4 变体（14 处，11 处等价）、`trimRows` 3 变体（14 处，12 处等价）。
+
+
 # 迭代 308 · v4.192.0 · 20 版 60 只 App 重构第二批：phone / games / diagnose 文本与协议归一面抽取（2026-11-23）
 
 - 【版本升至 4.192.0（五源同源）】phone / games / diagnose 三件的归一面抽成独立内核。三件源都是 600~3800 行的类/模块（phone-view.js 4243 行 / games-app.js 3837 行继承 PokerApp / diagnose-data.js 2980 行），类里绝大多数方法在动 this.app / this.currentView / this._phoneCallTtsCache / win / storage / API 冷却 —— 是有副作用的编排，不该整只搬。本版只抽归一面，源侧共 32 个方法体改为一行转调内核。
