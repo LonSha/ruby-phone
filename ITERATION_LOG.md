@@ -1,3 +1,15 @@
+# 迭代 310 · v4.194.0 · 20 版 60 只 App 重构第四批：跨 App 重复口径收敛第二炮 —— 文本读取面 toStr（2026-11-23）
+
+- 【版本升至 4.194.0（五源同源）】选件方法沿用第三批的「同名函数体指纹扫描」，重扫 v4.193.0 后新基线：产品码 4535 个函数名中跨 ≥3 文件出现 87 个，逐组比对函数体变体数。`toStr` 33 处 / 4 变体，其中 **31 处逐字等价** `(typeof v === 'string') ? v : ''`，是最大且语义最单一的等价簇；调用点合计 545 处，实参全是属性访问、变量或逻辑表达式。
+- `config/text-face.js`（52 行，纯函数内核）：唯一导出 `toStr(v)`。三条立场：① 类型严格，非串一律空串，刻意不改成 `String(v == null ? '' : v)`（那会让数字 5 变 '5'，是放宽不是等价）；② 不 trim —— 调用侧显式 trim 是既有形态（archive-app.js 的 `toStr(o.projectId).trim()`），并进来会双重 trim；③ 空串是如实回答不是兜底值。
+- 转调分两形：12 处 export 形删定义 + import + 保留 `export { toStr };`（`tests/freehome_min.test.mjs` / `tests/sullydesk_min.test.mjs` 经 `import * as M` 消费 `M.toStr`，导出面必须留；实测无一处用 `import { toStr }` 具名导入）；19 处私有形删定义 + import。另识别 `apps/affairs/affairs-app.js` 与 `apps/comms/comms-app.js` 两处**不同口径**（`String(v == null ? '' : v).trim()`），刻意不动，判据 C2 钉住。
+- **修掉一个真实的自伤缺陷并立成判据 B4**：转调脚本对「无 import 段的文件」逐行找注释头定位插入点，把 import 插进了块注释内部（freehome-data.js / stickerdesk-data.js / group-vote-handoff.js 三文件），import 被注释吞掉，`M.toStr is not a function`。同批还因只删多行定义的首行、漏删函数体尾巴，在 10 个文件留下裸露 `return ...; }`，syntax 门报 Illegal return statement。两条都靠门禁当场抓住，未流入提交。
+- **五处测试的副本树白名单补齐**：pvdesk / archive / cotdesk / diagdesk / uterus 五套负控制测试用「拷源文件到临时目录再 import」的方式做工，config 依赖是手工白名单。新增 `text-face.js` 依赖不跟上就报 MODULE_NOT_FOUND，七至十三条破坏类负控制**假红**（判据根本没跑到）。按各套件注释既有预警形态补齐（同族先例：v4.157.0 补 phone-feedback.js、v4.109.0 补 empty-face.js）。补齐后 v3450/v3460/v3470 回 HEAD 基线水位，v3480 恢复全绿，v3430 七条假红消除。
+- 用 `git stash` 做 HEAD 基线对拍分清「存量红」与「本轮回归」：v3380（8 fail）/ v3410（1）/ v3420（1）/ v3440（1）/ v3450（1）/ v3460（1）/ v3470（1）在改动前就是红的（多为版本锚类），不属本轮；v3430 的 8 fail、v3450/v3460/v3470 的 13/13/9 fail、v3480 的 2 fail 是本轮副本树缺依赖造成的假红，已全部修掉。
+- 新增判据 `tests/system-v4194.test.mjs` 11 条（A 组 4 / B 组 4 / C 组 2 / V 组 1）；22 用例对拍 0 diff；19 道门禁复跑通过（browser 层按规矩显式声明本次未执行）。
+- 下一批候选（已盘点未动）：`safeStr` 36 处 / 4 变体（15 份逐字等价、11 份带 fallback 参数）、`esc` 35 处 / 12 变体（18 份 split/join 形逐字相同但 12 变体间行为不等价，需先分簇）、`safeNum` 19 处 / 5 变体（16 份是 `Number(val)` 弱口径，收敛须改走 `numOrNull`，属行为变更需单独一批）。
+
+
 # 迭代 309 · v4.193.0 · 20 版 60 只 App 重构第三批：跨 App 重复口径收敛（num / numOrSelf / money 展示面）（2026-11-23）
 
 - 【版本升至 4.193.0（五源同源）】选件方向从「逐只抽内核」改为「跨 App 重复口径收敛」。前两批按 App 抽，剩余候选越来越难找到「整块可纯化」的逻辑：`apps/health/bio-races.js`（1840 行）/ `surgery-library.js`（1524 行）纯度 0.00 但本就是纯数据件；`apps/memory/`（9599 行）已高度内核化；`wangxiang-app.js`（1976 行）21 个 thisless 方法但构造函数重度有状态。改做全仓同名函数体指纹扫描，一次定位 44 组跨 ≥3 文件重复函数名，逐组比对函数体变体数，锁定展示面最集中的三处。

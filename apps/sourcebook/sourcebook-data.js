@@ -64,6 +64,7 @@
  *   故本件禁用正则字面量：一律用字串比对与 new RegExp 构造。
  * ======================================================== */
 import { numOrNull } from '../../config/num-gate.js';
+import { toStr } from '../../config/text-face.js';
 
 /* ---------- 真源表 ①：跨度六档（键面与校验白名单共用这一张） ---------- */
 export const SPAN_BUCKETS = Object.freeze([
@@ -133,10 +134,6 @@ export const RECIPIENT_KEYS = Object.freeze(Object.keys(RECIPIENT_KINDS));
 /* ---------- 真源表 ⑧：封存时间的取值三态 ---------- */
 export const CREATED_STATES = Object.freeze({ ok: 'ok', absent: 'absent', malformed: 'malformed' });
 export const CREATED_STATE_KEYS = Object.freeze(Object.keys(CREATED_STATES));
-
-function toStr(v) {
-    return (typeof v === 'string') ? v : '';
-}
 
 /* ══════════════════ 日期：不许把坏日期当成今天 ══════════════════ */
 /*

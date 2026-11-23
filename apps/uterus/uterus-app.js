@@ -48,6 +48,7 @@ import { writeReceipt } from '../../config/write-receipt.js';
 /* [v4.153.0 · R21-X10] Bodycord 档案桥（严格纯读）：外部插件的聊天 metadata
  *   档案只投影、不重算、不代管。探针在 tab 选中时才取（不在场就是不在场）。 */
 import { readBodycordFace, bodycordBridgeSelfCheck, BODYCORD_FACES } from '../../config/bodycord-bridge.js';
+import { toStr } from '../../config/text-face.js';
 export const UD_SUBJECT_KEY = 'uterus_subject';
 export const UD_LEDGER_KEY = 'uterus_ledger';
 
@@ -77,7 +78,6 @@ const INTAKE_WHY_TEXT = Object.freeze({
 const UD_TEXT_MAX = 400000;
 const UD_SUBJECT_MAX = 400000;
 
-function toStr(v) { return (typeof v === 'string') ? v : ''; }
 function dash() { return DASH_UNIT; }
 function stampOf(ms) {
     const n = numOrNull(ms);

@@ -16,6 +16,8 @@
  *   `''` / `'  '` / `[]` / `null` / `false` 全被读成 0、`true` 读成 1、`[5]` 读成 5。
  *   0 在权重与阈值面上是**合法读数**，故「没给」与「给了 0」必须分得开。 */
 import { numOrNull } from '../../config/num-gate.js';
+import { toStr } from '../../config/text-face.js';
+export { toStr };
 /* 本件对外仍导出同名入口（下游 -app.js 照旧 `import { numOrNull }`），不做第二份实现。 */
 export { numOrNull };
 export const LS_TOKEN_MIN = 2;
@@ -28,7 +30,6 @@ export const LS_LEDGER_MAX = 120;
 
 export function isPlain(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
 export function listOf(v) { return Array.isArray(v) ? v : []; }
-export function toStr(v) { return (typeof v === 'string') ? v : ''; }
 export function trimRows(list, cap) {
     const arr = listOf(list);
     const c = (typeof cap === 'number' && cap > 0) ? Math.floor(cap) : arr.length;

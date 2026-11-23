@@ -60,6 +60,7 @@
  *   故本件正则一律 new RegExp 构造、引号用 String.fromCharCode 拼装。
  * ======================================================== */
 import { numOrNull } from '../../config/num-gate.js';
+import { toStr } from '../../config/text-face.js';
 
 /* ---------- 真源表 ①：四路来源（视图键面与校验白名单共用这一张） ---------- */
 export const RECALL_CHANNELS = Object.freeze([
@@ -119,10 +120,6 @@ export const RECALL_FACES = Object.freeze({
     empty: 'empty',
     storage_absent: 'storage_absent'
 });
-
-function toStr(v) {
-    return (typeof v === 'string') ? v : '';
-}
 
 /** 读一个有限数：非数 / NaN / 空串一律 null（不许塌成 0）。 */
 function num(v) {

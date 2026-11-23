@@ -11,6 +11,8 @@
  * 源把布局挂 db.freeHomeLayout，本件落两条会话键走 ^fh_ 前缀。
  * ======================================================== */
 'use strict';
+import { toStr } from '../../config/text-face.js';
+export { toStr };
 
 /* ---------- 真源常量 ---------- */
 export const FH_GRID = 4;
@@ -21,7 +23,6 @@ export const FH_WIDGET_CELLS = Object.freeze({ custom: 4, clock: 8, photo: 4, no
 
 export function isPlain(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
 export function listOf(v) { return Array.isArray(v) ? v : []; }
-export function toStr(v) { return (typeof v === 'string') ? v : ''; }
 export function isInt(v) { return Number.isInteger(v); }
 export function trimRows(list, cap) {
     const arr = listOf(list);

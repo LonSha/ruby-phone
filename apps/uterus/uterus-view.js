@@ -36,6 +36,7 @@ import {
     affinityWordOf, DESCENT_INLET
 } from './uterus-data.js';
 import { writeLanded } from '../../config/write-receipt.js';
+import { toStr } from '../../config/text-face.js';
 
 const AMP = String.fromCharCode(38);
 const LT = String.fromCharCode(60);
@@ -78,7 +79,6 @@ function mixHex(from, to, ratio) {
     for (let i = 0; i < 3; i += 1) out.push(pad2(Math.round(a[i] * (1 - t) + b[i] * t).toString(16)));
     return '#' + out.join('');
 }
-function toStr(v) { return (typeof v === 'string') ? v : ''; }
 function numOr(v, d) { return (typeof v === 'number' && Number.isFinite(v)) ? v : d; }
 function listOf(v) { return Array.isArray(v) ? v : []; }
 /* 图块的像素高度：版面的 size 以 32 格图块为基准。真源同源。 */

@@ -55,6 +55,7 @@ import {
 import { PvdeskView } from './pvdesk-view.js';
 import { numOrNull } from '../../config/num-gate.js';
 import { writeReceipt } from '../../config/write-receipt.js';
+import { toStr } from '../../config/text-face.js';
 
 /* 四条会话键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中
    /^pvdesk_/，否则跨会话串味。源把题面、歌词、任务列表与设置全放在
@@ -97,9 +98,6 @@ const HOLD_WHY_TEXT = Object.freeze({
     [PV_HOLD_WHYS[5]]: '一镜都没有'
 });
 
-function toStr(v) {
-    return (typeof v === 'string') ? v : '';
-}
 function dash() {
     return DASH_UNIT;
 }

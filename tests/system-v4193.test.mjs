@@ -25,6 +25,18 @@ const NG = await import('../config/num-gate.js');
 
 const CORE = 'config/num-face.js';
 
+/** 语义化版本比较：a > b 给 1，相等 0，a < b 给 -1（版本锚下限形用）。 */
+const cmp = (a, b) => {
+    const pa = String(a).split('.').map(Number);
+    const pb = String(b).split('.').map(Number);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const x = pa[i] || 0;
+        const y = pb[i] || 0;
+        if (x !== y) return x > y ? 1 : -1;
+    }
+    return 0;
+};
+
 /* 12 个视图：num 定义已删、改为 import numeralText */
 const VIEW_FILES = [
     'apps/annidate/annidate-view.js',
@@ -186,16 +198,20 @@ test('C1 apps 下不再有本地展示口径函数定义（num 逐字复制件 /
 });
 
 /* ══════════ V 组 · 版本锚 ══════════ */
-test('V1 五源版本号抬到 4.193.0', () => {
-    const pkg = JSON.parse(read('package.json'));
-    assert.equal(pkg.version, '4.193.0', 'package.json');
+/* 版本锚用**下限形**：本套件成立于 4.193.0，钉「不低于」而非「恰等于」。
+ *   刚性等值锚每抬一版必红（v4.194.0 抬版时本条就红过一次），
+ *   那是给自己埋一条下一版必红的断言 —— 与 v3420 等套件的 K1 同款处理。 */
+test('V1 五源版本号不低于 4.193.0', () => {
     const man = JSON.parse(read('manifest.json'));
-    assert.equal(man.version, '4.193.0', 'manifest.json');
+    const pkg = JSON.parse(read('package.json'));
+    assert.ok(cmp(man.version, '4.193.0') >= 0, 'manifest.json 必须不低于 4.193.0，当前 ' + man.version);
+    assert.equal(pkg.version, man.version, 'package.json 必须与 manifest 同版');
     const ul = JSON.parse(read('update-log.json'));
-    assert.ok(ul.versions['4.193.0'], 'update-log.json 必须有 4.193.0 条目');
-    assert.equal(ul.latest, '4.193.0', 'update-log.json latest');
+    assert.equal(ul.latest, man.version, 'update-log.json latest 必须与 manifest 同版');
+    assert.ok(ul.versions['4.193.0'], 'update-log.json 必须有 4.193.0 条目（本版交付物）');
+    assert.ok(ul.versions[man.version], 'update-log.json 必须有当版条目');
     const idx = read('index.js');
-    assert.ok(idx.indexOf("'4.193.0'") >= 0, 'index.js 必须出现 4.193.0');
+    assert.ok(idx.indexOf("'" + man.version + "'") >= 0, 'index.js 必须出现当版号');
     const iter = read('ITERATION_LOG.md');
-    assert.ok(iter.indexOf('4.193.0') >= 0, 'ITERATION_LOG.md 必须出现 4.193.0');
+    assert.ok(iter.indexOf(man.version) >= 0, 'ITERATION_LOG.md 必须出现当版号');
 });

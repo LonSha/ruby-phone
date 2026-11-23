@@ -60,6 +60,7 @@ import { CotdeskView } from './cotdesk-view.js';
  *   writeScopeReceipt 在上面再加**逐条回读**（相位）—— 两者都是唯一实现。
  *   decodeStored 是对象值 / JSON 文本混用的历史兼容读口径（第 5 条）。 */
 import { writeReceipt, collectReceipt, writeScopeReceipt, decodeStored } from '../../config/write-receipt.js';
+import { toStr } from '../../config/text-face.js';
 export const CD_ITEMS_KEY = 'cotdesk_items';
 export const CD_CONFIG_KEY = 'cotdesk_config';
 export const CD_DRAFT_KEY = 'cotdesk_draft';
@@ -112,7 +113,6 @@ const ROLE_TEXT = Object.freeze({
     [CD_ROLES[1]]: CD_ROLE_TEXT[CD_ROLES[1]],
     [CD_ROLES[2]]: CD_ROLE_TEXT[CD_ROLES[2]]
 });
-function toStr(v) { return (typeof v === 'string') ? v : ''; }
 function dash() { return DASH_UNIT; }
 /** 读数取值：取不出来就画横线（**不画 0**）。 */
 function meterText(v) {

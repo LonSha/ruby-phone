@@ -32,6 +32,8 @@ import { APP_LAZY_ROUTE_INDEX } from './app-lazy-routes.js';
 import { writeReceipt } from './write-receipt.js';
 import { buildOpenDetail } from './app-open-detail.js';
 import { tabSourceSelfCheck, tabMapOf, TABS_BY_APP } from './tab-source.js';
+import { toStr } from './text-face.js';
+export { toStr };
 
 /* 两条会话键：随会话隔离（键前缀 ^te_ 已在 config/storage.js 的会话族里，
  *   与「切聊遵守既有 scope」的验收同源 —— 不做第二套隔离机制）。 */
@@ -151,7 +153,6 @@ export const TE_CARDS = Object.freeze([
 ]);
 
 export function isPlain(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
-export function toStr(v) { return (typeof v === 'string') ? v : ''; }
 export function listOf(v) { return Array.isArray(v) ? v : []; }
 function hasOwn(o, k) { return isPlain(o) ? Object.prototype.hasOwnProperty.call(o, k) : false; }
 

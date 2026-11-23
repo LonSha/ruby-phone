@@ -974,6 +974,9 @@ function stageTree() {
     fs.copyFileSync(path.join(ROOT, 'config', 'branch-canon-contract.js'), path.join(dir, 'config', 'branch-canon-contract.js'));
     /* [v4.109.0 · R13-O6] 存档台的空态分形把 view 接到 empty-face 上，副本树必须跟上。 */
     fs.copyFileSync(path.join(ROOT, 'config', 'empty-face.js'), path.join(dir, 'config', 'empty-face.js'));
+    /* [v4.194.0 · 第四批] 本目录 app 的本地 toStr 复制件已转调 config/text-face.js，
+     *   副本树必须带上它 —— 否则负控制报 MODULE_NOT_FOUND 假红（判据根本没跑到）。 */
+    fs.copyFileSync(path.join(ROOT, 'config', 'text-face.js'), path.join(dir, 'config', 'text-face.js'));
     const ad = path.join(dir, 'apps', 'archive');
     fs.mkdirSync(ad, { recursive: true });
     for (const f of ['archive-data.js', 'archive-view.js', 'archive-app.js', 'archive-canon.js']) {

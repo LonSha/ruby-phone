@@ -47,6 +47,7 @@
  * ======================================================== */
 'use strict';
 import { numOrNull } from '../../config/num-gate.js';
+import { toStr } from '../../config/text-face.js';
 
 /* --------- 1 上限与枚举 --------- */
 export const TVP_STOPS_MAX = 40;
@@ -63,7 +64,6 @@ export const TVP_COST_ID_PREFIX = 'tv_pc_';
 
 function isPlain(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
 function listOf(v) { return Array.isArray(v) ? v : []; }
-function toStr(v) { return (typeof v === 'string') ? v : ''; }
 function trimRows(list, cap) {
     const arr = listOf(list);
     const c = (typeof cap === 'number' && cap > 0) ? Math.floor(cap) : arr.length;

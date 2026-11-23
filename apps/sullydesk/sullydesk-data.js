@@ -21,6 +21,8 @@
  *   本件此前自带的那份 `numOrNull` 把「没给」读成有效值（`null` / `''` / `[]` / `false` → 0、
  *   `true` → 1、`[5]` → 5）。排序键与引用键上的 0 是**合法读数**，与「没给」必须分得开。 */
 import { numOrNull } from '../../config/num-gate.js';
+import { toStr } from '../../config/text-face.js';
+export { toStr };
 /* ---------- 真源常量 ---------- */
 export const EG_CRED_NAME_WORDS = Object.freeze(['api_key', 'apikey', 'secret', 'token', 'authorization', 'auth', 'bearer', 'password', 'passwd', 'pwd', 'access_key', 'private_key', 'anon_key', 'credential']);
 export const EG_SAFE_FIELDS = Object.freeze(['id', 'voiceId', 'fishReferenceId', 'systemPrompt', 'description', 'worldview', 'content', 'summary', 'memoryText', 'impression', 'avatar', 'src', 'prompt', 'notes', 'bio', 'title', 'label', 'text', 'lyrics']);
@@ -30,7 +32,6 @@ export const SD2_LEDGER_MAX = 120;
 
 export function isPlain(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
 export function listOf(v) { return Array.isArray(v) ? v : []; }
-export function toStr(v) { return (typeof v === 'string') ? v : ''; }
 export function trimRows(list, cap) {
     const arr = listOf(list);
     const c = (typeof cap === 'number' && cap > 0) ? Math.floor(cap) : arr.length;

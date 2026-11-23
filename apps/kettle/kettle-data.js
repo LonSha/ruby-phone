@@ -64,6 +64,7 @@
  *   故本件禁用正则字面量：一律字串比对与单字扫描。
  * ======================================================== */
 import { numOrNull } from '../../config/num-gate.js';
+import { toStr } from '../../config/text-face.js';
 
 /* ---------- 真源表 ①：轮次三档（键面与校验白名单共用这一张） ---------- */
 export const KETTLE_ROUND_BUCKETS = Object.freeze(['short', 'eventful', 'long']);
@@ -125,10 +126,6 @@ export const KETTLE_SETTLE_REASONS = Object.freeze({
 
 /* ---------- 真源表 ⑦：记录取值三态（源只有「有」与「当空」） ---------- */
 export const KETTLE_NOTE_STATES = Object.freeze(['ok', 'absent', 'malformed']);
-
-function toStr(v) {
-    return (typeof v === 'string') ? v : '';
-}
 
 /** 标签体的取值范围：**到收尾符或本行末，先到者为准**。
  *  ★ 为什么不收到串尾：模型偶尔忘写收尾符，收到串尾会把后面几行正文吞进选项里，

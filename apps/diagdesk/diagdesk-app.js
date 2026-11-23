@@ -55,6 +55,7 @@ import {
 } from './diagdesk-data.js';
 import { DiagdeskView } from './diagdesk-view.js';
 import { writeReceipt, collectReceipt } from '../../config/write-receipt.js';
+import { toStr } from '../../config/text-face.js';
 export const DD_ARCHIVE_KEY = 'diagdesk_archive';
 export const DD_DRAFT_KEY = 'diagdesk_draft';
 export const DD_LEDGER_KEY = 'diagdesk_ledger';
@@ -87,7 +88,6 @@ const INTAKE_WHY_TEXT = Object.freeze({
     [DD_INTAKE_WHYS[6]]: '栏位太多，超过本件上限（只报，不截）',
     [DD_INTAKE_WHYS[7]]: '贴进来的东西嵌套太深'
 });
-function toStr(v) { return (typeof v === 'string') ? v : ''; }
 function dash() { return DASH_UNIT; }
 function meterText(v) {
     const n = numOf(v);

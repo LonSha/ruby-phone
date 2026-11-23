@@ -1215,6 +1215,11 @@ function stageTree() {
      *   这正是本段注释警告的形态：依赖清单是手工白名单，不跟就假红。
      *   处置是补齐白名单（副本树要真装得下），不是放宽断言。 */
     fs.copyFileSync(path.join(ROOT, 'config', 'phone-feedback.js'), path.join(dir, 'config', 'phone-feedback.js'));
+    /* [v4.194.0 · 第四批] pvdesk-app.js / pvdesk-view.js 的本地 toStr 复制件已转调
+     *   config/text-face.js（31 份 toStr 逐字复制件的收敛），副本树必须带上它 ——
+     *   否则 I13~I19 七条破坏类负控制全部抛 MODULE_NOT_FOUND 假红。
+     *   形态与上面 v4.157.0 补 phone-feedback.js 完全同族：手工白名单不跟就假红。 */
+    fs.copyFileSync(path.join(ROOT, 'config', 'text-face.js'), path.join(dir, 'config', 'text-face.js'));
     const kd = path.join(dir, 'apps', 'pvdesk');
     fs.mkdirSync(kd, { recursive: true });
     for (const f of ['pvdesk-data.js', 'pvdesk-view.js', 'pvdesk-app.js']) {

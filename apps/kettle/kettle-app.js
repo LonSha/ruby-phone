@@ -42,6 +42,7 @@ import { KettleView } from './kettle-view.js';
 import { writeReceipt } from '../../config/write-receipt.js';
 import { numOrNull } from '../../config/num-gate.js';
 import { numOrSelf } from '../../config/num-face.js';
+import { toStr } from '../../config/text-face.js';
 
 /* 三条会话键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中
    /^kettle_/，否则跨会话串味。源把探店记录直接写进宿主会话。 */
@@ -59,10 +60,6 @@ const FACE_ABSENT = KETTLE_FACES[3];
 
 /** 覆盖值取值口：显式传入的**真数字**才认，取不出来回落。
  *  ★ 不写弱口径签名（那是本仓 W1 门禁禁的形态：会把「没给」说成「给了 0」）。 */
-
-function toStr(v) {
-    return (typeof v === 'string') ? v : '';
-}
 
 /** 「这一格写了东西、但认不出来」——_readRaw 的三种回报里只有这一种算数。
  *  ★ 与「storage 取不出来」（ok=false）**不同形**：那个是**取不出来**，

@@ -47,6 +47,7 @@ import { RECALL_NARRATIVE_STATES, RECALL_NARRATIVE_GAPS } from '../../config/rec
 import { writeReceipt } from '../../config/write-receipt.js';
 import { numOrNull } from '../../config/num-gate.js';
 import { numOrSelf } from '../../config/num-face.js';
+import { toStr } from '../../config/text-face.js';
 /** 覆盖值取值口（topN / floor 共用）：显式传入的**真数字**才认，取不出来就回落实例值。
  *  ★ 不走 `?? ` 兜底：本仓口径里「传了 null」与「没传」都回落（套件钉住这行为），
  *    而 `??` 会让 null 直接返回 null；也不写 `Number.isFinite(Number(v))`
@@ -60,10 +61,6 @@ const LEDGER_KEY = 'recall_ledger';
 /** 取数面读数（视图不自己拼统计）。★ 键面取数据层真源 RECALL_FACES，
  *  不在本文件另写一份（本仓 J7 形态：两份靠碰巧拼写一致对齐）。 */
 const FACE = RECALL_FACES;
-
-function toStr(v) {
-    return (typeof v === 'string') ? v : '';
-}
 
 /** 只收非空字符串数组，去重（回执 id 列 / 快照都走这里）。 */
 function toStrArr(v) {

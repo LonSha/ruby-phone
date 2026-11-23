@@ -16,6 +16,8 @@
  *   `null` / `''` / `[]` / `false` → 0、`true` → 1、`[5]` → 5。周期长度与经期天数的 0
  *   是**合法读数**，与「这一格没给」必须分得开。 */
 import { numOrNull } from '../../config/num-gate.js';
+import { toStr } from '../../config/text-face.js';
+export { toStr };
 /* 本件对外仍导出同名入口（下游 -app.js 照旧 `import { numOrNull }`），不做第二份实现。 */
 export { numOrNull };
 export const PM_CYCLE_MIN = 15;
@@ -27,7 +29,6 @@ export const PM_DAY_MS = 24 * 60 * 60 * 1000;
 
 export function isPlain(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
 export function listOf(v) { return Array.isArray(v) ? v : []; }
-export function toStr(v) { return (typeof v === 'string') ? v : ''; }
 export function trimRows(list, cap) {
     const arr = listOf(list);
     const c = (typeof cap === 'number' && cap > 0) ? Math.floor(cap) : arr.length;

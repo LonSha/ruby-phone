@@ -66,6 +66,7 @@ import { rwProjectsFromPack } from '../../config/resume-workbench.js';
  *   （config/branch-canon-contract.js）里，接线件只转发、视图只画 ——
  *   三处各写一份必然漂移，而漂移那天没人会响。 */
 import { ArchiveCanon } from './archive-canon.js';
+import { toStr } from '../../config/text-face.js';
 export const AR_PACK_KEY = 'archive_pack';
 export const AR_FACE_KEY = 'archive_face';
 export const AR_DRAFT_KEY = 'archive_draft';
@@ -103,7 +104,6 @@ const MODE_TEXT = Object.freeze({
     [AR_PACK_MODES[1].key]: '覆盖式：这些表先被清空再写入',
     [AR_PACK_MODES[2].key]: '不适用（认不出来）'
 });
-function toStr(v) { return (typeof v === 'string') ? v : ''; }
 function dash() { return DASH_UNIT; }
 /** 读数取值：取不出来就画横线（**不画 0**）。 */
 function meterText(v) {

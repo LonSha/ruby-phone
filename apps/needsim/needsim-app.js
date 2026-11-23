@@ -53,6 +53,7 @@ import { NeedsimView } from './needsim-view.js';
 import { writeReceipt } from '../../config/write-receipt.js';
 import { numOrNull } from '../../config/num-gate.js';
 import { numOrSelf } from '../../config/num-face.js';
+import { toStr } from '../../config/text-face.js';
 
 /* 三条会话键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中
    /^needsim_/，否则跨会话串味。源把需求值与生成池都放在没有角色维度的键下。 */
@@ -70,10 +71,6 @@ const FACE_ABSENT = SIMS_FACES[3];
 
 /** 覆盖值取值口：显式传入的**真数字**才认，取不出来回落。
  *  ★ 不写弱口径签名（那是本仓 W1 门禁禁的形态：会把「没给」说成「给了 0」）。 */
-
-function toStr(v) {
-    return (typeof v === 'string') ? v : '';
-}
 
 function clampLen(s, max) {
     const t = toStr(s).trim();

@@ -1214,6 +1214,9 @@ function stageTree() {
     /* [v3.58.0 · 计划 O5] 本件 17 件中的 cotdesk 已把写回执接进唯一实现，
      *   副本树少了它，模块解析当场 ERR_MODULE_NOT_FOUND（真踩过）。 */
     fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
+    /* [v4.194.0 · 第四批] 本目录 app 的本地 toStr 复制件已转调 config/text-face.js，
+     *   副本树必须带上它 —— 否则负控制报 MODULE_NOT_FOUND 假红（判据根本没跑到）。 */
+    fs.copyFileSync(path.join(ROOT, 'config', 'text-face.js'), path.join(dir, 'config', 'text-face.js'));
     const ad = path.join(dir, 'apps', 'cotdesk');
     fs.mkdirSync(ad, { recursive: true });
     for (const f of ['cotdesk-data.js', 'cotdesk-app.js', 'cotdesk-view.js']) {

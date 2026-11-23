@@ -50,6 +50,7 @@ import {
 } from './doujin-data.js';
 import { DoujinView } from './doujin-view.js';
 import { writeReceipt } from '../../config/write-receipt.js';
+import { toStr } from '../../config/text-face.js';
 
 export const DJ_SHOP_KEY = 'doujin_shop';
 export const DJ_MARKET_KEY = 'doujin_market';
@@ -88,7 +89,6 @@ const ROW_WHY_TEXT = Object.freeze({
     [DJ_ROW_WHYS[3]]: '超上限'
 });
 
-function toStr(v) { return (typeof v === 'string') ? v : ''; }
 function dash() { return DASH_UNIT; }
 /** 读数取值：取不出来就画横线（**不画 0**）。 */
 function meterText(v) {

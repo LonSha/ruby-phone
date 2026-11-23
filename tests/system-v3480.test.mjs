@@ -32,6 +32,9 @@ const UD_APP = 'apps/uterus/uterus-app.js';
 const UD_VIEW = 'apps/uterus/uterus-view.js';
 const UD_CSS = 'apps/uterus/uterus.css';
 const NUM_GATE = 'config/num-gate.js';
+/* [v4.194.0 · 第四批] uterus 三件的本地 toStr 复制件已转调 config/text-face.js，
+ *   副本树必须带上它 —— 否则负控制报 MODULE_NOT_FOUND 假红。 */
+const TEXT_FACE = 'config/text-face.js';
 const RECEIPT = 'config/write-receipt.js';
 const APPS = 'config/apps.js';
 const STORAGE = 'config/storage.js';
@@ -130,6 +133,7 @@ const WS_FILES = [
     PHONE_CSS,
     V255,
     NUM_GATE,
+    TEXT_FACE,
     RECEIPT
 ];
 function makeWorkspace() {

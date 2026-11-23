@@ -47,6 +47,8 @@
  *   本件此前自带的那份 numOrNull 把「没给」读成有效值：null / 空串 / 空数组 / 布尔假 -> 0、
  *   布尔真 -> 1、单元素数组 -> 5。0 在字段与游标面上是合法读数，故两者必须分得开。 */
 import { numOrNull } from '../../config/num-gate.js';
+import { toStr } from '../../config/text-face.js';
+export { toStr };
 /* 本件对外仍导出同名入口（下游 -app.js 照旧按原名引入），不做第二份实现。 */
 export { numOrNull };
 /* 行切分（CRLF / LF；裸 CR 按普通字符）。 */
@@ -133,7 +135,6 @@ export const MT_APPLY_CODES = Object.freeze([
 
 export function isPlain(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
 export function hasKey(obj, k) { return isPlain(obj) && Object.prototype.hasOwnProperty.call(obj, k); }
-export function toStr(v) { return (typeof v === 'string') ? v : ''; }
 export function listOf(v) { return Array.isArray(v) ? v : []; }
 export function clampNum(n, lo, hi) {
     let r = n;

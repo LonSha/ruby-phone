@@ -61,6 +61,7 @@
  *   逐字符扫描与括号配平；反斜杠一律走拼装形（String.fromCharCode）。
  * ======================================================== */
 import { numOrNull } from '../../config/num-gate.js';
+import { toStr } from '../../config/text-face.js';
 
 /* ---------- 真源表 ①：六项需求（键面与标签与初值共用这一张） ---------- */
 export const SIMS_NEED_KEYS = Object.freeze(['hunger', 'energy', 'bladder', 'hygiene', 'fun', 'social']);
@@ -203,10 +204,6 @@ export const SIMS_REPLY_WHYS = Object.freeze({
     bad_json: { label: '看着像对象但读不成 JSON', why: '源在这一步抛异常并吞掉，用户不知道坏在哪' },
     not_object: { label: '读出来不是对象', why: '源直接取字段，取到空也不报' }
 });
-
-function toStr(v) {
-    return (typeof v === 'string') ? v : '';
-}
 
 function clampLenRaw(s, max) {
     const t = toStr(s).trim();

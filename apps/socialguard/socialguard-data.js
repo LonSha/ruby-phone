@@ -23,6 +23,8 @@
  *   被收成 0，**键留下了**，于是 `readingsOf` 按键数据实计到了这些脏值；而互动门读的
  *   是同一个 0（falsy）⇒ 界面统计与互动门对同一条记录给出相反结论。 */
 import { numOrNull } from '../../config/num-gate.js';
+import { toStr } from '../../config/text-face.js';
+export { toStr };
 /* 本件对外仍导出同名入口（下游 -app.js 照旧 `import { numOrNull }`），不做第二份实现。 */
 export { numOrNull };
 /* ---------- 真源常量 ---------- */
@@ -37,7 +39,6 @@ export const SG_HISTORY_SUMMARY_MAX = 6;
 /* ---------- 基础工具 ---------- */
 export function isPlain(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
 export function listOf(v) { return Array.isArray(v) ? v : []; }
-export function toStr(v) { return (typeof v === 'string') ? v : ''; }
 /* ---------- 知情账单格判定（[v3.57.0·O3]） ----------
  * 「看过没」在源里只有一种可表示形态：`markSeen` 写进去的**正数**（首看时刻；
  * 拿不到时刻时写 1，见该函数）。故本判定只认「有限数且 > 0」，其余一律判「表示不了已看」：

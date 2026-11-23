@@ -26,6 +26,7 @@
  *   日历侧记一份 `applied` 台账：同一 `activityId` 第二次转交**不重复建事项**，
  *   如实报 `replayed` 而不是假装又建了一条。
  * ======================================================== */
+import { toStr } from './text-face.js';
 'use strict';
 
 /** 凭据归一的归因词表（判据按此表逐词核，防随口新词）。 */
@@ -69,8 +70,6 @@ export const GV_HANDOFF_KEYS = Object.freeze({
     draft: 'calendar_vote_handoff',
     applied: 'calendar_vote_applied'
 });
-
-function toStr(v) { return (typeof v === 'string') ? v : ''; }
 
 /**
  * 把派发出来的 detail 收成一份可落笔的凭据（**永不抛**）。

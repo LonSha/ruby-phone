@@ -15,6 +15,8 @@
  *   本件此前的 `numOrNullOf` 只给 `number` 放行、其余一律 `Number(v)` —— 牌序 0 是
  *   **合法读数**（第一张牌），而 `''` / `[]` / `false` 会被读成同一个 0。 */
 import { numOrNull } from '../../config/num-gate.js';
+import { toStr } from '../../config/text-face.js';
+export { toStr };
 export const CT_MAJOR = Object.freeze(['愚者','魔术师','女祭司','女皇','皇帝','教皇','恋人','战车','力量','隐士','命运之轮','正义','倒吊人','死神','节制','恶魔','塔','星星','月亮','太阳','审判','世界']);
 export const CT_SUITS = Object.freeze(['权杖','圣杯','宝剑','星币']);
 export const CT_RANKS = Object.freeze(['Ace','二','三','四','五','六','七','八','九','十','侍从','骑士','王后','国王']);
@@ -25,7 +27,6 @@ export const CT_LEDGER_MAX = 120;
 
 export function isPlain(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
 export function listOf(v) { return Array.isArray(v) ? v : []; }
-export function toStr(v) { return (typeof v === 'string') ? v : ''; }
 export function trimRows(list, cap) {
     const arr = listOf(list);
     const c = (typeof cap === 'number' && cap > 0) ? Math.floor(cap) : arr.length;

@@ -58,6 +58,7 @@
  *   本件此前自带的那份 numOrNull 只挡 null / undefined / 空串三形，
  *   纯空格串 / 空数组 / 布尔假 仍被读成 0、布尔真 读成 1、单元素数组 读成 5。 */
 import { numOrNull } from '../../config/num-gate.js';
+import { toStr } from '../../config/text-face.js';
 /* 本件对外仍导出同名入口（下游 -app.js 照旧按原名引入），不做第二份实现。 */
 export { numOrNull };
 /* ---------- 画布与上限（源：uterus_layout.js 的 UTERUS_CANVAS / MAX_DRAWN_FETUSES） ---------- */
@@ -128,7 +129,6 @@ export const UD_SOURCE_FILES = Object.freeze([
 export const UD_SOURCE_NOTE = '源是 st_bs_biotracker 的绘制一族（胎儿几何 / 版面 / 阶段常量）；本件只取「几何部件→像素格」与「状态→版面」这两层机制，不取它写回状态、读宿主 DOM、接 AI 提示词管线那三块。';
 
 /* ---------- 小工具 ---------- */
-function toStr(v) { return (typeof v === 'string') ? v : ''; }
 function numOr(v, fallback) { const n = numOrNull(v); return (n === null) ? fallback : n; }
 export function clampNum(v, lo, hi) { const n = numOr(v, lo); return (n < lo) ? lo : (n > hi) ? hi : n; }
 export function isPlain(v) { return Boolean(v) && typeof v === 'object' && !Array.isArray(v); }

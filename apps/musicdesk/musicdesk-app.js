@@ -52,6 +52,7 @@ import { MusicdeskView } from './musicdesk-view.js';
 import { writeReceipt } from '../../config/write-receipt.js';
 import { numOrNull } from '../../config/num-gate.js';
 import { numOrSelf } from '../../config/num-face.js';
+import { toStr } from '../../config/text-face.js';
 
 /* 四条会话键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中
    /^musicdesk_/，否则跨会话串味。源把曲库、歌词、来源健康都放在**无角色维度**
@@ -73,10 +74,6 @@ const DASH_UNIT = String.fromCharCode(8212);
 
 /** 覆盖值取值口：显式传入的**真数字**才认，取不出来回落。
  *  ★ 不写弱口径签名（那是本仓 W1 门禁禁的形态：会把「没给」说成「给了 0」）。 */
-
-function toStr(v) {
-    return (typeof v === 'string') ? v : '';
-}
 
 function clampLen(s, max) {
     const t = toStr(s).trim();

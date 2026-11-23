@@ -17,13 +17,14 @@
  *   `false → 0`、`true → 1`、`[5] → 5`。0 在这里是**合法读数**（第 0 分钟、第 0 天），
  *   于是「没给」与「给了 0」在同一个读数上塌在一起 —— 而两者处置相反。 */
 import { numOrNull } from '../../config/num-gate.js';
+import { toStr } from '../../config/text-face.js';
+export { toStr };
 export const AD_DAY_MS = 24 * 60 * 60 * 1000;
 export const AD_ZODIAC_CUTS = Object.freeze([20, 19, 21, 20, 21, 22, 23, 23, 23, 24, 23, 22]);
 export const AD_ZODIAC_SIGNS = Object.freeze(['摩羯座', '水瓶座', '双鱼座', '白羊座', '金牛座', '双子座', '巨蟹座', '狮子座', '处女座', '天秤座', '天蝎座', '射手座', '摩羯座']);
 
 export function isPlain(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
 export function listOf(v) { return Array.isArray(v) ? v : []; }
-export function toStr(v) { return (typeof v === 'string') ? v : ''; }
 export function trimRows(list, cap) {
     const arr = listOf(list);
     const c = (typeof cap === 'number' && cap > 0) ? Math.floor(cap) : arr.length;
