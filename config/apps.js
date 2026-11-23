@@ -97,6 +97,47 @@ export const APPS = [
         data: {}
     },
     {
+        // [v4.192.0] 通话/短信文本归一试算器：重构自 phone-view.js 4243 行视图类的
+        //   _cleanAIResponse / _cleanCallRejectReason / _parseSmsAiResponse /
+        //   _buildPhoneCallTtsCacheKey / _normalizeWechatAvatarPath 五族。源类持
+        //   this.app / this.currentView / this._phoneCallTtsCache 一票运行时态，
+        //   并直写 storage —— 那是有副作用的编排；本件改为纯函数内核 + PhoneStorage。
+        //   会话键走 ^phone_text_ 前缀，随会话隔离。
+        id: 'phonetext',
+        name: '通话文本',
+        icon: '\u{1F4DE}',
+        defaultIcon: DEFAULT_APP_ICONS.phone,
+        color: '#4aa8ff',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v4.192.0] 游戏 AI 协议解析试算器：重构自 games-app.js 3837 行聚合壳的
+        //   狼人杀/谁是卧底回包解析面（20 个方法体转调内核）。源类继承 PokerApp、
+        //   持一票游戏 data 实例与 API 冷却态，是编排面；本件只包纯解析。
+        //   会话键走 ^games_protocol_ 前缀，随会话隔离。
+        id: 'gamesprotocol',
+        name: '游戏协议',
+        icon: '\u{1F3B2}',
+        defaultIcon: DEFAULT_APP_ICONS.games,
+        color: '#8b5cf6',
+        badge: 0,
+        data: {}
+    },
+    {
+        // [v4.192.0] 诊断归因文案试算器：重构自 diagnose-data.js 的归因文案一族
+        //   （字段/桥/投影缺席/桥自述态/存档 schema 五表 + 存档健康行）。collectDiagnose
+        //   是 1880 行的聚合函数（持 win/storage 与一票 try/catch），本件只包查表面。
+        //   会话键走 ^diagnose_reason_ 前缀，随会话隔离。
+        id: 'diagnosereason',
+        name: '诊断归因',
+        icon: '\u{1F50D}',
+        defaultIcon: DEFAULT_APP_ICONS.diagnose,
+        color: '#22c55e',
+        badge: 0,
+        data: {}
+    },
+    {
         id: 'mofo',
         name: '魔坊',
         icon: '🪄',

@@ -476,7 +476,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.191.0';
+const ST_PHONE_VERSION = '4.192.0';
 const ST_PHONE_CSS_REVISION = '20261122-wechat-v4';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -547,6 +547,9 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'musicCoreApp',   // [v4.190.0] 歌词/播放模式：有 destroy 出口且读数随会话走，必须进表
     'weiboTextApp',  // [v4.191.0] 微博文本解析：试算台最近一次输入/输出（随会话隔离）
     'honeyTextApp',  // [v4.191.0] 蜜语文本清洗：试算台最近一次输入/输出（随会话隔离）
+    'phoneTextApp',      // [v4.192.0] 通话文本归一：试算台最近一次输入/输出（随会话隔离）
+    'gamesProtocolApp',  // [v4.192.0] 游戏协议解析：试算台最近一次回包与解析结果（随会话隔离）
+    'diagnoseReasonApp', // [v4.192.0] 诊断归因：试算台最近一次取值与文案（随会话隔离）
     'weatherApp',     // [v3.27.0] 天气：读数现取，但仍进表（下帧现取，防将来加缓存时漏重绑）
     'widgetApp',      // [v3.28.0] 自定义组件：有未保存草稿（widget_draft）与选中态，换会话必须丢草稿重取，必须进表
     'taobaoApp',      // [v3.29.0] 桃宝：有展开的物流面板（_openLogi，视图态），换会话必须收起重取，必须进表
@@ -721,12 +724,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-23",
     items: [
-        "【版本升至 4.191.0（五源同源）】20 版 60 只 App 重构计划第一炮：weibo / honey 两件的**文本与数值归一面**抽成独立内核。两件源都是 2600~5200 行的类（weibo-data 2623 行 / honey-data 5216 行），类里绝大多数方法在动 this.state 或自持状态并直写 storage —— 那是有副作用的编排，不该整只搬。因此本版只抽清洗面，源类 15 个方法体改为一行转调内核（实现不再留在编排面）。",
-        "`apps/weibo/weibo-text-core.js`（274 行，纯函数内核）：parseRelativeTimeToMinutes / formatRelativeTimeFromMinutes（分钟数与「刚刚/x分钟前/x小时前/x天前」互转，认不出按 0 走不编分钟）/ normalizeAtName（补 @，空名落 fallback「网友」）/ normalizeBareName（剥 @）/ stripDuplicateReplyMention / parseFollowerNumber（认不出返回 null 不编 0）/ extractTrailingLocation / parseCommentLine（支持「@名字（IP属地：北京）：内容」与「A 回复 B：内容」，返回 {ok,reason,out}）+ WEIBO_TIME_LIMITS / WEIBO_COMMENT_LIMITS / WEIBO_FOLLOWER_UNITS / WEIBO_REJECT。源文件 `weibo-data.js` 同步改造：2719 → 2623 行，7 个方法体改转调，其中 `_parseCommentLine` 透传时保留源类「不是评论给 null」口径。",
-        "`apps/honey/honey-text-core.js`（194 行，纯函数内核）：sanitizeInlineText / sanitizePromptLine / sanitizePromptBlockLine（HTML 剥除 + 空白折叠 + 按 maxLen 截断）/ clampFavorability（0~100 一位小数，读不出给 fallback 不编 0）/ clampReferenceValue（按 min-max 两位小数）/ normalizeNaiReferenceImage（只放行 http(s) 与 /backgrounds/，data: 内联图与占位串一律退回）/ isCommentStatusLine（命中「好感度/好感值」即状态行）/ normalizeCommentLine（「【热评】阿茶: 内容」→「[热评]阿茶: 内容」，「粉丝」等级改写为「热评」，无人称行补「匿名」，纯括号行/分隔线行/「评论区」行/指令行给 ''）+ HONEY_TEXT_LIMITS / HONEY_COMMENT_LIMITS。源文件 `honey-data.js` 同步改造：5228 → 5216 行，8 个方法体改转调。",
-        "两件各配四件套：控制器 `weibo-text-app.js`（ago/stamp/at/dedupe/followers/location/comment 七口）与 `honey-text-app.js`（inline/promptLine/favorability/reference/image/comment 六口）全部走 `_record` + `writeReceipt`，STATE_KEY 分别为 `weibo_text_v1` / `honey_text_v1`；视图用 `.wt-root`/`.ht-root` 根类 + data-act 委派 + CSS 自注入 + `_boundRoot === root` 去重；五处接线（config/apps.js / config/app-lazy-routes.js / config/storage.js 会话前缀 / scripts/keys-audit.mjs 键登记 / index.js 重绑表）全部落地。",
-        "wechat 件（975KB，本批最大件）经纯度扫描确认未达抽取条件：chat-view.js 18458 行 / wechat-app.js 8727 行 / wechat-data.js 5600 行三个巨文件全部持 DOM/存储/定时器/网络，26 个辅助模块中仅 5 个已纯。按「一次做 2-3 件、不烂尾」纪律顺延至 v4.192.0（与 phone/diagnose/games 同批），不在本版硬拆。",
-        "新增判据 `tests/system-v4191.test.mjs`（A 内核纯度与行为 / B 源类转调 / C 控制器 / D 视图样式 / E 五处接线 / V 版本锚）共 15 条；19 道门禁全绿。"
+        "【版本升至 4.192.0（五源同源）】20 版 60 只 App 重构计划第二批：phone / games / diagnose 三件的**文本与协议归一面**抽成独立内核，外加顺延落地的 wechat 判据面。三件源都是 600~3800 行的类/模块（phone-view.js 4243 行 / games-app.js 3837 行继承 PokerApp / diagnose-data.js 2980 行），里面绝大多数代码在动 this.app / this.currentView / this._phoneCallTtsCache / win / storage / API 冷却 —— 那是有副作用的编排，不该整只搬。因此本版只抽归一面，源侧共 32 个方法体改为一行转调内核（实现不再留在编排面）。",
+        "`apps/phone/phone-text-core.js`（181 行，纯函数内核）：cleanCallAiResponse（<Call> 优先、`---姓名---` 行剥除、`|||` 剥除、按行拆并去重，空回复给 `['...']`）/ cleanCallRejectReason（剥标签与姓名头，读不出给「<名> 暂时不方便接听。」或「对方暂时不方便接听。」）/ parseSmsAiResponse（`[姓名]`/`[发件方姓名]` 走 fallbackSender，日期补零成 `2024年03月05日` 形、时间 `21:30` 形）/ buildCallTtsCacheKey（五段用 US `\\u001f` 连接，文本自带空格不串味）/ normalizeWechatAvatarPath（三段前缀从长到短剥、绝对地址原样放行、只放行 maleN/femaleN 与白名单扩展名）/ normalizeTtsGender + TTS_GENDERS / TTS_CACHE_KEY_SEPARATOR / AVATAR_PLACEHOLDER 三常量表。`normalizeWechatAvatarPath` 刻意不自己取 `import.meta.url`，第二参 baseUrl 由调用方给。源文件 `phone-view.js` 6 个方法体改转调（`_cleanAIResponse` 36 行→1 行、`_normalizeTtsGender` 5 行→1 行等）。",
+        "`apps/games/games-protocol-core.js`（407 行，纯函数内核，22 个导出函数）：谁是卧底面 `parseUndercoverDealerResult` / `parseUndercoverSpeech` / `parseUndercoverVotes`（同一 voterSeat 只认第一次）/ `formatUndercoverPublicLog`（轮次首行 `【第N轮】`、换轮 `----- 第N轮 -----`、`source==='system'` 走「系统：」前缀）；狼人杀面 `parseWerewolfMatch`（只收 1~8 号且姓名性格齐全）/ `parseWerewolfSpeech` / `parseWerewolfLastWords` / `parseWerewolfNightDecision` / `parseWerewolfVoteDecision`（弃票落 0）/ `normalizeWerewolfPotion`（只认解药/救/antidote 与毒药/毒/poison 且仅 witch 步）/ `werewolfNightActors` / `formatWerewolfPublicChatLog` / `formatWerewolfVoteHistory`（voteHistory 优先，否则从 replayLog 滤公开投票）/ `resolveWerewolfVoteTarget`（平票一律 0）/ `fallbackWerewolfVoteTarget` / `formatWerewolfPublicStateMessage` / `formatWerewolfPublicLogMessage` / `formatWerewolfSpeechTaskMessage` / `buildWerewolfFallbackPlayers`（七名池轮取）/ `buildWerewolfPublicRecordMessages`（按天归档）+ 三个通用件 `extractLabeledField` / `extractNightField` / `extractFirstNumber`。源文件 `games-app.js` 21 个方法体改转调（`_fallbackWerewolfVoteTarget` 与 `_formatWerewolfSpeechTaskMessage` 保留一行取数后转调）。",
+        "`apps/diagnose/diagnose-reason-core.js`（123 行，纯函数内核）：五张 `Object.freeze` 归因表（FIELD_REASON_TEXT / BRIDGE_REASON_TEXT / PROJ_ABSENT_TEXT / SOURCE_STATE_TEXT / SCHEMA_STATES，键形一律带连字符字面量）+ 私有 `lookup`（空/null/undefined 给「未知」，未命中**如实输出原值**——不静默兜底）+ 六个导出函数 `fieldReasonText` / `bridgeReasonText` / `projAbsentText` / `sourceStateText` / `schemaStateText` / `storageFaceLine`（本会话档与全局档分列，一边读不出不说成两边都读不出）。源文件 `diagnose-data.js` 删除 6 个代码块（2980 → 2921 行）改为 import + re-export，`tests/system-v299|v300|v322` 的既有 import 面零影响。",
+        "三件各配四件套：控制器 `phone-text-app.js`（call/reject/sms/cacheKey/avatar/ttsGender/constants 七口）、`games-protocol-app.js`（dealer/undercoverSpeech/undercoverVotes/undercoverLog/match/speech/lastWords/night/nightActor/vote/chatLog/voteHistory/records/tally/voteFallback/stateMessage/logMessage/speechTask/fallbackPlayers 十八口）、`diagnose-reason-app.js`（field/bridge/proj/source/schema/storage 六口）全部走 `_record` + `writeReceipt`，STATE_KEY 分别为 `phone_text_v1` / `games_protocol_v1` / `diagnose_reason_v1`；视图分别用 `.pt-root`/`.gp-root`/`.dr-root` 根类 + data-act 委派 + CSS 自注入 + `_boundRoot === root` 去重；五处接线（config/apps.js / config/app-lazy-routes.js / config/storage.js 会话前缀 / scripts/keys-audit.mjs 键登记 / index.js 重绑表）全部落地。",
+        "新增判据 `tests/system-v4192.test.mjs`（A 内核纯度与行为 / B 源类转调 / C 控制器 / D 视图样式 / E 五处接线 / V 版本锚）共 14 条。断言一律按**实测口径**写不按概念写：`parseWerewolfSpeech('<狼人杀发言>\\n发言：我是好人\\n</狼人杀发言>')` 返回 `'发言：我是好人'`（`^发言` 替换不带 m 标志，标签内容首字符是 \\n 剥不掉），`parseWerewolfVoteDecision` 的票型切分按提示词给的紧凑形 `2->3，3->0`（空格分隔形切不出票，与源实现逐字一致）。19 道静态门禁 + file-size 台账全绿。",
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

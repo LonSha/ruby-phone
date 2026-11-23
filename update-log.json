@@ -1,6 +1,18 @@
 {
-  "latest": "4.191.0",
+  "latest": "4.192.0",
   "versions": {
+    "4.192.0": {
+      "version": "4.192.0",
+      "date": "2026-11-23",
+      "items": [
+        "【版本升至 4.192.0（五源同源）】20 版 60 只 App 重构计划第二批：phone / games / diagnose 三件的**文本与协议归一面**抽成独立内核，外加顺延落地的 wechat 判据面。三件源都是 600~3800 行的类/模块（phone-view.js 4243 行 / games-app.js 3837 行继承 PokerApp / diagnose-data.js 2980 行），里面绝大多数代码在动 this.app / this.currentView / this._phoneCallTtsCache / win / storage / API 冷却 —— 那是有副作用的编排，不该整只搬。因此本版只抽归一面，源侧共 32 个方法体改为一行转调内核（实现不再留在编排面）。",
+        "`apps/phone/phone-text-core.js`（181 行，纯函数内核）：cleanCallAiResponse（<Call> 优先、`---姓名---` 行剥除、`|||` 剥除、按行拆并去重，空回复给 `['...']`）/ cleanCallRejectReason（剥标签与姓名头，读不出给「<名> 暂时不方便接听。」或「对方暂时不方便接听。」）/ parseSmsAiResponse（`[姓名]`/`[发件方姓名]` 走 fallbackSender，日期补零成 `2024年03月05日` 形、时间 `21:30` 形）/ buildCallTtsCacheKey（五段用 US `\\u001f` 连接，文本自带空格不串味）/ normalizeWechatAvatarPath（三段前缀从长到短剥、绝对地址原样放行、只放行 maleN/femaleN 与白名单扩展名）/ normalizeTtsGender + TTS_GENDERS / TTS_CACHE_KEY_SEPARATOR / AVATAR_PLACEHOLDER 三常量表。`normalizeWechatAvatarPath` 刻意不自己取 `import.meta.url`，第二参 baseUrl 由调用方给。源文件 `phone-view.js` 6 个方法体改转调（`_cleanAIResponse` 36 行→1 行、`_normalizeTtsGender` 5 行→1 行等）。",
+        "`apps/games/games-protocol-core.js`（407 行，纯函数内核，22 个导出函数）：谁是卧底面 `parseUndercoverDealerResult` / `parseUndercoverSpeech` / `parseUndercoverVotes`（同一 voterSeat 只认第一次）/ `formatUndercoverPublicLog`（轮次首行 `【第N轮】`、换轮 `----- 第N轮 -----`、`source==='system'` 走「系统：」前缀）；狼人杀面 `parseWerewolfMatch`（只收 1~8 号且姓名性格齐全）/ `parseWerewolfSpeech` / `parseWerewolfLastWords` / `parseWerewolfNightDecision` / `parseWerewolfVoteDecision`（弃票落 0）/ `normalizeWerewolfPotion`（只认解药/救/antidote 与毒药/毒/poison 且仅 witch 步）/ `werewolfNightActors` / `formatWerewolfPublicChatLog` / `formatWerewolfVoteHistory`（voteHistory 优先，否则从 replayLog 滤公开投票）/ `resolveWerewolfVoteTarget`（平票一律 0）/ `fallbackWerewolfVoteTarget` / `formatWerewolfPublicStateMessage` / `formatWerewolfPublicLogMessage` / `formatWerewolfSpeechTaskMessage` / `buildWerewolfFallbackPlayers`（七名池轮取）/ `buildWerewolfPublicRecordMessages`（按天归档）+ 三个通用件 `extractLabeledField` / `extractNightField` / `extractFirstNumber`。源文件 `games-app.js` 21 个方法体改转调（`_fallbackWerewolfVoteTarget` 与 `_formatWerewolfSpeechTaskMessage` 保留一行取数后转调）。",
+        "`apps/diagnose/diagnose-reason-core.js`（123 行，纯函数内核）：五张 `Object.freeze` 归因表（FIELD_REASON_TEXT / BRIDGE_REASON_TEXT / PROJ_ABSENT_TEXT / SOURCE_STATE_TEXT / SCHEMA_STATES，键形一律带连字符字面量）+ 私有 `lookup`（空/null/undefined 给「未知」，未命中**如实输出原值**——不静默兜底）+ 六个导出函数 `fieldReasonText` / `bridgeReasonText` / `projAbsentText` / `sourceStateText` / `schemaStateText` / `storageFaceLine`（本会话档与全局档分列，一边读不出不说成两边都读不出）。源文件 `diagnose-data.js` 删除 6 个代码块（2980 → 2921 行）改为 import + re-export，`tests/system-v299|v300|v322` 的既有 import 面零影响。",
+        "三件各配四件套：控制器 `phone-text-app.js`（call/reject/sms/cacheKey/avatar/ttsGender/constants 七口）、`games-protocol-app.js`（dealer/undercoverSpeech/undercoverVotes/undercoverLog/match/speech/lastWords/night/nightActor/vote/chatLog/voteHistory/records/tally/voteFallback/stateMessage/logMessage/speechTask/fallbackPlayers 十八口）、`diagnose-reason-app.js`（field/bridge/proj/source/schema/storage 六口）全部走 `_record` + `writeReceipt`，STATE_KEY 分别为 `phone_text_v1` / `games_protocol_v1` / `diagnose_reason_v1`；视图分别用 `.pt-root`/`.gp-root`/`.dr-root` 根类 + data-act 委派 + CSS 自注入 + `_boundRoot === root` 去重；五处接线（config/apps.js / config/app-lazy-routes.js / config/storage.js 会话前缀 / scripts/keys-audit.mjs 键登记 / index.js 重绑表）全部落地。",
+        "新增判据 `tests/system-v4192.test.mjs`（A 内核纯度与行为 / B 源类转调 / C 控制器 / D 视图样式 / E 五处接线 / V 版本锚）共 14 条。断言一律按**实测口径**写不按概念写：`parseWerewolfSpeech('<狼人杀发言>\\n发言：我是好人\\n</狼人杀发言>')` 返回 `'发言：我是好人'`（`^发言` 替换不带 m 标志，标签内容首字符是 \\n 剥不掉），`parseWerewolfVoteDecision` 的票型切分按提示词给的紧凑形 `2->3，3->0`（空格分隔形切不出票，与源实现逐字一致）。19 道静态门禁 + file-size 台账全绿。"
+      ]
+    },
     "4.191.0": {
       "version": "4.191.0",
       "date": "2026-11-23",
@@ -6709,5 +6721,5 @@
       ]
     }
   },
-  "head": "4.191.0"
+  "head": "4.192.0"
 }

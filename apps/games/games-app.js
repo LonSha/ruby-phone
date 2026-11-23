@@ -31,6 +31,38 @@ import { LudoData, rollLudoDice, isLudoEventCell, LUDO_AI_EVENTS, LUDO_QUESTION_
 import { LudoView } from './ludo/ludo-view.js';
 // [v4.102.0 · R13-O3] 推理谜题：mystery-engine 的第一个产品端界面。
 import { MysteryView } from './mystery/mystery-view.js';
+/* [v4.192.0] 狼人杀/谁是卧底 AI 协议解析面抽成纯函数内核：本文件 15 个方法体一行转调
+ *   （_parseUndercoverDealerResult / _parseUndercoverSpeech / _parseUndercoverVotes /
+ *   _formatUndercoverPublicLog / _parseWerewolfMatch / _parseWerewolfSpeech /
+ *   _parseWerewolfLastWords / _parseWerewolfNightDecision / _parseWerewolfVoteDecision /
+ *   _extractWerewolfField / _extractWerewolfNightField / _extractFirstNumber /
+ *   _formatWerewolfPublicChatLog / _formatWerewolfVoteHistory / _resolveWerewolfVoteTarget /
+ *   _fallbackWerewolfVoteTarget / _formatWerewolfPublicStateMessage /
+ *   _formatWerewolfPublicLogMessage / _formatWerewolfSpeechTaskMessage /
+ *   _buildWerewolfFallbackPlayers / _buildWerewolfPublicRecordMessages）。 */
+import {
+    parseUndercoverDealerResult as _gpParseUndercoverDealerResult,
+    parseUndercoverSpeech as _gpParseUndercoverSpeech,
+    parseUndercoverVotes as _gpParseUndercoverVotes,
+    formatUndercoverPublicLog as _gpFormatUndercoverPublicLog,
+    parseWerewolfMatch as _gpParseWerewolfMatch,
+    parseWerewolfSpeech as _gpParseWerewolfSpeech,
+    parseWerewolfLastWords as _gpParseWerewolfLastWords,
+    parseWerewolfNightDecision as _gpParseWerewolfNightDecision,
+    parseWerewolfVoteDecision as _gpParseWerewolfVoteDecision,
+    normalizeWerewolfPotion as _gpNormalizeWerewolfPotion,
+    extractLabeledField as _gpExtractLabeledField,
+    extractNightField as _gpExtractNightField,
+    formatWerewolfPublicChatLog as _gpFormatWerewolfPublicChatLog,
+    formatWerewolfVoteHistory as _gpFormatWerewolfVoteHistory,
+    resolveWerewolfVoteTarget as _gpResolveWerewolfVoteTarget,
+    fallbackWerewolfVoteTarget as _gpFallbackWerewolfVoteTarget,
+    formatWerewolfPublicStateMessage as _gpFormatWerewolfPublicStateMessage,
+    formatWerewolfPublicLogMessage as _gpFormatWerewolfPublicLogMessage,
+    formatWerewolfSpeechTaskMessage as _gpFormatWerewolfSpeechTaskMessage,
+    buildWerewolfFallbackPlayers as _gpBuildWerewolfFallbackPlayers,
+    buildWerewolfPublicRecordMessages as _gpBuildWerewolfPublicRecordMessages
+} from './games-protocol-core.js';
 
 const CATBOX_CSS_URL = new URL('./catbox/catbox.css?v=1.0.0', import.meta.url).href;
 const WEREWOLF_CSS_URL = new URL('./werewolf/werewolf.css?v=1.0.49', import.meta.url).href;
@@ -650,24 +682,7 @@ export class GamesApp extends PokerApp {
     }
 
     _formatUndercoverPublicLog(messages = [], limit = 48) {
-        const source = (Array.isArray(messages) ? messages : [])
-            .slice(-Math.max(1, Number(limit) || 48))
-            .filter(message => String(message?.content || '').trim());
-        const lines = [];
-        let currentRound = null;
-        source.forEach(message => {
-            const round = Math.max(1, Number(message?.round || 1));
-            if (round !== currentRound) {
-                lines.push(currentRound === null ? `【第${round}轮】` : `----- 第${round}轮 -----`);
-                currentRound = round;
-            }
-            if (message.source === 'system') {
-                lines.push(`系统：${String(message.content || '').trim()}`);
-                return;
-            }
-            lines.push(`${Number(message.senderSeat || 0)}号 ${message.senderName || '玩家'}：${String(message.content || '').trim()}`);
-        });
-        return lines;
+        return _gpFormatUndercoverPublicLog(messages, limit);
     }
 
     async _callUndercoverAi(messages, options = {}) {
@@ -780,46 +795,15 @@ export class GamesApp extends PokerApp {
     }
 
     _parseUndercoverDealerResult(text = '') {
-        const source = String(text || '').trim();
-        const playerBlock = source.match(/<玩家生成>([\s\S]*?)<\/玩家生成>/)?.[1] || '';
-        const players = playerBlock
-            .split(/\n\s*---\s*\n/)
-            .map(section => ({
-                name: String(section.match(/玩家昵称\s*[:：]\s*([^\n]+)/)?.[1] || '').trim(),
-                personality: String(section.match(/性格\s*[:：]\s*([\s\S]*?)$/)?.[1] || '').trim()
-            }))
-            .filter(player => player.name && player.personality);
-        const wordBlock = source.match(/<游戏身份词>([\s\S]*?)<\/游戏身份词>/)?.[1] || '';
-        return {
-            players,
-            wordPair: {
-                civilian: String(wordBlock.match(/普通玩家身份词\s*[:：]\s*([^\n]+)/)?.[1] || '').trim(),
-                undercover: String(wordBlock.match(/卧底玩家身份词\s*[:：]\s*([^\n]+)/)?.[1] || '').trim()
-            }
-        };
+        return _gpParseUndercoverDealerResult(text);
     }
 
     _parseUndercoverSpeech(text = '') {
-        const source = String(text || '').trim();
-        return String(source.match(/<谁是卧底发言>([\s\S]*?)<\/谁是卧底发言>/)?.[1] || '').trim();
+        return _gpParseUndercoverSpeech(text);
     }
 
     _parseUndercoverVotes(text = '') {
-        const source = String(text || '').trim();
-        const block = source.match(/<谁是卧底投票>([\s\S]*?)<\/谁是卧底投票>/)?.[1] || '';
-        const voteText = block.match(/票型\s*[:：]\s*([^\n]+)/)?.[1] || block;
-        const votes = [];
-        const seen = new Set();
-        const pattern = /(\d+)\s*(?:号)?\s*(?:->|→|投给|投)\s*(\d+)\s*(?:号)?/g;
-        let match = null;
-        while ((match = pattern.exec(voteText))) {
-            const voterSeat = Number(match[1]);
-            const targetSeat = Number(match[2]);
-            if (seen.has(voterSeat)) continue;
-            seen.add(voterSeat);
-            votes.push({ voterSeat, targetSeat });
-        }
-        return votes;
+        return _gpParseUndercoverVotes(text);
     }
 
     move2048(direction) {
@@ -1871,18 +1855,7 @@ export class GamesApp extends PokerApp {
     }
 
     _parseWerewolfNightDecision(text = '', step = '') {
-        const source = String(text || '').trim();
-        const block = source.match(/<狼人杀夜晚行动>([\s\S]*?)<\/狼人杀夜晚行动>/)?.[1] || source;
-        const discussion = this._extractWerewolfNightField(block, '讨论');
-        const targetText = this._extractWerewolfNightField(block, '目标');
-        const potionText = this._extractWerewolfNightField(block, '药剂');
-        const reason = this._extractWerewolfNightField(block, '理由');
-        return {
-            targetSeat: this._extractFirstNumber(targetText),
-            usePotion: this._normalizeWerewolfPotion(potionText, step),
-            discussion,
-            reason
-        };
+        return _gpParseWerewolfNightDecision(text, step);
     }
 
     _parseWerewolfWolfAdvice(text = '') {
@@ -1991,17 +1964,11 @@ export class GamesApp extends PokerApp {
     }
 
     _extractWerewolfNightField(body, label) {
-        const escaped = String(label || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const match = String(body || '').match(new RegExp(`${escaped}\\s*[:：]\\s*([^\\n\\r]*)`));
-        return String(match?.[1] || '').trim();
+        return _gpExtractNightField(body, label);
     }
 
     _normalizeWerewolfPotion(text = '', step = '') {
-        if (step !== 'witch') return '';
-        const value = String(text || '').trim();
-        if (/解药|救|antidote/i.test(value)) return 'antidote';
-        if (/毒药|毒|poison/i.test(value)) return 'poison';
-        return '';
+        return _gpNormalizeWerewolfPotion(text, step);
     }
 
     _formatWerewolfNightStepName(step = '') {
@@ -2194,17 +2161,7 @@ export class GamesApp extends PokerApp {
     }
 
     _parseWerewolfVoteDecision(text = '') {
-        const source = String(text || '').trim();
-        const block = source.match(/<狼人杀投票>([\s\S]*?)<\/狼人杀投票>/)?.[1] || source;
-        const voteText = this._extractWerewolfNightField(block, '票型');
-        const targetText = this._extractWerewolfNightField(block, '出局');
-        const reason = this._extractWerewolfNightField(block, '理由');
-        const votes = [];
-        String(voteText || '').replace(/[，,；;]/g, ' ').split(/\s+/).forEach(part => {
-            const match = part.match(/(\d+)\s*(?:->|→|投|票)\s*(\d+|弃票)/);
-            if (match) votes.push({ voterSeat: Number(match[1]), targetSeat: /弃票/.test(match[2]) ? 0 : Number(match[2]) });
-        });
-        return { targetSeat: this._extractFirstNumber(targetText), votes, reason };
+        return _gpParseWerewolfVoteDecision(text);
     }
 
     _normalizeWerewolfVoteDecision(decision = {}, userVote = null) {
@@ -2234,111 +2191,28 @@ export class GamesApp extends PokerApp {
     }
 
     _resolveWerewolfVoteTarget(votes = []) {
-        const counts = new Map();
-        votes.forEach(vote => {
-            const targetSeat = Number(vote.targetSeat || 0);
-            if (!targetSeat) return;
-            counts.set(targetSeat, (counts.get(targetSeat) || 0) + 1);
-        });
-        if (!counts.size) return 0;
-        const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0]);
-        const topCount = Number(sorted[0]?.[1] || 0);
-        const tied = sorted.filter(item => Number(item[1]) === topCount);
-        return tied.length === 1 ? Number(sorted[0]?.[0] || 0) : 0;
+        return _gpResolveWerewolfVoteTarget(votes);
     }
 
     _formatWerewolfPublicChatLog(state = null) {
-        const safeState = state || this.werewolfData?.getState?.() || {};
-        const players = Array.isArray(safeState.players) ? safeState.players : [];
-        return (Array.isArray(safeState.chat) ? safeState.chat : []).map(item => {
-            const day = Number(item?.day || 0) ? `第${Number(item.day)}天 ` : '';
-            if (Number(item?.seat || 0) === 0) return `${day}系统：${item?.text || ''}`;
-            const player = players.find(playerItem => Number(playerItem.seat) === Number(item.seat));
-            return `${day}${item.seat}号${player?.name ? ` ${player.name}` : ''}：${item?.text || ''}`;
-        });
+        return _gpFormatWerewolfPublicChatLog(state);
     }
 
     _buildWerewolfPublicRecordMessages(state = null) {
-        const safeState = state || this.werewolfData?.getState?.() || {};
-        const players = Array.isArray(safeState.players) ? safeState.players : [];
-        const recordsByDay = new Map();
-        const ensureDay = (day) => {
-            const safeDay = Number(day || 0) || 1;
-            if (!recordsByDay.has(safeDay)) recordsByDay.set(safeDay, { speeches: [], votes: [] });
-            return recordsByDay.get(safeDay);
-        };
-
-        (Array.isArray(safeState.chat) ? safeState.chat : []).forEach(item => {
-            const day = Number(item?.day || 0) || 1;
-            const target = ensureDay(day);
-            if (Number(item?.seat || 0) === 0) {
-                target.speeches.push(`系统：${item?.text || ''}`);
-                return;
-            }
-            const player = players.find(playerItem => Number(playerItem.seat) === Number(item.seat));
-            target.speeches.push(`${item.seat}号${player?.name ? ` ${player.name}` : ''}：${item?.text || ''}`);
-        });
-
-        const voteItems = Array.isArray(safeState.voteHistory)
-            ? safeState.voteHistory
-            : (Array.isArray(safeState.replayLog)
-                ? safeState.replayLog.filter(item => String(item?.type || '') === 'vote' && String(item?.visibility || 'public') === 'public')
-                : []);
-        voteItems.forEach(item => {
-            const day = Number(item?.day || 0) || 1;
-            const text = String(item?.text || '').trim();
-            if (text) ensureDay(day).votes.push(text);
-        });
-
-        const currentDay = Number(safeState.day || 1) || 1;
-        for (let day = 1; day <= currentDay; day += 1) ensureDay(day);
-
-        return [...recordsByDay.entries()]
-            .sort((a, b) => Number(a[0]) - Number(b[0]))
-            .map(([day, record]) => ({
-                role: 'system',
-                name: `SYSTEM (狼人杀第${day}天公开记录)`,
-                isPhoneMessage: true,
-                content: [
-                    `【第 ${day} 天公开记录】`,
-                    '公开发言与系统公告：',
-                    record.speeches.length ? record.speeches.map(line => `- ${line}`).join('\n') : '- 暂无',
-                    '当天投票结果：',
-                    record.votes.length ? record.votes.map(line => `- ${line}`).join('\n') : '- 暂无'
-                ].join('\n')
-            }));
+        return _gpBuildWerewolfPublicRecordMessages(state);
     }
 
     _formatWerewolfVoteHistory(stateOrContext = null) {
-        const source = stateOrContext || this.werewolfData?.getState?.() || {};
-        const rawList = Array.isArray(source.voteHistory)
-            ? source.voteHistory
-            : (Array.isArray(source.replayLog)
-                ? source.replayLog.filter(item => String(item?.type || '') === 'vote' && String(item?.visibility || 'public') === 'public')
-                : []);
-        return rawList
-            .map(item => {
-                const day = Number(item?.day || 0) || 1;
-                const text = String(item?.text || '').trim();
-                return text ? `第${day}天 ${text}` : '';
-            })
-            .filter(Boolean);
+        return _gpFormatWerewolfVoteHistory(stateOrContext);
     }
 
     _fallbackWerewolfVoteTarget(userVote = null) {
         const state = this.werewolfData.getState();
-        const live = (state?.players || []).filter(player => !player.empty && player.alive !== false);
-        if (!live.length) return 0;
-        if (userVote && live.some(player => Number(player.seat) === Number(userVote.targetSeat))) {
-            return Number(userVote.targetSeat);
-        }
-        const sorted = [...live].sort((a, b) => Number(b.seat) - Number(a.seat));
-        return Number(sorted[0]?.seat || live[0].seat || 0);
+        return _gpFallbackWerewolfVoteTarget(state?.players || [], userVote);
     }
 
     _parseWerewolfLastWords(text = '') {
-        const source = String(text || '').trim();
-        return String(source.match(/<狼人杀遗言>([\s\S]*?)<\/狼人杀遗言>/)?.[1] || source).trim();
+        return _gpParseWerewolfLastWords(text);
     }
 
     async _buildWerewolfSpeechMessages(player) {
@@ -2385,74 +2259,20 @@ export class GamesApp extends PokerApp {
     }
 
     _formatWerewolfPublicStateMessage(context = {}) {
-        const playerLines = (context.players || [])
-            .map(player => `${player.seat}号 ${player.name}：${player.status}${player.isUser ? '，用户本人' : ''}`)
-            .join('\n');
-        const isOpenReveal = String(context.roleRevealMode || 'open') !== 'hidden';
-        return [
-            '【场上公开玩家状态】',
-            `当前：第 ${context.day || 1} 天白天。`,
-            `用户座位：${context.userSeat || '?'}号。`,
-            isOpenReveal
-                ? '本局为明牌模式：死亡或被投票放逐的玩家会公开真实身份；场上状态中写明的公开身份就是已公开事实，可以直接作为发言依据。'
-                : '本局为暗牌模式：死亡或被投票放逐的玩家不会公开真实身份；除公开发言和系统公告外，不得断言其真实身份。',
-            playerLines || '暂无'
-        ].join('\n');
+        return _gpFormatWerewolfPublicStateMessage(context);
     }
 
     _formatWerewolfPublicLogMessage(context = {}) {
-        const logLines = (context.publicLog || []).length
-            ? context.publicLog.map(line => `- ${line}`).join('\n')
-            : '- 暂无';
-        const voteLines = this._formatWerewolfVoteHistory(context);
-        return [
-            '【发言简报与系统公告】',
-            Number(context.day || 1) === 1 ? '当前是首日白天，系统尚未公布任何夜晚技能结果；禁止凭空声称查杀、金水、银水、刀口或验人结果。' : '',
-            '系统公告与已公开发言记录：',
-            logLines,
-            '已公开投票结果：',
-            voteLines.length ? voteLines.map(line => `- ${line}`).join('\n') : '- 暂无'
-        ].filter(Boolean).join('\n');
+        return _gpFormatWerewolfPublicLogMessage(context);
     }
 
     _formatWerewolfSpeechTaskMessage(context = {}) {
         const state = this.werewolfData.getState();
-        const speakerSeat = Number(context.speaker?.seat || 0);
-        const wolfMates = context.speakerPrivateRole === '狼人'
-            ? (state?.players || [])
-                .filter(player => player.role === '狼人' && player.alive !== false)
-                .map(player => `${player.seat}号 ${player.name}`)
-                .join('、')
-            : '';
-        const seerChecks = context.speakerPrivateRole === '预言家' && Array.isArray(context.seerChecks)
-            ? context.seerChecks
-                .map(item => `第 ${Number(item.day || 1)} 夜查验 ${Number(item.targetSeat || 0)}号：${item.resultRole === '狼人' ? '狼人' : '好人'}`)
-                .filter(Boolean)
-            : [];
-        return [
-            '【当前发言任务】',
-            '以下身份信息只给当前发言玩家用于策略判断。',
-            `当前该 ${speakerSeat || '?'}号 ${context.speaker?.name || '玩家'} 发言。`,
-            `当前发言玩家性格及语言风格：${context.speaker?.personality || '普通玩家，自然发言'}。`,
-            `当前发言玩家真实身份：${context.speakerPrivateRole || '村民'}。`,
-            wolfMates ? `狼人同伴：${wolfMates}。` : '',
-            seerChecks.length ? `你的预言家查验结果：${seerChecks.join('；')}。` : '',
-            '其他玩家真实身份不得在发言中泄露；除非场上公开信息已经说明，否则不要假装知道。',
-            '可以基于已公开投票结果分析“谁投了谁、谁跟票、谁弃票、谁票型异常”，并据此提出怀疑或辩解。',
-            '禁止描写心理活动、动作、表情或旁白，不要使用括号补充任何非发言内容。',
-            '请只输出当前玩家的公开发言。格式：',
-            '<狼人杀发言>',
-            '发言内容',
-            '</狼人杀发言>'
-        ].filter(Boolean).join('\n');
+        return _gpFormatWerewolfSpeechTaskMessage({ ...context, players: state?.players || [] });
     }
 
     _parseWerewolfSpeech(text = '') {
-        const source = String(text || '').trim();
-        const tagged = source.match(/<狼人杀发言>([\s\S]*?)<\/狼人杀发言>/)?.[1];
-        return String(tagged || source)
-            .replace(/^发言\s*[:：]/, '')
-            .trim();
+        return _gpParseWerewolfSpeech(text);
     }
 
     _buildWerewolfInvitedPlayers(contacts = [], emptySeats = []) {
@@ -2483,20 +2303,7 @@ export class GamesApp extends PokerApp {
     }
 
     _buildWerewolfFallbackPlayers(emptySeats = [], generated = []) {
-        const bySeat = new Map(generated.map(player => [Number(player.seat), player]));
-        const names = ['青岚', '夜航', '阿澈', '小满', '林鹿', '北辰', '梨白'];
-        return emptySeats.map((seat, index) => {
-            const item = bySeat.get(Number(seat));
-            if (item?.name) return item;
-            return {
-                seat,
-                id: `ai_${seat}`,
-                name: names[index % names.length],
-                gender: '',
-                personality: '谨慎观察，发言简短但会抓矛盾',
-                source: 'ai'
-            };
-        });
+        return _gpBuildWerewolfFallbackPlayers(emptySeats, generated);
     }
 
     _getWerewolfUserInfo() {
@@ -2510,28 +2317,11 @@ export class GamesApp extends PokerApp {
     }
 
     _parseWerewolfMatch(text = '') {
-        const source = String(text || '').trim();
-        const block = source.match(/<狼人杀匹配环节>([\s\S]*?)<\/狼人杀匹配环节>/)?.[1] || source;
-        const sections = [];
-        const pattern = /【\s*(\d+)\s*号\s*】([\s\S]*?)(?=---\s*【\s*\d+\s*号\s*】|【\s*\d+\s*号\s*】|$)/g;
-        let match = null;
-        while ((match = pattern.exec(block))) {
-            const seat = Number(match[1]);
-            const body = String(match[2] || '');
-            sections.push({
-                seat,
-                name: this._extractWerewolfField(body, '姓名'),
-                gender: this._extractWerewolfField(body, '性别'),
-                personality: this._extractWerewolfField(body, '性格及语言风格')
-            });
-        }
-        return sections.filter(item => item.seat >= 1 && item.seat <= 8 && item.name && item.personality);
+        return _gpParseWerewolfMatch(text);
     }
 
     _extractWerewolfField(body, label) {
-        const escaped = String(label || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const match = String(body || '').match(new RegExp(`${escaped}\\s*[:：]\\s*([\\s\\S]*?)(?=\\n\\s*(?:姓名|性别|性格及语言风格)\\s*[:：]|$)`));
-        return String(match?.[1] || '').trim();
+        return _gpExtractLabeledField(body, label);
     }
 
     _preloadCatboxAssets() {

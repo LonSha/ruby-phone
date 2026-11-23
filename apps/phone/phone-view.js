@@ -38,6 +38,17 @@ import { FACE_ATTR } from '../../config/empty-face.js';
  *   串联判定全在内核，本文件只做**取数 + 投影**。 */
 import { bindConversationThread, conversationLine, conversationBinderSelfCheck } from './conversation-thread-binder.js';
 import { stampOfCall } from '../../config/comm-time.js';
+/* [v4.192.0] 通话/短信文本归一面抽成纯函数内核：本文件 4 个方法体一行转调
+ *   （_cleanAIResponse / _cleanCallRejectReason / _parseSmsAiResponse /
+ *   _buildPhoneCallTtsCacheKey / _normalizeWechatAvatarPath）。 */
+import {
+    cleanCallAiResponse as _ptcCleanCallAiResponse,
+    cleanCallRejectReason as _ptcCleanCallRejectReason,
+    parseSmsAiResponse as _ptcParseSmsAiResponse,
+    buildCallTtsCacheKey as _ptcBuildCallTtsCacheKey,
+    normalizeWechatAvatarPath as _ptcNormalizeWechatAvatarPath,
+    normalizeTtsGender as _ptcNormalizeTtsGender
+} from './phone-text-core.js';
 /* 消息侧剧情时刻走全仓唯一出口（`storyAt` 优先 / 老字段 `timestamp` 兼容；墙钟不回退）。 */
 import { storyTsOf } from '../../config/time-source.js';
 
@@ -1228,38 +1239,7 @@ export class PhoneCallView {
     }
 
     _parseSmsAiResponse(response, fallbackSender = '') {
-        const raw = String(response || '').replace(/```(?:\w+)?/g, '').trim();
-        if (!raw) return [];
-
-        const taggedBodies = [];
-        const tagPattern = /<(?:短信|SMS)>([\s\S]*?)<\/\s*(?:短信|SMS)\s*>/gi;
-        let match;
-        while ((match = tagPattern.exec(raw)) !== null) {
-            taggedBodies.push(match[1]);
-        }
-        const bodies = taggedBodies.length > 0 ? taggedBodies : [raw];
-
-        return bodies.flatMap(body => String(body || '').split(/^\s*---+\s*$/gm)).flatMap(block => {
-            const senderMatch = String(block || '').match(/^\s*\[([^\]\r\n]+)\]\s*$/m);
-            const contentMatch = String(block || '').match(/内容\s*[：:]\s*([\s\S]*?)(?=\r?\n\s*发送时间\s*[：:]|$)/i);
-            if (!senderMatch || !contentMatch) return [];
-
-            const parsedSender = String(senderMatch[1] || '').trim();
-            const sender = /^(?:发件方姓名|姓名)$/i.test(parsedSender)
-                ? String(fallbackSender || '').trim()
-                : parsedSender;
-            const text = String(contentMatch[1] || '').trim();
-            const dateTimeMatch = String(block || '').match(/发送时间\s*[：:]\s*(?:(\d{1,6})\s*(?:年|[-/.])\s*(0?[1-9]|1[0-2])\s*(?:月|[-/.])\s*(0?[1-9]|[12]\d|3[01])\s*日?\s*)?([01]?\d|2[0-3])\s*[:：]\s*([0-5]\d)/i);
-            if (!sender || !text) return [];
-            const year = String(dateTimeMatch?.[1] || '');
-            const date = year
-                ? `${year.padStart(4, '0')}年${String(dateTimeMatch[2]).padStart(2, '0')}月${String(dateTimeMatch[3]).padStart(2, '0')}日`
-                : '';
-            const time = dateTimeMatch
-                ? `${String(dateTimeMatch[4]).padStart(2, '0')}:${dateTimeMatch[5]}`
-                : '';
-            return [{ sender, text, date, time }];
-        });
+        return _ptcParseSmsAiResponse(response, fallbackSender);
     }
 
     async _requestSmsReply(recipientName, outgoingMessages) {
@@ -3149,10 +3129,7 @@ export class PhoneCallView {
     }
 
     _normalizeTtsGender(gender = '') {
-        const raw = String(gender || '').trim().toLowerCase();
-        if (raw === 'male' || raw === 'm' || raw === '男') return 'male';
-        if (raw === 'female' || raw === 'f' || raw === '女') return 'female';
-        return '';
+        return _ptcNormalizeTtsGender(gender);
     }
 
     _getPhoneCallGenderFallbackTtsVoice(gender = '') {
@@ -3174,13 +3151,7 @@ export class PhoneCallView {
     }
 
     _buildPhoneCallTtsCacheKey({ bubbleId = '', caller = '', provider = '', voice = '', text = '' } = {}) {
-        return [
-            String(bubbleId || '').trim(),
-            String(caller || '').trim(),
-            String(provider || '').trim(),
-            String(voice || '').trim(),
-            String(text || '').trim()
-        ].join('\u001f');
+        return _ptcBuildCallTtsCacheKey({ bubbleId, caller, provider, voice, text });
     }
 
     _getPhoneCallTtsStorageKey(parts = {}) {
@@ -4004,18 +3975,7 @@ export class PhoneCallView {
     }
 
     _normalizeWechatAvatarPath(value) {
-        const raw = String(value || '').trim();
-        if (!raw || raw === '👤') return '';
-        if (/^(?:https?:\/\/|\/|data:image|blob:)/i.test(raw)) return raw;
-        const cleaned = raw.replace(/^['"]|['"]$/g, '').replace(/^\.?\/*/, '').replace(/^apps\/wechat\/avatars\//i, '').replace(/^wechat\/avatars\//i, '').replace(/^avatars\//i, '');
-        if (!cleaned || /\s/.test(cleaned)) return '';
-        if (/^(?:male|female)\d+$/i.test(cleaned)) {
-            return new URL(`../wechat/avatars/${cleaned}.png`, import.meta.url).href;
-        }
-        if (/^[a-z0-9._-]+\.(?:png|jpg|jpeg|webp|gif)$/i.test(cleaned)) {
-            return new URL(`../wechat/avatars/${cleaned}`, import.meta.url).href;
-        }
-        return '';
+        return _ptcNormalizeWechatAvatarPath(value, import.meta.url);
     }
 
     _getPromptManager() {
@@ -4173,55 +4133,11 @@ export class PhoneCallView {
     }
 
     _cleanAIResponse(response, callerName) {
-        if (!response) return ['...'];
-
-        let cleaned = response.trim();
-
-        // 提取 <Call> 标签内容
-        const callMatch = cleaned.match(/<Call>([\s\S]*?)<\/Call>/i);
-        if (callMatch) {
-            cleaned = callMatch[1].trim();
-        }
-
-        // 去掉 ---姓名--- 行
-        cleaned = cleaned.replace(/^---.*---\s*$/gm, '');
-
-        // 清理残留的 <Call>/<Phone> 标签
-        cleaned = cleaned.replace(/<\/?Call>/gi, '');
-        cleaned = cleaned.replace(/<\/?Phone>/gi, '');
-
-        // 清理旧格式标记
-        cleaned = cleaned.replace(/\[手机来电通话\][^:：]*[：:]\s*/g, '');
-        cleaned = cleaned.replace(/^from\s+\S+[：:]\s*/gmi, '');
-        cleaned = cleaned.replace(new RegExp(`^${callerName}[：:]\\s*`, 'gmi'), '');
-        cleaned = cleaned.replace(/\|\|\|/g, '');
-
-        // 按换行拆分为多条消息，过滤空行 + 去重
-        const lines = cleaned.split(/\n/).map(l => l.trim()).filter(l => l.length > 0);
-        const deduped = [];
-        const seen = new Set();
-        lines.forEach((line) => {
-            const key = String(line || '').replace(/\s+/g, ' ').trim();
-            if (!key) return;
-            if (seen.has(key)) return;
-            seen.add(key);
-            deduped.push(line);
-        });
-
-        return deduped.length > 0 ? deduped : ['...'];
+        return _ptcCleanCallAiResponse(response, callerName);
     }
 
     _cleanCallRejectReason(text, callerName = '') {
-        const safeCaller = String(callerName || '').trim();
-        let cleaned = String(text || '').trim();
-        cleaned = cleaned.replace(/<Call>|<\/Call>|<Phone>|<\/Phone>/gi, '').trim();
-        cleaned = cleaned.replace(/\[拒绝电话\]\s*[：:]\s*/gi, '').trim();
-        cleaned = cleaned.replace(/^---[\s\S]*?---\s*/gm, '').trim();
-        if (safeCaller) {
-            cleaned = cleaned.replace(new RegExp(`^${safeCaller.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[：:]\\s*`, 'i'), '').trim();
-        }
-        cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
-        return cleaned || (safeCaller ? `${safeCaller} 暂时不方便接听。` : '对方暂时不方便接听。');
+        return _ptcCleanCallRejectReason(text, callerName);
     }
 
     _escapeHtml(text) {

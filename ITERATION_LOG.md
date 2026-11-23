@@ -1,3 +1,15 @@
+# 迭代 308 · v4.192.0 · 20 版 60 只 App 重构第二批：phone / games / diagnose 文本与协议归一面抽取（2026-11-23）
+
+- 【版本升至 4.192.0（五源同源）】phone / games / diagnose 三件的归一面抽成独立内核。三件源都是 600~3800 行的类/模块（phone-view.js 4243 行 / games-app.js 3837 行继承 PokerApp / diagnose-data.js 2980 行），类里绝大多数方法在动 this.app / this.currentView / this._phoneCallTtsCache / win / storage / API 冷却 —— 是有副作用的编排，不该整只搬。本版只抽归一面，源侧共 32 个方法体改为一行转调内核。
+- `apps/phone/phone-text-core.js`（181 行，纯函数内核）：通话 AI 回复清洗 / 拒接理由清洗 / 短信批量解析 / TTS 缓存键 / 头像地址归一 / TTS 性别归一 + 3 张常量表。`normalizeWechatAvatarPath` 刻意不自己取 `import.meta.url`，第二参 baseUrl 由调用方给。源文件 `phone-view.js` 6 个方法体改转调（`_cleanAIResponse` 36 行→1 行等）。
+- `apps/games/games-protocol-core.js`（407 行，纯函数内核，22 个导出函数）：谁是卧底发牌/发言/投票/公开展示日志 + 狼人杀匹配/发言/遗言/夜晚行动/投票决策/药剂归一/夜步骤角色/公开发言日志/投票史/票型归并/兜底投票/三张发言消息/补位玩家/按天归档 + 3 个通用件。源文件 `games-app.js` 21 个方法体改转调（`_fallbackWerewolfVoteTarget` 与 `_formatWerewolfSpeechTaskMessage` 保留一行取数后转调）。
+- `apps/diagnose/diagnose-reason-core.js`（123 行，纯函数内核）：五张 `Object.freeze` 归因表 + 私有 `lookup`（空/null/undefined 给「未知」，未命中**如实输出原值**）+ 六个导出函数。源文件 `diagnose-data.js` 删 6 个代码块（2980 → 2921 行）改为 import + re-export，`tests/system-v299|v300|v322` 既有 import 面零影响。
+- 三件四件套齐：控制器 `phone-text-app.js` 七口 / `games-protocol-app.js` 十八口 / `diagnose-reason-app.js` 六口，全部走 `_record` + `writeReceipt`，STATE_KEY `phone_text_v1` / `games_protocol_v1` / `diagnose_reason_v1`；视图 `.pt-root`/`.gp-root`/`.dr-root` + data-act 委派 + CSS 自注入 + `_boundRoot` 去重；五处接线全落地。
+- 新增判据 `tests/system-v4192.test.mjs` 14 条；19 道门禁 + file-size 台账全绿。
+- 两处口径按实测钉住（不改代码，只把真实行为写进判据）：`parseWerewolfSpeech` 的 `^发言` 替换**不带 m 标志**（标签内容首字符是 
+ 时剥不掉「发言：」）；`parseWerewolfVoteDecision` 的票型切分按提示词给的紧凑形 `2->3，3->0`（空格分隔形切不出票）。二者与源实现逐字一致。
+
+
 # 迭代 307 · v4.191.0 · 20 版 60 只 App 重构第一炮：weibo / honey 文本与数值归一面抽取（2026-11-23）
 
 - 【版本升至 4.191.0（五源同源）】weibo / honey 两件的清洗面抽成独立内核。两件源都是 2600~5200 行的类，类里绝大多数方法在动 this.state 或自持状态并直写 storage —— 是有副作用的编排，不该整只搬。本版只抽清洗面，源类 15 个方法体改为一行转调内核。

@@ -38,6 +38,11 @@ import { backGuardReport } from '../../config/back-guard.js';
  *   为什么必须在这里露一面：计划书 O5 第 4 条要求「读数暴露到洞察 App 的一个分页」——
  *   内核有 stats() 而没人读，就是本仓反复出现的「登记面不算交付」。 */
 import { mediaCacheFace, mediaCacheFaceText, mediaCacheRows } from '../../config/media-cache-hooks.js';
+/* [v4.192.0] 归因文案与存档健康行：纯函数内核（本文件只再导出，实现不再留在这里）。 */
+import {
+    fieldReasonText, bridgeReasonText, projAbsentText,
+    sourceStateText, schemaStateText, storageFaceLine
+} from './diagnose-reason-core.js';
 import { logGateFace, logGateFaceText, logGateRows } from '../../config/log-gate.js';
 import { matrixRows as migrationMatrixRows, planMigration as migrationPlanOf, migrationCountsText, migrationFaceText } from '../../config/migration-matrix.js';
 import { BOOT_PHASES, createBootGuard, probeCapabilities, bootFallbackFaceText } from '../../config/boot-fallback.js';
@@ -2669,30 +2674,13 @@ export function knowledgeFaceText(face) {
     return knowledgeLine(face);
 }
 
-/** 存储时代的中文（未知取值**如实输出原值**，不静默兜底成某个具体结论） */
-export function schemaStateText(state) {
-    return SCHEMA_STATES[state] || String(state == null ? '' : state) || '未知';
-}
-
-const SCHEMA_STATES = Object.freeze({
-    current: '当前代',
-    legacy: '旧档（本方法只上报，不做迁移）',
-    future: '更新版插件写的档（按当前口径读可能误读）',
-    unknown: '无从判断（账本缺失或损坏）'
-});
-
-/** 存档健康面的一行读数（**不拼结论**：只做单位与分隔，判断归读者） */
-export function storageFaceLine(face) {
-    const f = face || {};
-    if (f.ok !== true) return '存档健康：读不到（' + String(f.reason || 'unknown') + '）';
-    const one = (x) => {
-        if (!x || x.ok !== true) return '读不到';
-        const s = x.schema || {}, l = x.ledger || {};
-        return schemaStateText(s.state) + ' · 已搬 ' + (l.count || 0) + ' 条键'
-            + (l.unparsableAt ? '（其中 ' + l.unparsableAt + ' 条时间戳坏了）' : '');
-    };
-    return '本会话档：' + one(f.chat) + ' ／ 全局档：' + one(f.global);
-}
+/** [v4.192.0] 归因文案一族（字段 / 桥 / 投影缺席 / 桥自述态 / 存档 schema）与存档健康行
+ *  已抽成纯函数内核 `diagnose-reason-core.js`；这里只做再导出，保持既有 import 面不变
+ *  （诊断视图与 tests/system-v299|v300|v322 都从这里取）。 */
+export {
+    FIELD_REASON_TEXT, BRIDGE_REASON_TEXT, PROJ_ABSENT_TEXT, SOURCE_STATE_TEXT, SCHEMA_STATES,
+    fieldReasonText, bridgeReasonText, projAbsentText, sourceStateText, schemaStateText, storageFaceLine
+} from './diagnose-reason-core.js';
 
 /** 值形状（与 readPushField 的 kind 同族；只用于展示，不参与判定） */
 function kindOf(v) {
@@ -2703,53 +2691,6 @@ function kindOf(v) {
     } catch (_e) { return 'unknown'; }
 }
 
-const BRIDGE_REASON_TEXT = Object.freeze({
-    'not-mounted': '未安装', 'ready': '就绪', 'disabled': '休眠（未开闸）',
-    'refused': '拒绝读取（未开闸 / 无授权）', 'no-snapshot': '在但尚无快照',
-    'engine-absent': '插件在、记忆引擎未就位', 'engine-empty': '引擎在位但返回空',
-    'thrown': '取快照抛错', 'probe-threw': '探针异常'
-});
-
-const FIELD_REASON_TEXT = Object.freeze({
-    'value': '有值', 'declared-null': '上游明说：这面是空', 'absent': '上游明说：源里没这项',
-    'legacy-null': '旧版桥：读不出（不硬猜）', 'legacy-value': '旧版桥：有值', 'no-snapshot': '无快照'
-});
-
-/** 中文归因文案（供视图直接显示；未知原因**如实输出原值**，不静默兜底） */
-export function fieldReasonText(reason) {
-    return FIELD_REASON_TEXT[reason] || String(reason || '未知');
-}
-/** 桥归因文案（未知原因如实输出原值） */
-export function bridgeReasonText(reason) {
-    return BRIDGE_REASON_TEXT[reason] || String(reason || '未知');
-}
-
-/** [v3.0.0] 投影缺席原因文案（上游 sourceLedger.absent 的 reason；未知原因如实输出原值） */
-const PROJ_ABSENT_TEXT = Object.freeze({
-    'no-provider': '上游没注册这个投影的取值器（不是「没有数据」，是这项压根没接）',
-    'thrown': '上游取值器抛错（读数已降级，原因见上游）',
-    'skipped': '本会话关掉了这个投影（配置面，不是故障）',
-    'absent': '上游标为缺席（未给原因）'
-});
-
-export function projAbsentText(reason) {
-    return PROJ_ABSENT_TEXT[reason] || String(reason || '未知');
-}
-
-/** [v3.0.1] 桥**自述态**文案（上游 v3.174 的 `sourceState`；未知原因如实输出原值）。
- *  键必须是带连字符的**字面量**（真源值形），不得写作裸标识符形 —— 那是 J7 拦下的
- *  「查不到就静默走兜底、多种处境显示成同一句话」的种子（v2.98 的 clock-view 实例）。 */
-const SOURCE_STATE_TEXT = Object.freeze({
-    'idle': '未开始（尚未取过快照）',
-    'ready': '就绪（上游说这轮读数可用）',
-    'engine-absent': '记忆引擎未就位（桥在，引擎不在）',
-    'engine-empty': '引擎在位但返回空（不是故障）',
-    'thrown': '取值抛错（原因见 lastError）'
-});
-
-export function sourceStateText(state) {
-    return SOURCE_STATE_TEXT[state] || String(state || '未知');
-}
 
 
 /**

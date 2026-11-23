@@ -29,6 +29,9 @@
 export const APP_LAZY_ROUTES = [
     { id: "weibotext", module: "./apps/weibo/weibo-text-app.js", key: "weiboTextApp", cls: "WeiboTextApp", errTitle: "微博文本解析" },
     { id: "honeytext", module: "./apps/honey/honey-text-app.js", key: "honeyTextApp", cls: "HoneyTextApp", errTitle: "蜜语文本清洗" },
+    { id: "phonetext", module: "./apps/phone/phone-text-app.js", key: "phoneTextApp", cls: "PhoneTextApp", errTitle: "通话文本归一" },
+    { id: "gamesprotocol", module: "./apps/games/games-protocol-app.js", key: "gamesProtocolApp", cls: "GamesProtocolApp", errTitle: "游戏协议解析" },
+    { id: "diagnosereason", module: "./apps/diagnose/diagnose-reason-app.js", key: "diagnoseReasonApp", cls: "DiagnoseReasonApp", errTitle: "诊断归因" },
     { id: "notifications", module: "./apps/notifications/notifications-app.js", key: "notificationsApp", cls: "NotificationCenterApp", errTitle: "通知中心" },
     { id: "search", module: "./apps/search/search-app.js", key: "searchApp", cls: "SearchApp", errTitle: "全局搜索" },
     { id: "playbook", module: "./apps/playbook/playbook-app.js", key: "playbookApp", cls: "PlaybookApp", errTitle: "灵感工坊" },
