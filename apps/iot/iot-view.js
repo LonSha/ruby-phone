@@ -18,6 +18,7 @@ const FACE_META = {
     [IOT_FACE.storage_absent]: { label: '存储读不出（不是“没设过”）', tone: 'err' },
 };
 
+const KEY_LABEL = { colorTempK: '色温', brightness: '亮度', setPointC: '设定温度', closedPercent: '开合度' };
 const MODE_LABEL = { cool: '制冷', heat: '制热', dry: '除湿', fan: '送风', quiet: '静音' };
 
 function step(key) {
@@ -128,9 +129,9 @@ export class IotView {
             const range = IOT_LIMITS[key];
             rows.push(
                 '<div class="iot-row"><span class="iot-k">' + key + '</span>'
-                + '<button class="iot-step" type="button" data-act="step" data-dev="' + dev.id + '" data-key="' + key + '" data-dir="-1">-</button>'
+                + '<button class="iot-step" type="button" data-act="step" data-dev="' + dev.id + '" data-key="' + key + '" data-dir="-1" aria-label="' + (KEY_LABEL[key] || key) + ' 减小">-</button>'
                 + '<span class="iot-v">' + fmt(key, st[key]) + '</span>'
-                + '<button class="iot-step" type="button" data-act="step" data-dev="' + dev.id + '" data-key="' + key + '" data-dir="1">+</button>'
+                + '<button class="iot-step" type="button" data-act="step" data-dev="' + dev.id + '" data-key="' + key + '" data-dir="1" aria-label="' + (KEY_LABEL[key] || key) + ' 增大">+</button>'
                 + '<span class="iot-range">' + range[0] + '~' + range[1] + '</span>'
                 + '</div>'
             );

@@ -195,6 +195,25 @@ export const MATRIX = Object.freeze([
      *   不读上游契约面（R6-O2 连续通信才接 phone-chat-memory）。 */
     Object.freeze({ appId: "affairs", name: "事务台", dir: "affairs", faces: Object.freeze({ F1_inject: true, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
     Object.freeze({ appId: "comms", name: "会话台", dir: "comms", faces: Object.freeze({ F1_inject: true, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    /* [v4.199.0] 补齐 v4.187.0~v4.192.0 新增的 16 件 App：它们一直没进本表，A1 报 row-missing，
+       F6 列也随之少 16（rebind 表里在、矩阵里无行 ⇒ 逐面统计对不上）。六面值由 system-v3550 自己的
+       recompute(ROOT) 一次跑出后原样抄入，**不是人判**；同批还修了判据侧两处扫描盲区（见该套件注释）。 */
+    Object.freeze({ appId: "weibotext", name: "微博文本", dir: "weibo", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "honeytext", name: "蜜语文本", dir: "honey", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "phonetext", name: "通话文本", dir: "phone", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "gamesprotocol", name: "游戏协议", dir: "games", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "diagnosereason", name: "诊断归因", dir: "diagnose", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "iot", name: "智能家居", dir: "iot", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "share", name: "近场快传", dir: "share", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "callscene", name: "情境通话", dir: "call", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "social", name: "朋友圈", dir: "social", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "daily", name: "生活织机", dir: "daily", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "keyboard", name: "口癖联想", dir: "keyboard", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "pokereval", name: "牌型评估", dir: "games/poker", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "wwrules", name: "狼人杀规则", dir: "games/werewolf", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "ucrules", name: "谁是卧底规则", dir: "games/undercover", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "bilifmt", name: "B站换算", dir: "bilibili", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
+    Object.freeze({ appId: "musiccore", name: "歌词与模式", dir: "music", faces: Object.freeze({ F1_inject: false, F2_search: false, F3_notify: false, F4_wechatLink: false, F5_upstreamRead: false, F6_lifecycle: true }) }),
 ]);
 
 /** 便捷取用口：逐面统计命中数（诊断面与判据共用；不自持第二份数据）。

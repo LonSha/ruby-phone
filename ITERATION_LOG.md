@@ -1,6 +1,25 @@
-迭代 314 · v4.198.0 · 20 版 60 只 App 重构第八批：跨 App 重复口径收敛第六炮 —— HTML 转义面 esc（2026-11-23）
+迭代 315 · v4.199.0 · App 重构：回改沿用了 8 个版本却没有出处的「60 只」+ 新增 App 重构台账（2026-11-23）
 
-- 【版本升至 4.198.0（五源同源）】20 版 60 只 App 重构计划第八批：跨 App 重复口径收敛第六炮 —— HTML 转义面 esc。本版重做全仓同名函数体指纹扫描（v4.197.0 后新基线），实测 function esc(s) 在 apps 下共 **35 处定义**、分为 **12 种口径**；其中变体 [0] 为 **18 份逐字全等**（调用点合计 **449 处**），是目前最大的一簇。
+- 【版本升至 4.199.0（五源同源）】本版治的事：一个沿用了 8 个版本却没有出处的数。v4.191.0 第一次在提交标题里写下「20 版 60 只 App 重构」，v4.192.0~v4.198.0 七个版本沿用同一说法，但仓里**从来没有一份文件定义过「60 只」是哪 60 只**。磁盘实读：`apps/` 下 **101 个目录**、`config/apps.js` 里 **105 条 id**。
+- **回改 22 处**（ITERATION_LOG.md 9 / TODO.md 5 / update-log.json 8），把「20 版 60 只 App 重构」改成不带手抄数的「App 重构」。回改前先证明**没有任何判据钉住这个数**：全仓 tests/ 逐文件扫 60 后随可选量词再随 App 字形，**零命中**（194 个套件同时提到 60 与 app，全是行号、时长、预算之类的噪声，无一条是断言）⇒ 回改不会翻红任何门，是一次安全的文字修正。判据 system-v4199 的 B1/B2/G2 三条把这个结论钉住：B1 断言三份文件不再含该字样，B2 断言 tests/ 下零命中（防将来有人把假数写进判据），G2 用 git show HEAD 证明回改前的确有过（防「本来就没有」的假负控制）。
+- 新增 `tools/gen_app_ledger.mjs`（172 行，台账生成器）+ `tests/audit/app-refactor-ledger.json`：把「已重构 / 待重构」从散文变成机器可读的账。**判据口径只有一条且写在台账里**：已重构 = 该 App 目录下存在至少一个 `*-core.js`（v4.191.0 立下的四件套第一件）。首轮读数：**101 目录 / 已重构 8 / 待重构 93**（已重构的 8 个 = diagnose / games / health / honey / music / phone / wechat / weibo）。
+- **两本账分开记，不许合成一个「App 总数」**：`apps/` 的目录不全是 App（实测 8 个是内核散件、无对应 id：audio / call / darknet / hardware / investigation / moments / network / security）；`config/apps.js` 的 id 也不全有独立目录（实测 12 个是重构产出的子 App：weibotext / honeytext / phonetext / gamesprotocol / diagnosereason / graph / callscene / pokereval / wwrules / ucrules / bilifmt / musiccore）。两个差集都由磁盘实读生成（dir_only / id_only 两个字段），判据 A5 只钉**形态**（必须非空、必须互不相交），不写死「必须是 8 和 12」—— 那两个数会随仓增长，写死就是下一颗同样的雷。
+- **本版自抓一处台账造假并当场修掉**：生成器初稿把 `dir_only` 写成 `dirNames.filter((d) => !dirSet.has(d))` —— dirSet 是从 dirNames 建的，这个过滤**恒为空数组**；同时 `id_only` 被硬编码成 `null`。两处都是「台账字段在场但不读数」的假账形态（比没有字段更糟：看起来有，读出来是空的）。修法：`config/apps.js` 改成既取 id 清单又取条数（与 `tools/gen_status_ledger.mjs` 的 `scale.apps_ids` 同一条正则，口径不许两处各写），两个差集都拿真清单比。
+- 新增判据 `tests/system-v4199.test.mjs`（A 台账与磁盘实读一致 5 条 / B 假数已回改 4 条 / C 台账落盘且不漂移 3 条 / G 判据自证 2 条 / V 版本锚 2 条）共 16 条。两条负控制：G1 篡改 `refactored` 布尔后 A4 的判据必须抓到（内存副本，不碰真盘）；G2 用 git 历史证明回改对象真实存在。版本锚一律**下限形**「不低于 4.199.0」（V1），不写死等于。
+- **缺陷形态（继承 v4.163.0 登记过的同一形态）**：一个数被写进标题与条目、沿用多个版本，却从未有文件定义过它的口径。它不会让任何门变红（本次实测 194 个套件零断言），因此可以安静地错很久。交棒改写：**凡是写进标题的规模数，必须同时有一个机器可读台账字段与它同源**；台账取数函数由判据 import 而非重写（两份取数必然漂移）；判据口径的唯一声明处落在台账里，不落在代码里。
+- **本版的诚实边界**：① 「已重构 8 个」只证明这 8 个目录下有 `*-core.js`，**不证明**行为等价、不证明接线完整、更不证明真机上跑对 —— 那三样由各版本自己的判据管，本台账刻意不比；② 回改只动了三份文件里的标题文字，**没有**回改已推送的 commit message（git 历史不可变，也不该为了好看去改）；③ 「93 个待重构」是**按目录数**的读数，与 v4.193.0 起另一条轨的「剩余 89 个跨 App 重复函数名面」**不是同一件事**，两本账在此正式分开，后续各自推进、互不当对方的进度读。
+- **本版自己抓到的缺陷（第二条，比台账造假更重）**：**用 `git checkout --` 回滚一个未提交的文件，把整个 update-log.json 打回了 HEAD**。起因只是想撤掉一次写坏的 JSON 补丁，结果该文件里本轮的全部改动（4.199.0 新条目 + 8 处历史回改 + latest/head 抬版）一起消失，更糟的是随后一次 splice 把 **4.198.0 整段 10 条历史条目覆盖掉**（键序里直接少一个版本，总条数不变所以不报错）。是判据 `system-v4199` 的 B1/B4 两条转红把它抓出来的（B4 逐个历史版本条目查错数，不依赖任何切口），不是人看出来的。修法：从 `git show HEAD:update-log.json` 取回 4.198.0 原文插回原位，再逐条重做 8 处回改，并用「其余 429 个版本条目必须与 HEAD 逐字相同」的断言对拍防再漂移。交棒改写：**未提交的改动没有第二份副本，任何「撤销」类命令都可能把它连锅端**；改这类文件前先 `git stash push -u` 或先复制一份到 /tmp，别信「我只想撤掉刚才那一行」。
+- **本版自己抓到的缺陷（第三条，与第二条同族但更隐蔽）**：改完 `PLAN.md` 的体量行就当作收尾，没把下游校对跑一遍 —— `system-v4107` 的 A5 与 `system-v4980` 的 A1 两条当场转红，报的是同一个读数：PLAN.md 写 `index.js 976539 字节 / 15598 行`，而判据现场算是 **977644 字节 / 15599 行**。根因是我给公告块补条目分两次做（先 9 条、后 10 条），中间用 `gen_plan_baseline.mjs` 生成过一次基线，第二次改完**没有重生成**。这与本仓已登记的两个形态是同一族：**改一处真源 ≠ 把它的下游校对也跑一遍**（v4.198.0 的「抬版漏 head 字段」、本版的「当版条目漏运行时验证边界条」都是它）。交棒改写：**凡是用工具生成出来再手工贴进文档的行，改完上级真源后必须重跑该工具**；判据 A5 的「对照组：门本身必须是绿的」这条设计是对的 —— 它不允许校对器自己红着去校对别人。
+- **运行时验证边界**：本版五类结论各有各的证据面，逐类说清哪些是实测、哪些不是。① **磁盘实读类可复现**：101 个 `apps/` 目录、105 条 `config/apps.js` id、8 个已重构 / 93 个待重构，全部由 `tools/gen_app_ledger.mjs` 现场扫盘生成（落盘 `tests/audit/app-refactor-ledger.json`），任何人重跑该脚本都应得到同一份读数；换一台机器只改 `apps/` 内容就会改数，改不了口径。② **历史追溯类可复现**：`git log --all -S` 证明「20 版 60 只 App」自 v4.191.0 起沿用 8 个版本、`git show 62613ab` 证明仓内从未定义过口径，均以 git 对象为准，与工作区是否干净无关。③ **静态门类部分实测**：语法 1698 文件 / 导入 1895 条 / 具名导入 1836 条为现场真跑读数；但 **21 道静态门里 browser 门本次按 `SKIP_BROWSER=1` 显式声明未执行**，那不是绿。④ **全量回归未跑完**：550 个套件后台逐条跑到 344+ 时因两条判据转红而中断，「其余未跑到的 200+ 个套件在本版改动下仍绿」这句话**没有任何证据支持**。⑤ **台账读数不证明行为**：`*-core.js` 在场只说明内核被抽出，不说明行为等价、接线完整，更不说明真机上跑对。同源表述与边界文档一致：遇到「看起来没坏但显示不对」的问题，属于该文档登记的第二类，需在真机复现后再修 —— 门禁**不能保证**在真宿主里复现它。
+- **iOS 27 UI 重构第一炮（settings，只动皮肤层，App 源码一字未改）**：先把 iOS 27 的真实设计规范落到纸面再动手 —— liquidglassdesign.com（2026-11-18 核对，引用 Apple newsroom 2026-09-14 发布公告 + HIG Materials + HIG Scroll Views）给出权威结论：iOS 27 **保留 Liquid Glass 并重新调校**，材质三处渲染变化（更有效漫射复杂内容 / 玻璃元素周围**新增一圈加深的边缘** / 镜面高光更亮）；**新增 Liquid Glass 透明度滑块**（Settings > Appearance > Liquid Glass，从 ultraclear 到 fully tinted，取代 iOS 26.1 放在 Display & Brightness 下的 Clear/Tinted 二选一，无关闭开关）；**滚动边缘**（HIG 2026-06-08 建议优先用自动滚动边缘样式，为包含大量控件的顶部工具栏提供更不透明的视觉分隔）；**哪些没变**（HIG Materials 核心规则未变：Liquid Glass 只用于功能层、内容层必须用标准材质，iOS 26 的分层方式依然适用）；**适配指南硬要求**（去掉工具栏/标签栏上的自定义背景，让系统玻璃和滚动边缘生效）。据此量化 settings 的违规面：**686 处内联 style、433 处写死颜色、11 处 blur()**，其中 header 行 2348 为 `background: #f7f7f7; color: #000; border-bottom: 0.5px solid #d8d8d8`、tabs 行 2355 为 `background: rgba(247,247,247,0.96); backdrop-filter: blur(10px)` —— 正是适配指南点名要去掉的自定义栏背景。
+- **重构落点（`apps/settings/settings.v3.css` curated 层，+32 -1）**：复用仓内既有 Liquid Glass token（`--lt-glass-fill` / `--lt-glass-fill-strong` / `--lt-glass-blur` / `--lt-glass-blur-strong` / `--lt-glass-rim` / `--lt-glass-specular`，`phone/design/lonsha-tokens-v3.css` 早已定义，本轮不新增 token）。header 由 `background: var(--lt-sys-grouped-bg); -webkit-backdrop-filter: none` 改为 `var(--lt-glass-fill)` + `var(--lt-glass-blur)` + `::after` 镜面高光（`--lt-glass-specular`，`inset-block-start: 0; block-size: 50%`，固定栏顶不随滚动）+ `box-shadow: var(--lt-glass-rim)`（iOS 27 加深边缘）；tabs 由 `bf`（实心 surface-2）改为 `--lt-glass-fill-strong` + `--lt-glass-blur-strong`；新增 tabs `::after` 滚动边缘分隔（`opacity: 0` → 仅 `#phone-panel 上 data-rp-ios 与 data-rp27-scrolled 两个属性同时在场时` 时 `opacity: 1`）。**内容层未动**：`.setting-section` 仍用 `var(--lt-sys-grouped-bg-2)`，遵守 HIG 分层。
+- **新增 `phone/ui/rp-skin-runtime.js` 第 6 步 `edge`（+52 行）**：为滚动边缘补上行为。文件头注释改「做六件事」；`on` 加 `edge: opts.edge !== false`；`counts` 加 `edge: 0`；实现含 `edgeScroll` WeakMap + `EDGE_SEL = '.app-body'` + `edgeSync/edgeEl/edgeTree/unedge` 四函数；接进 `run()` 与 `detach()`。`edgeSync` 在 `el.scrollTop > 1` 时给根节点 `setAttribute('data-rp27-scrolled','1')`，回顶部且**所有已挂容器都回到顶部才 removeAttribute**（避免多容器互相覆盖）。运行时零颜色字面量、零 `!important`，只加一个属性，不改类名/结构/样式。
+- **两个新判据 + 全部反向验证**：`tests/system-v4199-ui.test.mjs`（83 行 / 11 条：A 栏背景去实底 / B 玻璃加深边缘与镜面高光 / C 滚动边缘 / D edge 接线与运行时纯净 / E 分层不变与文件规矩）；`tests/system-v4199b.test.mjs`（15 条：内核 8 符号边界 + 接线断言 + 台账断言）。**反向验证不是走过场**：写脚本把产品代码临时改回旧写法（header 改回实底、删玻璃边缘、删滚动边缘、edge 从 run/detach 摘掉、分组卡误用玻璃、edge 里写死颜色共 7 个回退场景）与篡改台账（js_lines/js_files 漂移、伪造 refactored、伪造 core_files 假名、削弱判据说明共 5 个场景），**12 个全部被抓住**、文件 sha 复原后 11/11 与 15/15 全绿。另跑 4 个既有相关测试 47 项全绿。
+- **既有红结算（本轮把三条在 HEAD 上就已经红的红字清掉，不是本轮改坏的）**：全量跑批发现 3 套判据在 `git archive HEAD` 干净快照上逐字复现——① `r22_o3_a11y`：`apps/call/call-view.js:70` 与 `apps/iot/iot-view.js:131` 两个纯图标 `-` 按钮无可访问名（扫描器把 `-` 当空白字符剔除入 iconOnly，`+` 反而不算）。**已修**：两侧 `+/-` 一并补 `aria-label`，iot 走 `KEY_LABEL` 映射成人话（「色温 减小」），307 个纯图标按钮全覆盖。② `system-v255` A5「表内 App 都实现了 onChatChanged」：**17 个表内键没进判据的 dirMap** —— v4.187.0~v4.192.0 新增的 15 个既没进 dirMap、也没实现处理器；iotApp 两样都缺；commsApp 本有处理器、只缺登记。**已修**：dirMap 补齐至 94 键（+17）、`fileOverride` 点名同目录多份 `*-app.js` 的 13 个键；**16 个 App 各写一条真处理器**——5 个（share/call/social/daily/keyboard）走既有 `_load()`，10 个试算台把「回默认 + 读会话快照」抽成 `_initFromStorage()`，构造与换会话**共用同一条路径**（不抄第二份），iot 补 `_load()` 重取。③ `system-v3550` App 消费面矩阵：矩阵缺这 16 件 App 的行（A1 报 `row-missing`），F6 列少 16 项。**已修，且修的是判据自己的两处扫描盲区**：`idToDir` 只会「同名目录 / `<id>-app.js`」两猜，`weibotext` 直接 scandir 一个不存在的目录；`ownedFiles` 拿词干与 id 逐字比，`weibotext` vs 词干 `weibo-text`、`bilifmt` vs `bili-format` 全对不上，导致这 7 件 App 的自有文件集**恒为 0**、F1/F5 恒假。改成「归属以懒加载路由表的 module 为准」+「词干从长到短匹配」，16 行矩阵值由该套件**自己的 recompute(ROOT) 跑出后原样抄入**（不是人判），并补了一句 16 行来源的注释。**同批还消掉两处手抄数**：`r23_o1` 钉着「966 个 .js」（真读数早已 997）、「settings-app.js 12809」（真读数 12750），与本版治的「手抄数没有出处」同族——改成台账 `files_scanned` 两本账同源 + 天花板跟真读数走。**诚实边界**：这三条红的年龄至少 12 个版本（v4.187 起），期间每版都在这些红字上提交；本轮只证明「现在它们真的绿」，不证明过去那些提交当时是绿的。
+
+迭代 314 · v4.198.0 · App 重构第八批：跨 App 重复口径收敛第六炮 —— HTML 转义面 esc（2026-11-23）
+
+- 【版本升至 4.198.0（五源同源）】App 重构计划第八批：跨 App 重复口径收敛第六炮 —— HTML 转义面 esc。本版重做全仓同名函数体指纹扫描（v4.197.0 后新基线），实测 function esc(s) 在 apps 下共 **35 处定义**、分为 **12 种口径**；其中变体 [0] 为 **18 份逐字全等**（调用点合计 **449 处**），是目前最大的一簇。
 - config/esc-face.js（53 行，纯函数内核）：唯一导出 esc(v)，与 18 份复制件逐字等价（18 文件 × 33 探针 = 594 用例零差异；转调后复跑 45 用例仍零差异）。三条立场：① **只转四个字符** 与号、小于号、大于号、双引号，单引号刻意不转；② null/undefined 给空串，其余值统走 String()；③ **不带 max 截断** —— 那是第二个签名，属另一个面。函数体用四次 replace 正则实现，与 18 份复制件的 split/join 常量化形在全部探针上等价。**本版最要紧的一条是不许合并**：esc 治的是「串里的四个字符怎么变成实体」，与仓内三份文本读取内核治的不是同一件事 —— text-face.js（toStr）/ str-face.js（safeStr）/ loose-str-face.js（str）管的是「非串给什么、要不要 trim」。esc 与三者的边界在：输入不含那四个字符时四者一致，一旦含之，只有 esc 会转义。更关键的是 esc 自身另有 11 种异口径：空值合并运算符加 34/39 号实体形、双引号实体写作 quot; 的形、无空格形、以及**带 max 第二签名且转单引号**的形（tieba-view）。实测 it 加单引号 s 在本内核原样返回、在 v11 变成 39 号实体，且 v11 会按 max 截断 —— 两者合并就是造假等价。
 - **本版最要紧的一条是不许合并**：esc 治的是「串里的四个字符怎么变成实体」，与仓内三份文本读取内核治的不是同一件事 —— text-face.js（toStr）/ str-face.js（safeStr）/ loose-str-face.js（str）管的是「非串给什么、要不要 trim」。esc 与三者的边界在：输入不含那四个字符时四者一致，一旦含之，只有 esc 会转义。更关键的是 esc 自身另有 11 种异口径：空值合并运算符加 34/39 号实体形、双引号实体写作 quot; 的形、无空格形、以及**带 max 第二签名且转单引号**的形（tieba-view）。实测 it 加单引号 s 在本内核原样返回、在 v11 变成 39 号实体，且 v11 会按 max 截断 —— 两者合并就是造假等价。
 - 转调 **18 处**（全部在 apps 下，深度一致）：删本地 esc 定义 + 删 5 个只服务 esc 的常量（AMP/LT/GT/QUOTE/QUOTE_ESC，经词边界计数确认各文件内只被 esc 自身消费，AMP 6 次 = 1 定义 + 5 次体内引用，其余各 2 次 = 1 定义 + 1 次引用）+ 在 use strict 之后插 import { esc } from ../../config/esc-face.js。各文件调用点：creationdesk-view 97、backupdesk-view 72、traveldesk-view 47、memtable-view 39、taskentry-view 37、workflow-design 32、workflow-view 27、accessdesk-view 20、socialguard-view 15、caphealth-view 14、annidate-view 12、periodmath-view 6、stickerdesk-view 5、cardtable-view 4、freehome-view 4、lexiscore-view 3、sullydesk-view 8、summdesk-view 7。本批 18 处**全部有真实调用点**，无零调用死定义。
@@ -10,7 +29,7 @@
 - **交棒改写（下限形）**：本版新写的 v4198 判据 V1 直接用下限形（语义化 cmp(a,b)），未再产生新的刚性版本锚。v4.197.0 已统一改写的 8 套历史判据（v4080/v4120/v4210/v4260/v4270/v4280/v4290/v4300/v4480）本轮未受影：esc 的 18 个转调文件全在 apps 下、import 路径指向 ../../config/esc-face.js，不涉及 config 内核，未再触发「依赖面 deepEqual」类伪红。
 - **运行时验证边界**：门禁取数仍由 tools/refresh_doc_readings.py --write 现场真跑 scripts/syntax-check.mjs 与 scripts/import-resolve-check.mjs 取实测值（不读常量）；tools/gen_status_ledger.mjs 与 tools/audit-event-subscribers.mjs 均须带 --write 才落盘；browser 层按该门自身规矩以 SKIP_BROWSER=1 显式声明本次未执行，不假装跑过。
 - 纯函数内核新增 1 个文件（config/esc-face.js），无新增副作用文件；三道静态门禁（syntax 1695 文件 / import-resolve 1895 条静态导入 / named-import 1836 条具名导入）复跑通过。下一批候选（已盘点未动，共 88 个候选面）：safeNum 19 文件（16 份 Number(val) 弱口径，收敛须改走 numOrNull，属行为变更需单独一批）、listOf 18（4 变体，15 处等价 + 2 处 items 解包宽口径）、clip 17（未盘点变体）、isPlain 15（4 变体，14 处语义等价）、arr 15（未盘点）、trimRows 14（4 变体，11 处等价）、readingsOf 12、num 12。
-迭代 313 · v4.197.0 · 20 版 60 只 App 重构第七批：跨 App 重复口径收敛第五炮 —— 宽松文本规整读取面 str（2026-11-23）
+迭代 313 · v4.197.0 · App 重构第七批：跨 App 重复口径收敛第五炮 —— 宽松文本规整读取面 str（2026-11-23）
 
 - 【版本升至 4.197.0（五源同源）】沿用第六批的「同名函数体指纹扫描」，重扫 v4.196.0 后新基线：产品码内 `str` 实测 **24 处 / 1 变体** `function str(v) { return String(v == null ? '' : v).trim(); }`（1 apps + 23 config），调用点合计 **449 处** —— 目前最大的一簇。
 - `config/loose-str-face.js`（67 行，纯函数内核）：唯一导出 `str(v)`，与 24 份复制件逐字等价。文件名加 `loose` 前缀是因为 `str-face.js` 已被 safeStr 占用（v4.196.0），但导出名保持 `str` 使转调是纯搬移。三条立场：① **宽松** —— 非串也 `String()` 成串（数字 5 给 '5'、布尔 true 给 'true'、对象给 '[object Object]'），刻意**不**收紧成 `(typeof v === 'string') ? v.trim() : ''`（那会让原本显示 '5' 的地方变空串，是收紧不是等价）；② **trim 在本口径之内**；③ null/undefined 给空串（不是 'null'/'undefined'）。
@@ -23,7 +42,7 @@
 - **运行时验证边界**：门禁取数仍由 `tools/refresh_doc_readings.py --write` 现场真跑 `scripts/syntax-check.mjs` 与 `scripts/import-resolve-check.mjs` 取实测值（不读常量）；`tools/gen_status_ledger.mjs` 与 `tools/audit-event-subscribers.mjs` 均须带 `--write` 才落盘；browser 层按该门自身规矩以 `SKIP_BROWSER=1` 显式声明本次未执行。
 - 纯函数内核新增 1 个文件（`config/loose-str-face.js`），无新增副作用文件；19 道静态门禁复跑通过。下一批候选（已盘点未动）：`esc` 35 处 / 12 变体（18 份 split/join 形逐字相同，但 12 变体间**行为不等价** —— 有的不转 `'`、有的把实体拆开写、有的带 max 截断，须先分簇再抽）、`listOf` 18 处 / 4 变体（15 处等价 + 2 处 items 解包宽口径）、`isPlain` 15 处 / 4 变体（14 处语义等价）、`trimRows` 14 处 / 4 变体（11 处等价）。
 
-迭代 312 · v4.196.0 · 20 版 60 只 App 重构第六批：跨 App 重复口径收敛第四炮 —— 字符串规整读取面 safeStr（2026-11-23）
+迭代 312 · v4.196.0 · App 重构第六批：跨 App 重复口径收敛第四炮 —— 字符串规整读取面 safeStr（2026-11-23）
 
 - 【版本升至 4.196.0（五源同源）】沿用第五批的「同名函数体指纹扫描」，重扫 v4.195.0 后新基线：产品码内 `safeStr` 实测 **15 处 / 1 变体** `function safeStr(v) { return (typeof v === 'string') ? v.trim() : ''; }`，零分簇成本。调用点约 166 处。与 v4.194.0 的 `text-face.js` 唯一差别就是 trim —— 这正是仓内把它与 `toStr` 分成两个名字的原因。
 - `config/str-face.js`（59 行，纯函数内核）：唯一导出 `safeStr(v)`。三条立场：① 只收字符串，非串一律空串，刻意不改成 `String(v == null ? '' : v).trim()`（会让数字 5 变 '5'，是放宽不是等价）；② **trim 在本口径之内** —— 这 15 份复制件本来就 trim，并进来是等价，反之若为了与 toStr 一致而拿掉 trim 才是行为变更；调用侧不许再 `.trim()`（双重 trim），需要原文用 toStr；③ 空串是如实回答不是兜底值 —— 「读不出时该给什么」是 fallback 形（第二个入参）的事，强行并进来会让两种语义共用一条实现。
@@ -33,7 +52,7 @@
 - 新增判据 `tests/system-v4196.test.mjs` 9 条（A 组 4 / B 组 2 / C 组 2 / V 组 1）；18 用例对拍 0 diff；C1 需排除内核自身（内核就是这条口径的唯一实现，不是残留复制件）。
 - 纯函数内核新增 1 个文件（`config/str-face.js`），无新增副作用文件。下一批候选（已盘点未动）：`str` 44 处 / 11 变体（24 份逐字等价但分簇复杂）、`esc` 35 处 / 12 变体（18 份逐字相同但 12 变体间行为不等价，须先分簇）、`listOf` 18 处 / 4 变体（15 处等价 + 2 处 items 解包宽口径）、`isPlain` 15 处 / 4 变体（14 处语义等价）。
 
-迭代 311 · v4.195.0 · 20 版 60 只 App 重构第五批：跨 App 重复口径收敛第三炮 —— 数组读取面 safeArr（2026-11-23）
+迭代 311 · v4.195.0 · App 重构第五批：跨 App 重复口径收敛第三炮 —— 数组读取面 safeArr（2026-11-23）
 
 - 【版本升至 4.195.0（五源同源）】沿用第四批的「同名函数体指纹扫描」，重扫 v4.194.0 后新基线：产品码内 `safeArr` 实测 **16 处 / 1 变体** `function safeArr(v) { return Array.isArray(v) ? v : []; }`（15 个 config + 1 个 apps/wallet），零分簇成本，是当时最干净的等价簇。调用点合计 49 处，实参全是属性访问、变量或逻辑表达式。
 - `config/array-face.js`（44 行，纯函数内核）：唯一导出 `safeArr(v)`。三条立场：① **只认真数组** —— `{length:3}` / `{items:[1,2]}` / 'abc' 一律空数组，刻意不扩展成类数组或 items 解包（那是 `listOf` 的宽口径，不同族，合成即造假等价）；② **原样返回不拷贝** —— `safeArr(orig) === orig` 同一引用，刻意不改成 `.slice()`（性能口径变更，不是等价转调）；③ 空数组是如实回答不是兜底值。与 `text-face.js` / `num-face.js` 分工：分别是「这一格是不是字符串」「是不是数组」「数画成人看的串长什么样」。
@@ -43,7 +62,7 @@
 - 新增判据 `tests/system-v4195.test.mjs` 11 条（A 组 4 / B 组 3 / C 组 2 / V 组 1）；16 用例对拍 0 diff，并断言 `NEW(orig) === orig` 确认「原样返回不拷贝」同一引用口径；C2 钉住 `listOf` 宽口径变体（`Array.isArray(v.items)`）至少 2 处仍在场、不许被错误收敛。
 - 纯函数内核新增 1 个文件（`config/array-face.js`），无新增副作用文件。下一批候选（已盘点未动）：`safeStr` 36 处 / 4 变体（15 份逐字等价、11 份带 fallback 参数，需分「有无 fallback」两形）、`str` 43 处 / 12 变体（23 份逐字等价但整体分簇复杂）、`esc` 35 处 / 12 变体（18 份逐字相同但 12 变体间行为不等价，需先分簇再抽）、`listOf` 18 处 / 4 变体（15 处等价 + 2 处 items 解包宽口径）、`isPlain` 15 处 / 4 变体（14 处语义等价）。
 
-# 迭代 310 · v4.194.0 · 20 版 60 只 App 重构第四批：跨 App 重复口径收敛第二炮 —— 文本读取面 toStr（2026-11-23）
+# 迭代 310 · v4.194.0 · App 重构第四批：跨 App 重复口径收敛第二炮 —— 文本读取面 toStr（2026-11-23）
 
 - 【版本升至 4.194.0（五源同源）】选件方法沿用第三批的「同名函数体指纹扫描」，重扫 v4.193.0 后新基线：产品码 4535 个函数名中跨 ≥3 文件出现 87 个，逐组比对函数体变体数。`toStr` 33 处 / 4 变体，其中 **31 处逐字等价** `(typeof v === 'string') ? v : ''`，是最大且语义最单一的等价簇；调用点合计 545 处，实参全是属性访问、变量或逻辑表达式。
 - `config/text-face.js`（52 行，纯函数内核）：唯一导出 `toStr(v)`。三条立场：① 类型严格，非串一律空串，刻意不改成 `String(v == null ? '' : v)`（那会让数字 5 变 '5'，是放宽不是等价）；② 不 trim —— 调用侧显式 trim 是既有形态（archive-app.js 的 `toStr(o.projectId).trim()`），并进来会双重 trim；③ 空串是如实回答不是兜底值。
@@ -55,7 +74,7 @@
 - 下一批候选（已盘点未动）：`safeStr` 36 处 / 4 变体（15 份逐字等价、11 份带 fallback 参数）、`esc` 35 处 / 12 变体（18 份 split/join 形逐字相同但 12 变体间行为不等价，需先分簇）、`safeNum` 19 处 / 5 变体（16 份是 `Number(val)` 弱口径，收敛须改走 `numOrNull`，属行为变更需单独一批）。
 
 
-# 迭代 309 · v4.193.0 · 20 版 60 只 App 重构第三批：跨 App 重复口径收敛（num / numOrSelf / money 展示面）（2026-11-23）
+# 迭代 309 · v4.193.0 · App 重构第三批：跨 App 重复口径收敛（num / numOrSelf / money 展示面）（2026-11-23）
 
 - 【版本升至 4.193.0（五源同源）】选件方向从「逐只抽内核」改为「跨 App 重复口径收敛」。前两批按 App 抽，剩余候选越来越难找到「整块可纯化」的逻辑：`apps/health/bio-races.js`（1840 行）/ `surgery-library.js`（1524 行）纯度 0.00 但本就是纯数据件；`apps/memory/`（9599 行）已高度内核化；`wangxiang-app.js`（1976 行）21 个 thisless 方法但构造函数重度有状态。改做全仓同名函数体指纹扫描，一次定位 44 组跨 ≥3 文件重复函数名，逐组比对函数体变体数，锁定展示面最集中的三处。
 - `config/num-face.js`（84 行，纯函数内核）：`NUMERAL_DASH` / `numeralText(v, dash)` / `moneyText(v, dash)` / `numOrSelf(v, self)` + default 导出。与仓内已有权威件分工明确：`config/num-gate.js`（v3.12.0，`numOrNull` 全仓唯一数值取值门）管「数从哪来」，`config/num-clamp.js`（v3.84.0，有界取数）管「取到的数怎么夹」，本件管「画给人看的串长什么样」。
@@ -67,7 +86,7 @@
 - 下一批候选（已盘点未动）：`esc` 8 变体（35 文件，行为不等价 —— 有的不转 `'`、有的带 max 截断，需先分簇再抽）、`toStr` 4 变体（31 文件，29 处逐字等价为 `(typeof v === 'string') ? v : ''`）、`listOf` 3 变体（15 处，13 处等价）、`isPlain` 4 变体（14 处，11 处等价）、`trimRows` 3 变体（14 处，12 处等价）。
 
 
-# 迭代 308 · v4.192.0 · 20 版 60 只 App 重构第二批：phone / games / diagnose 文本与协议归一面抽取（2026-11-23）
+# 迭代 308 · v4.192.0 · App 重构第二批：phone / games / diagnose 文本与协议归一面抽取（2026-11-23）
 
 - 【版本升至 4.192.0（五源同源）】phone / games / diagnose 三件的归一面抽成独立内核。三件源都是 600~3800 行的类/模块（phone-view.js 4243 行 / games-app.js 3837 行继承 PokerApp / diagnose-data.js 2980 行），类里绝大多数方法在动 this.app / this.currentView / this._phoneCallTtsCache / win / storage / API 冷却 —— 是有副作用的编排，不该整只搬。本版只抽归一面，源侧共 32 个方法体改为一行转调内核。
 - `apps/phone/phone-text-core.js`（181 行，纯函数内核）：通话 AI 回复清洗 / 拒接理由清洗 / 短信批量解析 / TTS 缓存键 / 头像地址归一 / TTS 性别归一 + 3 张常量表。`normalizeWechatAvatarPath` 刻意不自己取 `import.meta.url`，第二参 baseUrl 由调用方给。源文件 `phone-view.js` 6 个方法体改转调（`_cleanAIResponse` 36 行→1 行等）。
@@ -79,7 +98,7 @@
  时剥不掉「发言：」）；`parseWerewolfVoteDecision` 的票型切分按提示词给的紧凑形 `2->3，3->0`（空格分隔形切不出票）。二者与源实现逐字一致。
 
 
-# 迭代 307 · v4.191.0 · 20 版 60 只 App 重构第一炮：weibo / honey 文本与数值归一面抽取（2026-11-23）
+# 迭代 307 · v4.191.0 · App 重构第一炮：weibo / honey 文本与数值归一面抽取（2026-11-23）
 
 - 【版本升至 4.191.0（五源同源）】weibo / honey 两件的清洗面抽成独立内核。两件源都是 2600~5200 行的类，类里绝大多数方法在动 this.state 或自持状态并直写 storage —— 是有副作用的编排，不该整只搬。本版只抽清洗面，源类 15 个方法体改为一行转调内核。
 - `apps/weibo/weibo-text-core.js`（274 行，纯函数内核）：相对时间互转 / @人名归一 / 粉丝数读数 / 评论行解析（IP 属地与「回复」两形态，返回 {ok,reason,out}）+ 4 张常量表。源文件 `weibo-data.js` 2719 → 2623 行，7 个方法体改转调，`_parseCommentLine` 透传保留「不是评论给 null」口径。
@@ -1956,7 +1975,7 @@
 - 【候选来源本版只启用已存模板名,如实留白】OP_PARAMS 里带候选的只有提醒标题与备忘标题,来源都写已存模板名。计划原文还提到选联系人、日期、草稿与结算对象;这些来源本版未接,因为本版能无头验收的只有模板名这条链,接联系人要先有读数口 —— 如实留白而不假装已做。
 - 【交棒改写】本版把 R4-O8 的验收从「界面上有没有下拉」交棒到「不输内部 ID 也能编 加 读不到与没有分得开 加 表外键要求重选」那条路;相关判据一律写成下限形与真跑形(行为面直接调模块、端到端拿假宿主装配),下一版抬版无需二次改写。
 - 【运行时验证边界(如实声明)】本版在无头环境验证的是:四态互不同形、面名表覆盖且不造面、登记表只登记真参数、纯函数零副作用、三处参数都有中文名、认不出即说认不出、读不到与没有不同形、候选归一四件、表外键要求重选且空值不生成垃圾行、预览写步计数与条件中文与认不出如实说、空草稿与读不到分开、视图不直出裸键且真消费四口、候选下拉三件齐全、候选读不到传 null、预览块真渲染、假宿主端到端装配与点选真写进草稿与渲染不露键与台账读不到亮态。未做真机上点选一条流程跑一遍的实机旅程,以及联系人与日期候选来源的接入。
-- 【定向判据与版本锚】新套件 tests/system-v4200.test.mjs 三十例全绿(A 口径五、B 行为十、C 接线五、D 端到端四、G 负控制五含反向对照、E 版本锚一);抬版按仓内唯一范式 tools/bump_v4200.py 对齐 tools/bump_v4190.py。
+- 【定向判据与版本锚】新套件 tests/system-v4199-ui.test.mjs 三十例全绿(A 口径五、B 行为十、C 接线五、D 端到端四、G 负控制五含反向对照、E 版本锚一);抬版按仓内唯一范式 tools/bump_v4200.py 对齐 tools/bump_v4190.py。
 - 【版本升至 4.20.0（五源同源）】update-log 与 manifest 与 package 与 index.js 常量与公告块与 ITERATION_LOG 五处同步;本段共 16 条。
 
 ## 迭代 178 — v4.19.0 · 第四期 R4-O7 通知按事情收拢
@@ -8236,7 +8255,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ---
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`4.188.0`（五源同源）
+- **当前版本**：`4.199.0`（五源同源）
 - **门禁基线**（**v3.27.0 实测**，`npm run check` 全链实跑：**十一道具名门逐门 0 红** · `RC=0`）：
   语法 **486 文件** / 导入可解析门 **282 文件 439 条**静态说明符 / 死导出 **1122 声明** · 零消费 24（**未涨**）/
   生命周期 **46 App 类 59 槽位** / 注册 APPS id 51、懒加载分支 51 / keys **185 键**使用点 185 登记（会话隔离 132 · 全局 50 · 历史键 3）/

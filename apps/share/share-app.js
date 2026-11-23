@@ -99,6 +99,17 @@ export class ShareApp {
         return { ok: true, saved: this._save() };
     }
 
+    /**
+     * [v4.199.0] 换会话：本 App 的读数全是**会话数据**（落盘键按会话隔离），
+     * 换会话必须整份重取 —— 与构造走同一条路径（this._load()），
+     * 否则 A 会话的『分享台账』会原样留在 B 会话里（v255 的 A5 盯的就是这个口）。
+     */
+    onChatChanged() {
+        this.storageOk = true;
+        this._view = null;
+        this._load();
+    }
+
     destroy() { this._view = null; }
 }
 

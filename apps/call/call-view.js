@@ -67,9 +67,9 @@ export class CallView {
               + '<button class="call-btn" type="button" data-act="begin" data-scene="' + st.scene + '">以当前场景发起通话</button>';
 
         const sigRow = '<div class="call-sig">信号 '
-            + '<button class="call-step" type="button" data-act="sig" data-dir="-1">-</button>'
+            + '<button class="call-step" type="button" data-act="sig" data-dir="-1" aria-label="信号减一">-</button>'
             + '<strong>' + st.signalBars + '/5</strong>'
-            + '<button class="call-step" type="button" data-act="sig" data-dir="1">+</button>'
+            + '<button class="call-step" type="button" data-act="sig" data-dir="1" aria-label="信号加一">+</button>'
             + '</div>';
 
         const hist = st.history.length

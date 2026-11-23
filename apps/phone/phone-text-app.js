@@ -21,12 +21,29 @@ export class PhoneTextApp {
     constructor(shell, storage) {
         this.shell = shell;
         this.storage = storage;
+        this._initFromStorage();
+    }
+
+    /**
+     * 构造与换会话共用同一条重取路径（v4.199.0 从构造函数抽出，只为让 onChatChanged 不抄一份）。
+     * 读的是**本会话**的存储快照，所以换会话 = 回构造态再读一次。
+     */
+    _initFromStorage() {
         this.lastInput = null;
         this.lastOut = null;
         this._view = null;
         const snap = this._readSnapshot();
         if (snap) { this.lastInput = snap.input || null; this.lastOut = snap.out || null; }
     }
+
+    /**
+     * [v4.199.0] 换会话：上次归一是**会话数据**（落盘键按会话隔离），
+     * 不重取的话，上一会话的读数会原样出现在新会话里（v255 的 A5 盯的就是这个口）。
+     */
+    onChatChanged() {
+        this._initFromStorage();
+    }
+
 
     _readSnapshot() {
         try {

@@ -14,6 +14,20 @@ import { parseJsonTolerant } from '../../config/json-symbol-repair.js';
 import { filterSettings as _r22FilterSettings, settingsFilterNote } from '../../config/settings-filter.js?v=4.157.0&r=20261116-r22';
 import { a11yAudit as _r22A11yAudit, a11yNote } from '../../config/a11y-audit.js?v=4.157.0&r=20261116-r22';
 import { mountIaPanel } from './settings-ia-panel.js?v=4.157.0&r=20261119-r25o5';
+/* [v4.199.0 · R27-U1] 手机取色纯函数族：字符串 -> 颜色与 rgb <-> hsv 的唯一真源。
+ *   本节只消费，不再本地实现：此前 7 个函数 + 1 个常量写在本文件里（149~231 行），
+   与 config/phone-color-face.js 各有一份，改一处另一处必漂。
+ *   applyPhoneShellScale / applyGlobalFontScale 会写 document.documentElement.style，是副作用面，刻意不抽。 */
+import {
+    PHONE_FRAME_COLOR_DEFAULT,
+    parsePhoneHexColor,
+    normalizePhoneHexColor,
+    clampPhoneColorNumber,
+    phoneHexToRgb,
+    phoneRgbToHex,
+    phoneRgbToHsv,
+    phoneHsvToRgb
+} from '../../config/phone-color-face.js';
 /* [v3.81.0 · A6] 便携负载的纯函数对：魔标校验 + 按内容去重追加（三处导入共用同一份口径）。
  *   此前三处（NAI 预设 / GPT 预设 / ComfyUI 工作流）各自解析、各自按名去重 ——
  *   同一份文件导两次就多一份（id 每次新生成、名字又被改名规则绕开）。 */
@@ -104,7 +118,6 @@ const PHONE_SHELL_SCALE_DEFAULT = 100;
 const PHONE_FONT_SCALE_MIN = 70;
 const PHONE_FONT_SCALE_MAX = 130;
 const PHONE_FONT_SCALE_DEFAULT = 100;
-const PHONE_FRAME_COLOR_DEFAULT = '#1a1a1a';
 const PHONE_GLOBAL_TEXT_COLOR_DEFAULT = '#000000';
 const LOBBY_LINK_CHARACTER_IDS_KEY = 'phone-lobby-link-character-ids';
 const LOBBY_LINK_GROUP_IDS_KEY = 'phone-lobby-link-group-ids';
@@ -156,78 +169,6 @@ function normalizePhoneFontScalePercent(value) {
     const raw = Number.parseFloat(value);
     if (!Number.isFinite(raw)) return PHONE_FONT_SCALE_DEFAULT;
     return Math.max(PHONE_FONT_SCALE_MIN, Math.min(PHONE_FONT_SCALE_MAX, Math.round(raw)));
-}
-
-function parsePhoneHexColor(value) {
-    let clean = String(value || '').trim();
-    if (!clean) return null;
-    if (!clean.startsWith('#')) clean = `#${clean}`;
-    if (/^#[0-9a-f]{3}$/i.test(clean)) {
-        clean = `#${clean.slice(1).split('').map(char => char.repeat(2)).join('')}`;
-    }
-    return /^#[0-9a-f]{6}$/i.test(clean) ? clean.toUpperCase() : null;
-}
-
-function normalizePhoneHexColor(value, fallback = PHONE_FRAME_COLOR_DEFAULT) {
-    return parsePhoneHexColor(value) || parsePhoneHexColor(fallback) || '#1A1A1A';
-}
-
-function clampPhoneColorNumber(value, min, max) {
-    const number = Number(value);
-    return Math.min(max, Math.max(min, Number.isFinite(number) ? number : min));
-}
-
-function phoneHexToRgb(value) {
-    const hex = normalizePhoneHexColor(value).slice(1);
-    return [
-        Number.parseInt(hex.slice(0, 2), 16),
-        Number.parseInt(hex.slice(2, 4), 16),
-        Number.parseInt(hex.slice(4, 6), 16)
-    ];
-}
-
-function phoneRgbToHex(rgb) {
-    return `#${rgb.map(channel => Math.round(clampPhoneColorNumber(channel, 0, 255)).toString(16).padStart(2, '0')).join('')}`.toUpperCase();
-}
-
-function phoneRgbToHsv(rgb) {
-    const [r, g, b] = rgb.map(channel => clampPhoneColorNumber(channel, 0, 255) / 255);
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const delta = max - min;
-    let hue = 0;
-
-    if (delta) {
-        if (max === r) hue = 60 * (((g - b) / delta) % 6);
-        else if (max === g) hue = 60 * (((b - r) / delta) + 2);
-        else hue = 60 * (((r - g) / delta) + 4);
-    }
-    if (hue < 0) hue += 360;
-
-    return {
-        h: hue,
-        s: max ? delta / max : 0,
-        v: max
-    };
-}
-
-function phoneHsvToRgb({ h, s, v }) {
-    const hue = ((clampPhoneColorNumber(h, 0, 360) % 360) + 360) % 360;
-    const saturation = clampPhoneColorNumber(s, 0, 1);
-    const value = clampPhoneColorNumber(v, 0, 1);
-    const chroma = value * saturation;
-    const x = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
-    const match = value - chroma;
-    let channels;
-
-    if (hue < 60) channels = [chroma, x, 0];
-    else if (hue < 120) channels = [x, chroma, 0];
-    else if (hue < 180) channels = [0, chroma, x];
-    else if (hue < 240) channels = [0, x, chroma];
-    else if (hue < 300) channels = [x, 0, chroma];
-    else channels = [chroma, 0, x];
-
-    return channels.map(channel => (channel + match) * 255);
 }
 
 function readNonNegativeStorageNumber(storage, key, defaultValue = 0, maxValue = 9999) {

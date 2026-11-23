@@ -46,7 +46,7 @@ export function computePlanBaseline() {
   const cssBytes = live.scale.css_bytes;
 
   const versionLine = `| 版本 | **v${version}**（五源同源） | \`update-log.json\` latest / \`package.json\` |`;
-  const gatesLine = `| 门禁 | \`npm run check\` **${gatesChinese}道静态门全过**；全量 \`node --test tests/*.test.mjs\` **${testFiles} 套件实跑全绿** | \`package.json\` scripts.check / \`tests/\` 实跑 |`;
+  const gatesLine = `| 门禁 | \`npm run check\` **${gatesChinese}道静态门全过**；全量 \`node --test tests/*.test.mjs\` **${testFiles} 套件实跑（存量红在案，逐项见 TODO 顶部与当版条目）** | \`package.json\` scripts.check / \`tests/\` 实跑 |`;
   const volumeLine = `| 体量 | **v${version} 机器台账复算**：apps **${appDirs} 个 App 目录**（\`config/apps.js\` **${appsIds} 条 id**）、config **${configCount}** 件、tests **${testFiles}** 套件、scripts **${scriptsCount}** 件；\`index.js\` **${indexBytes} 字节 / ${indexLines} 行**；\`phone.css\` **${cssBytes} 字节** | \`tools/gen_status_ledger.mjs\` / \`tests/audit/status-ledger.json\` |`;
 
   return {

@@ -81,7 +81,12 @@ test('真仓读数：966 个 .js / 合计与台账 total_lines_max 同源 / 45 �
   /* [v4.189.0] 960 → 966：两件大件（poker-eval / werewolf-rules）各落 3 个真新增 .js（内核 / 控制器 / 视图）+ 1 个 .css（.css 不计入这里的 .js 计数）；
    *   台账已按 --write 重压（45 个大文件 / 合计 401751 行），两侧同源。
    *   不是放宽判据：同一道门照样在跑，只是基准随本版真实新增抬了。 */
-  assert.equal(r.stats.files, 966, '扮到的 .js 数量与当前实际不符（1120 批次 +5 个分片 · iot/share +6 · 四件小 App +12 · 两件大件 +6：937 → 966）');
+  /* [v4.199.0 交棒改写] 不再钉字面文件数：它写成 966，而真读数在 v4.190~v4.199 之间已经到了 997
+   *   （+31 件真新增 .js），这一行从写下那天起就没人再签过 —— 与本版治的「手抄数没有出处」同族。
+   *   改成**两本账同源监护**：扫描面文件数由 --write 写进台账 files_scanned，判据只断言两侧相等；
+   *   下限仍由 MIN_FILES 守（防扫描面塌陷时「零文件零违规」的假绿）。 */
+  assert.equal(r.stats.files, ledger.files_scanned, '现场 .js 数必须与台账 files_scanned 同源（两本账不许各说各话）');
+  assert.ok(r.stats.files >= MIN_FILES, '扫描面文件数低于下限（首个参数塌陷）：' + r.stats.files);
   /* [v4.181.0 交棒改写] 396711 → 398528：这个读数自 v4.163.0 钉下后就没人再签过，而 v4.164 ~ v4.180 十七个版本一直在给 apps/ 加行（台账那边每次 --write 都重签了 total_lines_max，这行字面却没跟着动）—— 它从那时起就是红的，只是逐版回归从没跑到这一套。本版把它按当前真读数重签：这不是放宽判据，是让**两本账同源**：台账的 total_lines_max 与这里的字面必须一致，否则「总量没涨」就只是一句空话。 */
   /* [v4.183.0 交棒改写] 不再钉字面行数，改为断言**两本账同源**：现场合计 === 台账 total_lines_max。
    *   为什么：钉字面的代价是每版动一次 apps/ 就得重签一次（v4.163 钉 396711、v4.181 重签 398528、
@@ -114,7 +119,8 @@ test('「无上界门」这条欠账真的关了：PLAN.md 点名的三个大文
   // [R25-O5] settings-app.js 12798 → 12802：只付 1 行 import + 1 行 mount + 2 行注释；逻辑全在新文件里。
   /* [v4.162.0] 12802 → 12809：本项快照之后的提交在 settings-app.js 里长了 7 行（存量，非本版引入；
    *   干净快照 `git archive HEAD` 上现读就是 12809）。判据钉的是「台账是快照」，故跟着真读数走。 */
-  assert.equal(ledger.files['apps/settings/settings-app.js'].lines_max, 12809);
+  /* [v4.199.0] 12809 → 12750：配色纯函数族搬到 config/phone-color-face.js（−59），天花板跟着压下来。 */
+  assert.equal(ledger.files['apps/settings/settings-app.js'].lines_max, 12750);
   assert.ok(rows.every((r) => r.lines <= DEFAULT_MAX || r.path in ledger.files), '存在未被记账的大文件');
 });
 

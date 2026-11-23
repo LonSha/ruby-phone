@@ -26,6 +26,25 @@
 > 已过门：`syntax` / `import-resolve` / `dead-exports` / `named-import` / `doc-path-claim` / `weak-coercion`（新文件零命中）。
 > **存量红（与本轮无关，留待全量阶段统一处理）**：`system-v4980` A1（PLAN 基线表 348/450/14805 vs 磁盘 349/472/14808）、
 > `weak-coercion` 报 `config/v23-trace.js` 两处弱口径（R23 交付件，本轮未改）。
+> **[v4.199.0 已修] `system-v255` A5**（「rebind 表内每个 App 都实现了 onChatChanged」）——表内 `v4.187.0`~`v4.192.0`
+> 新增的 **15 个表项从未实现该处理器**：share / call / social / daily / keyboard / pokerEval / wwRules / ucRules /
+> biliFmt / musicCore / weiboText / honeyText / phoneText / gamesProtocol / diagnoseReason。换会话时
+> `phone[key]?.onChatChanged?.()` 是可选调用，所以只是**静默不重绑**（不报错）；`v3550` C1/C3 只守反方向
+> （「定义了必须在表里」与「表里键要有挂载点」），因此这条口径长期无人看守。缺陷形态两类：**本就有 `_load()` 的**
+> （5 个）让 `onChatChanged()` 直接调 `_load()`（keyboard 需先回默认值，因为 `_load` 只在存储有值时才覆盖）；
+> **试算台类**（10 个）把构造函数里的初始化体抽成 `_initFromStorage()`，构造与换会话共用同一条路径（不抄第二份）。
+> `iotApp` 顺手补 `_load()` 重取（它真的把设备状态串了会话）。判据仍由 `system-v255` / `system-v3550` 守。
+>
+> **[v4.199.0 全量实跑：HEAD 上就已红的 20 个套件，本版不掩盖也不假装修完]**。证据：用 `git archive HEAD`
+> 打干净快照，逐个串行复跑并与工作区结果逐条对比；本版自己弄红的 4 个（v225 album 监听器 / v3201 文档读数 /
+> v3730 status-ledger / v4148 event_subscribers）已全部修完并验证 OK。既有红清单：`system-v300` / `v3160`
+> （`ENOENT .sourcematerial/Adult_Romance_DirtyTalk_WorldInfo_v941.json`）/ `v3170` / `v3204` / `v3211` / `v324` /
+> `v325` / `v326` / `v327` / `v328` / `v3370` / `v3380` / `v3410` / `v3770` / `v4030` / `v4105` / `v4106` /
+> `v4940` / `v4990` / `wechat-dynamic-avatar-glass`；`v299` 在串行复跑里超时，未进对比表（同样未修）。
+> `v4990` 的病形：5 个试算台（weibotext / honeytext / phonetext / gamesprotocol / diagnosereason）没进
+> `APP_CATEGORY`、没有像素图标 URL、于是被静默 fallback 进 system 壳 —— 三条都是「缺一行数据」，但补之前要先定
+> 图标资产口径（`phone/icons/` 的命名与产出方式），故留待单独一轮。19 道静态门除 `check:file`（rc=2「门
+> `browser` 没有登记主读数」，HEAD 上同样 rc=2，非本轮引入）外全绿。
 >
 > **第二十三期（2026-11-17，已收口 · 历史留档）**：`R23-O1～O9` 收口 8/9（`O8` 未开工，已移交 `R24-O9`），
 > `R23-X1～X9` 全部交付（`config/v23-trace.js` 166 行 + 32 条判据）。下方记录保留为历史。
@@ -89,11 +108,13 @@
 > ④`R21-O7`/`O8`/`O9` `FORWARD=2` 纯转发层 + 跨 App 一物多账 + 事件派发无订阅 ⇒ 三笔结构性收尾。
 
 ---
-> **最近更新：v4.198.0**（20 版 60 只 App 重构计划第八批：跨 App 重复口径收敛第六炮 —— HTML 转义面 `esc`，18 份逐字全等的复制件收敛为 `config/esc-face.js`；判据 tests/system-v4198.test.mjs 14 条，三道静态门禁全绿）
-> **上一更新：v4.197.0**（20 版 60 只 App 重构计划第七批：跨 App 重复口径收敛第五炮 —— 宽松文本规整读取面 `str`，24 份逐字等价的复制件收敛为 `config/loose-str-face.js`；判据 tests/system-v4197.test.mjs 10 条，19 道门禁全绿）
-> **上一更新：v4.196.0**（20 版 60 只 App 重构计划第六批：跨 App 重复口径收敛第四炮 —— 字符串规整读取面 `safeStr`，15 份逐字等价的复制件收敛为 `config/str-face.js`；判据 tests/system-v4196.test.mjs 9 条，19 道门禁全绿）
-> **上一更新：v4.194.0**（20 版 60 只 App 重构计划第四批：跨 App 重复口径收敛第二炮 —— 文本读取面 `toStr`，31 处逐字等价的复制件收敛为 `config/text-face.js`，12 处 export 形 + 19 处私有形转调；判据 tests/system-v4194.test.mjs 11 条，19 道门禁全绿）
-> **上一更新：v4.191.0**（20 版 60 只 App 重构计划第一炮：weibo / honey 两件的文本与数值归一面抽成独立内核，源类 15 个方法体改为一行转调；wechat 件纯度未达抽取条件顺延；判据 tests/system-v4191.test.mjs 15 条，19 道门禁全绿）
+> **最近更新：v4.199.0**（App 重构：回改沿用了 8 个版本却没有出处的「20 版 60 只 App」这个数，22 处文字改为不带手抄数的「App 重构」；新增 tools/gen_app_ledger.mjs + tests/audit/app-refactor-ledger.json 把「已重构 8 / 待重构 93 / 目录 101 / id 105」变成机器可读账；判据 tests/system-v4199.test.mjs 16 条，全绿）
+
+> **上一更新：v4.198.0**（App 重构计划第八批：跨 App 重复口径收敛第六炮 —— HTML 转义面 `esc`，18 份逐字全等的复制件收敛为 `config/esc-face.js`；判据 tests/system-v4198.test.mjs 14 条，三道静态门禁全绿）
+> **上一更新：v4.197.0**（App 重构计划第七批：跨 App 重复口径收敛第五炮 —— 宽松文本规整读取面 `str`，24 份逐字等价的复制件收敛为 `config/loose-str-face.js`；判据 tests/system-v4197.test.mjs 10 条，19 道门禁全绿）
+> **上一更新：v4.196.0**（App 重构计划第六批：跨 App 重复口径收敛第四炮 —— 字符串规整读取面 `safeStr`，15 份逐字等价的复制件收敛为 `config/str-face.js`；判据 tests/system-v4196.test.mjs 9 条，19 道门禁全绿）
+> **上一更新：v4.194.0**（App 重构计划第四批：跨 App 重复口径收敛第二炮 —— 文本读取面 `toStr`，31 处逐字等价的复制件收敛为 `config/text-face.js`，12 处 export 形 + 19 处私有形转调；判据 tests/system-v4194.test.mjs 11 条，19 道门禁全绿）
+> **上一更新：v4.191.0**（App 重构计划第一炮：weibo / honey 两件的文本与数值归一面抽成独立内核，源类 15 个方法体改为一行转调；wechat 件纯度未达抽取条件顺延；判据 tests/system-v4191.test.mjs 15 条，19 道门禁全绿）
 > **上一更新：v4.190.0**（大件抽取：undercover 规则 / bilibili 换算 / music 歌词与播放模式 三件可纯化部分一次抽成独立内核，源类一行未动（music 只把 6 个方法体改成转调内核）；判据 tests/system-v4190.test.mjs 19 门全绿，16 道门禁全绿）
 > **上一更新：v4.189.0**（大件抽取：poker 牌型评估 / werewolf 规则判定 两件可纯化部分抽成独立内核，源类一行未动；判据 tests/system-v4189.test.mjs 21 门全绿，16 道门禁全绿）
 > **上一更新：v4.188.0**（R21-X6/X7/X8/X9 批次 F 收官四座一次交付：X6 App 变动摘要 —— 唯一桥 config/app-change-digest.js 三态面七归因，phone:goHome / phone:openApp 双咽喉只记剧情毫秒锚点不补墙钟，微信列表顶部画变动条且仅 digest 面出现（一直待着不动不出现 = 验收语对照半边）；X7 设备物理叙事 —— config/device-physical-narrative.js 六档四态、电量档压过温度档、normal 恒零候选（电量 90% 一句都不提 = 对照半边）、频率门 fail-closed（权重读不到不许提），挂生活流 onTick 电量被 tick 后那一拍，face 走中枢唯一读数口、weight 来自在场仲裁，候选挂 _x7 由角色挑；X8 恢复点差异预览 —— config/backup-diff-view.js 覆盖先于新增、appsTotal 全量计数与可截列表分离（自检抓到计数被上限污染的真缺陷：18 个 app 被截成 12 仍按 12 报）、默认只勾新增不默勾覆盖，backupdesk 快照面接线并消掉 App 层自拼的第二份文案（文案唯一实现归桥）；X9 剧情周回顾 —— config/weekly-recap.js 四态分形每条可回源、空周逐字说「本周没什么特别的事」不编条目、轮转抽取防话痨 app 独吞、自检首跑抓到用例设计错（perAppCap=2 时 2 个 app 永远凑不满 5 条是上限语义在工作），宿主惰性聚合四源事件账挂 _x9Events，日记封面顶部画「📅 本周回顾」。判据 tests/system-v4157.test.mjs 48 例全绿（v4156 E4 版本锚同步改下限形，复跑 19 例全绿）。上一版：R21-X3 静音与勿扰的剧情内解释：唯一桥 config/silence-narrative-bridge.js 纯函数六时段桶五态分形，通知咽喉在免打扰门处把「为什么没看到」只讲成候选句挂 window.VirtualPhone._x3，宿主只在产候选时记 silence_told_cursor，桥零写零 IO。判据 tests/system-v4156.test.mjs 19 例全绿。批次 F 至此全部交付（X4 于 v4.154.0、X3 于 v4.155.0、X6/X7/X8/X9 于本版）。）

@@ -114,6 +114,16 @@ export class IotApp {
         return { ok: true, saved: this._save() };
     }
 
+    /**
+     * [v4.199.0] 换会话：设备状态本身就是会话数据（键 iot_state 命中 CHAT_DATA_PATTERNS 的 /^iot_/），
+     * 所以换会话必须整份重取 —— 否则 A 会话调好的房间读数会原样出现在 B 会话里。
+     * 只丢一次性提示与只读视图引用，不写盘（换会话不该产生副作用）。
+     */
+    onChatChanged() {
+        this.notes = [];
+        this._load();
+    }
+
     destroy() { this._view = null; }
 }
 

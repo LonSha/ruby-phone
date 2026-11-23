@@ -157,12 +157,32 @@ test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
               // [v4.103.0 · R13-O9] 游戏厅：换会话必须丢回合态并重取八款游戏台账
     affairsApp: 'affairs',          // [v4.48.0·第六期 R6-O1] 事务台：换会话必须丢上一次动作归因（_lastAction）
                                     //             与页签（都是实例态），事务 / 参与者 / 待决由咽喉下一次 render 重取
-    commsApp: 'comms'               // [v4.49.0·第六期 R6-O2] 会话台：换会话必须丢选中会话与输入草稿（都是实例态），
+    commsApp: 'comms',              // [v4.49.0·第六期 R6-O2] 会话台：换会话必须丢选中会话与输入草稿（都是实例态），
                                     //             消息 / 来电 / 漏接 / 短信四路都随会话重取（不能把别人的草稿带过来）
+    iotApp: 'iot',                  // [v4.199.0] 智能家居中枢：设备状态是会话数据（关键 iot_state 命中 /^iot_/），
+                                    //            换会话必须整份重取，A 会话的房间读数不能留在 B
+    shareApp: 'share',            // [v4.187.0] 近场快传：有 destroy 出口，读数随会话走
+    callApp: 'call',              // [v4.188.0] 情境通话：同上
+    socialApp: 'social',          // [v4.188.0] 朋友圈：同上
+    dailyApp: 'daily',            // [v4.188.0] 生活织机：同上
+    keyboardApp: 'keyboard',      // [v4.188.0] 口癖联想：同上
+    pokerEvalApp: 'games/poker',  // [v4.189.0] 牌型评估：试算台（子目录）
+    wwRulesApp: 'games/werewolf', // [v4.189.0] 狼人杀规则：试算台（子目录）
+    ucRulesApp: 'games/undercover', // [v4.190.0] 谁是卧底规则：试算台（子目录）
+    biliFmtApp: 'bilibili',       // [v4.190.0] B 站换算：试算台
+    musicCoreApp: 'music',        // [v4.190.0] 歌词/播放模式：试算台
+    weiboTextApp: 'weibo',        // [v4.191.0] 微博文本解析：试算台
+    honeyTextApp: 'honey',        // [v4.191.0] 蜜语文本清洗：试算台
+    phoneTextApp: 'phone',        // [v4.192.0] 通话文本归一：试算台
+    gamesProtocolApp: 'games',    // [v4.192.0] 游戏协议解析：试算台
+    diagnoseReasonApp: 'diagnose', // [v4.192.0] 诊断归因：试算台
   };
   // 同一目录下可能有多份 *-app.js（apps/memory/ 下 memory-app.js 与 graph-app.js 并存），
   // 须按 key 精确命中对应文件，否则文件系统顺序可能先命中错的那个而假绿。
-  const fileOverride = { graphApp: 'graph-app.js', memoryApp: 'memory-app.js', lonshaBridge: 'lonsha-bridge.js' };
+  const fileOverride = { graphApp: 'graph-app.js', memoryApp: 'memory-app.js', lonshaBridge: 'lonsha-bridge.js',
+    pokerEvalApp: 'poker-eval-app.js', wwRulesApp: 'werewolf-rules-app.js', ucRulesApp: 'undercover-rules-app.js',
+    biliFmtApp: 'bili-format-app.js', musicCoreApp: 'music-core-app.js', weiboTextApp: 'weibo-text-app.js',
+    honeyTextApp: 'honey-text-app.js', phoneTextApp: 'phone-text-app.js', gamesProtocolApp: 'games-protocol-app.js', diagnoseReasonApp: 'diagnose-reason-app.js' };
   const missing = [];
   for (const k of KEYS) {
     const dir = dirMap[k];

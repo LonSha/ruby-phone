@@ -19,7 +19,7 @@
  * 只在 theme-controller 打开 iOS 拟真外观（data-rp-ios="3"）时由它动态加载并 attach；默认不加载。
  * 关掉 v3 时 detach() 把它做过的每一件事都撤销（DOM、属性、样式表、内联样式全部还原）。
  *
- * 做五件事，每件都可以单独关（attachSkinRuntime 的 opts）：
+ * 做六件事，每件都可以单独关（attachSkinRuntime 的 opts）：
  *   1. skins   按需加载皮肤：公共层一次 + 每个 App 第一次出现时加载 apps/<id>/<id>.v3.css
  *              （识别方式：config/style-skin-v3.js 的类名前缀表；index.js 的 openApp 也可以直接调 ensure(appId)）
  *   2. adopt   「收编」未分层的 App 样式：App 自己插入的 <link href=".../apps/...css"> 和 <style>（例如 wechat-styles、
@@ -34,6 +34,10 @@
  *              视觉隐藏的 <span> 里（textContent 不变，App 里按 textContent 判断状态的代码照常工作，读屏仍可读）。
  *              聊天气泡、朋友圈正文、表情面板、输入框、游戏棋盘等「内容」区域不碰。
  *   5. 以上全部只作用于 root（#phone-panel）内部与 document.head 里的 App 样式，不碰宿主 SillyTavern 的 DOM。
+ *   6. edge    iOS 27 滚动边缘：HIG 2026-06-08 建议优先用自动的滚动边缘样式，给「包含大量控件的顶部工具栏」
+ *              提供更不透明的视觉分隔。这里给 App 里的滚动容器挂 scroll 监听，滚离顶部时在根节点写
+ *              data-rp27-scrolled="1"，由皮肤 CSS 画分隔线（如 settings 的标签栏下沿）；回到顶部移除。
+ *              只加一个属性，不改类名 / 结构 / 任何样式，detach 时属性与监听一起还原。
  * 规矩：本文件不写任何颜色字面量、不写 !important、不含字符图标（正则用 \u 转义书写）。
  * ======================================================== */
 import '../../shared/icons.js';   // 侧效导入：globalThis.LonShaIcons
@@ -207,13 +211,13 @@ function rewriteUrls(cssText, baseHref) {
 export function attachSkinRuntime(root, opts = {}) {
     const doc = opts.doc || (typeof document !== 'undefined' ? document : null);
     if (!root || !doc || typeof root.querySelectorAll !== 'function') return { ensure: async () => null, detach() {}, collect: () => ({ attached: false }), _scan() {} };
-    const on = { skins: opts.skins !== false, adopt: opts.adopt !== false, classify: opts.classify !== false, demote: opts.demote !== false, glyphs: opts.glyphs !== false };
+    const on = { skins: opts.skins !== false, adopt: opts.adopt !== false, classify: opts.classify !== false, demote: opts.demote !== false, glyphs: opts.glyphs !== false, edge: opts.edge !== false };
     const layerize = typeof opts.layerize === 'function' ? opts.layerize : (css) => css;
     const fetchText = typeof opts.fetchText === 'function' ? opts.fetchText : (href) => fetch(href, { cache: 'force-cache' }).then((r) => (r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status))));
     const isOn = () => root.getAttribute('data-rp-ios') === '3';
     const loader = createSkinLoader({ doc, baseUrl: opts.baseUrl || '', isOn });
     const seenApps = new Set();
-    const counts = { apps: 0, adoptedLinks: 0, adoptedStyles: 0, classified: 0, demoted: 0, glyphs: 0, glyphSites: 0, glyphCounters: 0, glyphAttrs: 0 };
+    const counts = { apps: 0, adoptedLinks: 0, adoptedStyles: 0, classified: 0, demoted: 0, glyphs: 0, glyphSites: 0, glyphCounters: 0, glyphAttrs: 0, edge: 0 };
     const classified = new Map();         // 元素 -> { orig: 原始 style 文本, after: 映射后的 style 文本 }
     const classifiedSigs = new Set();
     const appCache = new WeakMap();
@@ -546,12 +550,52 @@ export function attachSkinRuntime(root, opts = {}) {
     let raf = 0;
     const raf$ = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : (f) => setTimeout(f, 16);
     const caf$ = typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : clearTimeout;
+    /* ---------- 6. iOS 27 滚动边缘 ----------
+       App 里真正的滚动容器（.app-body 等）不在固定高度元素上，而浮动的顶部栏是 sticky 的，
+       所以用「滚动位置」而不是 scroll-driven animation：滚离顶部就在根节点置 data-rp27-scrolled，
+       由皮肤 CSS 决定画在哪里（只作用于 App 自己声明为滚动容器的元素，避免误挂）。 */
+    const edgeScroll = new WeakMap();      // 容器 -> 监听器
+    const EDGE_SEL = '.app-body';
+    function edgeSync(el) {
+        const scrolled = el.scrollTop > 1;
+        const had = root.getAttribute('data-rp27-scrolled') === '1';
+        if (scrolled === had) return;
+        if (scrolled) root.setAttribute('data-rp27-scrolled', '1');
+        else {
+            /* 只有所有已挂容器都回到顶部才移除，避免多容器互相覆盖 */
+            let anyScrolled = false;
+            root.querySelectorAll(EDGE_SEL).forEach((c) => { if (c.scrollTop > 1) anyScrolled = true; });
+            if (!anyScrolled) root.removeAttribute('data-rp27-scrolled');
+        }
+    }
+    function edgeEl(el) {
+        if (edgeScroll.has(el)) return;
+        const fn = () => edgeSync(el);
+        el.addEventListener('scroll', fn, { passive: true });
+        edgeScroll.set(el, fn);
+        counts.edge += 1;
+        edgeSync(el);
+    }
+    function edgeTree(scope) {
+        if (!on.edge) return;
+        const base = screenScope(scope);
+        if (!base) return;
+        base.querySelectorAll(EDGE_SEL).forEach(edgeEl);
+    }
+    function unedge() {
+        root.querySelectorAll(EDGE_SEL).forEach((el) => {
+            const fn = edgeScroll.get(el);
+            if (fn) { el.removeEventListener('scroll', fn); edgeScroll.delete(el); }
+        });
+        root.removeAttribute('data-rp27-scrolled');
+    }
     function run(scope) {
         if (!isOn() || detached) return;
         try { detectApps(scope); } catch (_e) { /* 非致命 */ }
         try { classifyTree(scope); } catch (_e) { /* 非致命 */ }
         try { demoteTree(scope); } catch (_e) { /* 非致命 */ }
         try { bridgeTree(scope); } catch (_e) { /* 非致命 */ }
+        try { edgeTree(scope); } catch (_e) { /* 非致命 */ }
     }
     function schedule(node) {
         pending.add(node);
@@ -612,6 +656,8 @@ export function attachSkinRuntime(root, opts = {}) {
         /* 字符图标还原 */
         unbridge();
         unbridgeAttrs();
+        /* 滚动边缘还原 */
+        unedge();
     }
     function collect() {
         return { attached: !detached, on: { ...on }, ...counts, distinctClassified: classifiedSigs.size, inlineMap: !!inlineMap, distinctDemoted: demoted.size, skins: loader.collect() };

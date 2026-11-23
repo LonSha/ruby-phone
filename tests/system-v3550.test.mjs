@@ -23,7 +23,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { routeSurface, readRepoTable } from './_lazy_routes.mjs';
+import { routeSurface, readRepoTable, parseLazyRoutes } from './_lazy_routes.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -87,10 +87,21 @@ function appEntries(root) {
     return out;
 }
 
-/** id → 目录：同名目录优先，否则按 <dir>/<id>-app.js 定位（graph ⇒ memory） */
+/** id → 目录：同名目录优先，否则按 <dir>/<id>-app.js 定位（graph ⇒ memory），
+ *  最后以**懒加载路由表的 module** 为准（v4.199.0 补的第三层）。
+ *  为什么必须有第三层：v4.187~v4.192 那批「试算台」App 的 id 与文件名不同（weibotext ⇒
+ *  apps/weibo/weibo-text-app.js），前两层全落空时按 id === dir 兜底，会去 scandir 一个不存在的
+ *  目录 —— 抛 ENOENT 而不是给出一句可读的红字结论（A1 首跑实测踩中）。
+ *  取路由表而不是手抄一张映射：手抄的映射就是下一个「展示面与真源脱节」的种子。 */
 function idToDir(root, id, dirs) {
     if (dirs.indexOf(id) >= 0) return id;
     for (const d of dirs) if (fs.existsSync(path.join(root, 'apps', d, id + '-app.js'))) return d;
+    for (const r of parseLazyRoutes(readRepoTable())) {
+        if (r.id !== id) continue;
+        const mod = String(r.module || '').replace(/^\.\//, '');
+        const d = path.posix.dirname(mod);
+        if (d.indexOf('apps/') === 0 && d !== 'apps') return d.slice('apps/'.length);
+    }
     return id;
 }
 
@@ -100,12 +111,36 @@ function idToDir(root, id, dirs) {
  *  归属判据：文件 f 属于 App a ⟺ 存在命名前缀 p（p === a，或 p 为该目录下某个
  *  *-app.js 的词干）使 f === p + '.js' 或 f 以 p + '-' 开头；无前缀的文件
  *  （如 global-search-engine.js）归「与目录同名的那件 App」。 */
+/** id → 路由表里的入口文件词干（apps/<dir>/<stem>-app.js 的 stem）。
+ *  [v4.199.0] 归属判据从「id 猜文件名」改为「读路由表」：试算台的 id 与文件名缩写不一致
+ *  （bilifmt ⇒ bili-format-app.js），猜法会把自有文件集算成 0，六面读数随之恒假。 */
+function stemFromRoute(id) {
+    for (const r of parseLazyRoutes(readRepoTable())) {
+        if (r.id !== id) continue;
+        const base = path.posix.basename(String(r.module || ''));
+        return base.endsWith('-app.js') ? base.slice(0, -7) : '';
+    }
+    return '';
+}
+
 function ownedFiles(root, id, dir) {
+    const routeStem = stemFromRoute(id);
+
     const all = fs.readdirSync(path.join(root, 'apps', dir)).filter((f) => f.endsWith('.js') && !f.includes('.__neg__.'));
-    const stems = all.filter((f) => f.endsWith('-app.js')).map((f) => f.slice(0, -7));
+    /* [v4.199.0] 词干必须**从长到短**匹配：同目录里 'weibo' 是 'weibo-text' 的前缀，
+     *   先撞上短的那条就会把 weibo-text-app.js 判给主 App（ids 互串的第二种形态）。 */
+    const stems = all.filter((f) => f.endsWith('-app.js')).map((f) => f.slice(0, -7)).sort((a, b) => b.length - a.length);
     if (stems.length <= 1) return all;
     return all.filter((f) => {
-        for (const s of stems) if (f === s + '.js' || f.indexOf(s + '-') === 0) return s === id;
+        for (const s of stems) {
+            /* [v4.199.0] 词干与 id 的比较必须忽略连字符：试算台的 id 是 weibotext，
+             *   而文件词干是 weibo-text（六面读数曾因这一步恒假 —— files 直接为 0，
+             *   F1/F5 全判 false，等于这批 App 在矩阵里根本没被看见）。 */
+            /* id 与词干的对应关系**以路由表为准**：bilifmt 的词干是 bili-format（缩写不同），
+             *   光看前缀或去连字符都对不上。 */
+            const same = s === id || s.split('-').join('') === id.split('-').join('') || s === routeStem;
+            if (f === s + '.js' || f.indexOf(s + '-') === 0) return same;
+        }
         return id === dir;
     });
 }
@@ -765,3 +800,7 @@ test('D9 真仓只读：全部破坏跑完后，真仓六面判据必须仍然�
     assert.deepEqual(naFaceProblems(ROOT), []);
     assert.deepEqual(rebindProblems(ROOT), []);
 });
+
+/* [v4.199.0] 复算出入口：供 tools 侧一次性生成矩阵行用（判据口径不因此变成两处：
+ * 这里只导出**同一个** recompute，禁止在工具里再写一份取数）。 */
+export { recompute };

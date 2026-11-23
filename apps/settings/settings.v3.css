@@ -219,7 +219,39 @@
 @layer rp.skins.curated {
     /* ---- 设置：iOS 26 inset grouped（与 v3 .rp3-list 同一组尺寸），大圆角 26、行高 44/52、发丝线 ---- */
     #phone-panel[data-rp-ios="3"] :is(.settings-app, .yzp-settings-app) { background: var(--lt-sys-grouped-bg); color: var(--lt-sys-label); font-family: var(--lt-font-ios); }
-    #phone-panel[data-rp-ios="3"] :is(.settings-app-header, .yzp-settings-header) { background: var(--lt-sys-grouped-bg); border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; min-block-size: var(--rp3-nav-h); }
+    /* ---- 设置 v3.7：iOS 27 Liquid Glass ---- 依据 Apple 2026-09-14 发布公告与 HIG Materials / Scroll Views：
+       a. 栏背景去掉自定义实底（222 行原把 header 改回 --lt-sys-grouped-bg 并关掉 backdrop-filter，恰好抵消了
+          逐站点映射给的 gl 模糊），改用 Liquid Glass 常规变体：fill + rim + blur + 顶部镜面高光；
+       b. iOS 27 新增「玻璃元素周围一圈加深的边缘」，取 --lt-glass-rim（含 inset 高光）而非单色描边；
+       c. 滚动边缘：内容滚到浮动栏下方时给一条更不透明的分隔（HIG 2026-06-08 建议优先用自动滚动边缘样式），
+           这里用 ::after 画在 tabs 下沿，不动 App 源码；
+       d. Liquid Glass 只用于功能层（导航栏 / 标签栏），内容层的分组卡仍走标准材质 —— 与 HIG Materials 的分层一致。 ---- */
+    #phone-panel[data-rp-ios="3"] :is(.settings-app-header, .yzp-settings-header) {
+        min-block-size: var(--rp3-nav-h);
+        background: var(--lt-glass-fill); border: 0; box-shadow: none;
+        -webkit-backdrop-filter: var(--lt-glass-blur); backdrop-filter: var(--lt-glass-blur);
+    }
+    /* 镜面高光：只在栏顶部一道，随滚动不移动（iOS 27 边缘高光固定在顶部与底部） */
+    #phone-panel[data-rp-ios="3"] :is(.settings-app-header, .yzp-settings-header)::after {
+        content: ""; position: absolute; inset-block-start: 0; inset-inline: 0; block-size: 50%;
+        background: var(--lt-glass-specular); pointer-events: none;
+    }
+    /* 玻璃加深边缘：栏上下各一道 inset 高光，中间一圈发丝rim */
+    #phone-panel[data-rp-ios="3"] :is(.settings-app-header, .yzp-settings-header) { box-shadow: var(--lt-glass-rim); }
+    /* 标签栏：同样去掉自定义实底（原 rgba(247,247,247,0.96) + blur(10px），那是 iOS 26 之前的手写玻璃） */
+    #phone-panel[data-rp-ios="3"] :is(.settings-tabs, .yzp-settings-tabs) {
+        background: var(--lt-glass-fill-strong); border: 0; box-shadow: none;
+        -webkit-backdrop-filter: var(--lt-glass-blur-strong); backdrop-filter: var(--lt-glass-blur-strong);
+    }
+    /* 滚动边缘分隔：tabs 下沿一道更不透明的线，仅当页面已滚动（根节点带 data-rp27-scrolled）时出现 */
+    #phone-panel[data-rp-ios="3"] :is(.settings-tabs, .yzp-settings-tabs)::after {
+        content: ""; position: absolute; inset-block-end: 0; inset-inline: 0; block-size: var(--lt-hairline);
+        background: var(--lt-sys-separator); opacity: 0; transition: opacity 180ms ease;
+    }
+    #phone-panel[data-rp-ios="3"][data-rp27-scrolled] :is(.settings-tabs, .yzp-settings-tabs)::after { opacity: 1; }
+    /* 悬浮返回钮：与栏同材质，压在内容之上仍可读 */
+    #phone-panel[data-rp-ios="3"] :is(.settings-app-header, .yzp-settings-header) :is(.yzp-settings-home-back, .phone-back-button) { background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim), var(--lt-glass-rim); }
+
     #phone-panel[data-rp-ios="3"] .yzp-settings-home-back { inline-size: var(--rp3-glass-btn); block-size: var(--rp3-glass-btn); border: 0; border-radius: 999px; background: var(--rp33-glassbtn-bg); box-shadow: var(--rp33-glassbtn-rim); color: var(--lt-sys-label); }
     #phone-panel[data-rp-ios="3"] :is(.yzp-settings-tabs, .settings-tabs) { margin: var(--rp33-sp-2) var(--rp3-margin); padding: 2px; border: 0; border-radius: 999px; background: var(--rp33-seg-bg); box-shadow: none; }
     #phone-panel[data-rp-ios="3"] :is(.yzp-settings-tab-button, .settings-tab-btn) { min-block-size: var(--rp33-tab-h); padding-inline: var(--rp33-sp-3); border: 0; border-radius: 999px; background: transparent; color: var(--lt-sys-label-2); font: 600 var(--lt-ios-subhead-size) / 1 var(--lt-font-ios); box-shadow: none; }

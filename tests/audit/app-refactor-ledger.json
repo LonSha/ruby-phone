@@ -1,0 +1,980 @@
+{
+  "schema": "app-refactor-ledger@1",
+  "generated_by": "tools/gen_app_ledger.mjs",
+  "refactor_marker": "-core.js",
+  "refactor_marker_note": "已重构 = 该 App 目录下存在至少一个 *-core.js（四件套第一件）。js_lines 为该目录全部 .js 行数合计，不是单个文件；settings 的 config/phone-color-face.js 属跨 App 复用纯函数族，与 apps/<dir>/*-core.js 不同层，不计入本判据。只证明内核抽出，不证明行为等价 / 接线完整 / 真机跑对",
+  "scale": {
+    "app_dirs": 101,
+    "apps_ids": 105,
+    "dir_only": [
+      "audio",
+      "call",
+      "darknet",
+      "hardware",
+      "investigation",
+      "moments",
+      "network",
+      "security"
+    ],
+    "id_only": [
+      "weibotext",
+      "honeytext",
+      "phonetext",
+      "gamesprotocol",
+      "diagnosereason",
+      "graph",
+      "callscene",
+      "pokereval",
+      "wwrules",
+      "ucrules",
+      "bilifmt",
+      "musiccore"
+    ]
+  },
+  "counts": {
+    "refactored": 8,
+    "pending": 93,
+    "total_dirs": 101
+  },
+  "refactored_dirs": [
+    "diagnose",
+    "games",
+    "health",
+    "honey",
+    "music",
+    "phone",
+    "wechat",
+    "weibo"
+  ],
+  "pending_dirs": [
+    "accessdesk",
+    "accounting",
+    "achievement",
+    "affairs",
+    "album",
+    "annidate",
+    "archive",
+    "asset",
+    "audio",
+    "avatarframe",
+    "backupdesk",
+    "bilibili",
+    "block",
+    "calendar",
+    "call",
+    "caphealth",
+    "cardtable",
+    "chars",
+    "cheat",
+    "clock",
+    "comms",
+    "cotdesk",
+    "creationdesk",
+    "daily",
+    "darknet",
+    "date",
+    "diagdesk",
+    "diary",
+    "dirtytalk",
+    "doujin",
+    "focus",
+    "freehome",
+    "gacha",
+    "hardware",
+    "investigation",
+    "iot",
+    "kettle",
+    "keyboard",
+    "ledger",
+    "lexiscore",
+    "lofter",
+    "loverspace",
+    "magazine",
+    "memory",
+    "memtable",
+    "mofo",
+    "moments",
+    "mood",
+    "musicdesk",
+    "needsim",
+    "network",
+    "notifications",
+    "peek",
+    "periodmath",
+    "piggy",
+    "pixiv",
+    "place",
+    "playbook",
+    "plotline",
+    "profile",
+    "punchcard",
+    "pvdesk",
+    "reading",
+    "recall",
+    "regexfilter",
+    "search",
+    "security",
+    "settings",
+    "share",
+    "shop",
+    "social",
+    "socialguard",
+    "soundkit",
+    "sourcebook",
+    "stickerdesk",
+    "sullydesk",
+    "summdesk",
+    "taobao",
+    "tarot",
+    "taskentry",
+    "theater",
+    "tieba",
+    "timeweaver",
+    "traveldesk",
+    "usage",
+    "uterus",
+    "wallet",
+    "wangxiang",
+    "weather",
+    "widget",
+    "workflow",
+    "worldpulse",
+    "xhs"
+  ],
+  "rows": [
+    {
+      "dir": "accessdesk",
+      "js_files": 2,
+      "js_lines": 290,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "accounting",
+      "js_files": 3,
+      "js_lines": 803,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "achievement",
+      "js_files": 3,
+      "js_lines": 303,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "affairs",
+      "js_files": 6,
+      "js_lines": 664,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "album",
+      "js_files": 5,
+      "js_lines": 2664,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "annidate",
+      "js_files": 3,
+      "js_lines": 478,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "archive",
+      "js_files": 7,
+      "js_lines": 2586,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "asset",
+      "js_files": 16,
+      "js_lines": 9386,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "audio",
+      "js_files": 6,
+      "js_lines": 406,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": false
+    },
+    {
+      "dir": "avatarframe",
+      "js_files": 3,
+      "js_lines": 885,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "backupdesk",
+      "js_files": 4,
+      "js_lines": 1140,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "bilibili",
+      "js_files": 6,
+      "js_lines": 2913,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "block",
+      "js_files": 3,
+      "js_lines": 1174,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "calendar",
+      "js_files": 4,
+      "js_lines": 3823,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "call",
+      "js_files": 5,
+      "js_lines": 477,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": false
+    },
+    {
+      "dir": "caphealth",
+      "js_files": 2,
+      "js_lines": 238,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "cardtable",
+      "js_files": 3,
+      "js_lines": 280,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "chars",
+      "js_files": 4,
+      "js_lines": 1243,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "cheat",
+      "js_files": 3,
+      "js_lines": 695,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "clock",
+      "js_files": 3,
+      "js_lines": 656,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "comms",
+      "js_files": 2,
+      "js_lines": 481,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "cotdesk",
+      "js_files": 3,
+      "js_lines": 1745,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "creationdesk",
+      "js_files": 4,
+      "js_lines": 1924,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "daily",
+      "js_files": 4,
+      "js_lines": 394,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "darknet",
+      "js_files": 3,
+      "js_lines": 219,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": false
+    },
+    {
+      "dir": "date",
+      "js_files": 3,
+      "js_lines": 2008,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "diagdesk",
+      "js_files": 3,
+      "js_lines": 1750,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "diagnose",
+      "js_files": 6,
+      "js_lines": 5560,
+      "core_files": [
+        "diagnose-reason-core.js"
+      ],
+      "refactored": true,
+      "has_app_id": true
+    },
+    {
+      "dir": "diary",
+      "js_files": 3,
+      "js_lines": 4483,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "dirtytalk",
+      "js_files": 3,
+      "js_lines": 816,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "doujin",
+      "js_files": 3,
+      "js_lines": 2348,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "focus",
+      "js_files": 3,
+      "js_lines": 832,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "freehome",
+      "js_files": 3,
+      "js_lines": 331,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "gacha",
+      "js_files": 3,
+      "js_lines": 549,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "games",
+      "js_files": 43,
+      "js_lines": 22288,
+      "core_files": [
+        "games-protocol-core.js"
+      ],
+      "refactored": true,
+      "has_app_id": true
+    },
+    {
+      "dir": "hardware",
+      "js_files": 8,
+      "js_lines": 645,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": false
+    },
+    {
+      "dir": "health",
+      "js_files": 23,
+      "js_lines": 8203,
+      "core_files": [
+        "descriptions-core.js",
+        "family-core.js",
+        "intimacy-core.js",
+        "medical-core.js",
+        "physio-core.js",
+        "sires-core.js",
+        "skill-core.js"
+      ],
+      "refactored": true,
+      "has_app_id": true
+    },
+    {
+      "dir": "honey",
+      "js_files": 6,
+      "js_lines": 15167,
+      "core_files": [
+        "honey-text-core.js"
+      ],
+      "refactored": true,
+      "has_app_id": true
+    },
+    {
+      "dir": "investigation",
+      "js_files": 4,
+      "js_lines": 312,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": false
+    },
+    {
+      "dir": "iot",
+      "js_files": 4,
+      "js_lines": 567,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "kettle",
+      "js_files": 3,
+      "js_lines": 1591,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "keyboard",
+      "js_files": 4,
+      "js_lines": 330,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "ledger",
+      "js_files": 3,
+      "js_lines": 361,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "lexiscore",
+      "js_files": 3,
+      "js_lines": 296,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "lofter",
+      "js_files": 3,
+      "js_lines": 2277,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "loverspace",
+      "js_files": 3,
+      "js_lines": 1992,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "magazine",
+      "js_files": 3,
+      "js_lines": 2049,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "memory",
+      "js_files": 16,
+      "js_lines": 9606,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "memtable",
+      "js_files": 3,
+      "js_lines": 1552,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "mofo",
+      "js_files": 4,
+      "js_lines": 2596,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "moments",
+      "js_files": 3,
+      "js_lines": 300,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": false
+    },
+    {
+      "dir": "mood",
+      "js_files": 2,
+      "js_lines": 449,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "music",
+      "js_files": 7,
+      "js_lines": 4432,
+      "core_files": [
+        "music-core.js"
+      ],
+      "refactored": true,
+      "has_app_id": true
+    },
+    {
+      "dir": "musicdesk",
+      "js_files": 3,
+      "js_lines": 2531,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "needsim",
+      "js_files": 3,
+      "js_lines": 2166,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "network",
+      "js_files": 7,
+      "js_lines": 586,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": false
+    },
+    {
+      "dir": "notifications",
+      "js_files": 5,
+      "js_lines": 1200,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "peek",
+      "js_files": 3,
+      "js_lines": 1073,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "periodmath",
+      "js_files": 3,
+      "js_lines": 457,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "phone",
+      "js_files": 10,
+      "js_lines": 6212,
+      "core_files": [
+        "phone-text-core.js"
+      ],
+      "refactored": true,
+      "has_app_id": true
+    },
+    {
+      "dir": "piggy",
+      "js_files": 3,
+      "js_lines": 1235,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "pixiv",
+      "js_files": 3,
+      "js_lines": 2961,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "place",
+      "js_files": 3,
+      "js_lines": 1652,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "playbook",
+      "js_files": 3,
+      "js_lines": 351,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "plotline",
+      "js_files": 4,
+      "js_lines": 1577,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "profile",
+      "js_files": 3,
+      "js_lines": 583,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "punchcard",
+      "js_files": 3,
+      "js_lines": 1099,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "pvdesk",
+      "js_files": 3,
+      "js_lines": 2585,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "reading",
+      "js_files": 5,
+      "js_lines": 3725,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "recall",
+      "js_files": 3,
+      "js_lines": 1793,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "regexfilter",
+      "js_files": 3,
+      "js_lines": 838,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "search",
+      "js_files": 3,
+      "js_lines": 1460,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "security",
+      "js_files": 11,
+      "js_lines": 797,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": false
+    },
+    {
+      "dir": "settings",
+      "js_files": 9,
+      "js_lines": 15037,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "share",
+      "js_files": 5,
+      "js_lines": 567,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "shop",
+      "js_files": 4,
+      "js_lines": 1391,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "social",
+      "js_files": 4,
+      "js_lines": 419,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "socialguard",
+      "js_files": 3,
+      "js_lines": 701,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "soundkit",
+      "js_files": 3,
+      "js_lines": 1779,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "sourcebook",
+      "js_files": 3,
+      "js_lines": 1712,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "stickerdesk",
+      "js_files": 3,
+      "js_lines": 386,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "sullydesk",
+      "js_files": 3,
+      "js_lines": 367,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "summdesk",
+      "js_files": 3,
+      "js_lines": 382,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "taobao",
+      "js_files": 3,
+      "js_lines": 1854,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "tarot",
+      "js_files": 3,
+      "js_lines": 370,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "taskentry",
+      "js_files": 2,
+      "js_lines": 477,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "theater",
+      "js_files": 3,
+      "js_lines": 577,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "tieba",
+      "js_files": 3,
+      "js_lines": 845,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "timeweaver",
+      "js_files": 5,
+      "js_lines": 1657,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "traveldesk",
+      "js_files": 7,
+      "js_lines": 1541,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "usage",
+      "js_files": 3,
+      "js_lines": 966,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "uterus",
+      "js_files": 3,
+      "js_lines": 2659,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "wallet",
+      "js_files": 4,
+      "js_lines": 1268,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "wangxiang",
+      "js_files": 4,
+      "js_lines": 4484,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "weather",
+      "js_files": 3,
+      "js_lines": 941,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "wechat",
+      "js_files": 25,
+      "js_lines": 42490,
+      "core_files": [
+        "chat-call-core.js",
+        "chat-render-core.js",
+        "chat-text-core.js"
+      ],
+      "refactored": true,
+      "has_app_id": true
+    },
+    {
+      "dir": "weibo",
+      "js_files": 6,
+      "js_lines": 8044,
+      "core_files": [
+        "weibo-text-core.js"
+      ],
+      "refactored": true,
+      "has_app_id": true
+    },
+    {
+      "dir": "widget",
+      "js_files": 3,
+      "js_lines": 1308,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "workflow",
+      "js_files": 3,
+      "js_lines": 615,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "worldpulse",
+      "js_files": 3,
+      "js_lines": 1034,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    },
+    {
+      "dir": "xhs",
+      "js_files": 3,
+      "js_lines": 677,
+      "core_files": [],
+      "refactored": false,
+      "has_app_id": true
+    }
+  ],
+  "unknown": [],
+  "unknown_count": 0
+}
