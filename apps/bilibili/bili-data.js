@@ -47,6 +47,15 @@ import {
     timeAgo, wallStampText, makeLocalBilibiliUrl, isBilibiliEntryUrl
 } from './bili-format.js';
 
+/* [v4.191.0] 修 v4.190.0 抽取时漏掉的本地别名：本文件有 48 处 `numOr(...)` 与
+ *   16 处 `hash32(...)` 调用，而内核给的名字是 numOrNull / fmtHash32。
+ *   numOr 只做转发 + 兜默认值（不自己写 Number() 弱口径，口径全在 num-gate）。 */
+const hash32 = fmtHash32;
+const numOr = (value, fallback = 0) => {
+    const n = numOrNull(value);
+    return n == null ? fallback : n;
+};
+
 /* ---------- 0. 常量 ---------- */
 const STORAGE_KEY = 'bili_entries_v1';
 const MAX_ENTRIES = 24;          // 一批最多留多少条

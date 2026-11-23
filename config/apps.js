@@ -59,6 +59,19 @@ export const APPS = [
         }
     },
     {
+        // [v4.191.0] 微博文本解析试算器：重构自 weibo-data.js 的相对时间/@人名/
+        //   粉丝数/评论行四族。源类持 storage、点赞缓存与 async 生成面，是有副作用
+        //   的编排；本件改为纯函数内核 + PhoneStorage，注入只给读数。
+        //   会话键走 ^weibo_text_ 前缀，随会话隔离。
+        id: 'weibotext',
+        name: '微博文本',
+        icon: '📝',
+        defaultIcon: DEFAULT_APP_ICONS.weibo,
+        color: '#ff8200',
+        badge: 0,
+        data: {}
+    },
+    {
         id: 'honey',
         name: '蜜语',
         icon: '💕',
@@ -68,6 +81,20 @@ export const APPS = [
         data: {
             messages: []
         }
+    },
+    {
+        // [v4.191.0] 蜜语文本清洗试算器：重构自 honey-data.js 的 HTML 剥除/
+        //   好感度钳制/参考图归一/评论行归一四族。源类构造器接 storage、
+        //   持一票全局社交键、generate* 一族全是 async，是有副作用的编排；
+        //   本件改为纯函数内核 + PhoneStorage，注入只给读数。
+        //   会话键走 ^honey_text_ 前缀，随会话隔离。
+        id: 'honeytext',
+        name: '蜜语文本',
+        icon: '🍯',
+        defaultIcon: DEFAULT_APP_ICONS.honey,
+        color: '#ff6b9d',
+        badge: 0,
+        data: {}
     },
     {
         id: 'mofo',

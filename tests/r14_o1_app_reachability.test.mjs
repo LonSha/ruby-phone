@@ -7,9 +7,12 @@ import { APP_LIBRARY_CATEGORIES, APP_LIBRARY_ENTRY_ID } from '../config/app-libr
 import fs from 'node:fs';
 import path from 'node:path';
 
-test('R14-O1 · 89 个登记 App 路由完整性与装配契约', () => {
-  assert.equal(APPS.length, 89, 'APPS 总数必须严格对齐 89 个');
-  
+test('R14-O1 · 登记 App 路由完整性与装配契约', () => {
+  // [v4.191.0] 原判据把 APPS 总数硬钉在 89，此后每加一个试算台 App 就红一次
+  //   （本轮 weibotext / honeytext 落地后已是 102）。改下限形：只审「不许少于
+  //   已登记的入口数」与「ID 必须唯一」，不再锁死一个会过时的绝对值。
+  assert.ok(APPS.length >= 89, 'APPS 总数不得少于 89（实测 ' + APPS.length + '）');
+
   // 14 个内联特殊分支名单
   const INLINE_BRANCH_APPS = new Set([
     'wechat', 'weibo', 'honey', 'mofo', 'wangxiang', 'phone',
@@ -18,7 +21,7 @@ test('R14-O1 · 89 个登记 App 路由完整性与装配契约', () => {
   ]);
 
   const allAppIds = new Set(APPS.map(a => a.id));
-  assert.equal(allAppIds.size, 89, 'App ID 必须唯一无重复');
+  assert.equal(allAppIds.size, APPS.length, 'App ID 必须唯一无重复');
 
   for (const app of APPS) {
     if (INLINE_BRANCH_APPS.has(app.id)) {

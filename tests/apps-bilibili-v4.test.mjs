@@ -88,8 +88,11 @@ function freshWindow(extra) {
 }
 freshWindow();
 
-const { BiliData, fmtCount, fmtDur, isBilibiliEntryUrl, normalizeBilibiliEntries, parseBilibiliPayload } =
+const { BiliData, normalizeBilibiliEntries, parseBilibiliPayload } =
     await import('../apps/bilibili/bili-data.js');
+/* [v4.190.0] fmtCount / fmtDur / isBilibiliEntryUrl 已统一下沉到唯一内核
+ *   bili-format.js（bili-data.js 不再保留第二份导出），判据跟着改源。 */
+const BILI_FMT = await import('../apps/bilibili/bili-format.js');
 const { BiliApp } = await import('../apps/bilibili/bili-app.js');
 
 /* ---------- 共用夹具 ---------- */
@@ -304,6 +307,8 @@ test('A11 时间：同一条内容重复取数时间戳稳定；相对文案跟�
 });
 
 test('A12 导出纯函数：计数口径 / 时长 / 本 App 地址判定 / 标签解析', () => {
+    // [v4.190.0] 纯函数已统一下沉到唯一内核 bili-format.js，判据跟着改源。
+    const { fmtCount, fmtDur, isBilibiliEntryUrl } = BILI_FMT;
     assert.equal(fmtCount(12800), '1.3万');
     assert.equal(fmtCount(1280000), '128万');
     assert.equal(fmtCount(0), '0');

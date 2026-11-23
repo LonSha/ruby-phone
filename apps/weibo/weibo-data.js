@@ -30,6 +30,21 @@ import { captureSessionToken, guardSessionWrite } from '../../config/session-gat
 /* [v4.104.0 · R13-O8] 删微博先落回收站（唯一软删实现在 config/recycle-bin.js）。 */
 import * as recycleBin from '../../config/recycle-bin.js';
 
+/* [v4.191.0] 文本解析面已抽成纯函数内核 apps/weibo/weibo-text-core.js：
+ *   相对时间换算 / @人名归一 / 粉丝数读数 / 评论行切分。
+ *   源类这四个族原先是私有实现，本版改为转调内核（删本地重复实现，
+ *   行为不变）。源类仍持有存储、点赞缓存与 async 生成面 —— 那是有副作用的编排。 */
+import {
+    parseRelativeTimeToMinutes as _wtParseRelativeTimeToMinutes,
+    formatRelativeTimeFromMinutes as _wtFormatRelativeTimeFromMinutes,
+    normalizeAtName as _wtNormalizeAtName,
+    normalizeBareName as _wtNormalizeBareName,
+    stripDuplicateReplyMention as _wtStripDuplicateReplyMention,
+    parseFollowerNumber as _wtParseFollowerNumber,
+    extractTrailingLocation as _wtExtractTrailingLocation,
+    parseCommentLine as _wtParseCommentLine
+} from './weibo-text-core.js';
+
 export class WeiboData {
     constructor(storage) {
         this.storage = storage;
@@ -263,32 +278,13 @@ export class WeiboData {
     }
 
     _parseWeiboRelativeTimeToMinutes(timeText) {
-        const text = String(timeText || '').trim();
-        if (!text || text === '刚刚') return 0;
-
-        const minuteMatch = text.match(/(\d+)\s*分钟/);
-        if (minuteMatch) return Math.max(0, parseInt(minuteMatch[1], 10) || 0);
-
-        const hourMatch = text.match(/(\d+)\s*小时/);
-        if (hourMatch) return Math.max(0, (parseInt(hourMatch[1], 10) || 0) * 60);
-
-        const dayMatch = text.match(/(\d+)\s*天/);
-        if (dayMatch) return Math.max(0, (parseInt(dayMatch[1], 10) || 0) * 24 * 60);
-
-        const weekMatch = text.match(/(\d+)\s*(?:周|星期)/);
-        if (weekMatch) return Math.max(0, (parseInt(weekMatch[1], 10) || 0) * 7 * 24 * 60);
-
-        return 0;
+        /* [v4.191.0] 转调纯函数内核 weibo-text-core.js（原私有实现已删）。 */
+        return _wtParseRelativeTimeToMinutes(timeText);
     }
-
     _formatWeiboRelativeTimeFromMinutes(minutes) {
-        const totalMinutes = Math.max(0, Math.floor(Number(minutes) || 0));
-        if (totalMinutes < 1) return '刚刚';
-        if (totalMinutes < 60) return `${totalMinutes}分钟前`;
-        if (totalMinutes < 24 * 60) return `${Math.floor(totalMinutes / 60)}小时前`;
-        return `${Math.floor(totalMinutes / (24 * 60))}天前`;
+        /* [v4.191.0] 转调纯函数内核 weibo-text-core.js（原私有实现已删）。 */
+        return _wtFormatRelativeTimeFromMinutes(minutes);
     }
-
     _ensurePreservedTimeAnchor(post) {
         if (!post || typeof post !== 'object') return post;
         /* [R21-O2] 锚点 preservedAt 属内容时间轴 ⇒ story 档收口（走唯一降级出口）。 */
@@ -803,28 +799,17 @@ export class WeiboData {
     }
 
     _normalizeAtName(name, fallback = '网友') {
-        const raw = String(name || '').trim();
-        const finalName = raw || fallback;
-        return finalName.startsWith('@') ? finalName : `@${finalName}`;
+        /* [v4.191.0] 转调纯函数内核 weibo-text-core.js（原私有实现已删）。 */
+        return _wtNormalizeAtName(name, fallback);
     }
-
     _normalizeBareName(name = '') {
-        return String(name || '')
-            .replace(/^@+/, '')
-            .trim();
+        /* [v4.191.0] 转调纯函数内核 weibo-text-core.js（原私有实现已删）。 */
+        return _wtNormalizeBareName(name);
     }
-
     _stripDuplicateReplyMention(text = '', replyTo = '') {
-        let safeText = String(text || '').trim();
-        const target = this._normalizeBareName(replyTo);
-        if (!safeText || !target) return safeText;
-
-        const escaped = target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const duplicatePrefix = new RegExp(`^@?${escaped}\\s*[：:]\\s*`, 'u');
-        safeText = safeText.replace(duplicatePrefix, '').trim();
-        return safeText;
+        /* [v4.191.0] 转调纯函数内核 weibo-text-core.js（原私有实现已删）。 */
+        return _wtStripDuplicateReplyMention(text, replyTo);
     }
-
     // 只替换自定义提示词中的粉丝数占位符；账号状态已通过独立 system 消息注入
     _injectCurrentFollowersToPrompt(promptText) {
         const followers = this._getCurrentFollowersCount();
@@ -834,26 +819,9 @@ export class WeiboData {
     }
 
     _parseFollowerNumber(raw) {
-        if (raw === null || raw === undefined) return null;
-        let text = String(raw).trim();
-        if (!text) return null;
-
-        text = text
-            .replace(/[,\s，]/g, '')
-            .replace(/(人|位|名|个)$/u, '');
-
-        const match = text.match(/^(\d+(?:\.\d+)?)(万|千|[kKwW])?$/);
-        if (!match) return null;
-
-        let value = Number(match[1]);
-        if (!Number.isFinite(value)) return null;
-        const unit = String(match[2] || '').toLowerCase();
-        if (unit === 'k' || unit === '千') value *= 1000;
-        if (unit === 'w' || unit === '万') value *= 10000;
-
-        return Math.max(0, Math.round(value));
+        /* [v4.191.0] 转调纯函数内核 weibo-text-core.js（原私有实现已删）。 */
+        return _wtParseFollowerNumber(raw);
     }
-
     _extractFollowersCount(rawText) {
         if (!rawText || typeof rawText !== 'string') return null;
 
@@ -878,75 +846,11 @@ export class WeiboData {
 
     // 统一解析评论行（支持楼中楼：A 回复 B：内容）
     _parseCommentLine(rawLine) {
-        if (!rawLine || typeof rawLine !== 'string') return null;
-
-        let line = rawLine.trim();
-        if (!line) return null;
-
-        line = line
-            .replace(/^\d+[.、．]\s*/, '')
-            .replace(/^[\-•]\s*/, '')
-            .replace(/^\[([^\]]+)\]/, '$1')
-            .trim();
-
-        // 用“最后一个冒号”切分，避免把“IP属地：北京”里的冒号当成正文分隔符
-        const splitMatch = line.match(/^(.+)[：:]\s*([\s\S]+)$/);
-        if (!splitMatch) return null;
-
-        let head = (splitMatch[1] || '').trim();
-        const text = (splitMatch[2] || '').trim();
-        if (!head || !text) return null;
-
-        const cleanNameToken = (token) => String(token || '')
-            .trim()
-            .replace(/^@/, '')
-            .replace(/^【/, '')
-            .replace(/】$/, '')
-            .replace(/^\[/, '')
-            .replace(/\]$/, '')
-            .trim();
-
-        let location = '';
-        // 兼容多种属地写法：()、[]、【】、来自/IP属地 前缀
-        const locPatterns = [
-            /[（(]\s*(?:来自|IP属地|ip)?[：:\s]*\[?([^\]）)]+)\]?\s*[）)]$/i,
-            /[（(]\s*\[?([^\]）)]+)\]?\s*[）)]$/i,
-            /(?:\[|【)\s*(?:来自|IP属地|ip)?[：:\s]*\[?([^\]】]+)\]?\s*(?:\]|】)$/i,
-            /(?:\[|【)\s*\[?([^\]】]+)\]?\s*(?:\]|】)$/i
-        ];
-        for (const reg of locPatterns) {
-            const locMatch = head.match(reg);
-            if (locMatch) {
-                location = String(locMatch[1] || '')
-                    .replace(/^\s*(?:来自|IP属地|ip)\s*[：:\s]*/i, '')
-                    .replace(/^\[/, '')
-                    .replace(/\]$/, '')
-                    .trim();
-                head = head.replace(reg, '').trim();
-                break;
-            }
-        }
-
-        let nameHead = head;
-        let replyTo = null;
-        const replyMatch = head.match(/^(.+?)\s*回复\s*(.+)$/);
-        if (replyMatch) {
-            nameHead = cleanNameToken(replyMatch[1]);
-            const target = cleanNameToken(replyMatch[2]);
-            if (target) replyTo = `@${target}`;
-        }
-
-        const nameClean = cleanNameToken(nameHead);
-        if (!nameClean || nameClean.length > 30) return null;
-
-        return {
-            name: `@${nameClean}`,
-            location,
-            text,
-            replyTo
-        };
+        /* [v4.191.0] 转调纯函数内核 weibo-text-core.js：内核返回 {ok,reason,out}，
+         *   源类原口径是「不是评论就给 null」，故这里只把 out 透出去。 */
+        const r = _wtParseCommentLine(rawLine);
+        return r.ok ? r.out : null;
     }
-
     _updateFollowersFromText(rawText) {
         const profile = this.getProfile();
         const current = Math.max(0, parseInt(profile.followers, 10) || 0);

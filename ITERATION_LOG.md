@@ -1,3 +1,15 @@
+# 迭代 307 · v4.191.0 · 20 版 60 只 App 重构第一炮：weibo / honey 文本与数值归一面抽取（2026-11-23）
+
+- 【版本升至 4.191.0（五源同源）】weibo / honey 两件的清洗面抽成独立内核。两件源都是 2600~5200 行的类，类里绝大多数方法在动 this.state 或自持状态并直写 storage —— 是有副作用的编排，不该整只搬。本版只抽清洗面，源类 15 个方法体改为一行转调内核。
+- `apps/weibo/weibo-text-core.js`（274 行，纯函数内核）：相对时间互转 / @人名归一 / 粉丝数读数 / 评论行解析（IP 属地与「回复」两形态，返回 {ok,reason,out}）+ 4 张常量表。源文件 `weibo-data.js` 2719 → 2623 行，7 个方法体改转调，`_parseCommentLine` 透传保留「不是评论给 null」口径。
+- `apps/honey/honey-text-core.js`（194 行，纯函数内核）：文本清洗三兄弟 / 好感度钳制（0~100 一位小数）/ 参考值钳制（两位小数）/ 参考图归一（只放行 http(s) 与 /backgrounds/）/ 状态行识别 / 评论行归一（「粉丝」改写「热评」，无人称补「匿名」）+ 2 张常量表。源文件 `honey-data.js` 5228 → 5216 行，8 个方法体改转调。
+- 两件四件套齐：控制器走 `_record` + `writeReceipt`，STATE_KEY `weibo_text_v1` / `honey_text_v1`；视图 `.wt-root`/`.ht-root` + data-act 委派 + CSS 自注入 + `_boundRoot` 去重；五处接线全落地。
+- wechat 件（975KB）纯度扫描未达抽取条件（三个巨文件 18458/8727/5600 行全持 DOM/存储/定时器/网络，26 个辅助模块仅 5 个已纯），顺延 v4.192.0，不硬拆。
+- 新增判据 `tests/system-v4191.test.mjs` 15 条；19 道门禁全绿。
+- 修 v4.190.0 一处真实回归：`bili-data.js` 抽取 bili-format.js 时漏做本地别名，48 处 `numOr(` 与 16 处 `hash32(` 无定义，`apps-bilibili-v4.test.mjs` 39 条判据全红。本版补两个转发别名（`hash32 = fmtHash32`、`numOr` 走 `numOrNull`，不自己写 Number() 弱口径），21/21 转绿；该套件 A12 取数源改到唯一内核。
+- 修两处历史刚性锚：`system-v4190` V1 版本锚、`r14_o1_app_reachability` 的「APPS 严格等于 89」均改下限形。
+
+
 # 迭代 306 · v4.190.0 · 大件抽取：undercover 规则 / bilibili 换算 / music 歌词与播放模式（2026-11-23）
 
 - 【版本升至 4.190.0（五源同源）】大件工程第二炮：undercover / bilibili / music 三件的**可纯化部分**一次抽成独立内核。三件源都是 700~1500 行的类（undercover-data 724 行 / bili-data 1365 行 / music-data 1514 行），类里绝大多数方法在动 this.state 或自持状态并直写 storage，那是**有副作用的编排**，不该在本仓「纯函数内核 + 控制器 + 视图」纪律下整只搬。因此本版只抽规则面 / 换算面 / 歌词与模式面，源类一行未动（music 只把 6 个方法体改成转调内核，判据 B1 逐条钉住源类仍是类、仍造音频元素、仍持 _playlist）。

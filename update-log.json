@@ -1,6 +1,19 @@
 {
-  "latest": "4.190.0",
+  "latest": "4.191.0",
   "versions": {
+    "4.191.0": {
+      "version": "4.191.0",
+      "date": "2026-11-23",
+      "items": [
+        "【版本升至 4.191.0（五源同源）】20 版 60 只 App 重构计划第一炮：weibo / honey 两件的**文本与数值归一面**抽成独立内核。两件源都是 2600~5200 行的类（weibo-data 2623 行 / honey-data 5216 行），类里绝大多数方法在动 this.state 或自持状态并直写 storage —— 那是有副作用的编排，不该整只搬。因此本版只抽清洗面，源类 15 个方法体改为一行转调内核（实现不再留在编排面）。",
+        "`apps/weibo/weibo-text-core.js`（274 行，纯函数内核）：parseRelativeTimeToMinutes / formatRelativeTimeFromMinutes（分钟数与「刚刚/x分钟前/x小时前/x天前」互转，认不出按 0 走不编分钟）/ normalizeAtName（补 @，空名落 fallback「网友」）/ normalizeBareName（剥 @）/ stripDuplicateReplyMention / parseFollowerNumber（认不出返回 null 不编 0）/ extractTrailingLocation / parseCommentLine（支持「@名字（IP属地：北京）：内容」与「A 回复 B：内容」，返回 {ok,reason,out}）+ WEIBO_TIME_LIMITS / WEIBO_COMMENT_LIMITS / WEIBO_FOLLOWER_UNITS / WEIBO_REJECT。源文件 `weibo-data.js` 同步改造：2719 → 2623 行，7 个方法体改转调，其中 `_parseCommentLine` 透传时保留源类「不是评论给 null」口径（`r.ok ? r.out : null`）。",
+        "`apps/honey/honey-text-core.js`（194 行，纯函数内核）：sanitizeInlineText / sanitizePromptLine / sanitizePromptBlockLine（HTML 剥除 + 空白折叠 + 按 maxLen 截断）/ clampFavorability（0~100 一位小数，读不出给 fallback 不编 0）/ clampReferenceValue（按 min-max 两位小数）/ normalizeNaiReferenceImage（只放行 http(s) 与 /backgrounds/，data: 内联图与占位串一律退回）/ isCommentStatusLine（命中「好感度/好感值」即状态行）/ normalizeCommentLine（「【热评】阿茶: 内容」→「[热评]阿茶: 内容」，「粉丝」等级改写为「热评」，无人称行补「匿名」，纯括号行/分隔线行/「评论区」行/指令行给 ''）+ HONEY_TEXT_LIMITS / HONEY_COMMENT_LIMITS。源文件 `honey-data.js` 同步改造：5228 → 5216 行，8 个方法体改转调。",
+        "两件各配四件套：控制器 `weibo-text-app.js`（ago/stamp/at/dedupe/followers/location/comment 七口）与 `honey-text-app.js`（inline/promptLine/favorability/reference/image/comment 六口）全部走 `_record` + `writeReceipt`，STATE_KEY 分别为 `weibo_text_v1` / `honey_text_v1`；视图用 `.wt-root`/`.ht-root` 根类 + data-act 委派 + CSS 自注入 + `_boundRoot === root` 去重；五处接线（config/apps.js / config/app-lazy-routes.js / config/storage.js 会话前缀 / scripts/keys-audit.mjs 键登记 / index.js 重绑表）全部落地。",
+        "wechat 件（975KB，本批最大件）经纯度扫描确认未达抽取条件：`chat-view.js` 18458 行 / `wechat-app.js` 8727 行 / `wechat-data.js` 5600 行三个巨文件全部持 DOM/存储/定时器/网络，26 个辅助模块中仅 5 个已纯。按「一次做 2-3 件、不烂尾」纪律顺延至 v4.192.0（与 phone/diagnose/games 同批），不在本版硬拆。",
+        "新增判据 `tests/system-v4191.test.mjs`（A 内核纯度与行为 / B 源类转调 / C 控制器 / D 视图样式 / E 五处接线 / V 版本锚）共 15 条；19 道门禁全绿。",
+        "修 v4.190.0 一处真实回归：`bili-data.js` 抽取 bili-format.js 时漏做本地别名，文件里 48 处 `numOr(...)` 与 16 处 `hash32(...)` 无定义，全量测试 `apps-bilibili-v4.test.mjs` 39 条判据全红（ReferenceError: numOr is not defined）。本版补 `const hash32 = fmtHash32;` 与 `numOr = (v, fb=0) => { const n = numOrNull(v); return n == null ? fb : n; }` 两个转发别名（不自己写 Number() 弱口径，口径仍全在 num-gate），21/21 转绿。同步把该套件 A12 的取数源从 `bili-data.js` 改到唯一内核 `bili-format.js`。另修两处历史刚性锚：`system-v4190` 的 V1 版本锚与 `r14_o1_app_reachability` 的「APPS 必须严格等于 89」均改为下限形，避免每加一个试算台 App 就红一次。"
+      ]
+    },
     "4.190.0": {
       "version": "4.190.0",
       "date": "2026-11-23",
@@ -6696,5 +6709,5 @@
       ]
     }
   },
-  "head": "4.190.0"
+  "head": "4.191.0"
 }

@@ -1,0 +1,67 @@
+/* ========================================================
+ * weibo-text.css — [v4.191.0] 微博 文本解析 · 样式
+ * 纪律：只挂 .wt-root 自己的根类，不碰 .phone-screen 外壳。
+ * ======================================================== */
+.wt-root {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+.wt-head {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.wt-title {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.wt-sub {
+    font-size: 11px;
+    opacity: 0.72;
+}
+
+.wt-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.wt-grid button {
+    padding: 9px 8px;
+    font-size: 12px;
+    text-align: center;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    cursor: pointer;
+}
+
+.wt-grid button:active {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.wt-flash {
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 8px 10px;
+    border-left: 3px solid #f9a03f;
+    background: rgba(249, 160, 63, 0.12);
+    word-break: break-all;
+}
+
+.wt-out {
+    font-size: 11px;
+    line-height: 1.5;
+    padding: 8px 10px;
+    border: 1px dashed rgba(0, 0, 0, 0.22);
+    border-radius: 6px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    opacity: 0.9;
+}

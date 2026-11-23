@@ -476,7 +476,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.190.0';
+const ST_PHONE_VERSION = '4.191.0';
 const ST_PHONE_CSS_REVISION = '20261122-wechat-v4';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -545,6 +545,8 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'ucRulesApp',     // [v4.190.0] 谁是卧底规则：有 destroy 出口且读数随会话走，必须进表
     'biliFmtApp',     // [v4.190.0] B站换算：有 destroy 出口且读数随会话走，必须进表
     'musicCoreApp',   // [v4.190.0] 歌词/播放模式：有 destroy 出口且读数随会话走，必须进表
+    'weiboTextApp',  // [v4.191.0] 微博文本解析：试算台最近一次输入/输出（随会话隔离）
+    'honeyTextApp',  // [v4.191.0] 蜜语文本清洗：试算台最近一次输入/输出（随会话隔离）
     'weatherApp',     // [v3.27.0] 天气：读数现取，但仍进表（下帧现取，防将来加缓存时漏重绑）
     'widgetApp',      // [v3.28.0] 自定义组件：有未保存草稿（widget_draft）与选中态，换会话必须丢草稿重取，必须进表
     'taobaoApp',      // [v3.29.0] 桃宝：有展开的物流面板（_openLogi，视图态），换会话必须收起重取，必须进表
@@ -719,17 +721,12 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-23",
     items: [
-        "【版本升至 4.190.0（五源同源）】大件工程第二炮：undercover / bilibili / music 三件的**可纯化部分**一次抽成独立内核。三件源都是 700~1500 行的类（undercover-data 724 行 / bili-data 1365 行 / music-data 1514 行），类里绝大多数方法在动 this.state 或自持状态并直写 storage —— 那是**有副作用的编排**，不该在本仓「纯函数内核 + 控制器 + 视图」纪律下整只搬。因此本版只抽规则面 / 换算面 / 歌词与模式面，源类一行未动（music 只把 6 个方法体改成转调内核，B1 判据逐条钉住源类仍是类、仍 new Audio()、仍持 _playlist）。",
-        "`apps/games/undercover/undercover-rules.js`（465 行，纯函数内核）：PLAYER_COUNT=6 / FALLBACK_WORD_PAIRS 5 对 / FALLBACK_AI_PROFILES 5 个 / ROLES / PHASES / UC_REJECT（13 条封闭拒绝原因）/ SPEECH_LIMITS（52/42/8/7）+ normalizeWordHistory / usedWordSet / normalizeWordPair（rng 由调用方给，兜底池挑哪对也由 rng 定）/ rememberWordPair / normalizeContactIds / pickInvitedContacts / shuffle（Fisher-Yates，**不改入参**）/ seatPlayers（6 座空位留 pending）/ pickUndercoverSeat / buildAiProfiles / splitSpeechSegments（长句按阈值切碎）/ nextSpeaker（环形找未发言人，全员说完转 voting）/ resolveVotes（**平票无人出局、最高票唯一才出局**、弃票由 rng 兜、卧底全灭平民胜、活人 <=2 卧底胜）/ voteResultText / isValidGame（必须有且只有一个用户）/ alivePlayers。源类里 6 处自己造随机全部改成 rng 由调用方传。",
-        "`apps/bilibili/bili-format.js`（198 行，纯函数内核）：把 bili-data 里「公开三个、私有十个」的换算族整族提出 —— hash32 / b62 / makeBvid / makeMid / seededInt / compactText / parseCount / fmtCount / parseDur / fmtDur / timeAgo（**nowMs 一律由调用方传**，用户读的是剧情时间不是本机时间）/ wallStampText / makeLocalBilibiliUrl / isBilibiliEntryUrl。源文件 `bili-data.js` 同步改造：删掉本地重复实现，`isBilibiliEntryUrl` 改为 export 转发（旧导入方零改动）。",
-        "`apps/music/music-core.js`（138 行，纯函数内核）：PLAYBACK_MODES 三模式封闭词表 + PLAYBACK_MODE_LABELS / PLAYBACK_MODE_ICONS + MUSIC_REJECT + LRC_LIMITS（一行最多 16 个时间戳 / 全文最多 4000 行）+ normalizePlaybackMode（认不出归 once）/ nextPlaybackMode / modeFromRepeatOne（旧布尔开关双向映射）/ shouldLoop / parseLrc（一行多时间戳逐个成条、元数据行自然剔除、坏档返回 [] 不抛）/ currentLyricIndex / hasLyrics。源文件 `music-data.js` 同步改造：`_parseLrc` 与播放模式一族 6 个方法体改为转调内核，删掉本地 25 行 LRC 实现。",
-        "三件四件套齐：控制器 `undercover-rules-app.js`（deal / setWordPair / toggleAlive / setRole / speak / vote / verdict / aliveSeats / check，STATE_KEY `games_uc_rules_v1`）+ `bili-format-app.js`（count / dur / ago / id / text 五个试算口，STATE_KEY `bili_format_v1`，DEMO_NOW 固定时刻）+ `music-core-app.js`（lrc / seek / cycle / setMode / migrate，STATE_KEY `music_core_v1`，DEMO_SECONDS 固定进度）；视图 `undercover-rules-view.js`（6 人空桌 + 死活/设身份/发言/结算/设词对）+ `bili-format-view.js`（计数/时长/时间/标识四个换算格子 + JSON 输出）+ `music-core-view.js`（LRC 试算 + 时间轴歌词列表 + 播放模式拨盘）；样式三件。视图一律 `_boundRoot === root` 去重 + data-act 委派 + CSS 自注入，零定时器零网络。",
-        "五处接线：`config/apps.js` 加 `ucrules` / `bilifmt` / `musiccore` 三条；`config/app-lazy-routes.js` 加三行懒加载；`config/storage.js` 加 `^games_uc_rules_` / `^bili_format_` / `^music_core_` 三个会话前缀；`scripts/keys-audit.mjs` 登记 `games_uc_rules_v1` / `bili_format_v1` / `music_core_v1`；`index.js` 重绑表加 `ucRulesApp` / `biliFmtApp` / `musicCoreApp`。三个控制器落盘**只走 writeReceipt**，零 `storage.set(` 直写。",
-        "判据 `tests/system-v4190.test.mjs` 19 门（A 内核纯度与行为 8 / B 源库不动 3 / C 控制器 2 / D 视图样式 3 / E 接线 2 / V 版本锚 1）。A 组逐条钉住三件内核零 Math.random / 零 Date.now / 零类 / 零 DOM / 零存储，并跑行为面（同一 rng 序列发同一桌、同一 ts 配不同 nowMs 给不同文案、同一段 LRC + 同一秒永远同一句）。B3 是负控制：同一份判据在平票时必须判「无人出局」，在唯一最高票下必须判「出局」—— 证明「出不出局」真由票数决定而不是写死。",
-        "本版**自己抓到的缺陷**（都不是门禁先报的）：① `bili-format-app.js` / `music-core-app.js` 的 write-receipt 相对路径写成 `../../../`（多退一层，apps/bilibili 只需 `../../`），import-resolve-check 报 2 条无法解析后改齐；② 三件内核头注释里写着「不碰 Math.random / 不取 Date.now」这种字面量，反而让判据的 indexOf 扫描误报（本仓判据不用正则），改成「不碰随机源 / 不自己读系统时钟」的行为描述；③ undercover 内核的注释也有一处 `源里是 Math.random 自己挑`，同样改掉；④ **11 个 App 从未登记 `APP_CATEGORY`**（v4.189.0 的 pokereval/wwrules 与更早的 iot/share/callscene/social/daily/keyboard，加本版 ucrules/bilifmt/musiccore）—— 缺登记会被 `appCategory` 静默折成 system，把聚合壳撑到 20 个（上限 12）。本版按语义补齐类目；⑤ 同族欠账：这 11 个 App 也从未建过像素图标条目（`APP_GLYPHS`），桌面网格上 emoji 与像素方块混排。本版给 `tools/gen_pixel_icons.py` 补 11 条字形 + 底色并重跑生成器（92 → 100 个 SVG），`config/pixel-icons.generated.js` 清单随之从 93 涨到 101 ids。",
-        "读数跟着交付物走：`.js` 文件数 968 → 972（本版新增 5 个 .js + 3 个 CSS）；`tests/audit/` 台账与三本生成器（status-ledger / file-size / refresh-doc）重签。**不是放宽判据**，是基准随本版真实交付抬了。",
-        "**运行时验证边界**（与 `docs/runtime-verification-boundary.md` 同一句标志语）：三件都只在进程内跑过内核与判据，**不能保证**真机上的观感 —— 6 人空桌在窄屏（≤340px）下第二列被隐藏后的可读性、四个换算格子按钮的热区、以及「看起来没坏但显示不对」这一类仍未验证。",
-        "剩余大件清单：`undercover`（规则面已抽，源类 724 行未动）、`bilibili`（换算面已抽且源文件已接入，源类 BiliData 未动）、`music`（歌词与模式面已抽且源文件已接入，源类 MusicData 未动）、`uterus`（早已是纯函数内核，无需重构）。三件的源类其余方法仍是有副作用的编排面，若要整只重构需单独一版立项。"
+        "【版本升至 4.191.0（五源同源）】20 版 60 只 App 重构计划第一炮：weibo / honey 两件的**文本与数值归一面**抽成独立内核。两件源都是 2600~5200 行的类（weibo-data 2623 行 / honey-data 5216 行），类里绝大多数方法在动 this.state 或自持状态并直写 storage —— 那是有副作用的编排，不该整只搬。因此本版只抽清洗面，源类 15 个方法体改为一行转调内核（实现不再留在编排面）。",
+        "`apps/weibo/weibo-text-core.js`（274 行，纯函数内核）：parseRelativeTimeToMinutes / formatRelativeTimeFromMinutes（分钟数与「刚刚/x分钟前/x小时前/x天前」互转，认不出按 0 走不编分钟）/ normalizeAtName（补 @，空名落 fallback「网友」）/ normalizeBareName（剥 @）/ stripDuplicateReplyMention / parseFollowerNumber（认不出返回 null 不编 0）/ extractTrailingLocation / parseCommentLine（支持「@名字（IP属地：北京）：内容」与「A 回复 B：内容」，返回 {ok,reason,out}）+ WEIBO_TIME_LIMITS / WEIBO_COMMENT_LIMITS / WEIBO_FOLLOWER_UNITS / WEIBO_REJECT。源文件 `weibo-data.js` 同步改造：2719 → 2623 行，7 个方法体改转调，其中 `_parseCommentLine` 透传时保留源类「不是评论给 null」口径。",
+        "`apps/honey/honey-text-core.js`（194 行，纯函数内核）：sanitizeInlineText / sanitizePromptLine / sanitizePromptBlockLine（HTML 剥除 + 空白折叠 + 按 maxLen 截断）/ clampFavorability（0~100 一位小数，读不出给 fallback 不编 0）/ clampReferenceValue（按 min-max 两位小数）/ normalizeNaiReferenceImage（只放行 http(s) 与 /backgrounds/，data: 内联图与占位串一律退回）/ isCommentStatusLine（命中「好感度/好感值」即状态行）/ normalizeCommentLine（「【热评】阿茶: 内容」→「[热评]阿茶: 内容」，「粉丝」等级改写为「热评」，无人称行补「匿名」，纯括号行/分隔线行/「评论区」行/指令行给 ''）+ HONEY_TEXT_LIMITS / HONEY_COMMENT_LIMITS。源文件 `honey-data.js` 同步改造：5228 → 5216 行，8 个方法体改转调。",
+        "两件各配四件套：控制器 `weibo-text-app.js`（ago/stamp/at/dedupe/followers/location/comment 七口）与 `honey-text-app.js`（inline/promptLine/favorability/reference/image/comment 六口）全部走 `_record` + `writeReceipt`，STATE_KEY 分别为 `weibo_text_v1` / `honey_text_v1`；视图用 `.wt-root`/`.ht-root` 根类 + data-act 委派 + CSS 自注入 + `_boundRoot === root` 去重；五处接线（config/apps.js / config/app-lazy-routes.js / config/storage.js 会话前缀 / scripts/keys-audit.mjs 键登记 / index.js 重绑表）全部落地。",
+        "wechat 件（975KB，本批最大件）经纯度扫描确认未达抽取条件：chat-view.js 18458 行 / wechat-app.js 8727 行 / wechat-data.js 5600 行三个巨文件全部持 DOM/存储/定时器/网络，26 个辅助模块中仅 5 个已纯。按「一次做 2-3 件、不烂尾」纪律顺延至 v4.192.0（与 phone/diagnose/games 同批），不在本版硬拆。",
+        "新增判据 `tests/system-v4191.test.mjs`（A 内核纯度与行为 / B 源类转调 / C 控制器 / D 视图样式 / E 五处接线 / V 版本锚）共 15 条；19 道门禁全绿。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

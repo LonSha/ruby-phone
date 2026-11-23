@@ -13,6 +13,18 @@ import { parseJsonTolerant } from '../../config/json-symbol-repair.js';
 import { applyPhoneTagFilter } from '../../config/tag-filter.js';
 import { numOrNull } from '../../config/num-gate.js';
 import { storyNowWallFallback } from '../../config/time-source.js';
+/* [v4.191.0] 文本清洗与数值钳制面下沉到 honey-text-core.js（纯函数内核），
+ *   本类这 8 个方法改为一行转调，实现不再留在编排面。 */
+import {
+    sanitizeInlineText as _htSanitizeInlineText,
+    sanitizePromptLine as _htSanitizePromptLine,
+    sanitizePromptBlockLine as _htSanitizePromptBlockLine,
+    clampFavorability as _htClampFavorability,
+    clampReferenceValue as _htClampReferenceValue,
+    normalizeNaiReferenceImage as _htNormalizeNaiReferenceImage,
+    isCommentStatusLine as _htIsCommentStatusLine,
+    normalizeCommentLine as _htNormalizeCommentLine
+} from './honey-text-core.js';
 /* [v3.58.0 · 计划 O4] 会话世代栅栏：记录总结是一次跨帧的长请求（240s 超时），
  *   回信时可能已经换了会话。它写的是 `honey_host_history_*`（按会话隔离的键），
  *   所以旧回信落回来会把上一段会话的总结与已覆盖轮次哈希写进新会话的桶 ——
@@ -172,25 +184,15 @@ export class HoneyData {
     }
 
     _sanitizeInlineText(value, maxLen = 260) {
-        return String(value || '')
-            .replace(/<[^>]*>/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .slice(0, maxLen);
+        return _htSanitizeInlineText(value, maxLen);
     }
 
     _sanitizePromptLine(value = '') {
-        return String(value || '')
-            .replace(/<[^>]*>/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
+        return _htSanitizePromptLine(value);
     }
 
     _sanitizePromptBlockLine(value = '') {
-        return String(value || '')
-            .replace(/<[^>]*>/g, ' ')
-            .replace(/\r/g, '')
-            .trim();
+        return _htSanitizePromptBlockLine(value);
     }
 
     _buildPreviousRecommendAvoidanceContext(previousTopics) {
@@ -717,25 +719,15 @@ export class HoneyData {
     }
 
     _clampFavorability(value, fallback = 0) {
-        const num = Number.parseFloat(value);
-        if (!Number.isFinite(num)) return fallback;
-        const clamped = Math.max(0, Math.min(100, num));
-        return Math.round(clamped * 10) / 10;
+        return _htClampFavorability(value, fallback);
     }
 
     _clampReferenceValue(value, fallback = 0.7, min = 0, max = 1) {
-        const num = Number.parseFloat(value);
-        if (!Number.isFinite(num)) return fallback;
-        const clamped = Math.max(min, Math.min(max, num));
-        return Math.round(clamped * 100) / 100;
+        return _htClampReferenceValue(value, fallback, min, max);
     }
 
     _normalizeNaiReferenceImage(value) {
-        const raw = String(value || '').trim();
-        if (!raw || raw === '[object Object]' || raw === 'undefined' || raw === 'null') return '';
-        if (/^data:image\/[a-z0-9.+-]+;base64,/i.test(raw)) return '';
-        if (/^(?:https?:\/\/|\/backgrounds\/)/i.test(raw)) return raw;
-        return '';
+        return _htNormalizeNaiReferenceImage(value);
     }
 
     _normalizeHostNaiReference(item = {}) {
@@ -895,12 +887,7 @@ export class HoneyData {
     }
 
     _isHoneyCommentStatusLine(line = '') {
-        const text = String(line || '').trim();
-        if (!text) return true;
-        if (/^(?:当前)?好感(?:度|值)\s*[:：]/.test(text)) return true;
-        if (/^(?:热评|置顶|房管|官方|榜[一二三四五六七八九十0-9]+)?\s*(?:当前)?好感(?:度|值)\s*[:：]/.test(text)) return true;
-        if (/^(?:系统公告|系统消息)\s*[:：]\s*(?:当前)?好感(?:度|值)/.test(text)) return true;
-        return false;
+        return _htIsCommentStatusLine(line);
     }
 
     _buildLiveRuntimeContext(options = {}) {
@@ -4898,44 +4885,8 @@ export class HoneyData {
         }
         return '';
     }
-
     _normalizeCommentLine(line) {
-        let text = String(line || '').replace(/\r/g, '').trim();
-        if (!text) return '';
-
-        if (/^\s*(?:\(|（).*(?:\)|）)\s*$/.test(text)) return '';
-        if (/^(?:---+|===+)$/.test(text)) return '';
-        if (/^(?:互动区|打赏记录|直播剧情描写|[\[【]?\s*(?:图片|画面|视频)\s*[\]】]?|简介|主播|标题|在线人数|粉丝)[：:]/.test(text)) return '';
-        if (/^\[\s*评论区\s*\]/i.test(text)) return '';
-        if (/^\[\s*(?:联播请求|其他直播间请求联播)\s*[：:]/i.test(text)) return '';
-        if (/^(?:生成|不少于|至少)\d*条/.test(text)) return '';
-
-        text = text
-            .replace(/^\d{1,2}\s*[\.、]\s*/, '')
-            .replace(/^[-*•]\s*/, '')
-            .trim();
-        if (!text) return '';
-
-        const rankPrefixMatch = text.match(/^(【[^】]{1,16}】|\[[^\]]{1,16}\])\s*/);
-        let rankPrefix = '';
-        if (rankPrefixMatch) {
-            const rawRank = String(rankPrefixMatch[1] || '').replace(/[【】\[\]\s]/g, '').trim();
-            const normalizedRank = rawRank === '粉丝' ? '热评' : rawRank;
-            rankPrefix = normalizedRank ? `[${normalizedRank}]` : '';
-            text = text.slice(rankPrefixMatch[0].length).trim();
-        }
-
-        const fallbackUserSplit = text.match(/^([^:：\s]{1,24})\s*[：:]\s*(.+)$/);
-        if (fallbackUserSplit) {
-            const user = this._sanitizeInlineText(fallbackUserSplit[1], 24);
-            const content = this._sanitizePromptBlockLine(fallbackUserSplit[2]);
-            if (!user || !content) return '';
-            return `${rankPrefix}${user}: ${content}`.trim();
-        }
-
-        const fallback = this._sanitizePromptBlockLine(text);
-        if (!fallback) return '';
-        return `${rankPrefix}匿名: ${fallback}`.trim();
+        return _htNormalizeCommentLine(line);
     }
 
     _isHoneyGiftRecordLine(line) {
