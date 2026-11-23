@@ -106,6 +106,10 @@ export const APP_LAZY_ROUTES = [
     { id: "affairs", module: "./apps/affairs/affairs-app.js", key: "affairsApp", cls: "AffairsApp", errTitle: "事务台App" },
     { id: "comms", module: "./apps/comms/comms-app.js", key: "commsApp", cls: "CommsApp", errTitle: "会话台App" },
     { id: "share", module: "./apps/share/share-app.js", key: "shareApp", cls: "ShareApp", errTitle: "近场快传App" },
+    { id: "callscene", module: "./apps/call/call-app.js", key: "callApp", cls: "CallApp", errTitle: "情境通话App" },
+    { id: "social", module: "./apps/social/social-app.js", key: "socialApp", cls: "SocialApp", errTitle: "朋友圈App" },
+    { id: "daily", module: "./apps/daily/daily-app.js", key: "dailyApp", cls: "DailyApp", errTitle: "生活织机App" },
+    { id: "keyboard", module: "./apps/keyboard/keyboard-app.js", key: "keyboardApp", cls: "KeyboardApp", errTitle: "口癖联想App" },
 ];
 
 /* 索引（appId → 行）：装配器查表用，一次建好避免每次 openApp 线性扫。 */

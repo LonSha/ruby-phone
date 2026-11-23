@@ -1,0 +1,24 @@
+/* ============================================================
+ * daily.css — [v4.188.0] 生活织机 · 样式
+ * ============================================================ */
+.daily-root { display:flex; flex-direction:column; gap:10px; padding:12px; box-sizing:border-box; height:100%; overflow-y:auto; font-size:14px; color:var(--rp-text,#e6e6e6); background:var(--rp-bg,#12141a); }
+.daily-head { display:flex; align-items:center; gap:8px; }
+.daily-back { border:0; background:transparent; color:inherit; font-size:20px; line-height:1; padding:2px 8px; cursor:pointer; }
+.daily-title { font-weight:600; font-size:16px; flex:1; }
+.daily-face { font-size:11px; padding:2px 8px; border-radius:10px; border:1px solid currentColor; opacity:.85; white-space:nowrap; }
+.daily-face-ok { color:#38bdf8; } .daily-face-idle { color:#6b7280; }
+.daily-flash { font-size:12px; padding:6px 10px; border-radius:8px; background:rgba(255,255,255,.06); }
+.daily-sec-t { font-size:12px; opacity:.6; margin-top:4px; }
+.daily-rules { display:flex; gap:6px; flex-wrap:wrap; }
+.daily-rule { border:1px solid rgba(255,255,255,.16); background:transparent; color:inherit; font:inherit; font-size:12px; padding:5px 10px; border-radius:8px; cursor:pointer; }
+.daily-rule.is-on { border-color:rgba(56,189,248,.6); background:rgba(56,189,248,.14); }
+.daily-kw { font-size:11px; opacity:.55; }
+.daily-fire { border:1px solid rgba(56,189,248,.5); background:rgba(56,189,248,.12); color:inherit; font:inherit; font-size:13px; padding:8px 12px; border-radius:8px; cursor:pointer; }
+.daily-events { display:flex; flex-direction:column; gap:6px; }
+.daily-row { display:flex; gap:8px; font-size:12px; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,.04); }
+.daily-app { opacity:.8; white-space:nowrap; }
+.daily-hit { opacity:.6; white-space:nowrap; }
+.daily-snip { opacity:.85; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.daily-empty { font-size:12px; opacity:.55; padding:8px 2px; }
+.daily-foot { margin-top:auto; padding-top:8px; }
+.daily-reset { border:1px solid rgba(255,255,255,.16); background:transparent; color:inherit; font:inherit; font-size:12px; padding:6px 12px; border-radius:8px; cursor:pointer; }

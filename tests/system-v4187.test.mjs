@@ -237,8 +237,11 @@ test('E3 视图只绑一次 + 样式自注入（否则界面裸奔不报错）',
 });
 
 /* ══════════ V 版本锚 ══════════ */
-test('V1 版本锚：package.json 已抬到 4.187.0', () => {
-    const pkg = JSON.parse(read('package.json'));
-    assert.equal(pkg.version, '4.187.0');
-    assert.ok(read('index.js').indexOf('4.187.0') > 0, 'index.js 版本行要同源');
+test('V1 版本锚：本套件对应的 4.187.0 已进版本史', () => {
+    /* 历史版本锚：钉的是「4.187.0 曾经交付过」这件事，不是「当前正好是 4.187.0」。
+     *   后者会随每版抬版变红，红灯只是噪音（r23_o1 那条 v4.183 交棒改写的同一理由）。 */
+    const log = JSON.parse(read('update-log.json'));
+    assert.equal(log.head, log.latest, 'update-log head 与 latest 必须同源');
+    assert.ok(Object.prototype.hasOwnProperty.call(log.versions, '4.187.0'), '4.187.0 必须留在版本史里');
+    assert.ok(read('ITERATION_LOG.md').indexOf('v4.187.0') > 0, '迭代日志要记到 v4.187.0');
 });

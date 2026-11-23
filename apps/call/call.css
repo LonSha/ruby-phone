@@ -1,0 +1,25 @@
+/* ============================================================
+ * call.css — [v4.188.0] 情境通话声场 · 样式（只接 var() 主题）
+ * ============================================================ */
+.call-root { display:flex; flex-direction:column; gap:10px; padding:12px; box-sizing:border-box; height:100%; overflow-y:auto; font-size:14px; color:var(--rp-text,#e6e6e6); background:var(--rp-bg,#12141a); }
+.call-head { display:flex; align-items:center; gap:8px; }
+.call-back { border:0; background:transparent; color:inherit; font-size:20px; line-height:1; padding:2px 8px; cursor:pointer; }
+.call-title { font-weight:600; font-size:16px; flex:1; }
+.call-face { font-size:11px; padding:2px 8px; border-radius:10px; border:1px solid currentColor; opacity:.85; white-space:nowrap; }
+.call-face-ok { color:#38bdf8; } .call-face-warn { color:#f59e0b; } .call-face-idle { color:#6b7280; }
+.call-flash,.call-notes { font-size:12px; padding:6px 10px; border-radius:8px; background:rgba(255,255,255,.06); }
+.call-sec-t { font-size:12px; opacity:.6; margin-top:4px; }
+.call-scenes { display:flex; gap:6px; flex-wrap:wrap; }
+.call-scene { border:1px solid rgba(255,255,255,.16); background:transparent; color:inherit; font:inherit; font-size:12px; padding:5px 10px; border-radius:8px; cursor:pointer; }
+.call-scene.is-on { border-color:rgba(56,189,248,.6); background:rgba(56,189,248,.14); }
+.call-sig { display:flex; align-items:center; gap:8px; font-size:13px; }
+.call-step { border:1px solid rgba(255,255,255,.16); background:transparent; color:inherit; font:inherit; width:28px; height:28px; border-radius:8px; cursor:pointer; }
+.call-live { font-size:13px; padding:8px 10px; border-radius:8px; background:rgba(56,189,248,.08); }
+.call-live-idle { opacity:.6; }
+.call-btn { border:1px solid rgba(56,189,248,.5); background:rgba(56,189,248,.12); color:inherit; font:inherit; font-size:13px; padding:7px 12px; border-radius:8px; cursor:pointer; }
+.call-btn-hang { border-color:rgba(248,113,113,.6); background:rgba(248,113,113,.12); }
+.call-hist { display:flex; flex-direction:column; gap:6px; }
+.call-hrow { font-size:12px; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,.04); }
+.call-empty { font-size:12px; opacity:.55; padding:8px 2px; }
+.call-foot { margin-top:auto; padding-top:8px; }
+.call-reset { border:1px solid rgba(255,255,255,.16); background:transparent; color:inherit; font:inherit; font-size:12px; padding:6px 12px; border-radius:8px; cursor:pointer; }

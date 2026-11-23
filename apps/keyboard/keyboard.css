@@ -1,0 +1,21 @@
+/* ============================================================
+ * keyboard.css — [v4.188.0] 像素键盘 · 样式
+ * ============================================================ */
+.kb-root { display:flex; flex-direction:column; gap:10px; padding:12px; box-sizing:border-box; height:100%; overflow-y:auto; font-size:14px; color:var(--rp-text,#e6e6e6); background:var(--rp-bg,#12141a); }
+.kb-head { display:flex; align-items:center; gap:8px; }
+.kb-back { border:0; background:transparent; color:inherit; font-size:20px; line-height:1; padding:2px 8px; cursor:pointer; }
+.kb-title { font-weight:600; font-size:16px; flex:1; }
+.kb-face { font-size:11px; padding:2px 8px; border-radius:10px; border:1px solid currentColor; opacity:.85; white-space:nowrap; }
+.kb-face-ok { color:#38bdf8; } .kb-face-idle { color:#6b7280; }
+.kb-flash { font-size:12px; padding:6px 10px; border-radius:8px; background:rgba(255,255,255,.06); }
+.kb-sec-t { font-size:12px; opacity:.6; margin-top:4px; }
+.kb-slangs { display:flex; gap:6px; flex-wrap:wrap; }
+.kb-slang { display:inline-flex; align-items:center; gap:4px; font-size:12px; padding:4px 8px; border-radius:8px; border:1px solid rgba(255,255,255,.16); }
+.kb-del { border:0; background:transparent; color:inherit; opacity:.6; cursor:pointer; font:inherit; padding:0 2px; }
+.kb-addrow,.kb-queryrow { display:flex; gap:6px; }
+.kb-add,.kb-query { border:1px solid rgba(56,189,248,.5); background:rgba(56,189,248,.12); color:inherit; font:inherit; font-size:12px; padding:6px 12px; border-radius:8px; cursor:pointer; }
+.kb-cands { display:flex; gap:6px; flex-wrap:wrap; }
+.kb-cand { font-size:13px; padding:5px 10px; border-radius:8px; background:rgba(56,189,248,.1); border:1px solid rgba(56,189,248,.35); }
+.kb-none { font-size:12px; opacity:.55; }
+.kb-foot { margin-top:auto; padding-top:8px; }
+.kb-reset { border:1px solid rgba(255,255,255,.16); background:transparent; color:inherit; font:inherit; font-size:12px; padding:6px 12px; border-radius:8px; cursor:pointer; }

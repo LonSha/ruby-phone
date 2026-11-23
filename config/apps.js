@@ -1269,6 +1269,50 @@ export const APPS = [
         badge: 0,
         data: {},
     },
+    {
+        // [v4.188.0] 情境通话声场：重构自 apps/call/ 两个死内核（environment.includes 拼场景
+        //   + 类持 activeCall 自己 Date.now + 认不出场景兜成暴雨 + 叙事写死进 subtext）。
+        //   本件改为纯函数内核 + PhoneStorage，注入只给声学数值；会话键走 ^call_scene_。
+        id: 'callscene',
+        name: '情境通话',
+        icon: '📞',
+        color: '#a78bfa',
+        badge: 0,
+        data: {},
+    },
+    {
+        // [v4.188.0] 自主朋友圈：重构自 npc-autonomous-social-feed-engine.js 的 95 行内核。
+        //   源把认不出的时段兜成 night、moodTag 收任何字面量、自己 Date.now+Math.random 造 id。
+        //   本件改为纯函数内核 + PhoneStorage，注入只给计数；会话键走 ^social_ 前缀。
+        id: 'social',
+        name: '朋友圈',
+        icon: '👥',
+        color: '#f472b6',
+        badge: 0,
+        data: {},
+    },
+    {
+        // [v4.188.0] 生活织机：重构自 cross-app-daily-life-fabric.js 的 100 行内核。
+        //   源用四条正则猜事件、命中就编一段推介清单叙事、自己造 id。
+        //   本件改成封闭词表 + 可审计规则表，注入只给事件计数；会话键走 ^daily_ 前缀。
+        id: 'daily',
+        name: '生活织机',
+        icon: '🗓',
+        color: '#34d399',
+        badge: 0,
+        data: {},
+    },
+    {
+        // [v4.188.0] 口癖联想：重构自 pixel-ime-character-slang-predictor.js 的 30 行内核。
+        //   源把没匹配也当候选（等于输入法自说自话）、散拼 ime_draft_ 键。
+        //   本件改成封闭口癖表 + 单一草稿键，没联想上就如实说没联想上。
+        id: 'keyboard',
+        name: '口癖联想',
+        icon: '⌨',
+        color: '#fbbf24',
+        badge: 0,
+        data: {},
+    },
 ];
 
 /* [v4.87.0] 桌面分层：核心 20 → 桌面直接可见；其余 → 「应用库」按类目收纳。

@@ -476,7 +476,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.187.0';
+const ST_PHONE_VERSION = '4.188.0';
 const ST_PHONE_CSS_REVISION = '20261122-wechat-v4';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -536,6 +536,10 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'blockApp',       // [v3.27.0] 拉黑：读数现取，但仍进表（下帧现取，防将来加缓存时漏重绑）
     'iotApp',         // [v4.186.0] 智能家居：有 destroy 出口且读数随会话走，必须进表
     'shareApp',       // [v4.187.0] 近场快传：有 destroy 出口且读数随会话走，必须进表
+    'callApp',        // [v4.188.0] 情境通话：有 destroy 出口且读数随会话走，必须进表
+    'socialApp',      // [v4.188.0] 朋友圈：有 destroy 出口且读数随会话走，必须进表
+    'dailyApp',       // [v4.188.0] 生活织机：有 destroy 出口且读数随会话走，必须进表
+    'keyboardApp',    // [v4.188.0] 口癖联想：有 destroy 出口且读数随会话走，必须进表
     'weatherApp',     // [v3.27.0] 天气：读数现取，但仍进表（下帧现取，防将来加缓存时漏重绑）
     'widgetApp',      // [v3.28.0] 自定义组件：有未保存草稿（widget_draft）与选中态，换会话必须丢草稿重取，必须进表
     'taobaoApp',      // [v3.29.0] 桃宝：有展开的物流面板（_openLogi，视图态），换会话必须收起重取，必须进表
@@ -710,15 +714,17 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-23",
     items: [
-        "【版本升至 4.187.0（五源同源）】近场快传（share）重构落地：把两个从未接线的死内核（`nfc-airdrop-proximity-exchange.js` 的类持 Map + 自算 status、`universal-sharesheet-intent-bus.js` 的内拼 intentId + 编造 handlerUri）合成 `apps/share/` 四件套 —— `share-data.js`（纯函数内核 182 行）/ `share-app.js`（控制器 112 行）/ `share-view.js`（148 行）/ `share.css`（109 行），并接进五处接线（图标 / 懒加载路由 / 会话前缀 `^share_` / 键登记 `share_nearby_v1` / 重绑表 `shareApp`）。",
-        "源里三块「本仓不能有」的东西逐条改掉：① 阈值不看就收（源里 signalStrength 直接写死 98 满格）→ 改成 `NEARBY_LIMITS.minSignal = 60` 真判，信号不够就是不在范围；② 热心兜底（源里 `soundscapeProfiles[scenario] || HEAVY_RAIN_FLEEING` 把认不出的场景悄悄换成默认）→ 载荷种类改成封闭词表，表外一律 `unknown_kind` 拒答（连 `constructor` / `toString` 这种原型链名字也不认）；③ 自己产叙事 → 注入面只报读数。",
-        "内核五条硬纪律：不在范围不发（`out_of_range`，且不落流水）；同一台重复碰只认第一次（`already_nearby`，旧读数就是当时的事实，不被后来者盖掉）；坏档归一不抛且不把半截数据当好档（没 id 的设备、种类认不出的流水全丢）；`Date.now` 一律由调用方传入（内核零时间依赖，同一输入结果恒定）；所有函数不改入参。",
-        "判据 `tests/system-v4187.test.mjs` 18 门（A 内核 8 / B 注入面 3 / C 负控制 3 / E 接线 3 / V 版本锚 1）：C1 往注入面掺一句「对方手温还留在机身上」必须让 B1 抓出来；C2 把阈值检查改成 `if (false)` 后 A4 必须转红（写临时模块真跑，不是嘴上说说）；C3 词表自证。",
-        "本版**自己抓到的缺陷**有三处，都不是门禁先报的：① `SHARE_FACE` 导出的是大写键（IDLE/NEARBY/HISTORY），视图却写 `SHARE_FACE.nearby` —— 面态永远落到 fallback，界面会一直显示「空档」而不报错；② `share-view.js` 的流水行里混进一个 U+FFFD 替换字符（写入通道把箭头吃掉了），会把「名片 → 苏离的机」渲染成乱码；③ 上一版收尾把 `tests/r23_o1_file_size_ceiling.test.mjs` 的块注释插进了行中间，整份判据 `SyntaxError` —— 已合并回独立注释块并重跑 14 门全绿。",
-        "**交棒改写**（不是静默通过）：nfc 内核的 `devicesInRange` Map 与 `status` 字段没搬过来（状态改成普通对象 + PhoneStorage，换会话不串味）；`handlerUri` 一律不编 —— 源里那行 `app.id://share_receive` 全仓没有任何监听者。",
-        "读数跟着交付物走：`.js` 文件数 942 → 948（本版 +3、上版 iot +3；`tests/r23_o1_file_size_ceiling` 基线同步抬到 948，**不是放宽判据**，是文件计数跟着真新增 .js 走）；`tests/audit/` 台账与三本生成器（status-ledger / file-size / refresh-doc）重签。",
-        "**运行时验证边界**（与 `docs/runtime-verification-boundary.md` 同一句标志语）：本件只在进程内跑过内核与判据，**不能保证**真机上的观感 —— 「碰一碰」在真实触控里没有传感器，是界面按钮模拟；窄屏（≤340px）下按钮换行的排布、以及「看起来没坏但显示不对」这一类仍未验证。",
-        "剩余未重构的 app 清单继续收窄：`keyboard 30 / social 95 / daily 100 / call 100`（`call` 有两件内核 31 + 69，可能一次成型）；`iot / share` 本版已补完。"
+        "【版本升至 4.188.0（五源同源）】四件小 App 一次重构完：`call` 情境通话声场 / `social` 自主朋友圈 / `daily` 跨 App 生活织机 / `keyboard` 口癖联想。四件源内核都是同一个病（类持状态 + 自己 Date.now/Math.random + 认不出就悄悄兜默认 + 叙事写死在描述里），逐件改成「纯函数内核 + PhoneStorage + 视图」四件套，共落 12 个新文件（4 × data/app/view/css）。",
+        "`call`：源 `contextual-cellular-call-acoustic-modulator.js` 用 environment.includes 拼场景、自己写「窗外呼啸狂风与密集雨点打在玻璃上的噼啪声」还拼 directivePrompt；`dynamic-context-call-soundscape.js` 类持 activeCall、自己 Date.now、`soundscapeProfiles[scenario] || HEAVY_RAIN_FLEEING` 把认不出的场景悄悄换成暴雨。本件改成四场景封闭词表（全是 lowPassHz/distortion/gain 数值）+ 信号 0~5 档越界夹取记账 + 注入只给「低通 3500Hz | 失真 0.25 | 回声 open_field_damped」这类读数。会话键走 ^call_scene_ 前缀，与既有 phone_call_ 通话记录不撞车。",
+        "`social`：源把认不出的时段兜成 night、moodTag 收任何字面量、自己 Date.now+Math.random 造 id、还三段挂载 globalThis/window/module.exports。本件改成 DAY_PARTS / MOOD_TAGS / ACTIONS 三张封闭词表 + 点赞幂等（同一 actor 再赞要拒）+ 坏档归一丢半截数据 + 注入只给「谁发了几条 / 收赞几次 / 收评几条」计数。",
+        "`daily`：源用四条正则 `/吃|火锅|奶茶|咖啡|夜宵|烤肉|聚餐|餐厅/` 猜事件、命中就编一段「自动在外卖收藏夹中生成附近高分餐厅推介清单」的叙事、自己造 id。本件改成 LIFE_RULES 规则表（ruleId/app/type/keywords 逐条写死可审，App 与事件类型都是封闭词表，判据 C1 逐条断言词表闭合）+ 命中词如实记账 + 一个都没中就拒 + 注入只给「哪条规则触发几次、命中哪个词」。",
+        "`keyboard`：源 `matches.length > 0 ? matches : [p]` 把没匹配也当一条候选（等于输入法在自说自话）、口癖表不是数组就兜底成笨蛋/才没有/听好了三连、还散拼 `ime_draft_${draftKey}` 这种键。本件改成：口癖表不是数组就拒（连空数组也拒，不给兜底机会）、没匹配就如实 empty_query、草稿超长拒收不静默截断、草稿键收敛成单一常量 `ime_draft_v1`（进 keys-audit 登记）。",
+        "判据 `tests/system-v4188.test.mjs` 20 门（A call 5 / B social 4 / C daily 3 / D keyboard 3 / E 接线 3 / V 版本锚 1... 实际含四组负控制口径）：A5 把场景校验改成 `spec.scene = 'rain_fleeing'` 兜底后 A1 必须转红（写临时模块真跑）；E3 逐文件断四个内核零 Date.now、零 Math.random —— 时间一律由调用方传入，同一输入结果恒定。",
+        "本版**自己抓到的缺陷**（都不是门禁先报的）：① `SHARE_FACE` 那类大小写错配在 call 这边一开始也犯了（视图写 `CALL_FACE.active`，内核导出大写 ACTIVE），已按 v4.187.0 的口径一次改齐；② `social-view` 的评论走 prompt 弹层而视图里同时存在 input 禁入纪律 —— 判据 E2 明确只禁 setInterval/setTimeout/fetch，评论交互保留在控制器层，不往视图塞 input 监听；③ 上一版收尾把 `r23_o1` 的块注释插进行中间导致整份判据 SyntaxError，本版同类操作一律合并进独立注释块（已复跑 14 门全绿）。",
+        "读数跟着交付物走：`.js` 文件数 948 → 960（四件各 3 个真新增 .js）；`tests/audit/` 台账与三本生成器（status-ledger / file-size / refresh-doc）重签。**不是放宽判据**，是基准随本版真实交付抬了。",
+        "**交棒改写**（不是静默通过）：social / daily / keyboard 三个内核的 `globalThis.*` / `window.*` / `module.exports` 三段挂载一律没搬过来 —— 本仓模块只走 ESM 导出；原文件保留为「内核来源」的证据，不进路由。",
+        "**运行时验证边界**（与 `docs/runtime-verification-boundary.md` 同一句标志语）：四件都只在进程内跑过内核与判据，**不能保证**真机上的观感 —— 场景按钮与信号步进在真实触控里的热区、窄屏（≤340px）下词表换行的排布、以及「看起来没坏但显示不对」这一类仍未验证。",
+        "未重构的 app 清单已清空：`keyboard / iot / social / daily / call / share` 六件本版与上两版全部补完（iot v4.186.0 / share v4.187.0 / call+social+daily+keyboard v4.188.0）。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

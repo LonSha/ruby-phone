@@ -1,0 +1,23 @@
+/* ============================================================
+ * social.css — [v4.188.0] 自主朋友圈 · 样式
+ * ============================================================ */
+.social-root { display:flex; flex-direction:column; gap:10px; padding:12px; box-sizing:border-box; height:100%; overflow-y:auto; font-size:14px; color:var(--rp-text,#e6e6e6); background:var(--rp-bg,#12141a); }
+.social-head { display:flex; align-items:center; gap:8px; }
+.social-back { border:0; background:transparent; color:inherit; font-size:20px; line-height:1; padding:2px 8px; cursor:pointer; }
+.social-title { font-weight:600; font-size:16px; flex:1; }
+.social-face { font-size:11px; padding:2px 8px; border-radius:10px; border:1px solid currentColor; opacity:.85; white-space:nowrap; }
+.social-face-ok { color:#38bdf8; } .social-face-idle { color:#6b7280; }
+.social-flash { font-size:12px; padding:6px 10px; border-radius:8px; background:rgba(255,255,255,.06); }
+.social-list { display:flex; flex-direction:column; gap:8px; }
+.social-card { border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:6px; }
+.social-meta { display:flex; align-items:baseline; gap:8px; font-size:12px; }
+.social-author { font-weight:600; flex:1; }
+.social-tag { opacity:.6; }
+.social-body { font-size:13px; line-height:1.5; }
+.social-acts { display:flex; gap:6px; }
+.social-btn { border:1px solid rgba(56,189,248,.45); background:rgba(56,189,248,.1); color:inherit; font:inherit; font-size:12px; padding:4px 10px; border-radius:8px; cursor:pointer; }
+.social-btn-ghost { border-color:rgba(255,255,255,.16); background:transparent; opacity:.75; }
+.social-cmts { font-size:12px; opacity:.8; display:flex; flex-direction:column; gap:3px; }
+.social-empty { font-size:12px; opacity:.55; padding:12px 2px; }
+.social-foot { margin-top:auto; padding-top:8px; }
+.social-reset { border:1px solid rgba(255,255,255,.16); background:transparent; color:inherit; font:inherit; font-size:12px; padding:6px 12px; border-radius:8px; cursor:pointer; }
