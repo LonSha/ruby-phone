@@ -11,20 +11,9 @@
  *   · **不自己判**：分面 / 冲突 / 迁移 / 快照差异的名与文案全部来自内核。
  * ========================================================= */
 'use strict';
+import { esc } from '../../config/esc-face.js';
 import { renderExperienceImport } from './experience-import-view.js';
 import { renderExperiencePack } from './experience-pack-view.js';
-const AMP = String.fromCharCode(38);
-const LT = String.fromCharCode(60);
-const GT = String.fromCharCode(62);
-const QUOTE = String.fromCharCode(34);
-const QUOTE_ESC = AMP + 'quot;';
-function esc(s) {
-    return String(s === undefined || s === null ? '' : s)
-        .split(AMP).join(AMP + 'amp;')
-        .split(LT).join(AMP + 'lt;')
-        .split(GT).join(AMP + 'gt;')
-        .split(QUOTE).join(QUOTE_ESC);
-}
 const STATE_LABEL = {
     new: '新增', restore: '还原', conflict: '冲突', rejected: '拒收', identical: '逐字相同',
 };

@@ -13,24 +13,13 @@
  *   ④ 破坏性操作走 config/destructive-confirm.js 的确认口，不弹宿主对话框。
  * ======================================================== */
 'use strict';
+import { esc } from '../../config/esc-face.js';
 import { daysOf } from './annidate-data.js';
 import { confirmDestroy } from '../../config/destructive-confirm.js';
 import { numeralText } from '../../config/num-face.js';
 
-const AMP = String.fromCharCode(38);
-const LT = String.fromCharCode(60);
-const GT = String.fromCharCode(62);
-const QUOTE = String.fromCharCode(34);
-const QUOTE_ESC = AMP + 'quot;';
 const DASH = String.fromCharCode(45, 45);
 
-function esc(s) {
-    return String(s === undefined || s === null ? '' : s)
-        .split(AMP).join(AMP + 'amp;')
-        .split(LT).join(AMP + 'lt;')
-        .split(GT).join(AMP + 'gt;')
-        .split(QUOTE).join(QUOTE_ESC);
-}
 
 /** 一件纪念日的天数说法：只在视图这一处拼，口径来自数据层的 daysOf。 */
 function wordOf(it, nowMs) {

@@ -9,18 +9,7 @@
  *   · 放大量与窄屏：类名与 data-ax-* 全部来自内核的 guard（视图不自己算断点）。
  * ========================================================= */
 'use strict';
-const AMP = String.fromCharCode(38);
-const LT = String.fromCharCode(60);
-const GT = String.fromCharCode(62);
-const QUOTE = String.fromCharCode(34);
-const QUOTE_ESC = AMP + 'quot;';
-function esc(s) {
-    return String(s === undefined || s === null ? '' : s)
-        .split(AMP).join(AMP + 'amp;')
-        .split(LT).join(AMP + 'lt;')
-        .split(GT).join(AMP + 'gt;')
-        .split(QUOTE).join(QUOTE_ESC);
-}
+import { esc } from '../../config/esc-face.js';
 const LEVEL_TEXT = { standard: '标准', enhanced: '增强', large: '大字号' };
 const THEME_TEXT = { auto: '跟随系统', light: '浅色', dark: '深色' };
 const SOURCE_TEXT = { user: '你自己选的', policy: '跟随系统设置', default: '默认值' };

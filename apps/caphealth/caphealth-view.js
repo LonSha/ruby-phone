@@ -9,19 +9,8 @@
  *   · **不只用颜色区分状态**：每一行都带**文字**（stateText）——禁用色即可读（见验收④）。
  * ========================================================= */
 'use strict';
+import { esc } from '../../config/esc-face.js';
 import { CAP_STATE_TEXT } from '../../config/capability-health.js';
-const AMP = String.fromCharCode(38);
-const LT = String.fromCharCode(60);
-const GT = String.fromCharCode(62);
-const QUOTE = String.fromCharCode(34);
-const QUOTE_ESC = AMP + 'quot;';
-function esc(s) {
-    return String(s === undefined || s === null ? '' : s)
-        .split(AMP).join(AMP + 'amp;')
-        .split(LT).join(AMP + 'lt;')
-        .split(GT).join(AMP + 'gt;')
-        .split(QUOTE).join(QUOTE_ESC);
-}
 /* 状态 → 样式后缀（**不是**第二份文案表：文案唯一实现在内核，这里只挑类名）。
  *   缺省后缀取未验证 —— 认不出的状态不得被渲染成「可用」。 */
 const STATE_CLS = { ok: 'cph-ok', partial: 'cph-part', unavailable: 'cph-bad', unverified: 'cph-un' };

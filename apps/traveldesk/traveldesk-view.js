@@ -18,21 +18,10 @@ import { phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
  *   click / input 只在根容器上各挂一次，靠 data-act + dataset 分派；读不到 DOM 一律不抛。
  * ======================================================== */
 'use strict';
+import { esc } from '../../config/esc-face.js';
 import { confirmDestroy } from '../../config/destructive-confirm.js';
 import { numeralText, moneyText } from '../../config/num-face.js';
-const AMP = String.fromCharCode(38);
-const LT = String.fromCharCode(60);
-const GT = String.fromCharCode(62);
-const QUOTE = String.fromCharCode(34);
-const QUOTE_ESC = AMP + 'quot;';
 const DASH = String.fromCharCode(45, 45);
-function esc(s) {
-    return String(s === undefined || s === null ? '' : s)
-        .split(AMP).join(AMP + 'amp;')
-        .split(LT).join(AMP + 'lt;')
-        .split(GT).join(AMP + 'gt;')
-        .split(QUOTE).join(QUOTE_ESC);
-}
 
 const TABS = [
     { key: 'book', label: '账' },

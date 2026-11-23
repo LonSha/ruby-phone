@@ -12,20 +12,9 @@
  *     「受限声明式」的意思就是「认得出的动作是有限的」。
  * ========================================================= */
 'use strict';
+import { esc } from '../../config/esc-face.js';
 import { designHtml, bindDesign } from './workflow-design.js';
-const AMP = String.fromCharCode(38);
-const LT = String.fromCharCode(60);
-const GT = String.fromCharCode(62);
-const QUOTE = String.fromCharCode(34);
-const QUOTE_ESC = AMP + 'quot;';
 const DASH = String.fromCharCode(45, 45);
-function esc(s) {
-    return String(s === undefined || s === null ? '' : s)
-        .split(AMP).join(AMP + 'amp;')
-        .split(LT).join(AMP + 'lt;')
-        .split(GT).join(AMP + 'gt;')
-        .split(QUOTE).join(QUOTE_ESC);
-}
 export class WorkflowView {
     constructor(app) { this.app = app; this.root = null; }
     _mount() {

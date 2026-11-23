@@ -10,6 +10,7 @@
  *   . **不在本件判上限**:模板上限 / 步骤上限 / 参数上限 / 组数上限全走内核常量,本件不另写一份数字。
  * ========================================================= */
 'use strict';
+import { esc } from '../../config/esc-face.js';
 import {
     WD_ACTIONS, WD_ACTION_KEYS, WD_LIMITS, WD_DEFAULT_NAME,
     moveStep, bindParams, setBranch, setRepeat,
@@ -19,19 +20,7 @@ import {
     OP_PARAM_STATES, opFaceOptions, stepParamsOf, flowPreviewOf,
 } from '../../config/object-picker.js';
 
-const AMP = String.fromCharCode(38);
-const LT = String.fromCharCode(60);
-const GT = String.fromCharCode(62);
-const QUOTE = String.fromCharCode(34);
-const QUOTE_ESC = AMP + 'quot;';
 
-function esc(s) {
-    return String(s === undefined || s === null ? '' : s)
-        .split(AMP).join(AMP + 'amp;')
-        .split(LT).join(AMP + 'lt;')
-        .split(GT).join(AMP + 'gt;')
-        .split(QUOTE).join(QUOTE_ESC);
-}
 
 function emptyDraft() {
     return { id: '', name: WD_DEFAULT_NAME, steps: [] };

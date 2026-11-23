@@ -1,6 +1,22 @@
 {
-  "latest": "4.197.0",
+  "latest": "4.198.0",
   "versions": {
+  "4.198.0": {
+    "version": "4.198.0",
+    "date": "2026-11-23",
+    "items": [
+      "【版本升至 4.198.0（五源同源）】20 版 60 只 App 重构计划第八批：跨 App 重复口径收敛第六炮 —— HTML 转义面 esc。本版重做全仓同名函数体指纹扫描（v4.197.0 后新基线），实测 function esc(s) 在 apps 下共 **35 处定义**、分为 **12 种口径**；其中变体 [0] 为 **18 份逐字全等**（调用点合计 **449 处**），是目前最大的一簇。",
+      "config/esc-face.js（53 行，纯函数内核）：唯一导出 esc(v)，与 18 份复制件逐字等价（18 文件 × 33 探针 = 594 用例零差异；转调后复跑 45 用例仍零差异）。三条立场：① **只转四个字符** 与号、小于号、大于号、双引号，单引号刻意不转；② null/undefined 给空串，其余值统走 String()；③ **不带 max 截断** —— 那是第二个签名，属另一个面。函数体用四次 replace 正则实现，与 18 份复制件的 split/join 常量化形在全部探针上等价。**本版最要紧的一条是不许合并**：esc 治的是「串里的四个字符怎么变成实体」，与仓内三份文本读取内核治的不是同一件事 —— text-face.js（toStr）/ str-face.js（safeStr）/ loose-str-face.js（str）管的是「非串给什么、要不要 trim」。esc 与三者的边界在：输入不含那四个字符时四者一致，一旦含之，只有 esc 会转义。更关键的是 esc 自身另有 11 种异口径：空值合并运算符加 34/39 号实体形、双引号实体写作 quot; 的形、无空格形、以及**带 max 第二签名且转单引号**的形（tieba-view）。实测 it 加单引号 s 在本内核原样返回、在 v11 变成 39 号实体，且 v11 会按 max 截断 —— 两者合并就是造假等价。",
+      "**本版最要紧的一条是不许合并**：esc 治的是「串里的四个字符怎么变成实体」，与仓内三份文本读取内核治的不是同一件事 —— text-face.js（toStr）/ str-face.js（safeStr）/ loose-str-face.js（str）管的是「非串给什么、要不要 trim」。esc 与三者的边界在：输入不含那四个字符时四者一致，一旦含之，只有 esc 会转义。更关键的是 esc 自身另有 11 种异口径：空值合并运算符加 34/39 号实体形、双引号实体写作 quot; 的形、无空格形、以及**带 max 第二签名且转单引号**的形（tieba-view）。实测 it 加单引号 s 在本内核原样返回、在 v11 变成 39 号实体，且 v11 会按 max 截断 —— 两者合并就是造假等价。",
+      "转调 **18 处**（全部在 apps 下，深度一致）：删本地 esc 定义 + 删 5 个只服务 esc 的常量（AMP/LT/GT/QUOTE/QUOTE_ESC，经词边界计数确认各文件内只被 esc 自身消费，AMP 6 次 = 1 定义 + 5 次体内引用，其余各 2 次 = 1 定义 + 1 次引用）+ 在 use strict 之后插 import { esc } from ../../config/esc-face.js。各文件调用点：creationdesk-view 97、backupdesk-view 72、traveldesk-view 47、memtable-view 39、taskentry-view 37、workflow-design 32、workflow-view 27、accessdesk-view 20、socialguard-view 15、caphealth-view 14、annidate-view 12、periodmath-view 6、stickerdesk-view 5、cardtable-view 4、freehome-view 4、lexiscore-view 3、sullydesk-view 8、summdesk-view 7。本批 18 处**全部有真实调用点**，无零调用死定义。",
+      "**另 17 处异口径刻意未动**（判据 C2 钉住，实测 defs 17 / withMax 1 / 转单引号 5 / 空值合并形 8）：cheat-view、dt-view、gacha-view、xhs-view、board-view、health-view、notification-center-view、search-view、reading-view、tarot-view、timeweaver-view、worldpulse-view、album-voice-view、mystery-view、mood-view、settings-ia-panel、tieba-view。十二种口径混在一处收敛就是造假等价。",
+      "tests/system-v4198.test.mjs（14 条判据）：A 组 4 条内核纯度与等价性（A1 源码面零副作用；A2 45 用例对拍 0 diff；A3 三条立场含「第二个入参被忽略」；A4 只一个具名出口，escHtml/escapeHtml/escAttr/escMax 不许复活）；B1 18 文件定义与 5 常量已删 + import 在场 + 仍有调用点；B2 import 不许落进块注释且必须完整语句；B3 import 必须紧接 use strict（不插进多行 import 块中间）；C1 apps+config 无第二份同口径定义；C2 十七处异口径仍在场；**C3 esc 与带 max 加转单引号的 v11 必须保持互不等价**；C4 esc 与三份文本内核的边界在四个字符；D1/D2 负控制。",
+      "**本版自己抓到的缺陷（三类）**：① **内核落盘时引号被破坏**：因 package_proxy 的 JSON 包装对「长脚本 + 中文 + 多种引号」持续报 params must be a valid JSON object，改用 base64 载荷加 esc-amp/esc-lt/esc-gt/esc-dq 占位符替换落盘，替换逻辑把 use strict 一行的引号吃掉，落成空串加 use strict 加引号的坏形，语法不合法。修法是定位后按字节改回。教训：占位符替换完成后必须立刻跑 node --check，不能只靠 read_file 目测。② **自造的基准串本身就是错的**：分簇时我手写了一份「变体 0」基准串（split(LT).join(LT 加 lt;）），与源文件真实写法（split(LT).join(AMP 加 lt;））不同，导致全仓扫描 0 命中，一度以为 18 份不存在。修法是从源文件实抓定义做基准，不靠记忆复述。③ **判据自身三处假红**：A2/C3 引用 SQ 但只在 B3 里定义，ReferenceError 假红；C2 的正则把 tieba-view 的签名写死成 esc(s, max)，而真实签名是 esc(value, max = 0)，导致 withMax 实测 0 假红；C4 最初把不含四个字符的 plain text 塞进 notEqual 断言（四者本应一致），属断言写错。三条均为判据缺陷，非工程缺陷。",
+      "**交棒改写（下限形）**：本版新写的 v4198 判据 V1 直接用下限形（语义化 cmp(a,b)），未再产生新的刚性版本锚。v4.197.0 已统一改写的 8 套历史判据（v4080/v4120/v4210/v4260/v4270/v4280/v4290/v4300/v4480）本轮未受影：esc 的 18 个转调文件全在 apps 下、import 路径指向 ../../config/esc-face.js，不涉及 config 内核，未再触发「依赖面 deepEqual」类伪红。",
+      "**运行时验证边界**：门禁取数仍由 tools/refresh_doc_readings.py --write 现场真跑 scripts/syntax-check.mjs 与 scripts/import-resolve-check.mjs 取实测值（不读常量）；tools/gen_status_ledger.mjs 与 tools/audit-event-subscribers.mjs 均须带 --write 才落盘；browser 层按该门自身规矩以 SKIP_BROWSER=1 显式声明本次未执行，不假装跑过。",
+      "纯函数内核新增 1 个文件（config/esc-face.js），无新增副作用文件；三道静态门禁（syntax 1695 文件 / import-resolve 1895 条静态导入 / named-import 1836 条具名导入）复跑通过。下一批候选（已盘点未动，共 88 个候选面）：safeNum 19 文件（16 份 Number(val) 弱口径，收敛须改走 numOrNull，属行为变更需单独一批）、listOf 18（4 变体，15 处等价 + 2 处 items 解包宽口径）、clip 17（未盘点变体）、isPlain 15（4 变体，14 处语义等价）、arr 15（未盘点）、trimRows 14（4 变体，11 处等价）、readingsOf 12、num 12。"
+    ]
+  },
     "4.197.0": {
       "version": "4.197.0",
       "date": "2026-11-23",
@@ -6791,5 +6807,5 @@
       ]
     }
   },
-  "head": "4.197.0"
+  "head": "4.198.0"
 }

@@ -12,21 +12,10 @@
  *     与真实桌面是两套，混为一谈会做出一个「只在预览里生效」的假功能。
  * ======================================================== */
 'use strict';
-const AMP = String.fromCharCode(38);
-const LT = String.fromCharCode(60);
-const GT = String.fromCharCode(62);
-const QUOTE = String.fromCharCode(34);
-const QUOTE_ESC = AMP + 'quot;';
+import { esc } from '../../config/esc-face.js';
 const DASH = String.fromCharCode(45, 45);
 /* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。 */
 import { FACE_ATTR } from '../../config/empty-face.js';
-function esc(s) {
-    return String(s === undefined || s === null ? '' : s)
-        .split(AMP).join(AMP + 'amp;')
-        .split(LT).join(AMP + 'lt;')
-        .split(GT).join(AMP + 'gt;')
-        .split(QUOTE).join(QUOTE_ESC);
-}
 export class TaskentryView {
     constructor(app) { this.app = app; this.root = null; }
     _mount() {

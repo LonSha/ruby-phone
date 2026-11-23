@@ -13,18 +13,7 @@ import { phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
  *     真正的交接（进主聊天 / 进创作草稿）归既有 owner；读不出时不摆条目行、也不画交接按钮。
  * ========================================================= */
 'use strict';
-const AMP = String.fromCharCode(38);
-const LT = String.fromCharCode(60);
-const GT = String.fromCharCode(62);
-const QUOTE = String.fromCharCode(34);
-const QUOTE_ESC = AMP + 'quot;';
-function esc(s) {
-    return String(s === undefined || s === null ? '' : s)
-        .split(AMP).join(AMP + 'amp;')
-        .split(LT).join(AMP + 'lt;')
-        .split(GT).join(AMP + 'gt;')
-        .split(QUOTE).join(QUOTE_ESC);
-}
+import { esc } from '../../config/esc-face.js';
 export class CreationdeskView {
     constructor(app) { this.app = app; this.root = null; }
     _mount() {

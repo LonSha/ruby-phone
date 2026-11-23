@@ -89,7 +89,8 @@
 > ④`R21-O7`/`O8`/`O9` `FORWARD=2` 纯转发层 + 跨 App 一物多账 + 事件派发无订阅 ⇒ 三笔结构性收尾。
 
 ---
-> **最近更新：v4.197.0**（20 版 60 只 App 重构计划第七批：跨 App 重复口径收敛第五炮 —— 宽松文本规整读取面 `str`，24 份逐字等价的复制件收敛为 `config/loose-str-face.js`；判据 tests/system-v4197.test.mjs 10 条，19 道门禁全绿）
+> **最近更新：v4.198.0**（20 版 60 只 App 重构计划第八批：跨 App 重复口径收敛第六炮 —— HTML 转义面 `esc`，18 份逐字全等的复制件收敛为 `config/esc-face.js`；判据 tests/system-v4198.test.mjs 14 条，三道静态门禁全绿）
+> **上一更新：v4.197.0**（20 版 60 只 App 重构计划第七批：跨 App 重复口径收敛第五炮 —— 宽松文本规整读取面 `str`，24 份逐字等价的复制件收敛为 `config/loose-str-face.js`；判据 tests/system-v4197.test.mjs 10 条，19 道门禁全绿）
 > **上一更新：v4.196.0**（20 版 60 只 App 重构计划第六批：跨 App 重复口径收敛第四炮 —— 字符串规整读取面 `safeStr`，15 份逐字等价的复制件收敛为 `config/str-face.js`；判据 tests/system-v4196.test.mjs 9 条，19 道门禁全绿）
 > **上一更新：v4.194.0**（20 版 60 只 App 重构计划第四批：跨 App 重复口径收敛第二炮 —— 文本读取面 `toStr`，31 处逐字等价的复制件收敛为 `config/text-face.js`，12 处 export 形 + 19 处私有形转调；判据 tests/system-v4194.test.mjs 11 条，19 道门禁全绿）
 > **上一更新：v4.191.0**（20 版 60 只 App 重构计划第一炮：weibo / honey 两件的文本与数值归一面抽成独立内核，源类 15 个方法体改为一行转调；wechat 件纯度未达抽取条件顺延；判据 tests/system-v4191.test.mjs 15 条，19 道门禁全绿）
