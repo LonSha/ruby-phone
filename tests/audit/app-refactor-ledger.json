@@ -1,8 +1,20 @@
 {
-  "schema": "app-refactor-ledger@1",
+  "schema": "app-refactor-ledger@2",
   "generated_by": "tools/gen_app_ledger.mjs",
-  "refactor_marker": "-core.js",
-  "refactor_marker_note": "已重构 = 该 App 目录下存在至少一个 *-core.js（四件套第一件）。js_lines 为该目录全部 .js 行数合计，不是单个文件；settings 的 config/phone-color-face.js 属跨 App 复用纯函数族，与 apps/<dir>/*-core.js 不同层，不计入本判据。只证明内核抽出，不证明行为等价 / 接线完整 / 真机跑对",
+  "refactor_marker": "-core.js|-data.js",
+  "purity_bans": [
+    "Date.now",
+    "new Date",
+    "Math.random",
+    "document",
+    "window",
+    "localStorage",
+    "sessionStorage",
+    "setTimeout",
+    "setInterval",
+    "fetch"
+  ],
+  "refactor_marker_note": "已重构 = 目录下存在 *-core.js 或 *-data.js **且**该内核剔注释与字符串后不出现 purity_bans 里的任何符号。三态互斥：refactored（内核纯）/ core_impure（内核在场但不纯）/ no_core（无内核文件）；pending = 后两态之和。js_lines 为该目录全部 .js 行数合计，不是单个文件；settings 的 config/phone-color-face.js 属跨 App 复用纯函数族，与 apps/<dir>/*-core.js 不同层，不计入本判据。只证明内核抽出且未直接取时间/随机/碰宿主，不证明行为等价 / 接线完整 / 真机跑对",
   "scale": {
     "app_dirs": 101,
     "apps_ids": 105,
@@ -32,19 +44,118 @@
     ]
   },
   "counts": {
-    "refactored": 8,
-    "pending": 93,
+    "refactored": 37,
+    "core_impure": 42,
+    "no_core": 22,
+    "pending": 64,
     "total_dirs": 101
   },
   "refactored_dirs": [
-    "diagnose",
+    "archive",
+    "asset",
+    "avatarframe",
+    "call",
+    "cardtable",
+    "chars",
+    "cheat",
+    "clock",
+    "cotdesk",
+    "daily",
+    "dirtytalk",
+    "doujin",
+    "freehome",
     "games",
+    "iot",
+    "kettle",
+    "keyboard",
+    "ledger",
+    "lexiscore",
+    "memtable",
+    "place",
+    "plotline",
+    "profile",
+    "pvdesk",
+    "recall",
+    "share",
+    "social",
+    "socialguard",
+    "soundkit",
+    "sourcebook",
+    "stickerdesk",
+    "sullydesk",
+    "tarot",
+    "tieba",
+    "traveldesk",
+    "usage",
+    "uterus"
+  ],
+  "core_impure_dirs": [
+    "accounting",
+    "achievement",
+    "album",
+    "annidate",
+    "bilibili",
+    "block",
+    "calendar",
+    "date",
+    "diagdesk",
+    "diagnose",
+    "diary",
+    "focus",
+    "gacha",
     "health",
     "honey",
+    "lofter",
+    "loverspace",
+    "magazine",
+    "memory",
+    "mofo",
     "music",
+    "musicdesk",
+    "needsim",
+    "peek",
+    "periodmath",
     "phone",
+    "piggy",
+    "pixiv",
+    "playbook",
+    "punchcard",
+    "reading",
+    "regexfilter",
+    "shop",
+    "summdesk",
+    "taobao",
+    "theater",
+    "wallet",
+    "weather",
     "wechat",
-    "weibo"
+    "weibo",
+    "widget",
+    "xhs"
+  ],
+  "no_core_dirs": [
+    "accessdesk",
+    "affairs",
+    "audio",
+    "backupdesk",
+    "caphealth",
+    "comms",
+    "creationdesk",
+    "darknet",
+    "hardware",
+    "investigation",
+    "moments",
+    "mood",
+    "network",
+    "notifications",
+    "search",
+    "security",
+    "settings",
+    "taskentry",
+    "timeweaver",
+    "wangxiang",
+    "workflow",
+    "worldpulse"
   ],
   "pending_dirs": [
     "accessdesk",
@@ -53,89 +164,60 @@
     "affairs",
     "album",
     "annidate",
-    "archive",
-    "asset",
     "audio",
-    "avatarframe",
     "backupdesk",
     "bilibili",
     "block",
     "calendar",
-    "call",
     "caphealth",
-    "cardtable",
-    "chars",
-    "cheat",
-    "clock",
     "comms",
-    "cotdesk",
     "creationdesk",
-    "daily",
     "darknet",
     "date",
     "diagdesk",
+    "diagnose",
     "diary",
-    "dirtytalk",
-    "doujin",
     "focus",
-    "freehome",
     "gacha",
     "hardware",
+    "health",
+    "honey",
     "investigation",
-    "iot",
-    "kettle",
-    "keyboard",
-    "ledger",
-    "lexiscore",
     "lofter",
     "loverspace",
     "magazine",
     "memory",
-    "memtable",
     "mofo",
     "moments",
     "mood",
+    "music",
     "musicdesk",
     "needsim",
     "network",
     "notifications",
     "peek",
     "periodmath",
+    "phone",
     "piggy",
     "pixiv",
-    "place",
     "playbook",
-    "plotline",
-    "profile",
     "punchcard",
-    "pvdesk",
     "reading",
-    "recall",
     "regexfilter",
     "search",
     "security",
     "settings",
-    "share",
     "shop",
-    "social",
-    "socialguard",
-    "soundkit",
-    "sourcebook",
-    "stickerdesk",
-    "sullydesk",
     "summdesk",
     "taobao",
-    "tarot",
     "taskentry",
     "theater",
-    "tieba",
     "timeweaver",
-    "traveldesk",
-    "usage",
-    "uterus",
     "wallet",
     "wangxiang",
     "weather",
+    "wechat",
+    "weibo",
     "widget",
     "workflow",
     "worldpulse",
@@ -147,23 +229,44 @@
       "js_files": 2,
       "js_lines": 290,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "accounting",
       "js_files": 3,
       "js_lines": 803,
-      "core_files": [],
+      "core_files": [
+        "accounting-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "accounting-data.js": {
+          "Date.now": 3,
+          "new Date": 1,
+          "Math.random": 2
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "achievement",
       "js_files": 3,
       "js_lines": 303,
-      "core_files": [],
+      "core_files": [
+        "achievement-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "achievement-data.js": {
+          "Date.now": 1,
+          "fetch": 1
+        }
+      },
       "has_app_id": true
     },
     {
@@ -171,39 +274,66 @@
       "js_files": 6,
       "js_lines": 664,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "album",
       "js_files": 5,
       "js_lines": 2664,
-      "core_files": [],
+      "core_files": [
+        "album-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "album-data.js": {
+          "Date.now": 2,
+          "window": 11
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "annidate",
       "js_files": 3,
       "js_lines": 478,
-      "core_files": [],
+      "core_files": [
+        "annidate-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "annidate-data.js": {
+          "new Date": 4
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "archive",
       "js_files": 7,
       "js_lines": 2586,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "archive-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "asset",
       "js_files": 16,
       "js_lines": 9386,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "asset-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
@@ -211,15 +341,21 @@
       "js_files": 6,
       "js_lines": 406,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": false
     },
     {
       "dir": "avatarframe",
       "js_files": 3,
       "js_lines": 885,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "avatarframe-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
@@ -227,39 +363,70 @@
       "js_files": 4,
       "js_lines": 1140,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "bilibili",
       "js_files": 6,
-      "js_lines": 2913,
-      "core_files": [],
+      "js_lines": 2930,
+      "core_files": [
+        "bili-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "bili-data.js": {
+          "new Date": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "block",
       "js_files": 3,
       "js_lines": 1174,
-      "core_files": [],
+      "core_files": [
+        "block-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "block-data.js": {
+          "Date.now": 10
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "calendar",
       "js_files": 4,
       "js_lines": 3823,
-      "core_files": [],
+      "core_files": [
+        "calendar-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "calendar-data.js": {
+          "Date.now": 5,
+          "Math.random": 3
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "call",
       "js_files": 5,
-      "js_lines": 477,
-      "core_files": [],
-      "refactored": false,
+      "js_lines": 488,
+      "core_files": [
+        "call-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": false
     },
     {
@@ -267,39 +434,58 @@
       "js_files": 2,
       "js_lines": 238,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "cardtable",
-      "js_files": 3,
-      "js_lines": 280,
-      "core_files": [],
-      "refactored": false,
+      "js_files": 4,
+      "js_lines": 459,
+      "core_files": [
+        "cardtable-core.js",
+        "cardtable-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "chars",
       "js_files": 4,
       "js_lines": 1243,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "chars-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "cheat",
       "js_files": 3,
       "js_lines": 695,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "cheat-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "clock",
       "js_files": 3,
       "js_lines": 656,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "clock-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
@@ -307,15 +493,21 @@
       "js_files": 2,
       "js_lines": 481,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "cotdesk",
       "js_files": 3,
       "js_lines": 1745,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "cotdesk-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
@@ -323,15 +515,21 @@
       "js_files": 4,
       "js_lines": 1924,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "daily",
       "js_files": 4,
-      "js_lines": 394,
-      "core_files": [],
-      "refactored": false,
+      "js_lines": 405,
+      "core_files": [
+        "daily-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
@@ -339,91 +537,162 @@
       "js_files": 3,
       "js_lines": 219,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": false
     },
     {
       "dir": "date",
       "js_files": 3,
       "js_lines": 2008,
-      "core_files": [],
+      "core_files": [
+        "date-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "date-data.js": {
+          "new Date": 3
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "diagdesk",
       "js_files": 3,
       "js_lines": 1750,
-      "core_files": [],
+      "core_files": [
+        "diagdesk-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "diagdesk-data.js": {
+          "Date.now": 1,
+          "new Date": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "diagnose",
       "js_files": 6,
-      "js_lines": 5560,
+      "js_lines": 5577,
       "core_files": [
+        "diagnose-data.js",
         "diagnose-reason-core.js"
       ],
-      "refactored": true,
+      "state": "core_impure",
+      "refactored": false,
+      "impurities": {
+        "diagnose-data.js": {
+          "Date.now": 1,
+          "document": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "diary",
       "js_files": 3,
       "js_lines": 4483,
-      "core_files": [],
+      "core_files": [
+        "diary-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "diary-data.js": {
+          "Date.now": 5,
+          "Math.random": 3,
+          "window": 3,
+          "localStorage": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "dirtytalk",
       "js_files": 3,
       "js_lines": 816,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "dt-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "doujin",
       "js_files": 3,
       "js_lines": 2348,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "doujin-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "focus",
       "js_files": 3,
       "js_lines": 832,
-      "core_files": [],
+      "core_files": [
+        "focus-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "focus-data.js": {
+          "Date.now": 1,
+          "new Date": 1,
+          "Math.random": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "freehome",
       "js_files": 3,
       "js_lines": 331,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "freehome-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "gacha",
       "js_files": 3,
       "js_lines": 549,
-      "core_files": [],
+      "core_files": [
+        "gacha-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "gacha-data.js": {
+          "Date.now": 1,
+          "Math.random": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "games",
       "js_files": 43,
-      "js_lines": 22288,
+      "js_lines": 22356,
       "core_files": [
         "games-protocol-core.js"
       ],
+      "state": "refactored",
       "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
@@ -431,7 +700,9 @@
       "js_files": 8,
       "js_lines": 645,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": false
     },
     {
@@ -441,23 +712,48 @@
       "core_files": [
         "descriptions-core.js",
         "family-core.js",
+        "health-data.js",
         "intimacy-core.js",
         "medical-core.js",
+        "name-data.js",
         "physio-core.js",
         "sires-core.js",
         "skill-core.js"
       ],
-      "refactored": true,
+      "state": "core_impure",
+      "refactored": false,
+      "impurities": {
+        "family-core.js": {
+          "Date.now": 3,
+          "Math.random": 1
+        },
+        "health-data.js": {
+          "Date.now": 1
+        },
+        "medical-core.js": {
+          "Date.now": 1,
+          "new Date": 3
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "honey",
       "js_files": 6,
-      "js_lines": 15167,
+      "js_lines": 15184,
       "core_files": [
+        "honey-data.js",
         "honey-text-core.js"
       ],
-      "refactored": true,
+      "state": "core_impure",
+      "refactored": false,
+      "impurities": {
+        "honey-data.js": {
+          "Date.now": 6,
+          "Math.random": 2,
+          "window": 1
+        }
+      },
       "has_app_id": true
     },
     {
@@ -465,95 +761,168 @@
       "js_files": 4,
       "js_lines": 312,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": false
     },
     {
       "dir": "iot",
       "js_files": 4,
-      "js_lines": 567,
-      "core_files": [],
-      "refactored": false,
+      "js_lines": 578,
+      "core_files": [
+        "iot-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "kettle",
       "js_files": 3,
       "js_lines": 1591,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "kettle-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "keyboard",
       "js_files": 4,
-      "js_lines": 330,
-      "core_files": [],
-      "refactored": false,
+      "js_lines": 344,
+      "core_files": [
+        "keyboard-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "ledger",
       "js_files": 3,
       "js_lines": 361,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "ledger-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "lexiscore",
       "js_files": 3,
       "js_lines": 296,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "lexiscore-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "lofter",
       "js_files": 3,
       "js_lines": 2277,
-      "core_files": [],
+      "core_files": [
+        "lofter-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "lofter-data.js": {
+          "new Date": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "loverspace",
       "js_files": 3,
       "js_lines": 1992,
-      "core_files": [],
+      "core_files": [
+        "loverspace-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "loverspace-data.js": {
+          "Date.now": 9,
+          "new Date": 7,
+          "Math.random": 2
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "magazine",
       "js_files": 3,
       "js_lines": 2049,
-      "core_files": [],
+      "core_files": [
+        "magazine-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "magazine-data.js": {
+          "Date.now": 2
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "memory",
       "js_files": 16,
       "js_lines": 9606,
-      "core_files": [],
+      "core_files": [
+        "memory-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "memory-data.js": {
+          "Date.now": 1,
+          "new Date": 8,
+          "Math.random": 1,
+          "window": 3,
+          "setTimeout": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "memtable",
       "js_files": 3,
       "js_lines": 1552,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "memtable-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "mofo",
       "js_files": 4,
       "js_lines": 2596,
-      "core_files": [],
+      "core_files": [
+        "mofo-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "mofo-data.js": {
+          "Date.now": 3,
+          "Math.random": 3
+        }
+      },
       "has_app_id": true
     },
     {
@@ -561,7 +930,9 @@
       "js_files": 3,
       "js_lines": 300,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": false
     },
     {
@@ -569,33 +940,61 @@
       "js_files": 2,
       "js_lines": 449,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "music",
       "js_files": 7,
-      "js_lines": 4432,
+      "js_lines": 4449,
       "core_files": [
-        "music-core.js"
+        "music-core.js",
+        "music-data.js"
       ],
-      "refactored": true,
+      "state": "core_impure",
+      "refactored": false,
+      "impurities": {
+        "music-data.js": {
+          "window": 1,
+          "fetch": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "musicdesk",
       "js_files": 3,
       "js_lines": 2531,
-      "core_files": [],
+      "core_files": [
+        "musicdesk-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "musicdesk-data.js": {
+          "Date.now": 1,
+          "new Date": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "needsim",
       "js_files": 3,
       "js_lines": 2166,
-      "core_files": [],
+      "core_files": [
+        "needsim-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "needsim-data.js": {
+          "Date.now": 2,
+          "new Date": 1
+        }
+      },
       "has_app_id": true
     },
     {
@@ -603,7 +1002,9 @@
       "js_files": 7,
       "js_lines": 586,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": false
     },
     {
@@ -611,121 +1012,223 @@
       "js_files": 5,
       "js_lines": 1200,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "peek",
       "js_files": 3,
       "js_lines": 1073,
-      "core_files": [],
+      "core_files": [
+        "peek-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "peek-data.js": {
+          "Date.now": 1,
+          "new Date": 3,
+          "window": 3
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "periodmath",
       "js_files": 3,
       "js_lines": 457,
-      "core_files": [],
+      "core_files": [
+        "periodmath-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "periodmath-data.js": {
+          "new Date": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "phone",
       "js_files": 10,
-      "js_lines": 6212,
+      "js_lines": 6229,
       "core_files": [
+        "phone-data.js",
         "phone-text-core.js"
       ],
-      "refactored": true,
+      "state": "core_impure",
+      "refactored": false,
+      "impurities": {
+        "phone-data.js": {
+          "Date.now": 1,
+          "Math.random": 3
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "piggy",
       "js_files": 3,
       "js_lines": 1235,
-      "core_files": [],
+      "core_files": [
+        "piggy-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "piggy-data.js": {
+          "Date.now": 4,
+          "new Date": 3,
+          "Math.random": 6
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "pixiv",
       "js_files": 3,
       "js_lines": 2961,
-      "core_files": [],
+      "core_files": [
+        "pixiv-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "pixiv-data.js": {
+          "new Date": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "place",
       "js_files": 3,
       "js_lines": 1652,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "place-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "playbook",
       "js_files": 3,
       "js_lines": 351,
-      "core_files": [],
+      "core_files": [
+        "playbook-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "playbook-data.js": {
+          "Date.now": 1,
+          "fetch": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "plotline",
       "js_files": 4,
       "js_lines": 1577,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "plotline-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "profile",
       "js_files": 3,
       "js_lines": 583,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "profile-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "punchcard",
       "js_files": 3,
       "js_lines": 1099,
-      "core_files": [],
+      "core_files": [
+        "punchcard-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "punchcard-data.js": {
+          "Date.now": 7,
+          "new Date": 2,
+          "Math.random": 3
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "pvdesk",
       "js_files": 3,
       "js_lines": 2585,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "pvdesk-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "reading",
       "js_files": 5,
       "js_lines": 3725,
-      "core_files": [],
+      "core_files": [
+        "reading-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "reading-data.js": {
+          "Date.now": 5,
+          "Math.random": 2
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "recall",
       "js_files": 3,
       "js_lines": 1793,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "recall-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "regexfilter",
       "js_files": 3,
       "js_lines": 838,
-      "core_files": [],
+      "core_files": [
+        "regexfilter-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "regexfilter-data.js": {
+          "Math.random": 1
+        }
+      },
       "has_app_id": true
     },
     {
@@ -733,7 +1236,9 @@
       "js_files": 3,
       "js_lines": 1460,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": true
     },
     {
@@ -741,7 +1246,9 @@
       "js_files": 11,
       "js_lines": 797,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": false
     },
     {
@@ -749,95 +1256,154 @@
       "js_files": 9,
       "js_lines": 15037,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "share",
       "js_files": 5,
-      "js_lines": 567,
-      "core_files": [],
-      "refactored": false,
+      "js_lines": 578,
+      "core_files": [
+        "share-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "shop",
       "js_files": 4,
       "js_lines": 1391,
-      "core_files": [],
+      "core_files": [
+        "shop-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "shop-data.js": {
+          "Date.now": 2
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "social",
       "js_files": 4,
-      "js_lines": 419,
-      "core_files": [],
-      "refactored": false,
+      "js_lines": 430,
+      "core_files": [
+        "social-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "socialguard",
       "js_files": 3,
       "js_lines": 701,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "socialguard-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "soundkit",
       "js_files": 3,
       "js_lines": 1779,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "soundkit-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "sourcebook",
       "js_files": 3,
       "js_lines": 1712,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "sourcebook-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "stickerdesk",
       "js_files": 3,
       "js_lines": 386,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "stickerdesk-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "sullydesk",
       "js_files": 3,
       "js_lines": 367,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "sullydesk-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "summdesk",
       "js_files": 3,
       "js_lines": 382,
-      "core_files": [],
+      "core_files": [
+        "summdesk-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "summdesk-data.js": {
+          "Date.now": 1,
+          "new Date": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "taobao",
       "js_files": 3,
       "js_lines": 1854,
-      "core_files": [],
+      "core_files": [
+        "taobao-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "taobao-data.js": {
+          "Date.now": 5
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "tarot",
       "js_files": 3,
       "js_lines": 370,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "tarot-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
@@ -845,23 +1411,38 @@
       "js_files": 2,
       "js_lines": 477,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "theater",
       "js_files": 3,
       "js_lines": 577,
-      "core_files": [],
+      "core_files": [
+        "theater-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "theater-data.js": {
+          "Date.now": 2,
+          "window": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "tieba",
       "js_files": 3,
       "js_lines": 845,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "tieba-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
@@ -869,39 +1450,61 @@
       "js_files": 5,
       "js_lines": 1657,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "traveldesk",
       "js_files": 7,
       "js_lines": 1541,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "traveldesk-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "usage",
       "js_files": 3,
       "js_lines": 966,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "usage-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "uterus",
       "js_files": 3,
       "js_lines": 2659,
-      "core_files": [],
-      "refactored": false,
+      "core_files": [
+        "uterus-data.js"
+      ],
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "wallet",
       "js_files": 4,
       "js_lines": 1268,
-      "core_files": [],
+      "core_files": [
+        "wallet-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "wallet-data.js": {
+          "new Date": 1
+        }
+      },
       "has_app_id": true
     },
     {
@@ -909,15 +1512,25 @@
       "js_files": 4,
       "js_lines": 4484,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "weather",
       "js_files": 3,
       "js_lines": 941,
-      "core_files": [],
+      "core_files": [
+        "weather-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "weather-data.js": {
+          "Date.now": 2
+        }
+      },
       "has_app_id": true
     },
     {
@@ -927,27 +1540,63 @@
       "core_files": [
         "chat-call-core.js",
         "chat-render-core.js",
-        "chat-text-core.js"
+        "chat-text-core.js",
+        "wechat-data.js"
       ],
-      "refactored": true,
+      "state": "core_impure",
+      "refactored": false,
+      "impurities": {
+        "chat-call-core.js": {
+          "Date.now": 1,
+          "document": 5,
+          "window": 2,
+          "setTimeout": 2
+        },
+        "wechat-data.js": {
+          "Date.now": 12,
+          "new Date": 2,
+          "Math.random": 8,
+          "document": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "weibo",
       "js_files": 6,
-      "js_lines": 8044,
+      "js_lines": 8061,
       "core_files": [
+        "weibo-data.js",
         "weibo-text-core.js"
       ],
-      "refactored": true,
+      "state": "core_impure",
+      "refactored": false,
+      "impurities": {
+        "weibo-data.js": {
+          "Date.now": 9,
+          "Math.random": 3,
+          "window": 3,
+          "setTimeout": 1,
+          "fetch": 1
+        }
+      },
       "has_app_id": true
     },
     {
       "dir": "widget",
       "js_files": 3,
       "js_lines": 1308,
-      "core_files": [],
+      "core_files": [
+        "widget-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "widget-data.js": {
+          "Date.now": 1,
+          "Math.random": 2
+        }
+      },
       "has_app_id": true
     },
     {
@@ -955,7 +1604,9 @@
       "js_files": 3,
       "js_lines": 615,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": true
     },
     {
@@ -963,15 +1614,25 @@
       "js_files": 3,
       "js_lines": 1034,
       "core_files": [],
+      "state": "no_core",
       "refactored": false,
+      "impurities": {},
       "has_app_id": true
     },
     {
       "dir": "xhs",
       "js_files": 3,
       "js_lines": 677,
-      "core_files": [],
+      "core_files": [
+        "xhs-data.js"
+      ],
+      "state": "core_impure",
       "refactored": false,
+      "impurities": {
+        "xhs-data.js": {
+          "Date.now": 1
+        }
+      },
       "has_app_id": true
     }
   ],

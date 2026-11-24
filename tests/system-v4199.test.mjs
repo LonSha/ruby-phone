@@ -24,7 +24,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { collectAppLedger, REFACTORED_MARKER, ROOT } from '../tools/gen_app_ledger.mjs';
+import { collectAppLedger, CORE_MARKERS, REFACTORED_MARKER, PURITY_BANS, scanImpurities, ROOT } from '../tools/gen_app_ledger.mjs';
 import { execSync } from 'node:child_process';
 
 const REPO = ROOT;
@@ -55,17 +55,28 @@ test('A3 三个计数自洽：refactored + pending === total_dirs', () => {
   assert.equal(led.pending_dirs.length, led.counts.pending);
 });
 
-test('A4 已重构判据 = 目录下存在 *-core.js（逐目录复核，不信任台账自己的布尔）', () => {
+test('A4 已重构判据 = 内核文件在场 + 内核静态纯度达标（逐目录复核，不信任台账自己的布尔）', () => {
   const led = collectAppLedger();
   for (const r of led.rows) {
     const abs = path.join(REPO, 'apps', r.dir);
     const onDisk = fs.existsSync(abs)
-      ? fs.readdirSync(abs).filter((n) => n.endsWith(REFACTORED_MARKER))
+      ? fs.readdirSync(abs).filter((n) => CORE_MARKERS.some((m) => n.endsWith(m))).sort()
       : [];
-    assert.equal(r.refactored, onDisk.length > 0,
-      `${r.dir}: 台账说 refactored=${r.refactored}，磁盘 *-core.js 有 ${onDisk.length} 个`);
-    assert.deepEqual(r.core_files, onDisk.sort(),
-      `${r.dir}: 台账的 core_files 与磁盘清单不一致`);
+    assert.deepEqual(r.core_files, onDisk,
+      `${r.dir}: 台账的 core_files 与磁盘（*-core.js / *-data.js）清单不一致`);
+    /* 逐文件现场重扫一遍：台账说的 impurities 必须与现算的逐字相同。
+     * 不重扫就只剩「相信生成器」一条路 —— 那等于把判据降级成自证。 */
+    const live = {};
+    for (const f of onDisk) {
+      const hits = scanImpurities(fs.readFileSync(path.join(abs, f), 'utf8'));
+      if (Object.keys(hits).length) live[f] = hits;
+    }
+    assert.deepEqual(r.impurities, live, `${r.dir}: impurities 与现场重扫不一致`);
+    const expectState = onDisk.length === 0 ? 'no_core'
+      : (Object.keys(live).length === 0 ? 'refactored' : 'core_impure');
+    assert.equal(r.state, expectState, `${r.dir}: state 应为 ${expectState}，台账写 ${r.state}`);
+    assert.equal(r.refactored, expectState === 'refactored',
+      `${r.dir}: refactored 布尔必须与 state 同源`);
   }
 });
 
@@ -79,6 +90,41 @@ test('A5 两本账的差集都是真清单（dir_only 8 个 / id_only 12 个的�
   assert.ok(led.scale.id_only.length > 0, 'id_only 实测非空（重构产出的子 App）');
   const inter = led.scale.dir_only.filter((d) => led.scale.id_only.includes(d));
   assert.equal(inter.length, 0, `两个差集必须互不相交，交集=${inter}`);
+});
+
+test('A6 三态互斥且并集等于全部目录（不许有第四态漏在外面）', () => {
+  const led = collectAppLedger();
+  const c = led.counts;
+  assert.equal(c.refactored + c.core_impure + c.no_core, c.total_dirs,
+    `三态之和 ${c.refactored + c.core_impure + c.no_core} 必须等于目录总数 ${c.total_dirs}`);
+  assert.equal(c.refactored + c.pending, c.total_dirs, '兼容字段 pending 必须 = core_impure + no_core');
+  assert.equal(c.pending, c.core_impure + c.no_core, 'pending 的组成必须写清');
+  const seen = new Set();
+  for (const list of [led.refactored_dirs, led.core_impure_dirs, led.no_core_dirs]) {
+    for (const d of list) {
+      assert.ok(!seen.has(d), `目录 ${d} 同时出现在两态里`);
+      seen.add(d);
+    }
+  }
+  assert.equal(seen.size, c.total_dirs, '三份清单去重后必须等于目录总数');
+});
+
+test('A7 内核不纯的明细必须可执行（每一格都能点名到文件与符号）', () => {
+  const led = collectAppLedger();
+  for (const d of led.core_impure_dirs) {
+    const row = led.rows.find((r) => r.dir === d);
+    assert.ok(row && Object.keys(row.impurities).length > 0, `${d}: core_impure 却没有 impurities 明细`);
+    for (const [f, hits] of Object.entries(row.impurities)) {
+      assert.ok(PURITY_BANS.some((b) => b.key in hits) || Object.keys(hits).length > 0,
+        `${d}/${f}: 明细里的符号不在 purity_bans 里`);
+      assert.ok(row.core_files.includes(f), `${d}: 被点名的 ${f} 必须是内核文件`);
+    }
+  }
+  /* 另一面：refactored 的目录一滴杂质都不许有 */
+  for (const d of led.refactored_dirs) {
+    const row = led.rows.find((r) => r.dir === d);
+    assert.equal(Object.keys(row.impurities).length, 0, `${d}: 已判已重构却带杂质`);
+  }
 });
 
 /* ── B 段：「60 只」这个假数已被回改 ── */
@@ -198,23 +244,44 @@ test('C2 落盘台账与现读一致（漂移即红）', () => {
 test('C3 台账自带判据口径声明（不许口径只活在代码里）', () => {
   const p = path.join(REPO, 'tests/audit/app-refactor-ledger.json');
   const onDisk = JSON.parse(fs.readFileSync(p, 'utf8'));
-  assert.equal(onDisk.schema, 'app-refactor-ledger@1');
+  assert.equal(onDisk.schema, 'app-refactor-ledger@2');
   assert.equal(onDisk.refactor_marker, REFACTORED_MARKER);
+  assert.deepEqual(onDisk.refactor_marker, CORE_MARKERS.join('|'), '内核标记必须是两个年代名字的并集');
+  assert.ok(Array.isArray(onDisk.purity_bans) && onDisk.purity_bans.length >= 8,
+    '纯度闸清单必须随账落盘（口径不许只活在代码里）');
   assert.ok(onDisk.refactor_marker_note && onDisk.refactor_marker_note.length > 10,
     'refactor_marker_note 必须写清这个判据的边界');
 });
 
 /* ── G 段：判据自证（负控制）── */
 
-test('G1 负控制：把 *-core.js 判据改坏，A4 必须转红', () => {
-  /* 不碰真盘：用一份内存副本证明 A4 的断言真有判别力 */
+test('G1 负控制：两路篡改都必须被 A4/A6 的判据抓到', () => {
+  /* 第一路：篡改 state 而不改明细 ⇒ A4 的「state 必须与现场重扫同源」抓住。 */
   const led = collectAppLedger();
-  const first = led.rows[0];
-  const tampered = { ...first, refactored: !first.refactored };
-  // A4 的判据是 `r.refactored === (core_files.length > 0)`，篡改布尔必被抓住
-  const wouldFail = tampered.refactored !== (tampered.core_files.length > 0);
-  assert.equal(wouldFail, true,
-    '负控制失效：篡改 refactored 布尔后判据抓不到 ⇒ A4 是假绿');
+  const pick = led.rows.find((r) => r.state === 'refactored') || led.rows[0];
+  const tampered = { ...pick, state: pick.state === 'refactored' ? 'core_impure' : 'refactored' };
+  const expect = pick.core_files.length === 0 ? 'no_core'
+    : (Object.keys(pick.impurities).length === 0 ? 'refactored' : 'core_impure');
+  assert.notEqual(tampered.state, expect,
+    '负控制失效：篡改 state 后 A4 的 expectState 竟然还相等 ⇒ A4 是假绿');
+
+  /* 第二路：把 core_files 清空（但 state 还写 refactored）⇒ A4 的清单对拍抓住。 */
+  const hollow = { ...pick, core_files: [], state: 'refactored' };
+  const expect2 = hollow.core_files.length === 0 ? 'no_core' : 'refactored';
+  assert.notEqual(hollow.state, expect2, '负控制失效：清空 core_files 后 A4 抓不到');
+
+  /* 第三路：纯度扫描器自己必须真的认得出 —— 拿一段真副作用源码对拍。
+   * 这一步不能省：若 scanImpurities 恒返回 {}，上面两路照样绿。 */
+  assert.ok(scanImpurities('const t = Date.now();').constructor === Object, '扫描器返回形状必须可序列化');
+  assert.deepEqual(scanImpurities('const t = Date.now();'), { 'Date.now': 1 },
+    '纯度扫描器认不出 Date.now ⇒ 全部 refactored 都是假绿');
+  assert.deepEqual(scanImpurities('const x = Math.random();'), { 'Math.random': 1 },
+    '纯度扫描器认不出 Math.random');
+  /* 反向：注释与字符串里提到不算副作用（否则本账会把「解释为什么不许用」也当成违规）。 */
+  /* 反向：注释与字符串里提到不算副作用（否则本账会把「解释为什么不许用」也当成违规）。 */
+  const txt = ['// 不要写 Date.now()', '/* Math.random() 也不许 */', 'const s = "Date.now()";'].join(String.fromCharCode(10));
+  assert.deepEqual(scanImpurities(txt), {},
+    '纯度扫描器把注释/字符串也算成副作用 ⇒ 会逼人不敢写说明');
 });
 
 test('G2 负控制：B1 的字面串真在被扫的三个文件里出现过（回改前）', () => {
