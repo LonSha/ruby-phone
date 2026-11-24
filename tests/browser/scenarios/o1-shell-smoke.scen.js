@@ -92,11 +92,54 @@ const back = document.getElementById('phone-back-button');
 const backHidden = !!back && getComputedStyle(back).display === 'none';
 report({ name: 'back-button-home-hidden', ok: backHidden, detail: back ? ('display=' + getComputedStyle(back).display) : 'missing' });
 
-// 生产 CSS 真的注入了吗（注入失败时上面所有盒模型读数都会变成 0，故此条是归因锚）
-const cssTag = document.getElementById('st-phone-global-css');
+/* [v4.200.0 改向] 本版把 base 样式的来源收到**一条**：manifest css 入口
+ *   phone/design/rp-entry.css（静态 @import 分层副本）是唯一来源，
+ *   font-scale 的 ensureGlobalPhoneCSS 不再 fetch 根 phone.css 注入 <style>。
+ *   故这条判据从「注入的 <style> 必须存在」翻转为「**必须不存在**」——
+ *   留着它就意味着「未分层 + 2008 处 !important 的 base」又回来了，
+ *   而它会逐条压死 @layer 里的桌面 v2 皮肤（这正是本版修的病灶）。
+ *   同时仍读一次样式表总规则数：若分层入口没被加载，读数会塌到 0。 */
+const legacyTag = document.getElementById('st-phone-global-css');
+/* 递归数**真规则**：@import 进来的表挂在 r.styleSheet 上，@layer / @media 容器
+ *   则是把子规则放在 r.cssRules 里 —— 两种都要下钻，否则大头会被读成个位数
+ *   （实测：只读顶层 cssRules.length = 40，而真规则是几千条）。 */
+function countRules(obj, depth) {
+  let n = 0;
+  const list = obj && obj.cssRules;
+  if (!list || depth > 6) return 0;
+  for (const r of list) {
+    if (r.selectorText !== undefined || r.cssText === undefined) { /* 叶子规则 */ }
+    if (r.styleSheet) { n += 1 + countRules(r.styleSheet, depth + 1); continue; }
+    if (r.cssRules) { n += 1 + countRules(r, depth + 1); continue; }
+    n += 1;
+  }
+  return n;
+}
 let ruleCount = 0;
-for (const sheet of document.styleSheets) { try { ruleCount += sheet.cssRules.length; } catch (_e) { /* 跨源表跳过 */ } }
-report({ name: 'prod-css-loaded', ok: !!cssTag && ruleCount > 100, detail: 'style=' + (cssTag ? 'yes' : 'no') + ' rules=' + ruleCount });
+for (const sheet of document.styleSheets) ruleCount += countRules(sheet, 0);
+/* 更有力的归因锚：桌面 v2 皮肤的分层表到底有没有真的被解析进文档？
+ *   它每条选择器都带 [data-rp-desktop="2"]，只要它进了 CSSOM，
+ *   把每层规则的 cssText 序列化出来就一定能看到这个字样。 */
+function cssTextHas(obj, needle, depth) {
+  const list = obj && obj.cssRules;
+  if (!list || depth > 6) return false;
+  for (const r of list) {
+    let txt = '';
+    try { txt = String(r.cssText || ''); } catch (_e) { txt = ''; }
+    if (txt.indexOf(needle) >= 0) return true;
+    if (r.styleSheet && cssTextHas(r.styleSheet, needle, depth + 1)) return true;
+    if (r.cssRules && cssTextHas(r, needle, depth + 1)) return true;
+  }
+  return false;
+}
+let dv2Loaded = false;
+for (const sheet of document.styleSheets) {
+  if (cssTextHas(sheet, 'data-rp-desktop', 0)) { dv2Loaded = true; break; }
+}
+/* 归因读数：把命中情况也打出来（三层读数各有各的证据面，缺一层就无法定位）。
+ *   ① legacyStyle 必须不存在（本版收口）；② v2 皮肤必须真被解析；③ 规则总数下限。
+ *   实测基线（本版收口后、真 Chromium 131、入口 rp-entry.css）：rules≈4000+。 */
+report({ name: 'prod-css-loaded', ok: legacyTag === null && dv2Loaded && ruleCount > 1000, detail: 'legacyStyle=' + (legacyTag ? 'present(FAIL)' : 'absent') + ' dv2Skin=' + (dv2Loaded ? 'loaded' : 'MISSING') + ' rules=' + ruleCount });
 
 // 宿主桩的账：跨源请求被拒了几次（更新检查会去打 CDN，本桩刻意不放行）
 report({ name: 'host-stub-fetch-ledger', ok: true, detail: 'allowed=' + host.log.fetchAllowed + ' blocked=' + host.log.fetchBlocked.length + ' ' + JSON.stringify(host.log.fetchBlocked.slice(0, 3)) });

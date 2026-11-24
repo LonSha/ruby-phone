@@ -44,16 +44,17 @@
     ]
   },
   "counts": {
-    "refactored": 37,
-    "core_impure": 42,
+    "refactored": 42,
+    "core_impure": 37,
     "no_core": 22,
-    "pending": 64,
+    "pending": 59,
     "total_dirs": 101
   },
   "refactored_dirs": [
     "archive",
     "asset",
     "avatarframe",
+    "bilibili",
     "call",
     "cardtable",
     "chars",
@@ -70,7 +71,10 @@
     "keyboard",
     "ledger",
     "lexiscore",
+    "lofter",
     "memtable",
+    "periodmath",
+    "pixiv",
     "place",
     "plotline",
     "profile",
@@ -87,14 +91,14 @@
     "tieba",
     "traveldesk",
     "usage",
-    "uterus"
+    "uterus",
+    "wallet"
   ],
   "core_impure_dirs": [
     "accounting",
     "achievement",
     "album",
     "annidate",
-    "bilibili",
     "block",
     "calendar",
     "date",
@@ -105,7 +109,6 @@
     "gacha",
     "health",
     "honey",
-    "lofter",
     "loverspace",
     "magazine",
     "memory",
@@ -114,10 +117,8 @@
     "musicdesk",
     "needsim",
     "peek",
-    "periodmath",
     "phone",
     "piggy",
-    "pixiv",
     "playbook",
     "punchcard",
     "reading",
@@ -126,7 +127,6 @@
     "summdesk",
     "taobao",
     "theater",
-    "wallet",
     "weather",
     "wechat",
     "weibo",
@@ -166,7 +166,6 @@
     "annidate",
     "audio",
     "backupdesk",
-    "bilibili",
     "block",
     "calendar",
     "caphealth",
@@ -183,7 +182,6 @@
     "health",
     "honey",
     "investigation",
-    "lofter",
     "loverspace",
     "magazine",
     "memory",
@@ -196,10 +194,8 @@
     "network",
     "notifications",
     "peek",
-    "periodmath",
     "phone",
     "piggy",
-    "pixiv",
     "playbook",
     "punchcard",
     "reading",
@@ -213,7 +209,6 @@
     "taskentry",
     "theater",
     "timeweaver",
-    "wallet",
     "wangxiang",
     "weather",
     "wechat",
@@ -371,17 +366,13 @@
     {
       "dir": "bilibili",
       "js_files": 6,
-      "js_lines": 2930,
+      "js_lines": 2937,
       "core_files": [
         "bili-data.js"
       ],
-      "state": "core_impure",
-      "refactored": false,
-      "impurities": {
-        "bili-data.js": {
-          "new Date": 1
-        }
-      },
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
@@ -442,7 +433,7 @@
     {
       "dir": "cardtable",
       "js_files": 4,
-      "js_lines": 459,
+      "js_lines": 469,
       "core_files": [
         "cardtable-core.js",
         "cardtable-data.js"
@@ -829,17 +820,13 @@
     {
       "dir": "lofter",
       "js_files": 3,
-      "js_lines": 2277,
+      "js_lines": 2282,
       "core_files": [
         "lofter-data.js"
       ],
-      "state": "core_impure",
-      "refactored": false,
-      "impurities": {
-        "lofter-data.js": {
-          "new Date": 1
-        }
-      },
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
@@ -1038,17 +1025,13 @@
     {
       "dir": "periodmath",
       "js_files": 3,
-      "js_lines": 457,
+      "js_lines": 460,
       "core_files": [
         "periodmath-data.js"
       ],
-      "state": "core_impure",
-      "refactored": false,
-      "impurities": {
-        "periodmath-data.js": {
-          "new Date": 1
-        }
-      },
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
@@ -1090,17 +1073,13 @@
     {
       "dir": "pixiv",
       "js_files": 3,
-      "js_lines": 2961,
+      "js_lines": 2965,
       "core_files": [
         "pixiv-data.js"
       ],
-      "state": "core_impure",
-      "refactored": false,
-      "impurities": {
-        "pixiv-data.js": {
-          "new Date": 1
-        }
-      },
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {
@@ -1494,17 +1473,13 @@
     {
       "dir": "wallet",
       "js_files": 4,
-      "js_lines": 1268,
+      "js_lines": 1272,
       "core_files": [
         "wallet-data.js"
       ],
-      "state": "core_impure",
-      "refactored": false,
-      "impurities": {
-        "wallet-data.js": {
-          "new Date": 1
-        }
-      },
+      "state": "refactored",
+      "refactored": true,
+      "impurities": {},
       "has_app_id": true
     },
     {

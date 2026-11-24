@@ -15,6 +15,7 @@
  *   本件此前自带的那份 `numOrNull` 只给 `number` 放行、其余一律 `Number(v)`：
  *   `null` / `''` / `[]` / `false` → 0、`true` → 1、`[5]` → 5。周期长度与经期天数的 0
  *   是**合法读数**，与「这一格没给」必须分得开。 */
+import { dayKeyOf as pureDayKey } from '../../config/pure-time.js';
 import { numOrNull } from '../../config/num-gate.js';
 import { toStr } from '../../config/text-face.js';
 export { toStr };
@@ -130,13 +131,15 @@ export function alertGate(status, nowMs, alertedKey) {
     return { alert: true, why: '', key: dayKeyOf(nowMs) };
 }
 
-/* 日历日键（本地日期串，源 toDateString 口径等价）。 */
+/* 日历日键（`YYYY-MM-DD`，UTC 口径；非法输入返回空串）。
+ *   [v4.201.0] 换算下移到 config/pure-time.js 的整数算法，本文件不再构造 Date：
+ *   原实现的 `new Date(n).getFullYear()` 取的是**宿主本地日**，同一毫秒在
+ *   不同时区会落到不同的日键，`alertedKey` 的「今天已警过」幂等就不可复现。
+ *   本机 TZ=UTC 时与旧实现逐字相同。 */
 export function dayKeyOf(ms) {
     const n = numOrNull(ms);
     if (n === null) return '';
-    const d = new Date(n);
-    const pad = function (v) { return (v < 10 ? '0' : '') + v; };
-    return String(d.getFullYear()) + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    return pureDayKey(n);
 }
 
 /* 读数面。 */

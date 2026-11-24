@@ -303,10 +303,35 @@ export function createFontScaleManager(deps) {
     }
 
     async function ensureGlobalPhoneCSS() {
+        /* [v4.200.0 · 样图层收口] 这里**不再**把根 phone.css 原样注入 <style>。
+         * ------------------------------------------------------------
+         * 修前形态（v2.8.x 起一直是它）：
+         *   fetch(./phone.css) → 把整份 653KB 文本塞进 <style id="st-phone-global-css">。
+         *   而 phone.css 是**未分层**（0 个 @layer）且有 2008 处 !important 的表；
+         *   同一个文件同时还有一份分层副本 phone/design/legacy-phone.css
+         *   （由 scripts/gen-legacy-layer.mjs 生成：去 !important + 整份包进 @layer rp.legacy），
+         *   由 manifest 的 css 入口 rp-entry.css 静态 @import 进来。
+         *
+         * 后果（本次实测，不是推测）：未分层 + !important 的注入层恒压 @layer 里的每一条声明。
+         *   phone/design/rp-desktop-v2.css 的 31 条桌面规则全在 @layer rp.components 且零 !important，
+         *   于是 home-screen.js 明明挂上了 data-rp-desktop="2"，用户看到的桌面仍与旧版一字不差：
+         *     app-icon-bg 4 条 vs phone.css 9 条 !important；app-grid 1:8；dock 5:21；home-time 6:10。
+         *   「属性到位、样式到位、效果为零」——病灶就在这条冗余注入。
+         *
+         * 现在：base 样式只有一条来源（rp-entry.css → layer(rp.legacy) → legacy-phone.css），
+         *   运行时只负责**摘掉**旧的无层 <style>（升级后残留的那份），不再生产第二份。
+         *   顺带收益：不再有 653KB 文本 + 650KB 静态副本的双份解析，也不再需要「生成物比源旧」
+         *   这种漂移（判据 system-v4200 G2 钉住 --check 一致）。
+         *
+         * 为什么保留这个函数名与签名：调用点（index.js 4 处 + browser 场景）与
+         *   font-scale.test.mjs 的方法表都以它为契约；改名会牵动无关面。 */
         const styleId = 'st-phone-global-css';
         const existing = document.getElementById(styleId);
-        if (existing?.getAttribute('data-version') === ST_PHONE_VERSION
-            && existing?.getAttribute('data-revision') === ST_PHONE_CSS_REVISION) return;
+        /* 旧注入（任何版本）都必须摘掉：它带着 2008 处 !important，留着就继续压皮肤层。
+         * 幂等：没有就什么都不做。 */
+        if (existing) {
+            try { existing.remove(); } catch (_e) { /* 已被宿主摘走：无妨 */ }
+        }
 
         if (_globalCssLoadingPromise) {
             await _globalCssLoadingPromise;
@@ -314,25 +339,8 @@ export function createFontScaleManager(deps) {
         }
 
         _globalCssLoadingPromise = (async () => {
-            try {
-                const resp = await fetch(ST_PHONE_GLOBAL_CSS_URL, { cache: 'no-cache' });
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const cssText = await resp.text();
-                let finalCssText = cssText;
-                if (finalCssText.charCodeAt(0) === 0xFEFF) {
-                    finalCssText = finalCssText.slice(1);
-                }
-
-                const style = document.createElement('style');
-            style.id = styleId;
-            style.setAttribute('data-source', ST_PHONE_GLOBAL_CSS_URL);
-            style.setAttribute('data-version', ST_PHONE_VERSION);
-            style.setAttribute('data-revision', ST_PHONE_CSS_REVISION);
-            style.textContent = finalCssText;
-            existing?.remove();
-            document.head.appendChild(style);
-            /* [v4.92.0] 像素皮肤：主 CSS 注入成功后，追加 pixel-skin.css（像素 OS 视觉）。
-             *   失败不阻塞主 CSS —— 像素化是呈现层增强，降级即回到原视觉。 */
+            /* [v4.92.0] 像素皮肤：仍是运行时追加（它只在主题包选 pixel 时该出现，
+             *   且必须在 base 之后）。失败不阻塞手机可用 —— 像素化是呈现层增强。 */
             try {
                 /* [fix] 像素皮肤只在主题包选 pixel 时加载。
                  *   原来是无条件注入：iOS v3 皮肤与像素皮肤同时生效，
@@ -358,9 +366,6 @@ export function createFontScaleManager(deps) {
                     pstyle.textContent = pcss;
                 }
             } catch (_e) { /* 像素皮肤加载失败静默降级 */ }
-            } catch (err) {
-                console.error('❌ phone.css 动态注入失败:', err);
-            }
         })();
 
         await _globalCssLoadingPromise;

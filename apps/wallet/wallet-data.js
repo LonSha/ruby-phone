@@ -25,6 +25,10 @@
 'use strict';
 import { faceFieldState } from '../../config/world-bridge.js';
 import { numOrNull as num } from '../../config/num-gate.js';
+/* [v4.201.0] 流水日期串改走纯整数日历（config/pure-time.js）：本文件不再构造 Date。
+ *   原实现 `new Date(ts)` 取的是**本地日**，同一笔流水在不同时区的机器上
+ *   会显示成不同日期 —— 而钱账的日期是要拿去跟现实对账的，不能随机器漂。 */
+import { dayKeyOf } from '../../config/pure-time.js';
 /** 归因文案（五态；与 readWalletFace 的 reason 一一对应，缺项即 UI 显示原始 reason，不静默） */
 export const WALLET_REASONS = Object.freeze({
     'ready': '钱账就绪',
@@ -93,10 +97,10 @@ function whenOf(item) {
     const fl = num(item && item.floor);
     const parts = [];
     if (ts !== null) {
-        try {
-            const d = new Date(ts);
-            if (!Number.isNaN(d.getTime())) parts.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'));
-        } catch (_e) { /* 非法时间戳：不编 */ }
+        /* `ts` 已过 numOrNull（有限数）。空串在这里等价于旧实现的
+         * 「Invalid Date ⇒ 不 push」：非法时间戳仍然不编。 */
+        const k = dayKeyOf(ts);
+        if (k) parts.push(k);
     }
     if (fl !== null) parts.push('第' + fl + '楼');
     return parts.join(' · ');

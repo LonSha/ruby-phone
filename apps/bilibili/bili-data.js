@@ -38,7 +38,11 @@ import { storyNowWallFallback, wallNow } from '../../config/time-source.js';
  * 判据是「族名函数体内出现 Number( 且非纯转发」——本文件的 numOr 只做转发 + 兜默认值，
  * 这样 `null` / `''` / `[]` / `true` 仍按「没给」处理，不会被读成 0。 */
 import { numOrNull } from '../../config/num-gate.js';
-
+/* [v4.201.0] 日历换算改走纯整数内核（config/pure-time.js）：本文件不再构造 Date。
+ *   原来的 `new Date(wallNow())` 本身不读时钟（时钟已由 wallNow 显式注入），
+ *   但它会把**宿主本地时区**偷偷带进内核 —— 同一时刻在不同时区得出不同的
+ *   日键，`lastCoinDay` 的幂等判定就不可复现。 */
+import { partsOf } from '../../config/pure-time.js';
 /* [v4.190.0] 文本 / 计数 / 时间 / 标识 的纯函数一律取自唯一内核 bili-format.js，
  *   本文件不再保留第二份实现（判据 system-v4190 的 C2 逐条钉住这一点）。 */
 import {
@@ -1018,8 +1022,11 @@ export class BiliData {
 
     /** 每日硬币：现实里登录会送。按「墙钟自然日」只补一次。 */
     ensureDailyCoin() {
-        const d = new Date(wallNow());
-        const key = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+        const p = partsOf(wallNow());
+        /* 键格式**有意**沿用历史的不补零写法（`2026-11-5`）：这是已经落盘的
+         * `user.lastCoinDay`。改成补零会让老存档被判定成「今天还没领」，
+         * 老用户升级当天多领一次硬币。 */
+        const key = p ? (p.y + '-' + p.m + '-' + p.d) : '';
         if (this.user.lastCoinDay === key) return 0;
         this.user.lastCoinDay = key;
         this.user.coin = Math.min(9999, numOr(this.user.coin, 0) + COIN_DAILY);

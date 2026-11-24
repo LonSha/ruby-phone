@@ -28,8 +28,18 @@ import { numOrNull } from '../../config/num-gate.js';
 import { toStr } from '../../config/text-face.js';
 
 export { toStr };
-/* 牌组逻辑全部搬去 cardtable-core.js；这里原样转出，导出面与 v3.51.0 逐字相同。 */
-export * from './cardtable-core.js';
+/* 牌组逻辑全部搬去 cardtable-core.js；这里**逐名转出**，导出面与 v3.51.0 逐字相同。
+ * [v4.200.0] 从 `export * from` 改成显式名单：`export *` 是 dead-export 门禁 E9 的
+ *   **唯一未识别写法**（枚举器认不出它的成员，这些名字在门禁眼里根本不存在 ——
+ *   既不报红灯也不进账本，fail-closed 拒判 exit 2）。改成显式名单后走已登记的
+ *   `export { … } from` 块路径，导出面一名不差，门禁的「未识别 0」才真正成立。
+ *   名单与 core 的导出面同源：顺序即 core 的声明序，改 core 必须同步改这里。 */
+export {
+    CT_MAJOR, CT_SUITS, CT_RANKS, CT_LENORMAND, CT_DECK_TYPES,
+    CT_SELECT_MAX, CT_LEDGER_MAX, CT_REJECT, tarotNameOf, lenormandNameOf,
+    normalizeSeed, makeRng, shuffle, normalizeDeckType, buildDeck,
+    pickCard, renumber, readingsOf,
+} from './cardtable-core.js';
 
 export function isPlain(v) { return !!v && typeof v === 'object' && !Array.isArray(v); }
 export function listOf(v) { return Array.isArray(v) ? v : []; }

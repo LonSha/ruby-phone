@@ -44,6 +44,8 @@ const at = (rel) => pathToFileURL(path.join(ROOT, rel)).href;
 
 const PC = 'config/projection-contract.js';
 const DG_DATA = 'apps/diagnose/diagnose-data.js';
+/* v4.192.0 起，五份文案表与查表函数的**唯一真源**。J6 盯的行为就实现在这里，改打它才是真破坏。 */
+const DG_REASON = 'apps/diagnose/diagnose-reason-core.js';
 const DG_VIEW = 'apps/diagnose/diagnose-view.js';
 const IDX = 'index.js';
 
@@ -612,11 +614,19 @@ test('v300 E4. 负控制：必填字段检查被摘 ⇒ J4 在副本上转红', 
 });
 
 test('v300 E5. 负控制：未知原因兜底成固定串 ⇒ J6 在副本上转红', async () => {
+    /* [v4.200.0 收尾修：判据自身腐坏] 本条原锚点写的是**未抽提前的旧形**
+     *   `return PROJ_ABSENT_TEXT[reason] || String(reason || '未知');` —— v4.192.0 把五份文案表
+     *   与其查表函数一并抽进 `apps/diagnose/diagnose-reason-core.js`（唯一真源），本文件只剩
+     *   `projAbsentText` 的转发。旧锚点从那时起就**零命中**（mutateOnce 报 0 !== 1），
+     *   这不是实现坏了，是**判据盯着一个已不存在的形态**—— 即「判据所凭的前提消失」。
+     *   修法：把破坏点搬到**当前真源的查表调用上**（`lookup(PROJ_ABSENT_TEXT, reason, '未知')`），
+     *   破坏方式不变（未知原因被兜底成固定串），断言不变（J6 必须转红且 why='未知'）。
+     *   为何改打 reason-core 而不是 DG_DATA：J6 测的行为已不在 DG_DATA 里实现，只打转发层是**假破坏**（改了也不影响读数）。 */
     await withMirror({
-        [DG_DATA]: (s) => mutateOnce(
+        [DG_REASON]: (s) => mutateOnce(
             s,
-            "return PROJ_ABSENT_TEXT[reason] || String(reason || '未知');",
-            "return PROJ_ABSENT_TEXT[reason] || '未知';")
+            "return lookup(PROJ_ABSENT_TEXT, reason, '未知');",
+            "return '未知';")
     }, async (dir) => {
         const dg = await loadMirror(dir, DG_DATA);
         assert.equal(jAbsentTextHonest(DG_MOD).ok, true, '原版上 J6 必须为真（阳性对照）');

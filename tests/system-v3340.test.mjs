@@ -619,21 +619,53 @@ test('C5 读数与投影：现取不持副本；空入/杂入/缺键三态各有
     assert.equal(app.setTab('nope'), 'home', '坏页签必须收回首页');
 });
 /* ══════════════════════ D — 通道与纪律面 ══════════════════════ */
-test('D1 数据层只许一条 import 且**层级对**；不许碰存储 / DOM / 定时器 / 网络', () => {
-    const code = stripComments(read(LF_DATA));
+/* 数据层依赖面判据（v4.201.0 从 D1 体内提出来，好让负控制直接喂坏样本）。
+ *   真正要守的只有两条：① 每条 import 都必须是**两层写**的 `../../config/<叶子>.js`
+ *   （零依赖叶子，不许引别的 App、不许三层级）；② 数值口径必须仍取自 num-gate。
+ *   原来是 `imports.length === 1` —— 那是 v3.34.0 给本文件拍的**单文件快照**
+ *   （当时 lofter 数据层确实只依赖 num-gate）。同仓 wallet / bilibili / periodmath
+ *   的数据层早已 3~4 条 import，拿条数当判据会把「数据层多接一个零依赖叶子」
+ *   这种正当事判成红灯。改成形状判据后，违规写法一样跑不掉（见 D1b 负控制）。 */
+function dataLayerProblems(code) {
+    const bad = [];
     const imports = code.match(/^import[^\n]*\n/gm) || [];
-    assert.equal(imports.length, 1, '数据层只许一条 import（零依赖叶子优先）');
-    assert.ok(imports[0].includes("'../../config/num-gate.js'"),
-        '导入必须是**两层**（apps/lofter/ 与 apps/date/ 同层；写三层就是起手那处真缺陷）');
-    assert.equal(imports[0].includes('../../../'), false, '不许再出现三层级写法');
-    /* 目录式交叉核对：从 LF_DATA 出发走两级必须真能落到 config/num-gate.js。 */
-    const target = path.resolve(ROOT, path.dirname(LF_DATA), '../../config/num-gate.js');
-    assert.equal(fs.existsSync(target), true, '两层解析必须真落到 config/num-gate.js');
+    if (!imports.length) bad.push('no-import: 数据层一条依赖都没有，数值口径只能在本地再写一份');
+    for (const line of imports) {
+        const m = /from\s+'([^']+)';\s*$/.exec(line.trim());
+        if (!m) { bad.push('bad-import-shape: ' + line.trim()); continue; }
+        const spec = m[1];
+        if (spec.includes('../../../')) bad.push('three-level: ' + spec + ' 是三层级写法');
+        else if (!/^\.\.\/\.\.\/config\/[a-z0-9-]+\.js$/.test(spec)) bad.push('not-config-leaf: ' + spec);
+    }
+    if (!imports.some((l) => l.includes("'../../config/num-gate.js'"))) {
+        bad.push('num-gate-missing: 数值口径没走 num-gate 内核');
+    }
+    return bad;
+}
+test('D1 数据层的依赖必须全是**两层写的 config 零依赖叶子**；不许碰存储 / DOM / 定时器 / 网络', () => {
+    const code = stripComments(read(LF_DATA));
+    assert.deepEqual(dataLayerProblems(code), [], '数据层 import 面必须干净');
+    /* 层级必须真能落地（声明面 vs 磁盘面：字符串长得像两层不算数）。 */
+    for (const line of code.match(/^import[^\n]*\n/gm) || []) {
+        const spec = /from\s+'([^']+)'/.exec(line)[1];
+        const target = path.resolve(ROOT, path.dirname(LF_DATA), spec);
+        assert.equal(fs.existsSync(target), true, '两层解析必须真落到盘上：' + spec);
+    }
     for (const banned of ['document.', 'window.', 'localStorage', 'indexedDB',
         'setTimeout', 'setInterval', 'fetch(', 'XMLHttpRequest']) {
         assert.equal(code.includes(banned), false, LF_DATA + ' 的代码里不得出现：' + banned);
     }
     assert.equal(code.includes('Number.isFinite(Number('), false, '不得就地再写一份弱口径取数');
+});
+test('D1b 负控制：三层级 / 引 App 私有件 / 丢 num-gate 三种写法必须各自被抓到', () => {
+    assert.ok(dataLayerProblems("import { a } from '../../../config/num-gate.js';\n")
+        .some((x) => x.startsWith('three-level')), '三层级必须被抓');
+    assert.ok(dataLayerProblems("import { a } from '../../config/num-gate.js';\nimport { b } from './lofter-format.js';\n")
+        .some((x) => x.startsWith('not-config-leaf')), '引 App 私有件必须被抓');
+    assert.ok(dataLayerProblems("import { b } from '../../config/text-face.js';\n")
+        .some((x) => x.startsWith('num-gate-missing')), '丢 num-gate 必须被抓');
+    assert.deepEqual(dataLayerProblems("import { b } from '../../config/num-gate.js';\nimport { c } from '../../config/pure-time.js';\n"),
+        [], '两条零依赖叶子（num-gate + pure-time）必须放行');
 });
 test('D2 App 层不许直连模型 / 不许落数据库 / 不许替宿主写楼层', () => {
     const code = stripComments(read(LF_APP));
@@ -969,6 +1001,13 @@ function writeDamagedCopy(rel, from, to) {
     fs.writeFileSync(target, damaged);
     fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
     fs.writeFileSync(path.join(dir, 'config', 'num-gate.js'), NUM_GATE_STUB);
+    /* [v4.201.0] lofter 数据层多接了一个零依赖叶子 config/pure-time.js。
+     *   镜像里必须把它一起 stage 进去，否则被破坏的副本一 import 就
+     *   ERR_MODULE_NOT_FOUND —— 那会让 I1~I8 全部「转红」成假的（红在加载失败，
+     *   不是红在判据识破破坏）。这里拷**真件**而不是桩：它是零依赖叶子，
+     *   拷真件不会把判据要抓的东西拷进来。 */
+    fs.writeFileSync(path.join(dir, 'config', 'pure-time.js'),
+        fs.readFileSync(path.join(ROOT, 'config', 'pure-time.js'), 'utf8'));
     return { target, src: damaged };
 }
 async function loadDamagedCopy(rel, from, to) {

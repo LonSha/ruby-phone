@@ -66,6 +66,13 @@ function parseViewports() {
 }
 const VIEWPORTS = parseViewports();
 const budgetMs = Number(flags.get('budget') || 45000);
+/* [v4.200.0 改向] 外部样式表必须喂**manifest css 入口**（phone/design/rp-entry.css），
+ *   而不是根 phone.css。理由是本版修的病灶：根 phone.css 是未分层 + 2008 处
+ *   !important 的原始表，把它当外部表注入，等价于把「压死 @layer 皮肤」的那个
+ *   来源搬进浏览器层 —— 场景里量到的就是被压死之后的旧外观，测不出真实现。
+ *   可用 --styles=a,b 显式覆盖（覆盖时如实打屏，不静默）。 */
+const SCENE_STYLES = String(flags.get('styles') || 'phone/design/rp-entry.css')
+  .split(',').map((s) => s.trim()).filter(Boolean);
 /** 结构自证下限：低于这些数就是「覆盖面缩水」，不是「恰好没找到问题」。 */
 const MIN_SCENES = Number(flags.get('min-scenes') || 7);
 const MIN_VIEWPORTS = Number(flags.get('min-viewports') || 4);
@@ -131,7 +138,7 @@ if (!probe.available) {
 if (!quiet) {
   console.log(`[browser-gate] ver=${VERSION} root=${ROOT}`);
   console.log(`[browser-gate] browser=${probe.source} → ${probe.exe}`);
-  console.log(`[browser-gate] scenes=${scenes.length} viewports=${VIEWPORTS.map((v) => v.width + 'x' + v.height).join('/')} budget=${budgetMs}ms`);
+  console.log(`[browser-gate] scenes=${scenes.length} viewports=${VIEWPORTS.map((v) => v.width + 'x' + v.height).join('/')} budget=${budgetMs}ms styles=${SCENE_STYLES.join(',')}`);
 }
 const evidence = [];
 let totalReads = 0;
@@ -143,7 +150,7 @@ for (const scene of scenes) {
   const rel = path.join('tests/browser/scenarios', scene);
   for (const vp of VIEWPORTS) {
     const r = await runScenario({
-      root: ROOT, scenarios: [rel], styles: ['phone.css'],
+      root: ROOT, scenarios: [rel], styles: SCENE_STYLES,
       viewport: vp, budgetMs, browser: probe,
     });
     const key = scene;

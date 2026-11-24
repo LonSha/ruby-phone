@@ -3,7 +3,7 @@
  * ------------------------------------------------------------
  * 用法：
  *   node tests/browser/run-scenario.mjs <场景文件…> [--width=390] [--height=844] [--budget=30000]
- *                                      [--styles=phone.css,…] [--root=.]
+ *                                      [--styles=phone/design/rp-entry.css,…] [--root=.]
  *
  * 它只做三件事：拼参数、调 runScenario、调 printReports 打读数。
  *   **判据在场景文件里，格式化在库文件里** —— 驱动不自己抄一份报表格式，
@@ -31,7 +31,7 @@ for (const a of argv) {
 }
 
 if (files.length === 0) {
-  console.error('用法：node tests/browser/run-scenario.mjs <场景文件…> [--width=390] [--height=844] [--budget=30000] [--styles=phone.css] [--root=.]');
+  console.error('用法：node tests/browser/run-scenario.mjs <场景文件…> [--width=390] [--height=844] [--budget=30000] [--styles=phone/design/rp-entry.css] [--root=.]');
   process.exit(2);
 }
 
@@ -41,7 +41,7 @@ const viewport = {
   height: Number(flags.get('height') || 844),
 };
 const budgetMs = Number(flags.get('budget') || 30000);
-const styles = String(flags.get('styles') || 'phone.css').split(',').map((s) => s.trim()).filter(Boolean);
+const styles = String(flags.get('styles') || 'phone/design/rp-entry.css').split(',').map((s) => s.trim()).filter(Boolean);
 
 const probe = findBrowser();
 if (!probe.available) {

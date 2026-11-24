@@ -804,6 +804,10 @@ function writeDamagedCopy(rel, from, to) {
     fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
     fs.writeFileSync(path.join(dir, 'config', 'num-gate.js'), NUM_GATE_STUB);
     fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
+    /* [v4.201.0] pixiv 数据层的月份键改走零依赖叶子 config/pure-time.js，镜像必须一起 stage：
+     *   否则被破坏的副本一 import 就 ERR_MODULE_NOT_FOUND，I1~I6 会红在加载失败上
+     *   而不是红在判据识破破坏 —— 那是假红（真正的破坏永远验不到）。 */
+    fs.copyFileSync(path.join(ROOT, 'config', 'pure-time.js'), path.join(dir, 'config', 'pure-time.js'));
     return { target, src: damaged };
 }
 async function loadDamagedCopy(rel, from, to) {

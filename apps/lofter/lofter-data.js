@@ -51,6 +51,10 @@
  * ======================================================== */
 'use strict';
 import { numOrNull } from '../../config/num-gate.js';
+/* [v4.201.0] 月份键改走纯整数日历（config/pure-time.js），内核不再构造 Date：
+ *   原实现 `new Date(createdAt)` 取的是**本地月**，换一台时区不同的机器，
+ *   同一篇文章会归档到不同月份 —— 分组结果不幂等。 */
+import { ymOf } from '../../config/pure-time.js';
 
 /* ---------- 常量 ---------- */
 
@@ -670,8 +674,9 @@ export function groupByMonth(articles) {
     const arr = (Array.isArray(articles) ? articles : []).map((a) => normalizeArticle(a));
     const map = new Map();
     for (const a of arr) {
-        const d = new Date(a.createdAt || 0);
-        const key = (a.createdAt ? (d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')) : '未标注');
+        /* `createdAt` 已由 normalizeArticle 规整成有限整数（或 0），这里只做换算，
+         * 不再构造 Date；`a.createdAt ?` 的假值分支保持原样（0 ⇒ '未标注'）。 */
+        const key = (a.createdAt ? ymOf(a.createdAt) : '未标注');
         if (!map.has(key)) map.set(key, []);
         map.get(key).push(a);
     }

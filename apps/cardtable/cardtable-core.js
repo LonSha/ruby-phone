@@ -10,7 +10,16 @@
  *     ③ 「认不出就悄悄兜默认」的第二种写法：`buildDeck('tarotx')` 静默变成 'all'，
  *        用户点了「只要塔罗」却多出 36 张雷诺曼，且**没有任何一处报错**。
  *
- * 本件的三条改变（每条都有判据钉着，见 tests/system-v4200b.test.mjs）：
+ * 本件的三条改变（判据状态**如实**写在这里 —— v4.200.0 提交时这行原本指向一张
+ *   名为「v4200b」的判据文件，而 `tests/` 下**根本没有它**，
+ *   是 `doc-path-claim` 门抓到的声明落空。现按真实情况改写：
+ *     · ① 随机源显式传入 + `makeRng(seed)` 可复现 —— **判据未写**（口子见文末 TODO）；
+ *     · ② 牌组类型封闭（`normalizeDeckType` 返回 null，表外不静默兜 'all'）—— **判据未写**；
+ *     · ③ 纯度扫描（内核文本面不出现 Date.now / Math.random / DOM / 存储 / 网络）——
+ *       由 `tests/system-v4199.test.mjs` 与 `tests/system-v4199b.test.mjs` 的台账判据钉住。
+ *   在那之前 ①② 只有代码承诺、没有机器判据 —— 不许当成已验收。
+ *
+ * 下面三条依次展开：
  *   1) **随机源必须显式传入**：`shuffle(arr, rng)` / `buildDeck(type, rng)` 的 `rng`
  *      不是函数就**抛错**，不兜 `Math.random` —— 兜底等于把「不可复现」留在原地。
  *      配套 `makeRng(seed)`（mulberry32）给出一条**同 seed 同牌序**的路。
