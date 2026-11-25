@@ -270,9 +270,18 @@ test('C4 视图层:段 + 四类绑定 + flash 派发', () => {
 });
 
 test('C5 视图把「参加 / 婉拒 / 未答复」与「预计 / 实际」都摆出来', () => {
-    assert.equal(/参加 ' \+ num\(rd && rd\.accepted\)/.test(view), true);
-    assert.equal(/婉拒 ' \+ num\(rd && rd\.declined\)/.test(view), true);
-    assert.equal(/未答复 ' \+ num\(rd && rd\.pending\)/.test(view), true);
+    /* ★ [v4.200.0 修既有] 原来这里把视图的实现形状也钉死了：要求字面 `'参加 ' + num(rd && rd.accepted)`。
+     *   真实现是 `'(参加 ' + numeralText(rd && rd.accepted) + ' · 婉拒 ' + … `（三个读数列在同一行，用 · 分隔），
+     *   于是三条断言全部落空 —— **红在辅助函数名与拼接形状，不在「有没有摆出来」**。
+     *   判据要守的性质是两条，都保留且更明确：
+     *     ① 三个状态各自绑定**自己的**读数（`rd.accepted` / `rd.declined` / `rd.pending`，不许合并成一个数）；
+     *     ② 读数必须过一层辅助函数（不许视图里裸拼数字 —— 这正是 C4「视图不自己算」的同一条纪律）。
+     *   辅助函数具体叫 `num` 还是 `numeralText` 属实现细节，不属判据。 */
+    const paired = (label, field) => new RegExp(
+        "'[^']*" + label + " ' \\+ [A-Za-z_$][\\w$]*\\(rd && rd\\." + field + "\\)").test(view);
+    assert.equal(paired('参加', 'accepted'), true, '参加人数必须绑定 rd.accepted 并经辅助函数转写');
+    assert.equal(paired('婉拒', 'declined'), true, '婉拒人数必须绑定 rd.declined 经辅助函数转写');
+    assert.equal(paired('未答复', 'pending'), true, '未答复人数必须绑定 rd.pending 经辅助函数转写');
     assert.equal(/预计花费\(不落账\)/.test(view), true);
     assert.equal(/实际金额/.test(view), true);
 });
