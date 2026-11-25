@@ -55,6 +55,16 @@ export class MomentsView {
 
         return `
             <div class="moments-page" style="overscroll-behavior: none; ${bgImage ? `background-image: url('${bgImage}'); background-size: cover; background-position: center;` : (hasMainShellBg ? 'background: transparent;' : 'background: #fff;')}">
+                <!-- [v4.200.0 · 照现实重写] 官方朋友圈是从「发现」点进来的二级页，
+                     页内自带返回热区（原实现没有任何返回入口，进了只能靠底部 tab 重置）。
+                     这里补一条与官方同形的返回行：左「‹」+ 居中的空标题，44px 高。 -->
+                <div class="moments-navbar">
+                    <button class="moments-back-btn" id="moments-back-btn" aria-label="返回发现">
+                        <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                    </button>
+                    <span class="moments-navbar-title">朋友圈</span>
+                    <span class="moments-navbar-spacer" aria-hidden="true"></span>
+                </div>
                 <!-- 朋友圈列表 - 有背景图时透明，无背景图时白色 -->
                 <div class="moments-feed" style="background: ${hasBackdrop ? 'transparent' : '#fff'};">
                     <div class="moments-pull-refresh-indicator" id="moments-pull-refresh-indicator">
@@ -262,6 +272,14 @@ export class MomentsView {
         if (momentsPage) {
             momentsPage.style.overscrollBehavior = 'none';
         }
+
+        /* [v4.200.0 · 照现实重写] 朋友圈是「发现」下的二级页，必须能返回。
+         *   回退目标是 currentView='discover'（入口列表），不是 chats ——
+         *   用户从发现进的朋友圈，返回发现才符合预期。 */
+        document.getElementById('moments-back-btn')?.addEventListener('click', () => {
+            this.app.currentView = 'discover';
+            this.app.render();
+        });
 
         this.bindMomentsPullRefresh();
 

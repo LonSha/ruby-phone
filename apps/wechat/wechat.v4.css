@@ -167,7 +167,116 @@
     color: #07C160;
     font-weight: 400;
 }
-[data-rp-refresh="4"] .wechat-app .wechat-moments-unread-dot { background: #FA5151; }
+/* ---------- 朋友圈二级页的返回栏（官方形态：44px、左‹、居中标题） ---------- */
+[data-rp-refresh="4"] .wechat-app .moments-navbar {
+    display: flex;
+    align-items: center;
+    height: 44px;
+    padding: 0 8px;
+    background: #EDEDED;
+    border-bottom: .5px solid #D8D8D8;
+    box-sizing: border-box;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+}
+[data-rp-refresh="4"] .wechat-app .moments-back-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 18px;
+    color: #111;
+    cursor: pointer;
+    flex: 0 0 36px;
+}
+[data-rp-refresh="4"] .wechat-app .moments-back-btn:active { opacity: .5; }
+[data-rp-refresh="4"] .wechat-app .moments-navbar-title {
+    flex: 1 1 auto;
+    text-align: center;
+    font-size: 17px;
+    font-weight: 500;
+    color: #111;
+}
+[data-rp-refresh="4"] .wechat-app .moments-navbar-spacer { flex: 0 0 36px; }
+
+/* ---------- 发现页（官方 8.0.80 结构：分组卡片 + 56px 行 + 右侧箭头） ---------- */
+[data-rp-refresh="4"] .wechat-app .wechat-discover {
+    padding: 10px 0 24px;
+    background: #EDEDED;
+    min-height: 100%;
+    box-sizing: border-box;
+}
+[data-rp-refresh="4"] .wechat-app .wechat-discover-card {
+    background: #FFF;
+    margin: 0 0 10px;
+    /* 官方是通栏白底、无圆角、无外边距；分组之间 10px 灰缝 */
+    border-radius: 0;
+    overflow: hidden;
+}
+[data-rp-refresh="4"] .wechat-app .wechat-discover-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 56px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    position: relative;
+    background: #FFF;
+    -webkit-tap-highlight-color: transparent;
+}
+/* 分割线从图标右侧起（官方形态：不顶到左边缘） */
+[data-rp-refresh="4"] .wechat-app .wechat-discover-row + .wechat-discover-row::before {
+    content: '';
+    position: absolute;
+    left: 52px;
+    right: 0;
+    top: 0;
+    height: 0.5px;
+    background: #E5E5E5;
+}
+[data-rp-refresh="4"] .wechat-app .wechat-discover-row:active { background: #E5E5E5; }
+[data-rp-refresh="4"] .wechat-app .wechat-discover-icon {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    color: #505050;
+}
+[data-rp-refresh="4"] .wechat-app .wechat-discover-icon svg { width: 24px; height: 24px; }
+[data-rp-refresh="4"] .wechat-app .wechat-discover-label {
+    flex: 1 1 auto;
+    font-size: 16px;
+    color: #111;
+    text-align: left;
+    line-height: 1;
+}
+[data-rp-refresh="4"] .wechat-app .wechat-discover-arrow {
+    font-size: 13px;
+    color: #C7C7C7;
+    flex: 0 0 auto;
+}
+[data-rp-refresh="4"] .wechat-app .wechat-discover-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #FA5151;
+    flex: 0 0 auto;
+}
+/* 本仓未实现的入口：文案与位置照官方，但视觉上明确「不可用」，
+   避免用户以为点了能进（点了会给一句「本机未实现」提示）。 */
+[data-rp-refresh="4"] .wechat-app .wechat-discover-row.is-disabled .wechat-discover-label,
+[data-rp-refresh="4"] .wechat-app .wechat-discover-row.is-disabled .wechat-discover-icon,
+[data-rp-refresh="4"] .wechat-app .wechat-discover-row.is-disabled .wechat-discover-arrow {
+    opacity: .38;
+}
 
 /* ---------- 6. \u901a\u8baf\u5f55\uff08\u9996\u5b57\u6bcd\u5206\u7ec4\uff09 ---------- */
 [data-rp-refresh="4"] .wechat-app .contacts-group-title {

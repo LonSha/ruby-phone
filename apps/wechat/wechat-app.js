@@ -4965,7 +4965,7 @@ export class WechatApp {
                     </span>
                 `;
             }
-            if (this.currentView === 'discover') return '朋友圈';
+            if (this.currentView === 'discover') return '发现';
             return '微信';
         };
 
@@ -4986,10 +4986,18 @@ export class WechatApp {
                     <i class="fa-solid fa-ellipsis"></i>
                 </button>`;
             }
-            if (this.currentView === 'discover') {
+            if (this.currentView === 'moments') {
                 return `
-                    <button class="wechat-header-btn" id="moments-post-btn" title="发朋友圈">
+                    <button class="wechat-header-btn" id="moments-post-btn" title="发朋友圈" aria-label="发朋友圈">
                         <i class="fa-solid fa-camera"></i>
+                    </button>`;
+            }
+            if (this.currentView === 'discover') {
+                /* 官方「发现」页右上角是「搜索」胶囊 + 「＋」；本仓无全局搜索实现，
+                 * 只保留视觉位置中的「＋」，点击给「未实现」提示，不静默。 */
+                return `
+                    <button aria-label="更多" class="wechat-header-btn" id="discover-more-btn">
+                        <i class="fa-solid fa-plus"></i>
                     </button>`;
             }
             return `
@@ -5027,7 +5035,7 @@ export class WechatApp {
 
         const headerClass = [
             'wechat-header',
-            this.currentView === 'discover' ? 'moments-header-style' : '',
+            (this.currentView === 'discover' || this.currentView === 'moments') ? 'moments-header-style' : '',
             isMainRootView ? 'wechat-header-chatlist-glass' : ''
         ].filter(Boolean).join(' ');
         const appClass = [
@@ -5088,7 +5096,7 @@ export class WechatApp {
                                 <path d="M14.31 16H2.83"></path>
                                 <path d="m16.62 12-5.74 9.94"></path>
                             </svg>
-                            <span>朋友圈</span>
+                            <span>发现</span>
                             ${this.wechatData.hasUnreadMoments?.() ? '<span class="wechat-moments-unread-dot" aria-label="有未查看的朋友圈"></span>' : ''}
                         </div>
                         <div class="wechat-tab ${this.currentView === 'me' ? 'active' : ''}" data-view="me">
@@ -5649,6 +5657,8 @@ export class WechatApp {
                 return this.contactsView.render();
             case 'discover':
                 return this.renderDiscover();
+            case 'moments':
+                return this.momentsView.renderMomentsPage();
             case 'me':
                 return this.renderProfile();
             default:
@@ -5714,8 +5724,56 @@ export class WechatApp {
     }
 
     renderDiscover() {
-        // 直接渲染朋友圈
-        return this.momentsView.renderMomentsPage();
+        /* [v4.200.0 · 照现实重写] 官方微信 8.0.80（2026-10-23 App Store）的「发现」tab
+         *   是一个**入口列表**，不是朋友圈本身：朋友圈 / 视频号 / 直播 / 扫一扫 / 搜一搜 /
+         *   看一看 / 购物 / 游戏 / 小程序，点「朋友圈」才进朋友圈页。
+         *   旧实现 renderDiscover() 直接 `return momentsView.renderMomentsPage()`，
+         *   于是「发现」tab 和「朋友圈」是同一屏，tab 文案也写成了「朋友圈」。
+         *
+         *   本仓只有朋友圈真的有内容（momentsView），其余入口在本仓没有对应实现。
+         *   按「照现实做结构，但不假装有功能」的纪律：
+         *   - 朋友圈：可点，进朋友圈页（唯一真入口）；
+         *   - 其余：照官方**位置与文案**列出，但加 `is-disabled` + `aria-disabled`，
+         *     点击给一句「本机未实现」，不静默无反应（静默无反应会被当成 bug 排查）。
+         *   互通说明：卡片、分组标题、行高、右侧箭头全部走官方尺寸（卡片 8px 圆角、
+         *   行高 56px、分组标题 13px 灰字）。 */
+        const row = (key, icon, label, extra = '') => `
+            <div class="wechat-discover-row${key === 'moments' ? '' : ' is-disabled'}" data-discover="${key}"
+                 ${key === 'moments' ? '' : 'aria-disabled="true" tabindex="-1"'} role="button">
+                <span class="wechat-discover-icon">${icon}</span>
+                <span class="wechat-discover-label">${label}</span>
+                ${extra}
+                <i class="fa-solid fa-chevron-right wechat-discover-arrow" aria-hidden="true"></i>
+            </div>`;
+        const grp = (rows) => `<div class="wechat-discover-card">${rows.join('')}</div>`;
+
+        const hasUnread = this.wechatData.hasUnreadMoments?.();
+        const momentsExtra = hasUnread
+            ? '<span class="wechat-discover-dot" aria-label="有未查看的朋友圈"></span>'
+            : '';
+
+        return `
+            <div class="wechat-discover">
+                ${grp([
+                    row('moments', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="8.5" cy="10" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="15.5" cy="10" r="1.4" fill="currentColor" stroke="none"></circle><path d="M12 6.5c4.2 0 7.5 2.6 7.5 6s-3.3 6-7.5 6-7.5-2.6-7.5-6c0-1.3.5-2.5 1.4-3.5"></path></svg>', '朋友圈', momentsExtra),
+                ])}
+                ${grp([
+                    row('channels', '<i class="fa-solid fa-play"></i>', '视频号'),
+                    row('live', '<i class="fa-solid fa-tower-broadcast"></i>', '直播'),
+                ])}
+                ${grp([
+                    row('scan', '<i class="fa-solid fa-expand"></i>', '扫一扫'),
+                    row('search', '<i class="fa-solid fa-magnifying-glass"></i>', '搜一搜'),
+                ])}
+                ${grp([
+                    row('look', '<i class="fa-regular fa-eye"></i>', '看一看'),
+                    row('shopping', '<i class="fa-solid fa-bag-shopping"></i>', '购物'),
+                    row('games', '<i class="fa-solid fa-gamepad"></i>', '游戏'),
+                ])}
+                ${grp([
+                    row('miniprogram', '<i class="fa-solid fa-shapes"></i>', '小程序'),
+                ])}
+            </div>`;
     }
 
     renderProfile() {
@@ -5881,11 +5939,24 @@ export class WechatApp {
         });
         this.bindChatListLongPressDelete();
 
-        // "发现"页面现在直接是朋友圈，绑定朋友圈事件
+        // 官方「发现」页是一个入口列表，点「朋友圈」才进朋友圈（v4.200.0 照现实重写）
         if (this.currentView === 'discover') {
+            addClickListener('[data-discover="moments"]', () => {
+                this.currentView = 'moments';
+                this.render();
+            });
+            /* 其余入口本仓没有实现：点了要给一句人话，不静默无反应
+             * （静默无反应会被当成 bug 反复排查，这是「假装有功能」的另一种形态）。 */
+            document.querySelectorAll?.('.wechat-discover-row.is-disabled')?.forEach((el) => {
+                el.addEventListener('click', () => {
+                    const label = el.querySelector('.wechat-discover-label')?.textContent || '该功能';
+                    this.app?.phoneShell?.showNotification?.('提示', `本机未实现「${label}」`, 'ℹ️');
+                });
+            });
+        }
+        // 「朋友圈」独立视图（从发现页进入）
+        if (this.currentView === 'moments') {
             this.momentsView.bindMomentsEvents();
-
-            // 🔥 发朋友圈按钮
             addClickListener('#moments-post-btn', () => this.momentsView.showPostMomentPage());
         }
 
