@@ -6,6 +6,16 @@ const root = document.createElement('div'); document.body.append(root);
 const app = new TraveldeskApp({ getContentContainer: () => root }, storage);
 app.intakeBoard(JSON.stringify({ stops: [{id:'a',place:'车站'}, {id:'b',place:'公园'}] }));
 app.render();
+/* [v4.201.0 口径修正] traveldesk 在 v4.169.0 已「照现实重写」为四页签
+ * （账 / 汇 / 行 / 结），行程板按钮 tvp-progress 只在「行」页签里渲染。
+ * 本场景写在单页时代，直接 querySelector 到 null 就 click ⇒ 四档视口全 threw。
+ * 不是产品坏了，是场景没跟上结构：先切到「行」页签再断言。 */
+function gotoTab(key) {
+    const b = root.querySelector('[data-act="tab"][data-tab="' + key + '"]');
+    if (!b) throw new Error('找不到页签 ' + key);
+    b.click();
+}
+gotoTab('party');
 const record = (id, ok, detail) => report({ name: id, ok, detail });
 window.confirm = () => false;
 root.querySelector('[data-act="tvp-progress"][data-op="skip"]').click();
@@ -18,6 +28,7 @@ root.querySelector('[data-act="tvp-progress"][data-id="b"][data-op="reschedule"]
 record('explicit-date', data.get('tv_party').stops[1].day === '2026-11-07', 'explicit confirmed date persists');
 const reopened = new TraveldeskApp({ getContentContainer: () => root }, storage);
 reopened.render();
+gotoTab('party');
 record('reopen', root.textContent.includes('skipped'), 'read saved progress after new app instance');
 const calendar = Object.create(CalendarData.prototype);
 calendar.storage = storage; calendar.memoKey = 'calendar_memos'; calendar._memos = [{id:'memo',title:'游园',dateKey:'2026-11-06',time:'10:00',type:'daily',source:'manual'}];
@@ -31,6 +42,7 @@ root.querySelector('[data-act="tvp-calendar"][data-id="b"]').click();
 record('calendar-handoff', JSON.parse(data.get('calendar_memos'))[0].dateKey === '2026-11-07' && calendar.getMemos()[0].time === '10:00', 'real calendar owner updates date and preserves time');
 record('link-persisted', data.get('tv_party').stops[1].calendarMemoId === 'memo', 'association is saved with the stop');
 const again = new TraveldeskApp({ getContentContainer: () => root }, storage); again.render();
+gotoTab('party'); /* 重开也要回「行」页签，否则下面的 tvp-calendar / tvp-unlink 仍在 null 上点 */
 window.prompt = () => { throw Error('saved association must not prompt again'); };
 root.querySelector('[data-act="tvp-calendar"][data-id="b"]').click();
 record('link-reused', root.textContent.includes('站点关联已保存'), 'reopened app reuses explicit calendar association');

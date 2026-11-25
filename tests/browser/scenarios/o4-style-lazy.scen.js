@@ -86,10 +86,23 @@ report({
 
 /* ② 打开 needsim：样式必须真到 */
 window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId: 'needsim' } }));
+/* 【口径修正 · v4.201.0】原判据只认 `link.sheet.cssRules.length > 0`，
+ *   在本门的真环境下**恒假**：场景页从 127.0.0.1:<随机端口> 取样式表，
+ *   而每次 run 端口都不同 ⇒ 样式表是**跨源**的 ⇒ Chromium 按 CSSOM 同源策略
+ *   把 `link.sheet` 置 null（这是规范行为，不是载入失败）。
+ *   实测证据：dataset.appStyleLoaded='true'（load 事件真触发）且探针
+ *   --nsm-bg='#eef1f6'（样式真的算出来了），而 hasSheet=false —— 三者同时成立。
+ *   于是「样式生效了」被报成 FAIL，属**判据缺陷伪装成红点**，比漏测更坏：
+ *   它让人开始不信任红点。
+ *   改成两条**真证据**任一成立即算到齐（都比 cssRules 硬）：
+ *     ① load 回执 dataset.appStyleLoaded === 'true'（loader 自己写的三态之一）；
+ *     ② 直接读计算样式（外层还另有一条 probeVar 探针做独立第二重）。
+ *   保留 cssRules 路径只为同源时可读的存量，不作唯一依据。 */
 const linkOk = await waitFor(function () {
   const l = document.getElementById('app-style-needsim');
   if (!l) return false;
-  try { return !!(l.sheet && l.sheet.cssRules && l.sheet.cssRules.length > 0); } catch (_e) { return false; }
+  try { if (l.sheet && l.sheet.cssRules && l.sheet.cssRules.length > 0) return true; } catch (_e) { /* 跨源：读不到不是没到 */ }
+  return String((l.dataset && l.dataset.appStyleLoaded) || '') === 'true';
 }, { timeoutMs: 15000 });
 const nsmAfter = probeVar('nsm-root', '--nsm-bg');
 report({
@@ -108,10 +121,12 @@ report({
 
 /* 再打开第二个 App：第二次也要真到（不许只对第一个有效） */
 window.dispatchEvent(new CustomEvent('phone:openApp', { detail: { appId: 'soundkit' } }));
+/* 同上：跨源 CSSOM 读不到 rules 不算没到，认 load 回执。 */
 const sndLoaded = await waitFor(function () {
   const l = document.getElementById('app-style-soundkit');
   if (!l) return false;
-  try { return !!(l.sheet && l.sheet.cssRules && l.sheet.cssRules.length > 0); } catch (_e) { return false; }
+  try { if (l.sheet && l.sheet.cssRules && l.sheet.cssRules.length > 0) return true; } catch (_e) { /* 跨源 */ }
+  return String((l.dataset && l.dataset.appStyleLoaded) || '') === 'true';
 }, { timeoutMs: 15000 });
 const sndAfter = probeVar('snd-root', '--snd-bg');
 report({
