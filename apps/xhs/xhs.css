@@ -368,9 +368,23 @@
  *   开合不再写行内 style：data-open 是机器可读的状态位，is-open 是显示位，
  *   两个断点分开的好处是「关着」与「没渲染」在 DOM 上分得清。 */
 .xhs-header-title { flex: 1; text-align: center; font-size: 14px; font-weight: 600; color: #fff; }
-.xhs-navbar { display: flex; border-top: 1px solid rgba(255, 255, 255, 0.08); background: rgba(15, 15, 17, 0.96); }
+.xhs-navbar { display: flex; align-items: center; border-top: 1px solid rgba(255, 255, 255, 0.08); background: rgba(15, 15, 17, 0.96); }
 .xhs-nav { flex: 1; padding: 9px 0 11px; border: 0; background: none; color: #8b8b93; font-size: 12px; cursor: pointer; }
 .xhs-nav.is-on { color: #ff2442; font-weight: 600; }
+/* [v4.202.0 · 照现实] 官方 9.55 的底栏中央是**凸起的圆形发布键**（红底白＋，
+   压在底栏上沿之上），不是与页签同形的一格。这里照官方做成 44px 圆钮，
+   用负 margin 让它凸出底栏；:active 时微微下沉（官方也有这层反馈）。 */
+.xhs-nav-pub {
+  flex: 0 0 auto; inline-size: 44px; block-size: 44px; margin: -14px 10px 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 50%; cursor: pointer;
+  background: #ff2442; color: #fff; font-size: 18px;
+  box-shadow: 0 2px 8px rgba(255, 36, 66, 0.4);
+}
+.xhs-nav-pub:active { transform: scale(0.94); }
+/* 本仓未实现的入口：照官方位置与文案，但明确「不可用」（文案降到 .38），
+   点了给一句「本机未实现」而不是静默无反应。 */
+.xhs-nav.is-disabled { opacity: .38; cursor: default; }
 .xhs-list { padding: 10px 12px 16px; display: flex; flex-direction: column; gap: 8px; }
 .xhs-list-head { font-size: 11px; color: #8b8b93; }
 .xhs-msg { display: flex; flex-direction: column; gap: 2px; text-align: left; color: #e6e6ea; cursor: pointer;

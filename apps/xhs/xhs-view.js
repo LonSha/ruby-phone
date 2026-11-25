@@ -95,8 +95,19 @@ export class XhsView {
             </div>
           </div>
         </div>`;
-    const tabs = TABS.map((t) =>
-      `<button class="xhs-nav${this.tab === t.key ? ' is-on' : ''}" data-tab="${t.key}">${t.label}</button>`).join('');
+    /* [v4.202.0 · 照现实] 官方小红书 9.55 的底栏是**五格**：
+     *   首页 / 购物 / ＋ / 消息 / 我 —— 中间那个「＋」是凸起的圆形发布键，
+     *   不是页头右上角的一颗小加号。旧实现把发布放在页头、底栏只有三格，
+     *   与官方结构差两层（格数 + 发布键位置）。
+     *   这里把「＋」原样搬到底栏正中：左右各两格，中间独立成一个 flex 单元。
+     *   `data-tab` 只给真正的页签；「＋」用 `data-act="xhs-compose"`，不混入页签语义。 */
+    const tabs = TABS.map((t, i) => {
+      const btn = `<button class="xhs-nav${this.tab === t.key ? ' is-on' : ''}" data-tab="${t.key}">${t.label}</button>`;
+      /* 「购物」在本仓没有对应实现：照官方**位置与文案**列出，但明确 disabled，点了给一句提示。 */
+      if (i === 0) return btn + '<button class="xhs-nav is-disabled" data-act="xhs-soon" data-what="购物" aria-disabled="true">购物</button>';
+      if (i === 1) return '<button class="xhs-nav-pub" data-act="xhs-compose" aria-label="发布笔记"><i class="fa-solid fa-plus"></i></button>' + btn;
+      return btn;
+    }).join('');
     return `
       <div class="xhs-root">
         <header class="xhs-header">
@@ -195,6 +206,24 @@ export class XhsView {
     }
     const mePost = this.container.querySelector('#xhs-me-compose');
     if (mePost) mePost.addEventListener('click', () => this._openCompose());
+    /* [v4.202.0] 底栏中央「＋」与「购物」：
+     *   · ＋ 走与页头那颗**同一个** _openCompose()（单一入口，不另写一份打开逻辑）；
+     *   · 购物在本仓无实现，点击必须给一句真话，不能静默无反应 ——
+     *     静默会被当成「按钮坏了」，排查成本比一句提示高得多。 */
+    this.container.querySelectorAll('[data-act="xhs-compose"]').forEach((btn) => {
+      btn.addEventListener('click', () => this._openCompose());
+    });
+    this.container.querySelectorAll('[data-act="xhs-soon"]').forEach((btn) => {
+      btn.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        const what = btn.dataset.what || '该入口';
+        try {
+          if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+            window.alert('「' + what + '」本机未实现。');
+          }
+        } catch (_e) { /* 宿主无 alert 时不制造新崩溃 */ }
+      });
+    });
   }
 
   _openCompose() {
