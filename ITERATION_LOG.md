@@ -1,3 +1,17 @@
+迭代 320 · v4.208.0 · 时计照现实：底栏一级导航 + 两格真一级面（今天 / 时计）（2026-11-25）
+- 1. 时计按现实收口为底栏一级导航。判据两条 Apple 官方支持原文（不是记忆）：①「在 iPhone 上使用计时器或秒表」——「轻点『秒表』」；②「在 iPhone 上的『时钟』中查看世界时间」——「前往『时钟』App。轻点『世界时钟』」。两篇合起来说明一级入口在**页面底部页签**上，不是页头的一排小胶囊（旧实现正是页头 `.cl-tabs` 胶囊）
+- 2. 只落**两格**：今天 / 时计。官方还有『闹钟 / 秒表 / 计时器』三格 —— 本机没有闹钟调度面、也没有秒表与倒计时链路，画出来就是三个点了不发生的假键，故**不画**，改为时计面页脚一行如实说明（`.cl-absent`）。验收里 `absent-note-is-honest` 钉住「说明里必须点出闹钟与假键」，`no-fake-nav-cells` 钉住「底栏只许两格且都属于 `_tabs()`」
+- 3. 三层外壳收口（与 LOFTER / Pixiv / 贴吧 同口径）：`.cl-root.cl-app`（满屏纵向 flex、`overflow:hidden`、padding 归零）→ `.cl-scroll`（`flex 1 1 auto` + **`min-height:0`**，承接原内边距，唯一滚动区）→ `.cl-tabbar`（`flex-shrink:0` 贴底，**不用 `position:fixed`**）。`min-height:0` 是必需项：缺它 flex 子项不收缩，底栏会被内容顶出可视区（`A7` 判据专门盯这一行）
+- 4. 底栏格数**由真功能面派生**：`_tabbarHtml()` 遍历 `_tabs()` 出格，不写死格数（写死就会在 `_tabs()` 增删后多出/少掉一格而无人发现）。当前面高亮走 `aria-current="page"`，不只靠颜色
+- 5. 样式走独立皮肤表 `apps/clock/clock.v4.css`，由 `phone/design/rp-entry.css` 的 `@import` 投递（贴吧 / B 站两轮已确立的形态）。本轮**未改 phone.css**，故不牵动三级镜像（`apps/*.css` → `phone.css` 同源段 → legacy 生成物），也不存在段边界截断风险
+- 6. v3 皮肤同步：皮肤原先把 `padding` + `min-block-size:100%` 写在 `.cl-root` 上（老福特 / 淘宝 / Pixiv 都踩过「底栏被撑出可视区」），本版在 `clock.v4.css` 里把外壳归零、内边距搬到滚动层，并在 `[data-rp-ios="3"]` 下单独给了底栏配色
+- 7. 新增静态门 `tests/apps-clock-v4.test.mjs`（A1~A7，7/7 绿）：底栏是 `<nav role=navigation aria-label=主导航>`、格数 == `_tabs().length`、`aria-current` 语义、**两个面各自都要压底栏**（早退分支漏一条那个面就没导航）、未实现三格不画但要有真话、皮肤表被 `@import` 投递且底栏不许 `position:fixed`、滚动层必须有 `min-height:0`
+- 8. 新增浏览器验收场景 `tests/browser/scenarios/o8-clock-bottomnav.scen.js`（14 条读数，真 Chromium 131.0.6778.33）：`nav-flush-to-shell-bottom` delta=0；`nav-thumb-height` offsetH=44；`nav-item-count`=2 且文案「今天/时计」；`switch-to-clock-face` 真切面且第二格变 `page`；`shell-three-layers-add-up` scroll 611 + nav 44 == shell 655（±2 内）—— 「底栏没有被内容顶出可视区」有机器读数而不是靠肉眼；`back-to-today-keeps-nav` 切回后仍贴底；`same-shell-reused` 外壳与底栏各只有一份
+- 9. 三档视口 320x640 / 390x844 / 768x1024 全绿（14 ok / 0 fail ×3）
+- 10. 【验证边界如实交代】① **未在真 SillyTavern 宿主里开手机**，底栏观感需真机刷新确认；② v3 皮肤档位只做了 CSS 口径同步，**未单独开 v3 皮肤取证**；③ `phone.css` 内旧的 `.cl-tabs` / `.cl-tab` 规则仍在（旧页头胶囊那套），两套类名不同、v4 底栏不命中旧规则，属已知不动的存量
+- 11. 【存量门禁红，与本版无关，已验基线】`npm run registry` 报 R3「apps/wechat/wechat.v4.css 从未被投递」—— 该文件实际已由 `phone/design/rp-entry.css` 的 `@import` 引入，属 registry 门识别面缺口；v4.207.0 已用 `git stash` 在本版改动之前复跑确认基线同红，本版不并入修复，不掩盖也不顺手改
+- 【版本升至 4.208.0（五源同源）】六源同源：manifest.json / package.json / index.js 的 ST_PHONE_VERSION / update-log.json 的 latest 与 head / tests/audit/status-ledger.json 的 version。
+
 迭代 319 · v4.207.0 · 贴吧照现实：底栏一级导航 + 进吧/我的两个真实一级面（2026-11-25）
 - 1. 贴吧按现实收口为底栏一级导航。判据两条独立原话（贴吧站内可检索，不是记忆）：①「底部导航条怎么关?」证明一级导航在画面底部；②「点击右下角【我的】图标，进入个人主页」证明「我的」在最右下角。取不到官方图的中间两格配色与图标细节，写进常量注释「不当作判据」
 - 2. 四格落法：首页 / 进吧 / 消息(disabled) / 我的 —— 只落四格不凑五格：本仓没有「发现 / 商店 / 直播」任何落点，第五格必然是假键
@@ -8305,7 +8319,7 @@ v2.82 曾因夹具只复制部分目录（缺 `data/` `phone/` `assets/`）而�
 ---
 
 - **仓库**：`/home/user/ruby-phone`（`LonSha/ruby-phone`，SillyTavern 原生第三方扩展）
-- **当前版本**：`4.200.0`（五源同源）
+- **当前版本**：`4.208.0`（五源同源）
 - **门禁基线**（**v3.27.0 实测**，`npm run check` 全链实跑：**十一道具名门逐门 0 红** · `RC=0`）：
   语法 **486 文件** / 导入可解析门 **282 文件 439 条**静态说明符 / 死导出 **1122 声明** · 零消费 24（**未涨**）/
   生命周期 **46 App 类 59 槽位** / 注册 APPS id 51、懒加载分支 51 / keys **185 键**使用点 185 登记（会话隔离 132 · 全局 50 · 历史键 3）/

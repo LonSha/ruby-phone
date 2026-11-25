@@ -1,0 +1,120 @@
+/* ============================================================
+ * apps/clock/clock.v4.css — 时计「照现实」v4：底栏一级导航外壳
+ * ------------------------------------------------------------
+ * 作用域：.cl-root.cl-app（本 App 自己的根容器），**不挂 v4 开关** ——
+ *   理由同 tieba.v4.css / bilibili.v4.css：这是 App 自己的样式表，
+ *   由 phone/design/rp-entry.css 的 @import 投递，不是全局皮肤开关。
+ *
+ * 判据来源（写在文件里，不靠记忆）：
+ *   · Apple 官方支持「在 iPhone 上使用计时器或秒表」：「轻点『秒表』」；
+ *   · Apple 官方支持「在 iPhone 上的『时钟』中查看世界时间」：
+ *     「前往『时钟』App。轻点『世界时钟』」。
+ *   两篇合起来说明：一级入口在**页面底部的页签**上，不是页头的胶囊。
+ *
+ * 为什么不改 phone.css：贴吧 / B 站两轮已确立「新 App 皮肤走 @import 独立表」，
+ *   改 phone.css 会牵动三级镜像（apps/*.css → phone.css 同源段 → legacy 生成物），
+ *   一处漏同步就被 G2/B1 判红，而本版只该改时计这一件事。
+ * ============================================================ */
+
+/* ---------- 三层外壳：外壳只做满屏纵向 flex，滚动落内容层，底栏贴底 ---------- */
+.cl-root.cl-app {
+  padding: 0;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.cl-app .cl-scroll {
+  flex: 1 1 auto;
+  min-height: 0;              /* 没有这一行，flex 子项不会收缩，底栏会被顶出可视区 */
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+/* 底栏：flex-shrink:0 贴底，**不用 position:fixed**
+ *   （fixed 会脱离 .cl-app 的高度约束：贴吧/老福特/Pixiv 三轮都实测过底栏被裁或盖住末行）。 */
+.cl-app .cl-tabbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+  min-height: 48px;           /* 拇指热区下限：写在栏上，按钮被宿主样式压 min-height 时也不会缩 */
+  border-top: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(10, 14, 20, .92);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.cl-app .cl-tabbar-item {
+  flex: 1 1 0;
+  min-height: 48px;           /* 拇指热区下限，与既有两个已收口 App 同口径 */
+  height: 100%;
+  box-sizing: border-box;
+  padding: 8px 4px;
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cl-app .cl-tabbar-item.is-on { color: #dbeafe; font-weight: 600; }
+.cl-app .cl-tabbar-item.is-on::after {
+  content: '';
+  display: block;
+  margin: 4px auto 0;
+  width: 18px;
+  height: 2px;
+  border-radius: 1px;
+  background: #60a5fa;
+}
+
+/* 「官方有、本机没有」的如实说明（页脚一行，不伪装成控件）。 */
+.cl-absent {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #94a3b8;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(148, 163, 184, .10);
+}
+
+/* ---------- v3 皮肤同步 ----------
+ * 皮肤原先把 padding + min-block-size:100% 写在 .cl-root 上（泰勒同型：
+ * 老福特/淘宝/Pixiv 都踩过「底栏被撑出可视区」）。这里把外壳归零、把内边距搬到滚动层。 */
+#phone-panel[data-rp-ios="3"] .cl-root.cl-app {
+  padding: 0;
+  gap: 0;
+  min-block-size: 0;
+  height: 100%;
+}
+#phone-panel[data-rp-ios="3"] .cl-app .cl-scroll {
+  padding: var(--rp33-sp-2) var(--rp33-margin) var(--rp33-sp-5);
+  gap: var(--rp33-sp-3);
+}
+#phone-panel[data-rp-ios="3"] .cl-app .cl-tabbar {
+  background: var(--rp33-bg);
+  border-top: 0.5px solid var(--rp33-sep);
+}
+#phone-panel[data-rp-ios="3"] .cl-app .cl-tabbar-item {
+  min-block-size: var(--rp33-hit);
+  color: var(--rp33-label-2);
+  font: var(--lt-type-caption1);
+}
+#phone-panel[data-rp-ios="3"] .cl-app .cl-tabbar-item.is-on {
+  color: var(--rp33-accent);
+  font-weight: 600;
+}
+#phone-panel[data-rp-ios="3"] .cl-app .cl-tabbar-item.is-on::after {
+  background: var(--rp33-accent);
+}

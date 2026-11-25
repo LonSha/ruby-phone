@@ -476,7 +476,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.207.0';
+const ST_PHONE_VERSION = '4.208.0';
 const ST_PHONE_CSS_REVISION = '20261124-style-layer-single-source';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -724,17 +724,16 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-25",
     items: [
-        "1. 贴吧按现实收口为底栏一级导航。判据两条（均为贴吧站内可检索到的原话，不是记忆、不靠猜）：①「底部导航条怎么关?」证明贴吧 App 的一级导航在**画面底部**且用户会想关掉它；②「点击右下角【我的】图标，进入个人主页」证明「我的」在**最右下角**。取不到官方图的中间两格配色与图标细节，明写进常量注释「不当作判据」，不假装那是官方样式。",
-        "2. 四格落法：首页 / 进吧 / 消息(disabled) / 我的。**只落四格不凑五格** —— 本仓没有「发现 / 商店 / 直播」任何落点，凑出来的第五格必然是一颗点了不动的假键；四格封顶的另一面是每格更宽，真机比五格更好按。",
-        "3. 「消息」画出来但禁用：整格 opacity .38 + aria-disabled，点击走页面内提示条（类名 tb-toast）如实说「本机还没做」。藏起来会被读成「这个 App 压根没有消息」，静默会被读成「按钮坏了」，两种都不对；全程不碰宿主 alert（会卡住 SillyTavern 消息流）。",
-        "4. 新增两个**真一级面**（不是空壳）：bars 面列全部吧 + 每吧帖数与最新标题，点一行真把 barId 切过去并回首页（等价于「进到那个吧」）；me 面列「我的帖子 / 我赞过的」，计数与数据层 author 等于「我」以及 isLiked 直接对账。me 面**不做签到 / 经验 / 等级 / 收藏** —— 本仓没有账号体系与积分模型，做出来就是假控件，改为页面底部一行如实说明（验收里有 no-fake-widgets 读数钉住）。",
-        "5. 三层外壳收口（与 LOFTER / Pixiv 同一套口径）：外层 tb-app（满屏纵向 flex、overflow:hidden、padding 归零）→ 中层 tb-view（flex 1 1 auto 且 min-height 0，**不写 height 100%**）→ 滚动区 tb-scroll（唯一滚动区，承接原内边距）→ 底栏 tb-tabbar（flex-shrink 0 贴底，**不用 position fixed**）。两处已实测过的坑写进代码注释：height:100% 在 overflow:hidden 父级里会溢出把底栏裁掉（LOFTER 那轮）；position:fixed 会脱离外壳高度约束，微博那轮实测 nav 溢出 appH 8px。",
-        "6. 门禁收紧而非放宽：tests/apps-tieba-v4.test.mjs 的 B1「渲染出的每个 data-act 都必须有人接」白名单补入 nav 与 enter-bar 两个动作，**同时**在该测试里真把 bars / me 两个面各渲染一遍 —— 只登记白名单不渲染，等于没验。",
-        "7. 新增浏览器验收场景 tests/browser/scenarios/o8-tieba-bottomnav.scen.js（23 条读数）。关键读数：nav-pinned-to-bottom delta=0；nav-touch-height offsetH=49（用 offsetHeight 而非 getBoundingClientRect —— 外壳对整屏做过约 0.9 的 scale，用 rect 判 44 会误红）；content-above-nav scrollBottom=697 navTop=697；message-disabled-look opacity=0.38 且 aria-disabled=true；message-says-not-implemented 命中页面内提示条且页面不变；bars-page-real-list rows=3 与 dataBars=3 相等；enter-bar-switches-and-returns 真切 barId 并回首页；home-chip-follows 首页 chip 跟着切；me-page-shows-my-post **先造一条 author 为「我」的帖让 dataMine 从 0 变 1 再验**（否则 0 对 0 是空验证，过滤写挂了也会绿）；me-page-no-fake-widgets 无假控件词。",
-        "8. 三档视口 320x640 / 390x844 / 768x1024 全部 23 ok / 0 fail，每档 served=565 个真实文件请求（真 Chromium 131.0.6778.33）；四个已收口 App 回归 weibo 20/20、taobao 13/13、lofter 19/19、pixiv 19/19 全通过，证明本轮未污染已收口 App。",
-        "9. 【验证边界如实交代】① 未在真 SillyTavern 宿主里开手机取证，底栏观感仍需真机刷新确认；② v3 皮肤档位未单独取证；③ 贴吧样式走 phone/design/rp-entry.css 的 @import 投递，本轮**未改 phone.css**，故不存在 pixiv 那轮的段边界截断风险；代价是 phone.css 内旧的 tb-root 时代规则未清理 —— 两套类名不同，v4 不命中旧规则，属已知不动的存量。",
-        "10. 【存量门禁红，与本版无关，已验基线】npm run registry 报 R3「apps/wechat/wechat.v4.css 从未被投递」。实测该文件已由 phone/design/rp-entry.css 第 52 行的 @import 引入，属 registry 门的识别面缺口；已用 git stash 在**本版改动之前**复跑确认基线同样为红（exit=1、同一条 R3），故不并入本版修复，另案处理，不掩盖也不顺手改。",
-        "【版本升至 4.207.0（五源同源）】六源同源：manifest.json / package.json / index.js 的 ST_PHONE_VERSION / update-log.json 的 latest 与 head / tests/audit/status-ledger.json 的 version。运行时验证边界（诚实交代）：① 真 Chromium 131.0.6778.33 打开了贴吧并真点击，23 条读数全 OK；② 未在真 SillyTavern 宿主里开手机，底栏观感需真机刷新确认；③ v3 皮肤开着的档未单独取证；④ 本轮未改 phone.css（贴吧走 @import 投递），phone.css 内旧的 tb-root 时代规则仍在，两套类名不同、v4 不命中旧规则。",
+        "1. 时计按现实收口为底栏一级导航。判据两条 Apple 官方支持原文（不是记忆、不靠猜）：①「在 iPhone 上使用计时器或秒表」——「轻点『秒表』」；②「在 iPhone 上的『时钟』中查看世界时间」——「前往『时钟』App。轻点『世界时钟』」。两篇合起来说明：一级入口在**页面底部的页签**上，不是页头的一排小胶囊（旧实现正是页头胶囊）。",
+        "2. 只落**两格**：今天 / 时计 —— 本仓真有的两个一级面。官方还有『闹钟 / 秒表 / 计时器』三格：本机没有闹钟调度面、也没有秒表与倒计时链路，画出来就是三个点了不发生的假键，故**不画**，改为时计面页脚一行如实说明（.cl-absent，验收里 absent-note-is-honest 钉住「说了是假键才不画」这件事）。",
+        "3. 三层外壳收口（与 LOFTER / Pixiv / 贴吧 同一套口径）：外层 .cl-root.cl-app（满屏纵向 flex、overflow:hidden、padding 归零）→ 滚动层 .cl-scroll（flex 1 1 auto + **min-height:0**，承接原内边距）→ 底栏 .cl-tabbar（flex-shrink:0 贴底，**不用 position:fixed**）。min-height:0 是必需项：缺它 flex 子项不收缩，底栏会被内容顶出可视区。",
+        "4. 底栏格数是真功能面的函数，不是装饰：两格都对应 _tabs() 里真有的面，点击走既有容器级委托（data-tab 在 _bindEvents 的委托里已接好，逐按钮挂监听会在每次重绘后失效 —— 本仓治过同款）。",
+        "5. 样式走独立皮肤表 apps/clock/clock.v4.css，由 phone/design/rp-entry.css 的 @import 投递（贴吧 / B 站两轮已确立的形态）。本轮**未改 phone.css**，故不牵动三级镜像（apps/*.css → phone.css 同源段 → legacy 生成物），也不存在段边界截断风险。",
+        "6. v3 皮肤同步：皮肤原先把 padding + min-block-size:100% 写在 .cl-root 上（老福特 / 淘宝 / Pixiv 都踩过「底栏被撑出可视区」），本版在 clock.v4.css 里把外壳归零、内边距搬到滚动层，并在 [data-rp-ios=\"3\"] 下单独给了底栏配色。",
+        "7. 新增浏览器验收场景 tests/browser/scenarios/o8-clock-bottomnav.scen.js（14 条读数，真 Chromium 131.0.6778.33）。关键读数：nav-flush-to-shell-bottom delta=0；nav-thumb-height offsetH=44（≥44 下限）；nav-item-count=2 且文案为「今天/时计」；nav-current-highlight aria-current=page；switch-to-clock-face 真切面且第二格变 page；no-fake-nav-cells 底栏只有两个 data-tab 且都属于 _tabs()；shell-three-layers-add-up scroll 611 + nav 44 == shell 655（±2 内）——「底栏没有被内容顶出可视区」有机器读数；back-to-today-keeps-nav 切回后仍贴底；same-shell-reused 外壳与底栏各只有一份。",
+        "8. 三档视口 320x640 / 390x844 / 768x1024 全绿（14 ok / 0 fail ×3）。",
+        "9. 【验证边界如实交代】① 未在真 SillyTavern 宿主里开手机取证，底栏观感仍需真机刷新确认；② v3 皮肤档位只做了 CSS 口径同步，**未单独开 v3 皮肤取证**；③ phone.css 内旧的 .cl-tabs / .cl-tab 规则仍在（那套是旧页头胶囊），两套类名不同、v4 底栏不命中旧规则，属已知不动的存量。",
+        "【版本升至 4.208.0（五源同源）】六源同源：manifest.json / package.json / index.js 的 ST_PHONE_VERSION / update-log.json 的 latest 与 head / tests/audit/status-ledger.json 的 version。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

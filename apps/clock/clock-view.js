@@ -73,7 +73,11 @@ export class ClockView {
     if (!container) return;
     container.innerHTML = '';
     this._root = document.createElement('div');
-    this._root.className = 'cl-root';
+    /* [v4.208.0 · 照现实] 根容器只做满屏纵向 flex 外壳（cl-app），
+     *   内边距与内容流搬到 .cl-scroll，底栏 .cl-tabbar 用 flex-shrink:0 贴底。
+     *   不写 position:fixed —— 贴吧/老福特/Pixiv 三轮实测：fixed 会脱离外壳高度约束，
+     *   底栏被裁或盖住最后一行内容。 */
+    this._root.className = 'cl-root cl-app';
     this._root.innerHTML = this._buildHTML();
     container.appendChild(this._root);
     this._bindEvents();
@@ -96,19 +100,13 @@ export class ClockView {
     const parts = [];
 
     // Header
+    parts.push('<div class="cl-scroll">');
     parts.push('<div class="cl-header"><h2>\u23f1\ufe0f 时计</h2></div>');
-
-    /* [v4.112.0 · R13-X1] 页签栏：两屏共用一条页签。
-     *   为什么不做成两个 App：计划书原文「不增加主屏格子压力」，而时间是 clock 的主题。 */
-    parts.push('<div class="cl-tabs">');
-    for (const t of this._tabs()) {
-      parts.push('<button type="button" class="cl-tab' + (this._tab === t.key ? ' is-on' : '')
-        + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>');
-    }
-    parts.push('</div>');
 
     if (this._tab === 'today') {
       parts.push(this._todayHtml());
+      parts.push('</div>');
+      parts.push(this._tabbarHtml());
       return parts.join('\n');
     }
 
@@ -170,7 +168,32 @@ export class ClockView {
     parts.push('<label class="cl-toggle"><input type="checkbox" id="cl-diag" ' + (this.app.settings.showDiagnostics ? 'checked' : '') + '><span>显示诊断</span></label>');
     parts.push('</div>');
 
+    /* [v4.208.0 · 照现实] 官方「时钟」还有『闹钟 / 秒表 / 计时器』三格：
+     *   本机没有闹钟调度面、也没有秒表与倒计时链路，画出来就是三个点了不发生的假键。
+     *   故**不画**，改为页脚一行如实说明 —— 藏起来会被读成「这个 App 没有这些功能」，
+     *   画出来又是假控件，两种都不对。 */
+    parts.push('<div class="cl-absent">官方「时钟」还有『闹钟 / 秒表 / 计时器』三格：'
+      + '本机没有闹钟调度、秒表与倒计时链路，画出来就是点了不发生的假键，故不画。</div>');
+
+    parts.push('</div>');
+    parts.push(this._tabbarHtml());
     return parts.join('\n');
+  }
+
+  /* [v4.208.0 · 照现实] 底栏一级导航（结构与口音参照 iOS「时钟」的底部页签）。
+   *   只落**本仓真有的两格**：今天 / 时计 —— 两个真一级面，不凑格。
+   *   判据来源写在这里，不靠记忆：Apple 官方支持两篇 ——
+   *     ·「在 iPhone 上使用计时器或秒表」：「轻点『秒表』」；
+   *     ·「在 iPhone 上的『时钟』中查看世界时间」：「前往『时钟』App。轻点『世界时钟』」。
+   *   即「时钟」的一级入口在**页面底部**的页签上，不是页头的小胶囊。 */
+  _tabbarHtml() {
+    const items = this._tabs().map((t) => {
+      const on = this._tab === t.key;
+      return '<button type="button" class="cl-tabbar-item' + (on ? ' is-on' : '') + '"'
+        + ' data-tab="' + t.key + '" aria-current="' + (on ? 'page' : 'false') + '">'
+        + this._esc(t.label) + '</button>';
+    }).join('');
+    return '<nav class="cl-tabbar" role="navigation" aria-label="主导航">' + items + '</nav>';
   }
 
   /* ════════ [v4.112.0 · R13-X1] 「今天」面板 ════════

@@ -52,6 +52,7 @@
 @import url("../../apps/wechat/wechat.v4.css");   /* 微信·照现实（v4）：仅 [data-rp-refresh="4"] .wechat-app 命中 */
 @import url("../../apps/bilibili/bilibili.v4.css"); /* B站·照现实重写：作用域 .bl-app（App 自己的样式表，不挂 v4 开关——理由见文件头） */
 @import url("../../apps/tieba/tieba.v4.css");    /* 贴吧·照现实重写：作用域 .tb-app（同上，不挂 v4 开关） */
+@import url("../../apps/clock/clock.v4.css");    /* 时计·照现实重写：作用域 .cl-root.cl-app（底栏一级导航外壳） */
 
 
 /* ---------- 宿主护盾（未分层，必须在层外） ----------

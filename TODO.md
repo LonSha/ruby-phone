@@ -108,7 +108,7 @@
 > ④`R21-O7`/`O8`/`O9` `FORWARD=2` 纯转发层 + 跨 App 一物多账 + 事件派发无订阅 ⇒ 三笔结构性收尾。
 
 ---
-> **最近更新：v4.200.0**（桌面重构 v2 上屏的**真因修复**：`ensureGlobalPhoneCSS()` 运行时 `fetch(./phone.css)` 注入 `<style id="st-phone-global-css">` 是 base 样式的**第二条来源**，未分层 + 2008 处 `!important` 恒压 `@layer` 里的 31 条皮肤规则 —— `home-screen.js` 明明挂了 `data-rp-desktop="2"`，用户看到的桌面仍与旧版一字不差。本版把来源收到**一条**（只摘旧注入、不再生产），重生 `phone/design/legacy-phone.css`（`--check` 一致），并把 O1 场景的 `prod-css-loaded` 由「必须有 `#st-phone-global-css`」改向为「**必须没有**」+ 两条归因锚（`dv2Skin=loaded` / `rules=7127`），门与驱动的默认外部样式表同步改为 `phone/design/rp-entry.css`；新增判据 `tests/system-v4200-layer.test.mjs` 16 条（含 5 条负控制，全实测转红），全绿。跨仓：LonSha 记忆插件 v5 样式表 62/63 条选择器 `.lsm5-*` 在 JS 侧零产出，属另一仓，本版不动）
+> **最近更新：v4.208.0**（时计「照现实」：底栏一级导航 + 今天/时计两格真一级面；官方还有『闹钟/秒表/计时器』三格 —— 本机没有对应链路，**不画假键**，改为页脚如实说明。详见 [ITERATION_LOG.md](ITERATION_LOG.md) 迭代 320）
 > **上一更新：v4.199.0**（App 重构：回改沿用了 8 个版本却没有出处的「20 版 60 只 App」这个数，22 处文字改为不带手抄数的「App 重构」；新增 tools/gen_app_ledger.mjs + tests/audit/app-refactor-ledger.json 把「已重构 8 / 待重构 93 / 目录 101 / id 105」变成机器可读账；判据 tests/system-v4199.test.mjs 16 条，全绿）
 > **上一更新：v4.198.0**（App 重构计划第八批：跨 App 重复口径收敛第六炮 —— HTML 转义面 `esc`，18 份逐字全等的复制件收敛为 `config/esc-face.js`；判据 tests/system-v4198.test.mjs 14 条，三道静态门禁全绿）
 > **上一更新：v4.197.0**（App 重构计划第七批：跨 App 重复口径收敛第五炮 —— 宽松文本规整读取面 `str`，24 份逐字等价的复制件收敛为 `config/loose-str-face.js`；判据 tests/system-v4197.test.mjs 10 条，19 道门禁全绿）

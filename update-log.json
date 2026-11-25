@@ -1,6 +1,23 @@
 {
-  "latest": "4.207.0",
+  "latest": "4.208.0",
   "versions": {
+    "4.208.0": {
+      "version": "4.208.0",
+      "date": "2026-11-25",
+      "title": "时计照现实：底栏一级导航 + 两格真一级面（今天 / 时计）",
+      "items": [
+        "1. 时计按现实收口为底栏一级导航。判据两条 Apple 官方支持原文（不是记忆、不靠猜）：①「在 iPhone 上使用计时器或秒表」——「轻点『秒表』」；②「在 iPhone 上的『时钟』中查看世界时间」——「前往『时钟』App。轻点『世界时钟』」。两篇合起来说明：一级入口在**页面底部的页签**上，不是页头的一排小胶囊（旧实现正是页头胶囊）。",
+        "2. 只落**两格**：今天 / 时计 —— 本仓真有的两个一级面。官方还有『闹钟 / 秒表 / 计时器』三格：本机没有闹钟调度面、也没有秒表与倒计时链路，画出来就是三个点了不发生的假键，故**不画**，改为时计面页脚一行如实说明（.cl-absent，验收里 absent-note-is-honest 钉住「说了是假键才不画」这件事）。",
+        "3. 三层外壳收口（与 LOFTER / Pixiv / 贴吧 同一套口径）：外层 .cl-root.cl-app（满屏纵向 flex、overflow:hidden、padding 归零）→ 滚动层 .cl-scroll（flex 1 1 auto + **min-height:0**，承接原内边距）→ 底栏 .cl-tabbar（flex-shrink:0 贴底，**不用 position:fixed**）。min-height:0 是必需项：缺它 flex 子项不收缩，底栏会被内容顶出可视区。",
+        "4. 底栏格数是真功能面的函数，不是装饰：两格都对应 _tabs() 里真有的面，点击走既有容器级委托（data-tab 在 _bindEvents 的委托里已接好，逐按钮挂监听会在每次重绘后失效 —— 本仓治过同款）。",
+        "5. 样式走独立皮肤表 apps/clock/clock.v4.css，由 phone/design/rp-entry.css 的 @import 投递（贴吧 / B 站两轮已确立的形态）。本轮**未改 phone.css**，故不牵动三级镜像（apps/*.css → phone.css 同源段 → legacy 生成物），也不存在段边界截断风险。",
+        "6. v3 皮肤同步：皮肤原先把 padding + min-block-size:100% 写在 .cl-root 上（老福特 / 淘宝 / Pixiv 都踩过「底栏被撑出可视区」），本版在 clock.v4.css 里把外壳归零、内边距搬到滚动层，并在 [data-rp-ios=\"3\"] 下单独给了底栏配色。",
+        "7. 新增浏览器验收场景 tests/browser/scenarios/o8-clock-bottomnav.scen.js（14 条读数，真 Chromium 131.0.6778.33）。关键读数：nav-flush-to-shell-bottom delta=0；nav-thumb-height offsetH=44（≥44 下限）；nav-item-count=2 且文案为「今天/时计」；nav-current-highlight aria-current=page；switch-to-clock-face 真切面且第二格变 page；no-fake-nav-cells 底栏只有两个 data-tab 且都属于 _tabs()；shell-three-layers-add-up scroll 611 + nav 44 == shell 655（±2 内）——「底栏没有被内容顶出可视区」有机器读数；back-to-today-keeps-nav 切回后仍贴底；same-shell-reused 外壳与底栏各只有一份。",
+        "8. 三档视口 320x640 / 390x844 / 768x1024 全绿（14 ok / 0 fail ×3）。",
+        "9. 【验证边界如实交代】① 未在真 SillyTavern 宿主里开手机取证，底栏观感仍需真机刷新确认；② v3 皮肤档位只做了 CSS 口径同步，**未单独开 v3 皮肤取证**；③ phone.css 内旧的 .cl-tabs / .cl-tab 规则仍在（那套是旧页头胶囊），两套类名不同、v4 底栏不命中旧规则，属已知不动的存量。",
+        "【版本升至 4.208.0（五源同源）】六源同源：manifest.json / package.json / index.js 的 ST_PHONE_VERSION / update-log.json 的 latest 与 head / tests/audit/status-ledger.json 的 version。"
+      ]
+    },
     "4.207.0": {
       "version": "4.207.0",
       "date": "2026-11-25",
@@ -6942,5 +6959,5 @@
       ]
     }
   },
-  "head": "4.207.0"
+  "head": "4.208.0"
 }
