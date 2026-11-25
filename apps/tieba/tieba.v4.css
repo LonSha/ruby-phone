@@ -17,6 +17,9 @@
  * ============================================================ */
 @layer rp.apps {
     .tb-app {
+        /* 三层外壳的第一层（v4.207.0）：只做「满屏 + 纵向 flex + 裁溢出」。
+         * **不给 padding** —— 内边距在 .tb-scroll 里，底栏才能贴到真机底边。
+         * 淘宝那轮的教训：页面容器的 padding 会把 App 顶高 66px，底栏被挤出可视区。 */
         --tb-bg: #0f1319;
         --tb-surface: #171d26;
         --tb-surface2: #1e2531;
@@ -161,6 +164,18 @@
     }
 
     /* ===== 2. 滚动区 ===== */
+    /* 三层外壳的第二层（v4.207.0）。**故意不写 height:100%**：
+     * 在 overflow:hidden 的父级里，height:100% 会让它按内容撑高并溢出，
+     * 底部那条 50px 的底栏就被裁掉了 —— LOFTER 那轮实测过的坑。
+     * flex:1 1 auto + min-height:0 才是「占满剩余高度且允许内部滚动」。 */
+    .tb-view {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+    }
+
     .tb-scroll {
         flex: 1 1 auto;
         min-height: 0;
@@ -675,6 +690,187 @@
     }
 
     /* ===== 9. 提示 ===== */
+    /* ===== 12. 底栏一级导航（v4.207.0） ===== */
+    /* 贴底做法：flex-shrink:0 + 尾部陪伴在外壳里，**不用 position:fixed**。
+     * fixed 会脱离 .tb-app 的高度约束 —— 微博那轮实测 nav 溢出 appH 8px，
+     * 且底部安全区在 fixed 下需要另一套 inset 计算，容易出双份间距。 */
+    .tb-tabbar {
+        display: flex;
+        align-items: stretch;
+        flex: 0 0 auto;
+        flex-shrink: 0;
+        block-size: 50px;
+        padding-bottom: env(safe-area-inset-bottom, 0);
+        border-top: 1px solid var(--tb-line);
+        background: var(--tb-surface);
+    }
+    .tb-tabitem {
+        display: flex;
+        flex: 1 1 0;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        /* 可点高度下限：真机上低于 44px 会点空（本仓 44 是硬门槛，
+         * 见验收读数 nav-touch-height）。 */
+        min-block-size: 48px;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--tb-dim);
+        font-family: inherit;
+        font-size: 10px;
+        line-height: 1;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .tb-tabitem i {
+        font-size: 18px;
+        line-height: 1;
+    }
+    .tb-tabtext {
+        font-size: 10px;
+        letter-spacing: 0.01em;
+    }
+    .tb-tabitem.is-on {
+        color: var(--tb-blue-text);
+    }
+    /* disabled 格：**画出来但按住不给假反馈**。opacity .38 是本仓禁用态的
+     * 唯一刻度（与 LOFTER / Pixiv / 微博一致），点击时由视图层如实提示。 */
+    .tb-tabitem.is-off {
+        opacity: 0.38;
+        cursor: default;
+    }
+    .tb-tabitem:not(.is-off):active {
+        background: var(--tb-surface2);
+    }
+
+    /* ===== 13. 进吧（v4.207.0） ===== */
+    .tb-barrows {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px 12px 14px;
+    }
+    .tb-barrow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        inline-size: 100%;
+        /* 一行的高度够 44px：整行可点，不需要在行内再放一个「进入」小按钮。 */
+        min-block-size: 56px;
+        padding: 8px 10px;
+        border: 1px solid var(--tb-line);
+        border-radius: 12px;
+        background: var(--tb-surface);
+        color: var(--tb-text);
+        font-family: inherit;
+        text-align: start;
+        cursor: pointer;
+    }
+    .tb-barrow:active {
+        background: var(--tb-surface2);
+    }
+    .tb-barrow-ava {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        inline-size: 36px;
+        block-size: 36px;
+        border-radius: 10px;
+        background: var(--tb-blue-soft);
+        color: var(--tb-blue-text);
+        font-size: 15px;
+        font-weight: 600;
+    }
+    .tb-barrow-main {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        gap: 2px;
+        min-inline-size: 0;
+    }
+    .tb-barrow-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--tb-text);
+    }
+    .tb-barrow-sub {
+        overflow: hidden;
+        color: var(--tb-dim);
+        font-size: 11px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    /* 右箭头用边框画，零外链（本文件规矩②）。 */
+    .tb-barrow-go {
+        flex: 0 0 auto;
+        inline-size: 7px;
+        block-size: 7px;
+        margin-inline-end: 2px;
+        border-top: 1.5px solid var(--tb-dim);
+        border-right: 1.5px solid var(--tb-dim);
+        transform: rotate(45deg);
+    }
+
+    /* ===== 14. 我的（v4.207.0） ===== */
+    .tb-me-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 12px 10px;
+    }
+    .tb-me-ava {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        inline-size: 46px;
+        block-size: 46px;
+        border-radius: 14px;
+        background: var(--tb-blue-soft);
+        color: var(--tb-blue-text);
+        font-size: 18px;
+        font-weight: 600;
+    }
+    .tb-me-id {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        gap: 3px;
+        min-inline-size: 0;
+    }
+    .tb-me-id b {
+        font-size: 15px;
+        color: var(--tb-text);
+    }
+    .tb-me-sub {
+        color: var(--tb-dim);
+        font-size: 11px;
+    }
+    .tb-me-new {
+        flex: 0 0 auto;
+        min-block-size: 34px;
+        padding: 0 14px;
+        font-size: 12px;
+    }
+    .tb-me-sec {
+        padding: 12px 12px 6px;
+        color: var(--tb-strong);
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .tb-me-note {
+        margin: 12px 12px 18px;
+        padding: 10px 12px;
+        border: 1px dashed var(--tb-line);
+        border-radius: 10px;
+        color: var(--tb-dim);
+        font-size: 11px;
+        line-height: 1.6;
+    }
+
     .tb-toast {
         position: absolute;
         left: 50%;

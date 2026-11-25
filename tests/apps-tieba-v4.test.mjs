@@ -211,7 +211,10 @@ test('A9 统计：帖数 / 回复数 / 吧数都数得出来', () => {
  * B. 视图层
  * ============================================================ */
 const KNOWN_ACTS = new Set(['back', 'chip', 'open', 'like', 'search', 'search-clear',
-    'compose', 'compose-close', 'compose-send', 'reply-send']);
+    'compose', 'compose-close', 'compose-send', 'reply-send',
+    /* v4.207.0 底栏：两个新动作。登记在这里才算「点得到且有人接」—— 本门禁
+     * 只认渲染出来的 data-act，视图层写了 case 但页面没画出来也算漏。 */
+    'nav', 'enter-bar']);
 
 function tagBalance(html) {
     const bad = [];
@@ -248,6 +251,14 @@ test('B1 三页都画得出来、标签闭合、data-act 都有处理分支', ()
     view.keyword = '这套词不存在';
     view._act('search', fakeEl({}));
     check('search-empty');
+    /* v4.207.0：底栏两个新一级面也必须真画一遍 —— 否则「nav」这个动作虽然
+     * 在 KNOWN_ACTS 里，页面上的 bars / me 从未被渲染过，等于没验。 */
+    view._act('nav', fakeEl({ nav: 'bars' }));
+    check('bars');
+    view._act('nav', fakeEl({ nav: 'me' }));
+    check('me');
+    view._act('nav', fakeEl({ nav: 'home' }));
+    check('home-again');
     check('sheet');
     const unknown = [...seen].filter((a) => !KNOWN_ACTS.has(a));
     assert.deepEqual(unknown, [], '这些 data-act 点得到、代码里没人接');

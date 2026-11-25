@@ -476,7 +476,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.206.0';
+const ST_PHONE_VERSION = '4.207.0';
 const ST_PHONE_CSS_REVISION = '20261124-style-layer-single-source';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -724,14 +724,17 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-25",
     items: [
-        "1. Pixiv 按官方 8.11.5 收口为底栏一级导航（官方公告 2024-06-11「Android版pixivアプリにナビゲーションメニューを追加しました」：三个画面改从画面下导航取用，另含「通知」与「マイページ」⇒ 底栏共五格）",
-        "2. 五格落法：首页 / 检索 / 插画 / 通知(disabled) / 我的 —— 「新着」不落（本仓无跨用户投稿流，落一格只能指回同一个面，两个格指向同一面就是假按钮）；「插画」补在检索之后（官方是首页顶部的类型筛、不是底栏格，但本仓插画是一整面，不给入口则一级导航走不到）",
-        "3. 事件委派面新增 `act` 键（DELEGATE_KEYS）：不加这一项，点击冒泡到根容器时找不到委派目标，表现是「点了完全没反应」且不报错 —— 本仓最贵的一类静默缺陷",
-        "4. 分三层：根容器只做满屏纵向 flex 外壳（padding 搬到内容层），滚动落在 .pxv-main，底栏 flex-shrink:0 贴底 —— 不用 position:fixed",
-        "5. 皮肤同步：pixiv.v3.css 的根容器原带 padding + min-block-size:100%，会把底栏撑出可视区（同型于淘宝那轮顶高 66px），改为外壳口径（--rp33-hit 作底栏下限）",
-        "6. 样式三级镜像同步：apps/pixiv/pixiv.css（唯一源）→ phone.css 同源段 → phone/design/legacy-phone.css。★ 本段在 phone.css 里**不是最后一段**（紧跟其后还有 v3.49.0 memtable 等无段头样式），按「下一个段头」截断会一次删掉 2369 行 —— 记在这里防复发",
-        "7. 新增 o8-pixiv-bottomnav 验收场景（19 条读数，320/640、390/844、768/1024 三档全绿）",
-        "【版本升至 4.206.0（五源同源）】六源同源：manifest.json / package.json / index.js 的 ST_PHONE_VERSION / update-log.json 的 latest 与 head / tests/audit/status-ledger.json 的 version。运行时验证边界（诚实交代）：① 真 Chromium 131.0.6778.33 打开了 pixiv 并真点击，19 条读数全 OK；② **未在真 SillyTavern 宿主里开手机**，底栏观感需真机刷新确认；③ v3 皮肤开着的档未单独取证。",
+        "1. 贴吧按现实收口为底栏一级导航。判据两条（均为贴吧站内可检索到的原话，不是记忆、不靠猜）：①「底部导航条怎么关?」证明贴吧 App 的一级导航在**画面底部**且用户会想关掉它；②「点击右下角【我的】图标，进入个人主页」证明「我的」在**最右下角**。取不到官方图的中间两格配色与图标细节，明写进常量注释「不当作判据」，不假装那是官方样式。",
+        "2. 四格落法：首页 / 进吧 / 消息(disabled) / 我的。**只落四格不凑五格** —— 本仓没有「发现 / 商店 / 直播」任何落点，凑出来的第五格必然是一颗点了不动的假键；四格封顶的另一面是每格更宽，真机比五格更好按。",
+        "3. 「消息」画出来但禁用：整格 opacity .38 + aria-disabled，点击走页面内提示条（类名 tb-toast）如实说「本机还没做」。藏起来会被读成「这个 App 压根没有消息」，静默会被读成「按钮坏了」，两种都不对；全程不碰宿主 alert（会卡住 SillyTavern 消息流）。",
+        "4. 新增两个**真一级面**（不是空壳）：bars 面列全部吧 + 每吧帖数与最新标题，点一行真把 barId 切过去并回首页（等价于「进到那个吧」）；me 面列「我的帖子 / 我赞过的」，计数与数据层 author 等于「我」以及 isLiked 直接对账。me 面**不做签到 / 经验 / 等级 / 收藏** —— 本仓没有账号体系与积分模型，做出来就是假控件，改为页面底部一行如实说明（验收里有 no-fake-widgets 读数钉住）。",
+        "5. 三层外壳收口（与 LOFTER / Pixiv 同一套口径）：外层 tb-app（满屏纵向 flex、overflow:hidden、padding 归零）→ 中层 tb-view（flex 1 1 auto 且 min-height 0，**不写 height 100%**）→ 滚动区 tb-scroll（唯一滚动区，承接原内边距）→ 底栏 tb-tabbar（flex-shrink 0 贴底，**不用 position fixed**）。两处已实测过的坑写进代码注释：height:100% 在 overflow:hidden 父级里会溢出把底栏裁掉（LOFTER 那轮）；position:fixed 会脱离外壳高度约束，微博那轮实测 nav 溢出 appH 8px。",
+        "6. 门禁收紧而非放宽：tests/apps-tieba-v4.test.mjs 的 B1「渲染出的每个 data-act 都必须有人接」白名单补入 nav 与 enter-bar 两个动作，**同时**在该测试里真把 bars / me 两个面各渲染一遍 —— 只登记白名单不渲染，等于没验。",
+        "7. 新增浏览器验收场景 tests/browser/scenarios/o8-tieba-bottomnav.scen.js（23 条读数）。关键读数：nav-pinned-to-bottom delta=0；nav-touch-height offsetH=49（用 offsetHeight 而非 getBoundingClientRect —— 外壳对整屏做过约 0.9 的 scale，用 rect 判 44 会误红）；content-above-nav scrollBottom=697 navTop=697；message-disabled-look opacity=0.38 且 aria-disabled=true；message-says-not-implemented 命中页面内提示条且页面不变；bars-page-real-list rows=3 与 dataBars=3 相等；enter-bar-switches-and-returns 真切 barId 并回首页；home-chip-follows 首页 chip 跟着切；me-page-shows-my-post **先造一条 author 为「我」的帖让 dataMine 从 0 变 1 再验**（否则 0 对 0 是空验证，过滤写挂了也会绿）；me-page-no-fake-widgets 无假控件词。",
+        "8. 三档视口 320x640 / 390x844 / 768x1024 全部 23 ok / 0 fail，每档 served=565 个真实文件请求（真 Chromium 131.0.6778.33）；四个已收口 App 回归 weibo 20/20、taobao 13/13、lofter 19/19、pixiv 19/19 全通过，证明本轮未污染已收口 App。",
+        "9. 【验证边界如实交代】① 未在真 SillyTavern 宿主里开手机取证，底栏观感仍需真机刷新确认；② v3 皮肤档位未单独取证；③ 贴吧样式走 phone/design/rp-entry.css 的 @import 投递，本轮**未改 phone.css**，故不存在 pixiv 那轮的段边界截断风险；代价是 phone.css 内旧的 tb-root 时代规则未清理 —— 两套类名不同，v4 不命中旧规则，属已知不动的存量。",
+        "10. 【存量门禁红，与本版无关，已验基线】npm run registry 报 R3「apps/wechat/wechat.v4.css 从未被投递」。实测该文件已由 phone/design/rp-entry.css 第 52 行的 @import 引入，属 registry 门的识别面缺口；已用 git stash 在**本版改动之前**复跑确认基线同样为红（exit=1、同一条 R3），故不并入本版修复，另案处理，不掩盖也不顺手改。",
+        "【版本升至 4.207.0（五源同源）】六源同源：manifest.json / package.json / index.js 的 ST_PHONE_VERSION / update-log.json 的 latest 与 head / tests/audit/status-ledger.json 的 version。运行时验证边界（诚实交代）：① 真 Chromium 131.0.6778.33 打开了贴吧并真点击，23 条读数全 OK；② 未在真 SillyTavern 宿主里开手机，底栏观感需真机刷新确认；③ v3 皮肤开着的档未单独取证；④ 本轮未改 phone.css（贴吧走 @import 投递），phone.css 内旧的 tb-root 时代规则仍在，两套类名不同、v4 不命中旧规则。",
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

@@ -1,3 +1,15 @@
+迭代 319 · v4.207.0 · 贴吧照现实：底栏一级导航 + 进吧/我的两个真实一级面（2026-11-25）
+- 1. 贴吧按现实收口为底栏一级导航。判据两条独立原话（贴吧站内可检索，不是记忆）：①「底部导航条怎么关?」证明一级导航在画面底部；②「点击右下角【我的】图标，进入个人主页」证明「我的」在最右下角。取不到官方图的中间两格配色与图标细节，写进常量注释「不当作判据」
+- 2. 四格落法：首页 / 进吧 / 消息(disabled) / 我的 —— 只落四格不凑五格：本仓没有「发现 / 商店 / 直播」任何落点，第五格必然是假键
+- 3. 「消息」画出来但禁用：opacity .38 + aria-disabled，点了走页面内提示条如实说「本机还没做」；藏起来会被读成「没有消息」，静默会被读成「按钮坏了」
+- 4. 新增两个真一级面：bars 面列全部吧 + 每吧帖数/最新标题，点一行真切 barId 并回首页；me 面列「我的帖子 / 我赞过的」，计数与数据层 author==='我' / isLiked 对账。me 面不做签到/经验/等级/收藏（无账号体系与积分模型，做了就是假控件），改为页脚一行如实说明
+- 5. 三层外壳收口（与 LOFTER / Pixiv 同口径）：tb-app（满屏纵向 flex、overflow:hidden、padding 归零）→ tb-view（flex 1 1 auto + min-height 0，**不写 height:100%**）→ tb-scroll（唯一滚动区）→ tb-tabbar（flex-shrink 0 贴底，不用 position:fixed）
+- 6. 门禁收紧而非放宽：B1 的 data-act 白名单补入 nav / enter-bar，**同时**在该测试里真渲染 bars / me 两面 —— 只登记不渲染等于没验
+- 7. 新增 o8-tieba-bottomnav 验收场景（23 条读数）：底栏贴底 delta=0、拇指热区 offsetH=49、四格文案与顺序、消息格 opacity .38 且点了给真话、进吧列表 rows=3=dataBars、进吧真切 barId 且首页 chip 跟随、me 面先造 author='我' 的帖让 dataMine 0→1 再验（否则 0 对 0 是空验证）、无假控件词
+- 8. 三档视口 320x640 / 390x844 / 768x1024 全绿（23 ok / 0 fail，每档 served=565）；四个已收口 App 回归 weibo 20/20、taobao 13/13、lofter 19/19、pixiv 19/19 全通过
+- 9. 【存量门禁红，与本版无关】npm run registry 的 R3「apps/wechat/wechat.v4.css 从未被投递」在**本版改动之前**用 git stash 复跑同样为红（exit=1、同一条 R3），该文件实际已由 phone/design/rp-entry.css 第 52 行 @import 引入，属 registry 门识别面缺口，另案处理
+- 【版本升至 4.207.0（五源同源）】六源同源：manifest.json / package.json / index.js 的 ST_PHONE_VERSION / update-log.json 的 latest 与 head / tests/audit/status-ledger.json 的 version。运行时验证边界（诚实交代）：① 真 Chromium 131.0.6778.33 里打开了贴吧并真点击，23 条读数全 OK；② **未在真 SillyTavern 宿主里开手机**，底栏观感需真机刷新确认；③ v3 皮肤开着的档未单独取证；④ 本轮未改 phone.css（贴吧走 @import 投递），故 phone.css 内旧的 tb-root 时代规则仍在，两套类名不同、v4 不命中旧规则。
+
 迭代 318 · v4.206.0 · Pixiv 照现实：底栏五格 + 内容区滚动收口（2026-11-25）
 - 1. Pixiv 按官方 8.11.5 收口为底栏一级导航（官方公告 2024-06-11「Android版pixivアプリにナビゲーションメニューを追加しました」：三个画面改从画面下导航取用，另含「通知」与「マイページ」⇒ 底栏共五格）
 - 2. 五格落法：首页 / 检索 / 插画 / 通知(disabled) / 我的 —— 「新着」不落（本仓无跨用户投稿流，落一格只能指回同一个面，两个格指向同一面就是假按钮）；「插画」补在检索之后（官方是首页顶部的类型筛、不是底栏格，但本仓插画是一整面，不给入口则一级导航走不到）

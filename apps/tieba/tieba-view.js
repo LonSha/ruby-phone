@@ -8,7 +8,7 @@
  * 版权 (c) 2026 LonSha。采 MIT 许可。
  * ======================================================== */
 /* ============================================================
- * apps/tieba/tieba-view.js — 贴吧视图层（v4.161.0）
+ * apps/tieba/tieba-view.js — 贴吧视图层（v4.207.0 底栏一级导航）
  * ------------------------------------------------------------
  * 画法按「真机上贴吧长什么样」倒推，不按旧模板的 div 堆叠：
  *   首页：48 顶栏（返回 / 吧名 / 发帖）· 搜索框 · 吧 chip 横滑 · 帖子卡流
@@ -22,6 +22,22 @@
  *   ③ **所有交互走 `[data-act]` + 事件委托**：容器上只挂一次监听（`_bound`），
  *      重绘不会把监听器丢掉，也不会越挂越多。
  * 头像不用外链图片：离线 / 宿主禁网时远程图必然 404，画成「首字 + 色调」。
+ * ============================================================
+ * 【v4.207.0 照现实：一级导航从「顶栏返回键」改为「底栏常驻」】
+ *   修前的真实缺口：本 App 只有 首页 / 详情 / 搜索 三个面，面与面之间只有顶栏那颗
+ *   返回键可走 —— 现实中贴吧 App 的一级导航在**画面底部**，且「我的」在最右格
+ *   （判据见下方 `TB_NAV` 的注释，两条都是贴吧吧内可检索到的原话，不是记忆）。
+ *   四格的**能力对位**（「结构照官方、能力照本仓」——本仓没有的能力不画假键）：
+ *     首页  现有 home（帖子流 + 吧 chip）
+ *     进吧  新增 page='bars'：全部吧列表 + 每吧帖数 → 点进该吧（getBars / getPostsByBar）
+ *     消息  **本仓无消息模块** → 标 disabled：opacity .38 + aria-disabled，
+ *           点它走页面内 `.tb-toast` 如实说「本机还没做」，不弹宿主 alert、
+ *           也不假造一个空消息列表（空列表会被读成「今天没人回我」）
+ *     我的  新增 page='me'：我发的帖 / 我赞过的帖（author==='我' / isLiked）
+ *   详情页与搜索页**不进底栏**：它们是二级面，底栏留着但不高亮任何一格，
+ *   返回键仍然回首页 —— 与现实中「点进帖子后底栏消失或保持」的两种做法里，
+ *   本仓选「保持并取消高亮」，因为本仓没有独立的消息流可以跳走，保留底栏
+ *   能让人随时切回「进吧」，跳走也不会丢掉帖子上下文。
  * ============================================================ */
 
 /** 文本归一 + 转义：同一处收口，避免有的地方转义了、有的地方忘了。 */
@@ -35,6 +51,37 @@ function esc(value, max = 0) {
         .replace(/"/g, '\u0026quot;')
         .replace(/'/g, '&#39;');
 }
+
+/* ============================================================
+ * 一级导航四格（v4.207.0）
+ * ------------------------------------------------------------
+ * 【顺序依据 · 两条独立原话，都是贴吧站内可检索到的，不是记忆】
+ *   ① 「底部导航条怎么关?」—— 贴吧吧内提问帖标题。它证明贴吧 App 的一级导航
+ *      在**底部**，且用户对它是有感知的（会想关掉）；
+ *   ② 「点击右下角【我的】图标，进入个人主页」—— 站内教程原文。它证明
+ *      「我的」在**最右下角**，即四格里的最后一格。
+ *   「进吧」落在第二格：贴吧把「进吧」作为一级入口是长期稳定的结构，本仓照此
+ *   落格。**不当判据**的部分是中间两格的官方配色与图标细节 —— 取不到官方图，
+ *   就按本仓视觉台（深色底 + 亮蓝强调）画，不假装那是官方样式。
+ *
+ * 【为什么只有四格】官方底栏容量是四到五格，本仓真正有落点的只有三格半：
+ *   首页（有）· 进吧（有）· 我的（有）· 消息（**没有消息模块**）。
+ *   第五格无论放「发现 / 商店 / 直播」都会是一颗点了不动的假键 —— 本仓从
+ *   LOFTER 那一轮起就定了规矩：宁可少一格，不画假键。四格封顶的另一面是
+ *   每格更宽（真机上四格比五格更好按）。
+ *
+ * 【disabled 的语义】`on:false` 的格子不是「隐藏」，是「如实告知还没做」：
+ *   画出来 + opacity .38 + aria-disabled，点击走页面内提示条。藏起来用户会
+ *   以为「这个 App 压根没有消息」，画出来并说明才符合「照现实」。
+ * ============================================================ */
+const TB_NAV = [
+    { key: 'home', label: '首页', icon: 'fa-house', on: true },
+    { key: 'bars', label: '进吧', icon: 'fa-compass', on: true },
+    { key: 'message', label: '消息', icon: 'fa-comment-dots', on: false },
+    { key: 'me', label: '我的', icon: 'fa-user', on: true }
+];
+/* 二级面（详情 / 搜索）不参与高亮：底栏留着，但不骗人说「你现在在首页」。 */
+const TB_SUB_PAGES = { detail: '', search: '' };
 
 /** 头像色调：按作者名取稳定下标，同一个人永远同一个色。 */
 function toneOf(name) {
@@ -90,9 +137,20 @@ export class TiebaView {
         const c = this.container;
         if (!c) return;
         this._scrollTop = this._readScroll();
+        /* 三层外壳（与 LOFTER / Pixiv 同一套口径，缺陷根因写在两处文件头）：
+         *   .tb-app     满屏纵向 flex、overflow:hidden、padding:0
+         *   .tb-view    flex:1 1 auto + min-height:0，**不写 height:100%**
+         *   .tb-scroll  唯一滚动区，承接原有内边距
+         *   .tb-tabbar  flex-shrink:0 贴底，**不用 position:fixed**
+         * 两条已实测过的坑：`height:100%` 在 overflow:hidden 的父级里会溢出把
+         * 底栏裁掉（LOFTER 那轮）；position:fixed 会脱离外壳高度约束，微博那轮
+         * 实测 nav 溢出 appH 8px。 */
         c.innerHTML = `<div class="tb-app" data-page="${esc(this.page)}">`
             + this._appbarHtml()
+            + `<div class="tb-view">`
             + `<div class="tb-scroll" data-role="scroll">${this._bodyHtml()}</div>`
+            + `</div>`
+            + this._tabbarHtml()
             + this._composeHtml()
             + `</div>`;
         this._restoreScroll();
@@ -109,8 +167,11 @@ export class TiebaView {
     }
 
     _appbarHtml() {
-        const title = this.page === 'search'
-            ? '搜索贴吧'
+        /* 标题按面切。bars / me 是本版新增的一级面，标题取「进吧」「我的」，
+         * **不写「百度贴吧」**：一级面之间顶栏标题一样，用户会看不出自己切了面。 */
+        const TITLE = { search: '搜索贴吧', bars: '进吧', me: '我的' };
+        const title = TITLE[this.page]
+            ? TITLE[this.page]
             : (this.page === 'detail'
                 ? esc(this._barNameOfPost() || '贴吧')
                 : '百度贴吧');
@@ -127,7 +188,37 @@ export class TiebaView {
     _bodyHtml() {
         if (this.page === 'detail') return this._detailHtml();
         if (this.page === 'search') return this._searchHtml();
+        if (this.page === 'bars') return this._barsHtml();
+        if (this.page === 'me') return this._meHtml();
         return this._homeHtml();
+    }
+
+    /* ---------- 1.5 底栏一级导航（v4.207.0） ---------- */
+    /**
+     * 底栏 HTML。**只有这里产出 `.tb-tabitem`**，重绘时整块替换，
+     * 不单独打补丁 —— 与 `_paint()` 的「DOM 只是 this 的投影」同一条纪律。
+     *
+     * 高亮规则（`TB_SUB_PAGES` 参与判断，不是装饰）：
+     *   详情 / 搜索 这两个二级面**不高亮任何一格**。理由：用户点进帖子后
+     *   浏览器语义里「你还在首页那条路上」，但贴吧现实里底栏高亮的是「进吧」
+     *   那一系。本仓没有独立消息流可跳，硬高亮一格会把「返回键」要表达的
+     *   「这是二级面」冲掉，故取「保持底栏、取消高亮」，让人随时能切回去。
+     */
+    _tabbarHtml() {
+        const cur = TB_SUB_PAGES[this.page] === '' ? '' : this.page;
+        const items = TB_NAV.map((n) => {
+            const on = n.on && cur === n.key;
+            return '<button type="button" class="tb-tabitem'
+                + (on ? ' is-on' : '')
+                + (n.on ? '' : ' is-off')
+                + '" data-act="nav" data-nav="' + n.key + '"'
+                + (n.on ? '' : ' aria-disabled="true"')
+                + ' aria-label="' + esc(n.label) + '">'
+                + '<i class="fa-solid ' + n.icon + '" aria-hidden="true"></i>'
+                + '<span class="tb-tabtext">' + esc(n.label) + '</span>'
+                + '</button>';
+        }).join('');
+        return '<nav class="tb-tabbar" role="navigation" aria-label="主导航">' + items + '</nav>';
     }
 
     /* ---------- 2. 首页 ---------- */
@@ -221,6 +312,79 @@ export class TiebaView {
             + `<input class="tb-reply-input" type="text" placeholder="回复楼主…" data-role="reply" aria-label="回复内容" />`
             + `<button type="button" class="tb-btn tb-btn-send" data-act="reply-send" data-post="${esc(p.id)}">回复</button>`
             + `</div>`;
+    }
+
+    /* ---------- 3.5 进吧（v4.207.0） ---------- */
+    /**
+     * 「进吧」面：全部吧的列表，每格显示吧名 / 帖子数 / 最近一条标题。
+     * 能力对位：`getBars()` + `getPostsByBar(id)` —— 点一格就把 `barId` 切过去
+     * 并回首页，等价于现实里「进到那个吧」。
+     *
+     * 为什么不做「关注 / 未关注」两栏：本仓没有关注关系（数据层没有这字段，
+     * 模型标签入库也不带），画出来两栏就是拿同一份数据换两个标题。
+     */
+    _barsHtml() {
+        const d = this._data();
+        const bars = d.getBars();
+        if (!bars.length) {
+            return `<div class="tb-empty"><p class="tb-empty-title">还没有吧</p>`
+                + `<p class="tb-empty-tip">发第一帖时会自动建一个吧。</p>`
+                + `<button type="button" class="tb-btn" data-act="compose">去发帖</button></div>`;
+        }
+        const rows = bars.map((b) => {
+            const posts = d.getPostsByBar(b.id);
+            const last = posts.length ? posts[0].title : '';
+            const tail = posts.length
+                ? `${posts.length} 帖 · 最新：${esc(last, 24)}`
+                : '暂无帖子';
+            return `<button type="button" class="tb-barrow" data-act="enter-bar" data-bar="${esc(b.id)}">`
+                + `<span class="tb-barrow-ava tb-tone${toneOf(b.name)}" aria-hidden="true">${esc(String(b.name || '吧').slice(0, 1))}</span>`
+                + `<span class="tb-barrow-main">`
+                + `<b class="tb-barrow-name">${esc(b.name)}</b>`
+                + `<span class="tb-barrow-sub">${tail}</span>`
+                + `</span>`
+                + `<span class="tb-barrow-go" aria-hidden="true"></span>`
+                + `</button>`;
+        }).join('');
+        const st = d.stats();
+        return `<div class="tb-count">全部 ${st.bars} 个吧 · ${st.posts} 帖 · ${st.replies} 条回复</div>`
+            + `<div class="tb-barrows">${rows}</div>`;
+    }
+
+    /* ---------- 3.6 我的（v4.207.0） ---------- */
+    /**
+     * 「我的」面：我发的帖 / 我赞过的帖。
+     * 能力对位：`author === '我'`（发帖与回复都写死这个署名）与 `isLiked`。
+     *
+     * 三件本仓做不到的事，如实说明而不画假控件：
+     *   · 头像 / 昵称 —— 没有账号体系，写死「本机用户」；
+     *   · 签到 / 经验 / 等级 —— 没有积分模型；
+     *   · 我的收藏 —— 本仓的收藏在 B站 那套（favorites），贴吧数据层没有。
+     * 所以这一页只有两个真实列表 + 一行说明，不做「设置项列表」凑数。
+     */
+    _meHtml() {
+        const d = this._data();
+        const all = d.getPostsByBar('all');
+        const mine = all.filter((p) => String(p.author) === '我');
+        const liked = all.filter((p) => p.isLiked && String(p.author) !== '我');
+        const card = (p) => this._postCardHtml(p);
+        return `<div class="tb-me-head">`
+            + `<span class="tb-me-ava" aria-hidden="true">我</span>`
+            + `<span class="tb-me-id">`
+            + `<b>本机用户</b>`
+            + `<span class="tb-me-sub">发过 ${mine.length} 帖 · 赞过 ${liked.length} 帖</span>`
+            + `</span>`
+            + `<button type="button" class="tb-btn tb-me-new" data-act="compose">发帖</button>`
+            + `</div>`
+            + `<div class="tb-me-sec">我的帖子 (${mine.length})</div>`
+            + (mine.length
+                ? `<div class="tb-list">${mine.map(card).join('')}</div>`
+                : `<div class="tb-empty tb-empty-quiet"><p class="tb-empty-tip">还没发过帖，点右上角「发帖」说两句。</p></div>`)
+            + `<div class="tb-me-sec">我赞过的 (${liked.length})</div>`
+            + (liked.length
+                ? `<div class="tb-list">${liked.map(card).join('')}</div>`
+                : `<div class="tb-empty tb-empty-quiet"><p class="tb-empty-tip">还没赞过别人的帖。</p></div>`)
+            + `<div class="tb-me-note">本机没有账号体系，这一页只数本会话里你自己发过和赞过的帖子。</div>`;
     }
 
     /* ---------- 4. 搜索 ---------- */
@@ -362,6 +526,31 @@ export class TiebaView {
                 if (input && typeof input.focus === 'function') input.focus();
                 return null;
             }
+            case 'nav': {
+                const to = this._attr(el, 'nav') || 'home';
+                const item = TB_NAV.find((n) => n.key === to);
+                if (!item) return null;
+                /* disabled 格：如实说「还没做」，不假跳一个空页。用页面内提示条，
+                 * 不碰宿主 alert —— alert 会卡住 SillyTavern 的消息流。 */
+                if (!item.on) return this._toast('「' + item.label + '」本机还没做。');
+                if (to === 'home') {
+                    this.postId = '';
+                    this.page = 'home';
+                } else {
+                    this.postId = '';
+                    this.page = to;
+                }
+                return this._paint();
+            }
+            case 'enter-bar': {
+                const bid = this._attr(el, 'bar');
+                if (!bid || !data.getBar(bid)) return this._toast('这个吧不在了');
+                this.barId = bid;
+                this.page = 'home';
+                this.postId = '';
+                this._paint();
+                return this._toast('已进入「' + this._barLabel() + '」');
+            }
             case 'compose': return this._openCompose();
             case 'compose-close': return this._closeCompose();
             case 'compose-send': return this._sendPost();
@@ -371,7 +560,10 @@ export class TiebaView {
     }
 
     _back() {
-        if (this.page === 'detail' || this.page === 'search') {
+        /* 一级面（bars / me）按返回 = 回首页；二级面（detail / search）同理。
+         * 已经在首页时才把返回键交给宿主（退出 App）。 */
+        const NAV_PAGES = { bars: 1, me: 1 };
+        if (this.page === 'detail' || this.page === 'search' || NAV_PAGES[this.page]) {
             this.page = 'home';
             this.postId = '';
             return this._paint();
