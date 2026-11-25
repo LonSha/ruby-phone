@@ -48,11 +48,19 @@ const FACE_META = {
     [TAOBAO_REASONS.storage_absent]: { icon: '⚠️', label: '存储不可用（读数拿不到）', tone: 'err' },
 };
 
-/** 底部四个页签（顺序即现实里的顺序；娃娃机与设置收在「我的」里）。 */
+/** 底部页签 —— 照官方淘宝 10.69.16 的五格：首页 / 逛逛 / 消息 / 购物车 / 我的。
+ *  【与官方对齐的三处改动】
+ *   ① 官方底栏是**五格**，且**订单不在底栏** —— 订单挂在「我的」下面（我的 → 全部订单）。
+ *      旧实现把「订单」抬成底栏一格，等于把二级页当成一级页，跳转层级与官方不同；
+ *   ② 「逛逛」是淘宝的内容流一级入口，本仓无实现：照官方位置与文案列出，
+ *      标 is-disabled + aria-disabled + 降到 .38，点了给一句真话；
+ *   ③ 「消息」同理（本仓站内信没有落地），也照官方列出并标禁用。
+ *  真正可用的三格（首页 / 购物车 / 我的）保持原有实现与事件，一行行为不改。 */
 const TABS = [
     { key: 'home', label: '首页', icon: 'fa-solid fa-house' },
+    { key: 'guang', label: '逛逛', icon: 'fa-solid fa-compass', disabled: true },
+    { key: 'msg', label: '消息', icon: 'fa-solid fa-comment-dots', disabled: true },
     { key: 'cart', label: '购物车', icon: 'fa-solid fa-cart-shopping' },
-    { key: 'orders', label: '订单', icon: 'fa-solid fa-receipt' },
     { key: 'mine', label: '我的', icon: 'fa-solid fa-user' },
 ];
 
@@ -269,6 +277,17 @@ export class TaobaoView {
         for (const t of TABS) {
             const on = this.tabKey === t.key;
             const n = badge[t.key] || 0;
+            /* [v4.204.0 · 照现实] 禁用格：照官方位置与文案列出，但必须**看得出不能点**
+             *   （opacity .38 + aria-disabled），点了给一句真话。
+             *   不静默不是礼貌问题：静默无反应会被当成「按钮坏了」，排查成本比一句话高得多。 */
+            if (t.disabled) {
+                parts.push('<button class="tbo-tab is-disabled" data-act="soon" data-what="' + this._esc(t.label) + '"'
+                    + ' aria-disabled="true" aria-label="' + this._esc(t.label) + '（本机未实现）">');
+                parts.push('<i class="' + t.icon + '" aria-hidden="true"></i>');
+                parts.push('<span class="tbo-tab-label">' + this._esc(t.label) + '</span>');
+                parts.push('</button>');
+                continue;
+            }
             parts.push('<button class="tbo-tab" data-act="tab" data-tab="' + this._esc(t.key) + '"'
                 + (on ? ' aria-current="page"' : '') + ' aria-label="' + this._esc(t.label) + '">');
             parts.push('<i class="' + t.icon + '" aria-hidden="true"></i>');
@@ -624,6 +643,18 @@ export class TaobaoView {
         parts.push('<div class="tbo-me-stat"><b>' + proj.grabCount + '</b><span>抓取</span></div>');
         parts.push('</div>');
 
+        /* ---- 我的订单（官方层级：订单挂在「我的」下面，**不在底栏**）----
+         * [v4.204.0 · 照现实] 旧实现把「订单」抬成底栏一格。官方淘宝 10.69.16 的底栏是
+         *   首页/逛逛/消息/购物车/我的，订单是「我的」里面的二级页（全部订单 + 各状态）。
+         *   这里补一级入口，保证把订单从底栏摘掉之后**仍然点得到**（不能只摘不迁）。
+         *   徽标沿用底栏原来的在途数，读数不变。 */
+        parts.push('<section class="tbo-sec">');
+        parts.push('<h2 class="tbo-sec-title">我的订单</h2>');
+        parts.push('<div class="tbo-actions">');
+        parts.push('<button class="tbo-btn tbo-btn-ghost" data-act="tab" data-tab="orders" aria-label="全部订单">'
+            + '全部订单' + (proj.pendingCount > 0 ? ('（' + proj.pendingCount + ' 在途）') : '') + '</button>');
+        parts.push('</div>');
+        parts.push('</section>');
         /* ---- 娃娃机 ---- */
         parts.push('<section class="tbo-sec">');
         parts.push('<h2 class="tbo-sec-title">娃娃机</h2>');
@@ -707,6 +738,15 @@ export class TaobaoView {
         const id = this._attr(el, 'id');
         switch (act) {
             case 'tab': this._tabTo(this._attr(el, 'tab') || 'home'); return;
+            /* [v4.204.0 · 照现实] 官方底栏里本仓未实现的那两格（逛逛 / 消息）：
+             *   点了要给一句真话，不能静默 —— 静默在用户眼里就是「按钮坏了」。
+             *   提示走自绘 .tbo-toast（本仓纪律②：不弹宿主 alert，会卡住消息流）。 */
+            case 'soon': {
+                const what = this._attr(el, 'what') || '该入口';
+                this.flash = '「' + what + '」本机未实现。';
+                this._paint();
+                return;
+            }
             case 'back': this._back(); return;
             case 'open-p': this._nav('detail', { id }); return;
             case 'open-logi': this._nav('logi', { id }); return;

@@ -813,8 +813,16 @@ test('F4 前缀全仓唯一：.tbo- 只出现在本 App 目录与 phone.css', ()
     const users = files.filter((f) => fs.readFileSync(f, 'utf8').includes(CSS_PFX));
     assert.ok(users.length > 0, CSS_PFX + ' 必须在仓里被用到');
     for (const f of users) {
-        assert.ok(f.includes('/apps/' + APP_ID + '/') || f.endsWith('phone.css'),
-            CSS_PFX + ' 只应出现在 apps/' + APP_ID + '/ 与 phone.css，实测还有：' + f.replace(ROOT, ''));
+        /* [v4.204.0] 放行面新增一处：tests/browser/scenarios/。
+         *   理由：该目录是**浏览器验收场景**，本质是「在真外壳里点这个 App」，
+         *   必须写它的类名才能量（.tbo-tabbar 常驻、.tbo-tab.is-disabled 的 opacity 等）。
+         *   把它们排除在扫描面外是不行的 —— 那会让「场景文件里写错前缀」查不出来；
+         *   而整目录放行 tests/ 也不行。所以按**具体目录**放行，而不是按「是不是测试」。
+         *   门禁的本意是「前缀不许越界到别人的实现里」，不是「测试不许提它」。 */
+        const ok = f.includes('/apps/' + APP_ID + '/')
+            || f.endsWith('phone.css')
+            || f.includes('/tests/browser/scenarios/');
+        assert.ok(ok, CSS_PFX + ' 只应出现在 apps/' + APP_ID + '/、phone.css 与 tests/browser/scenarios/，实测还有：' + f.replace(ROOT, ''));
     }
 });
 

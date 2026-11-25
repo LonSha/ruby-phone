@@ -15367,8 +15367,16 @@ input:checked + .toggle-slider:before {
 /* ---------- [v3.29.0] 桃宝 App（.tbo-*） ---------- */
 /* ---------- 外壳 / 顶部栏 / 页签栏 / 吐司 ---------- */
 .tbo-app { position: relative; display: flex; flex-direction: column; height: 100%; overflow: hidden; background: #0b0f14; color: #e2e8f0; font-size: 13px; }
-.tbo-page { flex: 1; overflow-y: auto; padding: 12px 12px 16px; display: flex; flex-direction: column; gap: 12px; }
-.tbo-page-home, .tbo-page-detail, .tbo-page-cart, .tbo-page-orders, .tbo-page-logi, .tbo-page-mine { min-height: 100%; }
+.tbo-page { flex: 1; overflow-y: auto; padding: 12px 12px 16px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+/* [v4.204.0 · 真缺陷] 这两行原来写的是 `min-height: 100%`，它把页面**撑到与父容器等高**，
+   而 .tbo-page 自己还有 padding（上下共 28px）。纵向 flex 里 flex 子项默认 min-height:auto
+   ＝内容高度，于是「100% + padding」把 .tbo-app 的总高顶出 66px，底栏被推出可视区
+   （实测 app.offsetH=728 / page.offsetH=756 / barBottom-appBottom=+66）。
+   现实里的 App 底栏是常驻的，滚的只有内容 ⇒ 这里改成 min-height:0，
+   让 .tbo-page 老实吃 flex 分配到的剩余高度，滚动发生在它自己身上。
+   注意：不能只加 overflow 不管 min-height —— flex 子项的默认 min-height:auto 会
+   继续按内容撑高，overflow 只会变成「溢出但不可滚」。 */
+.tbo-page-home, .tbo-page-detail, .tbo-page-cart, .tbo-page-orders, .tbo-page-logi, .tbo-page-mine { min-height: 0; }
 .tbo-top { position: sticky; top: 0; z-index: 6; display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: rgba(11, 15, 20, .94); border-bottom: 1px solid rgba(255, 255, 255, .06); }
 .tbo-top-btn { flex: 0 0 auto; width: 30px; height: 30px; border: 0; border-radius: 9px; background: rgba(255, 255, 255, .06); color: #cbd5e1; font-size: 13px; line-height: 30px; text-align: center; cursor: pointer; }
 .tbo-top-btn:hover { background: rgba(255, 255, 255, .12); color: #f8fafc; }
@@ -15377,6 +15385,12 @@ input:checked + .toggle-slider:before {
 .tbo-tabbar { flex: 0 0 auto; display: flex; border-top: 1px solid rgba(255, 255, 255, .07); background: #0d1218; }
 .tbo-tab { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 0 10px; border: 0; background: none; color: #64748b; font-size: 11px; cursor: pointer; }
 .tbo-tab.is-on { color: #fb923c; }
+/* [v4.204.0 · 照现实] 官方底栏里本仓未实现的两格（逛逛 / 消息）：
+   照官方位置与文案列出，但必须**看得出不能点**。opacity 落在整格上（图标+文字一起降），
+   只降文字会让图标仍然亮着，看上去像「可以点只是灰了点」—— 那比不标更误导。
+   cursor 也改掉：桌面宽屏下鼠标指针是「这里不可点」的第一信号。 */
+.tbo-tab.is-disabled { opacity: .38; cursor: default; }
+.tbo-tab.is-disabled:hover { color: #64748b; }
 .tbo-tab-label { line-height: 1.1; }
 .tbo-tab-badge { position: absolute; top: 3px; left: 54%; min-width: 14px; padding: 0 4px; border-radius: 7px; background: #ef4444; color: #fff; font-size: 10px; line-height: 14px; text-align: center; }
 .tbo-toast { position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); max-width: 78%; padding: 7px 14px; border-radius: 18px; background: rgba(15, 23, 42, .95); color: #f8fafc; font-size: 12px; box-shadow: 0 6px 18px rgba(0, 0, 0, .45); z-index: 20; pointer-events: none; }
@@ -15524,6 +15538,7 @@ input:checked + .toggle-slider:before {
 .tbo-cover-3 { background: linear-gradient(135deg, rgba(168, 85, 247, .2), rgba(88, 28, 135, .05)); }
 .tbo-cover-4 { background: linear-gradient(135deg, rgba(244, 114, 182, .2), rgba(157, 23, 77, .05)); }
 .tbo-cover-5 { background: linear-gradient(135deg, rgba(148, 163, 184, .2), rgba(51, 65, 85, .05)); }
+
 /* ---------- [v3.30.0] 恋爱空间 App（.lov-*） ---------- */
 .lov-root { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
 .lov-header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }

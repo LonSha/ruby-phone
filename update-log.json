@@ -1,6 +1,19 @@
 {
-  "latest": "4.203.0",
+  "latest": "4.204.0",
   "versions": {
+    "4.204.0": {
+      "version": "4.204.0",
+      "date": "2026-11-25",
+      "title": "桃宝照现实：底栏五格 + 修底栏被挤出可视区",
+      "items": [
+        "1. 桃宝按官方 10.69.16 收口为底栏五格（首页/逛逛/消息/购物车/我的），逛逛·消息 标 is-disabled + aria-disabled + opacity .38，点击走自绘 toast 给真话",
+        "2. 订单从底栏摘掉（官方这一格不存在），迁到「我的」里的「我的订单」入口，状态页签照旧可切 —— 只摘不迁会让订单页变成孤儿",
+        "3. 修真缺陷：.tbo-page 的 min-height:100% + 自身 padding 把 .tbo-app 顶高 66px，底栏被推出可视区（实测 app.offsetH=728 / page.offsetH=756 / barBottom-appBottom=+66）；改为 min-height:0，滚动落在内容区",
+        "4. 新增 o8-taobao-tabbar 验收场景（13 条读数，320/390/768 三档全绿）",
+        "5. 打通样式镜像链：apps/taobao/taobao.css 是唯一源，phone.css 同源段与被 phone/design/legacy-phone.css 生成的两级镜像一并同步（漏任一级都会「改了没生效」）",
+        "6. F4 前缀门禁放行面增加 tests/browser/scenarios/：门禁本意是「前缀不许越界到别人的实现」，不是「验收场景不许提它」"
+      ]
+    },
     "4.203.0": {
       "version": "4.203.0",
       "date": "2026-11-25",
@@ -6880,5 +6893,5 @@
       ]
     }
   },
-  "head": "4.203.0"
+  "head": "4.204.0"
 }
