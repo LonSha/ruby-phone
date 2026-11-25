@@ -15863,14 +15863,31 @@ input:checked + .toggle-slider:before {
 .lof-field .lof-sel { min-width: 150px; width: auto; }
 
 /* ---------- [v3.35.0] Pixiv App（.pxv-*） ---------- */
-/* 缝合自 Perigee pixiv 三片（插画 / 小说 / 评论）。四块不缝：不直连任何模型 /
-   不落 IndexedDB 也不碰宿主对象 / 不共用别的 App 的池 / 一张图都不存也不收外链。
-   样式投递走机制 A（打包进本文件）。 */
 /* 缝合自 Perigee js/pixiv-illust.js + pixiv-novel.js + pixiv-comments.js。
    四块不缝：不直连模型 / 不落 IndexedDB 也不碰宿主对象 / 不共用别的 App 的池 /
    一张图都不存也不收外链（故本文件里**没有** img 规则）。
    样式投递走机制 A（打包进 phone.css 同款段）。 */
-.pxv-root { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+/* [v4.206.0 · 照现实] 官方 pixiv 8.11.5 的一级导航在**底栏且常驻**（官方公告直引见 pixiv-view.js 的 PXV_NAV）。
+   旧实现把四个页签平铺在顶部、且根容器自己就是滚动容器 —— 加底栏也会被内容一起推走。
+   分三层（与 lofter 同口径，理由同）：
+     根容器 —— 只做「满屏纵向 flex + 不许自己滚」的框子（不设 padding，否则底栏离线 12px）
+     .pxv-app —— 承接 flex:1（**不写 height:100%**：根容器是 overflow:hidden，
+       写满高会让它在纵向 flex 里溢出、底栏被裁掉 —— 淘宝那轮 page 顶高 66px 是同一族缺陷）
+     .pxv-main —— 真正滚的那块，原来的 padding / gap 搬到这里
+     .pxv-bottomnav —— flex-shrink:0 贴底，不用 position:fixed（绝对定位会脱离外壳高度约束） */
+.pxv-root { padding: 0; display: flex; flex-direction: column; gap: 0; height: 100%; min-height: 0; box-sizing: border-box; overflow: hidden; }
+.pxv-app { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; box-sizing: border-box; }
+.pxv-main { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box; }
+/* 底栏：48px 是「图标 19 + 文字 10 + 上下内边距」的实测值（与微博 16.11.3 同高），
+   高于 44px 拇指下限。皮肤打开时由 .pxv.v3 覆盖成 --rp33-hit。 */
+.pxv-bottomnav { display: flex; align-items: stretch; flex-shrink: 0; box-sizing: border-box; min-block-size: 48px; border-top: 0.5px solid rgba(255,255,255,.08); background: rgba(20,20,22,.96); }
+.pxv-navitem { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; box-sizing: border-box; min-inline-size: 0; padding: 6px 0 7px; border: 0; background: none; color: #8a8a93; font-size: 10px; line-height: 1; font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pxv-navitem i { font-size: 19px; line-height: 19px; }
+.pxv-navitem.is-on { color: #0096fa; }
+.pxv-navitem:active { opacity: .6; }
+/* 本仓没实现的入口（「通知」）：照官方位置与文案列出，但整颗降到 .38 并标 aria-disabled，
+   点了给一句「本机还没做」的真话 —— 静默无反应会被当成按钮坏了。 */
+.pxv-navitem.is-disabled { opacity: .38; cursor: default; }
 .pxv-header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .pxv-header h2 { font-size: 18px; margin: 0; color: #f0f0f0; }
 .pxv-header-sub { font-size: 11px; color: #64748b; }
@@ -15997,6 +16014,9 @@ input:checked + .toggle-slider:before {
 
 .pxv-prompt { border: 1px solid rgba(251,191,36,.28); border-radius: 10px; padding: 10px; background: rgba(251,191,36,.05); display: flex; flex-direction: column; gap: 6px; }
 .pxv-pre { font-size: 11px; color: #e5e7eb; background: rgba(0,0,0,.3); border-radius: 8px; padding: 9px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; margin: 0; max-height: 320px; overflow: auto; }
+/* [v3.35.0] 坏号章：不假装成具体章号，也不给点击目标（低调但看得出）。 */
+.pxv-toc-item.is-bad { opacity: .55; cursor: default; }
+.pxv-toc-item.is-bad .pxv-toc-n { font-style: italic; }
 
 /* ══════════════ [v3.49.0] 结构化记忆案头（memtable） ══════════════ */
 /* memtable.css — [v3.49.0] 结构化记忆案头 */

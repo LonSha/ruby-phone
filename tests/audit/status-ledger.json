@@ -1,7 +1,7 @@
 {
   "schema": "status-ledger@1",
   "generated_by": "tools/gen_status_ledger.mjs",
-  "version": "4.205.0",
+  "version": "4.206.0",
   "version_sources": {
     "package": "4.200.0",
     "manifest": "4.200.0",

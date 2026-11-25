@@ -18,7 +18,7 @@ import {
  *  ★ 本仓判据共用的剥注释器（`stripComments`）是字符状态机、**不解析正则字面量**：
  *    正则字面量里一旦出现半个引号，剥器就把它当成字符串的起头，从那一行往后块注释再也剥不掉。
  *    v3.31.0 在 date-view 上当场踩到，本件一律照 date / lofter 的写法抄。 */
-const DELEGATE_KEYS = ['tab', 'myface', 'read', 'chap', 'chlike', 'fav', 'following', 'followauthor', 'tag', 'untag', 'author', 'reply', 'illfav', 'illdel', 'illprompt', 'styletog', 'styledel'];
+const DELEGATE_KEYS = ['tab', 'myface', 'read', 'chap', 'chlike', 'fav', 'following', 'followauthor', 'tag', 'untag', 'author', 'reply', 'illfav', 'illdel', 'illprompt', 'styletog', 'styledel', 'act'];
 const DQUOTE = '"';
 /* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。 */
 import { FACE_ATTR } from '../../config/empty-face.js';
@@ -52,6 +52,38 @@ const TABS = [
     { key: 'illust', label: '插画' },
     { key: 'me', label: '我的' },
     { key: 'search', label: '检索' },
+];
+/* [v4.206.0 · 照现实] 底栏一级导航（官方 pixiv 8.11.5 是一级导航在底栏，不是把四格平铺在顶部）。
+ *
+ * 官方依据（机器可查，不靠记忆）：pixiv 官方公告「Android版pixivアプリにナビゲーションメニューを追加しました」
+ *   （pixiv.net/info.php，2024-06-11）原文：これまで右上のアイコンから切り替えていた
+ *   「ホーム」「検索」「新着」の各画面が、本アップデート以降は**画面下のナビゲーションメニュー**から
+ *   利用できるようになります —— 并明确菜单项含「通知」与「マイページ」，合计五格。
+ *   日文原文直接引在这里，避免以后有人按中译反推成别的顺序。
+ *
+ * 五格 → 本仓落法（结构照官方，能力照本仓）：
+ *   · ホーム（首页）    → novel：本仓的「作品」面（稿子流），最接近官方首页视野；
+ *   · 検索（检索）      → search：官方同名，直落；
+ *   · 新着（新作）      → **不落**：官方这一格是「按投稿时间排的新投稿」，本仓没有跨用户的
+ *     投稿流（稿子都是用户自己贴进来的），落一格就只能指回「作品」面 —— 两个格指向同一个
+ *     面本身就是假按钮（点哪个都一样，用户会以为自己在切视野）。宁可少一格。
+ *   · 通知              → **不落**：本仓没有站内信 / 通知落地（App 侧无通知键、无未读状态），
+ *     照官方位置列出但标 is-disabled，点了给一句真话。
+ *   · マイページ（我的）→ me：官方同为账号相关功能的集合面，直落。
+ *   · 插画（illust）补在「检索」之后：官方把插画/漫画/小说当作首页顶部的**作品类型筛**，
+ *     不是底栏格；本仓没有「一套首页 + 类型筛」的结构，插画是一整面（有自己的作者池与
+ *     收藏），若不给底栏入口，这一面在一级导航里就完全走不到 —— 这是本仓唯一的位置偏离，
+ *     理由与 lofter 的「搜索」那一格同源：能力在，就不许让它没有入口。
+ *
+ * 顺序：按官方公告列举顺序 ホーム → 検索 →（新着 缺）→ 通知 → マイページ，插画插在检索之后。
+ *   官方公告只给了菜单项集合，没给逐像素顺序 —— 本仓按列举顺序落，并在验收场景里
+ *   把这条**写明为「按公告列举顺序」**，不假装知道官方逐格的精确坐标。 */
+const PXV_NAV = [
+    { key: 'novel', label: '首页', icon: 'fa-house' },
+    { key: 'search', label: '检索', icon: 'fa-magnifying-glass' },
+    { key: 'illust', label: '插画', icon: 'fa-palette' },
+    { key: 'notice', label: '通知', icon: 'fa-bell', disabled: true },
+    { key: 'me', label: '我的', icon: 'fa-user' },
 ];
 /* 「我的」五格的真源是 App 投影里的 `meTabs`；这里只给每格配人话标签，
  * 顺序与投影一致（favorites / following / history / works / settings）。 */
@@ -119,6 +151,15 @@ export class PixivView {
         const meta = FACE_META[face] || { icon: '\u2753', label: '未识别的状态：' + String(face), tone: 'warn' };
         const cur = app.tab();
         const parts = [];
+        /* [v4.206.0 · 照现实] 官方 pixiv 8.11.5 的一级导航在**底栏**（官方公告直引见 PXV_NAV 注释）。
+         *   旧实现是顶部一块 4 列网格（.pxv-tabs，每格带副标题），与官方差一层结构。
+         *
+         *   改法与 lofter 同口径（本文件只有 4 处 cur 依赖，不重写内容层）：
+         *   · 外层包 .pxv-app > .pxv-main；底栏排在最后，靠 flex 贴底（不用 position:fixed）；
+         *   · 顶部那块 4 列网格**保留**（承载 faceOf 副标题，是读数不是装饰），降级为内容区页签条；
+         *   · 底栏五格见 PXV_NAV；「通知」照官方位置列出并标 is-disabled（无落地，点了给真话）。
+         *   滚动与内边距搬到 .pxv-main：根容器只做满屏纵向 flex 外壳，否则底栏会被内容一起推走。 */
+        parts.push('<div class="pxv-app"><div class="pxv-main">');
         parts.push('<div class="pxv-header"><h2>\u{1f3a8} Pixiv</h2>'
             + '<span class="pxv-header-sub">日文同人平台</span></div>');
         parts.push('<div class="pxv-face pxv-face-' + meta.tone + '">');
@@ -144,7 +185,32 @@ export class PixivView {
         parts.push(this._writePanel());
         parts.push(this._stylePanel());
         parts.push(this._settingsPanel());
+        parts.push('</div>');           /* /.pxv-main */
+        parts.push(this._bottomNavHTML(cur));
+        parts.push('</div>');           /* /.pxv-app */
         return parts.join('\n');
+    }
+    /* ---------- 底栏（照官方 pixiv 8.11.5） ----------
+     * 只画与派事件：真正的切换仍走 App.setTab（data-tab 已在 _onDelegated 里接好）。
+     * 「通知」用 data-act="pxv-soon" 单独一条路 —— 它**不是**页签，不混进 data-tab 语义，
+     * 否则读数里「页签数」会把一格未实现的入口也算成页签（lofter 同款）。
+     * ⚠ DELEGATE_KEYS 里必须加 'act'，否则点击冒泡到根容器时找不到委派目标
+     *   —— 表现是「点了完全没反应」，且不报错（本仓最贵的一类静默缺陷）。 */
+    _bottomNavHTML(cur) {
+        const items = PXV_NAV.map((it) => {
+            if (it.disabled) {
+                return '<button class="pxv-navitem is-disabled" data-act="pxv-soon" data-what="'
+                    + this._esc(it.label) + '" aria-disabled="true">'
+                    + '<i class="fa-solid ' + it.icon + '"></i>'
+                    + '<span>' + this._esc(it.label) + '</span></button>';
+            }
+            return '<button class="pxv-navitem' + (cur === it.key ? ' is-on' : '') + '"'
+                + ' data-tab="' + it.key + '"'
+                + (cur === it.key ? ' aria-current="page"' : '')
+                + '><i class="fa-solid ' + it.icon + '"></i>'
+                + '<span>' + this._esc(it.label) + '</span></button>';
+        });
+        return '<nav class="pxv-bottomnav">' + items.join('') + '</nav>';
     }
     /* ---------- 作品面 ---------- */
     _novelPanel() {
@@ -658,6 +724,16 @@ export class PixivView {
         }
         if (!el || el === root) return;
         const gl = (k) => el.getAttribute('data-' + k);
+        /* [v4.206.0 · 照现实] 底栏里本仓没实现的那一格（官方有、本仓没链路）。
+         * 给一句真话而不是静默无反应 —— 静默会被当成「按钮坏了」。
+         * 走页面内 .pxv-flash 提示条，不调宿主 alert（宿主 alert 会卡住 SillyTavern 的消息流）。 */
+        const act = gl('act');
+        if (act === 'pxv-soon') {
+            const what = gl('what') || '该入口';
+            this._flash = '「' + what + '」本机还没做。';
+            this.refresh();
+            return;
+        }
         const tab = gl('tab');
         if (tab) { app.setTab(tab); this._open = ''; app.clearRef(); this.refresh(); return; }
         const myface = gl('myface');

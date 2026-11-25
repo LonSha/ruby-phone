@@ -476,7 +476,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.205.0';
+const ST_PHONE_VERSION = '4.206.0';
 const ST_PHONE_CSS_REVISION = '20261124-style-layer-single-source';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -724,15 +724,14 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-25",
     items: [
-        "1. 老福特按官方 LOFTER 8.3.78 收口为底栏一级导航（官方是底栏常驻，旧实现只有顶部 4 个按钮，差一层结构）",
-        "2. 底栏五格：首页 / 关注 / 消息 / 我的 / 搜索 —— 官方中央那颗发布键不落（本仓没有发布链路，不画一个点了不发生的假按钮）",
-        "3. 「消息」照官方位置列出并标 is-disabled + aria-disabled + opacity .38，点了走页面内提示条给一句真话（不调宿主 alert）",
-        "4. 分三层：根容器只做满屏纵向 flex 外壳，滚动与内边距搬到内容层，底栏 flex-shrink:0 贴底 —— 不用 position:fixed，避免盖住内容或漏底",
-        "5. 皮肤同步：v3 皮肤的根容器原带 padding + min-block-size:100%，会把底栏撑出可视区（同型于淘宝那轮 page 顶高 66px），一并改为外壳口径",
-        "6. 样式三级镜像同步：apps/lofter/lofter.css（唯一源）→ phone.css 同源段 → phone/design/legacy-phone.css（生成物）",
-        "7. 修正 update-log 里旧条目对本仓类名前缀的字面引用（前缀唯一性门禁把发版说明也算进扫描面）",
-        "8. 新增 o8-lofter-bottomnav 验收场景（19 条读数，320/640 / 390/844 / 768/1024 三档全绿）：底栏贴底 delta=0、拇指热区 offsetH=45、四格真能切、切完底栏仍常驻、未实现格点了给真话",
-        "【版本升至 4.205.0（五源同源）】六源同源：manifest.json / package.json / index.js 的 ST_PHONE_VERSION / update-log.json 的 latest 与 head / tests/audit/status-ledger.json 的 version。运行时验证边界（诚实交代）：① 本版在真 Chromium（131.0.6778.33）里打开了老福特并真点击，19 条读数全 OK；② **未在真 SillyTavern 宿主里打开手机取证**，底栏在宿主的观感需真机刷新确认；③ v3 皮肤下的底栏样式（走 --rp33-hit 与半透明磨砂）本场景在默认外观下量到，**皮肤开着的档未单独取证**。",
+        "1. Pixiv 按官方 8.11.5 收口为底栏一级导航（官方公告 2024-06-11「Android版pixivアプリにナビゲーションメニューを追加しました」：三个画面改从画面下导航取用，另含「通知」与「マイページ」⇒ 底栏共五格）",
+        "2. 五格落法：首页 / 检索 / 插画 / 通知(disabled) / 我的 —— 「新着」不落（本仓无跨用户投稿流，落一格只能指回同一个面，两个格指向同一面就是假按钮）；「插画」补在检索之后（官方是首页顶部的类型筛、不是底栏格，但本仓插画是一整面，不给入口则一级导航走不到）",
+        "3. 事件委派面新增 `act` 键（DELEGATE_KEYS）：不加这一项，点击冒泡到根容器时找不到委派目标，表现是「点了完全没反应」且不报错 —— 本仓最贵的一类静默缺陷",
+        "4. 分三层：根容器只做满屏纵向 flex 外壳（padding 搬到内容层），滚动落在 .pxv-main，底栏 flex-shrink:0 贴底 —— 不用 position:fixed",
+        "5. 皮肤同步：pixiv.v3.css 的根容器原带 padding + min-block-size:100%，会把底栏撑出可视区（同型于淘宝那轮顶高 66px），改为外壳口径（--rp33-hit 作底栏下限）",
+        "6. 样式三级镜像同步：apps/pixiv/pixiv.css（唯一源）→ phone.css 同源段 → phone/design/legacy-phone.css。★ 本段在 phone.css 里**不是最后一段**（紧跟其后还有 v3.49.0 memtable 等无段头样式），按「下一个段头」截断会一次删掉 2369 行 —— 记在这里防复发",
+        "7. 新增 o8-pixiv-bottomnav 验收场景（19 条读数，320/640、390/844、768/1024 三档全绿）",
+        "【版本升至 4.206.0（五源同源）】六源同源：manifest.json / package.json / index.js 的 ST_PHONE_VERSION / update-log.json 的 latest 与 head / tests/audit/status-ledger.json 的 version。运行时验证边界（诚实交代）：① 真 Chromium 131.0.6778.33 打开了 pixiv 并真点击，19 条读数全 OK；② **未在真 SillyTavern 宿主里开手机**，底栏观感需真机刷新确认；③ v3 皮肤开着的档未单独取证。",
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
