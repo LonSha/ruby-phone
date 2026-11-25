@@ -215,6 +215,11 @@
     "apps/worldpulse/worldpulse-app.js": "世界脉搏的刷新节流。",
     "apps/worldpulse/worldpulse-engine.js": "世界脉搏的采样窗口（机器时间）。",
     "apps/xhs/xhs-data.js": "小红书的抓取节流。",
-    "apps/moments/npc-social-graph-dynamic-moments.js": "本文件 v4.140.0 起**已无裸 `Date.now()`**（2 处评论 timestamp 改走 `storyNowWallFallback`，函数增设第三参 `win`，由 `phone/domain-engines-mount.js` 的 `onMomentReactions` 透传宿主）。保留本条目只为记录收口轨迹与回滚点；若将来在此新增墙钟用途，理由必须重写，不得沿用本条。"
+    "apps/moments/npc-social-graph-dynamic-moments.js": "本文件 v4.140.0 起**已无裸 `Date.now()`**（2 处评论 timestamp 改走 `storyNowWallFallback`，函数增设第三参 `win`，由 `phone/domain-engines-mount.js` 的 `onMomentReactions` 透传宿主）。保留本条目只为记录收口轨迹与回滚点；若将来在此新增墙钟用途，理由必须重写，不得沿用本条。",
+    "apps/call/call-app.js": "通话的开始/结束时刻（通话时长时间轴的起止点，必须真墙钟，不能由剧情钟代理）",
+    "apps/daily/daily-app.js": "当日动手动作的落盘时刻（“at” 字段给人看，必须是真墙钟）",
+    "apps/games/werewolf/werewolf-rules-view.js": "按真实秒轮换座位提示（渲染节奏，不进内容时间轴）",
+    "apps/share/share-app.js": "近场分享的触达时刻（设备互传回执上的时间）",
+    "apps/social/social-app.js": "动态与互动的发生时刻（用户可见时间线，必须真墙钟）"
   }
 }

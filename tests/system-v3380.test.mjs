@@ -880,6 +880,22 @@ const NUM_GATE_STUB = 'export function numOrNull(v) {\n'
     + '    return Number.isFinite(n) ? n : null;\n'
     + '}\n';
 
+/* 选一个本次可写的破坏副本根目录：优先沿用固定名（缓存可见），
+ *   残留不可写时退到带 pid 的独占目录（保证整组负控制不会因环境而假红）。 */
+function pickDmgDir(name) {
+    const fixed = path.join(os.tmpdir(), name);
+    try {
+        fs.rmSync(fixed, { recursive: true, force: true, maxRetries: 3 });
+        fs.mkdirSync(fixed, { recursive: true });
+        fs.accessSync(fixed, fs.constants.W_OK);
+        return fixed;
+    } catch {
+        const alt = fixed + '_' + process.pid;
+        fs.rmSync(alt, { recursive: true, force: true, maxRetries: 3 });
+        fs.mkdirSync(alt, { recursive: true });
+        return alt;
+    }
+}
 /** 造一份破坏副本并**落盘**（只写文件，不加载）。副本按**真目录结构**建。 */
 function writeDamagedCopy(rel, from, to) {
     const src = read(rel);
@@ -925,11 +941,20 @@ for (const [title, key, kind, judge, expect] of NEG) {
              *   也让缓存键与内容一致。 */
             let hash = 0;
             for (let i = 0; i < damagedSrc.length; i += 1) hash = (hash * 31 + damagedSrc.charCodeAt(i)) | 0;
-            const dir = path.join(os.tmpdir(), 'rp_v3380_dmg');
+            /* [v4.200.0] 固定目录是**故意的**（同一内容同一路径，才看得出 ESM 缓存），
+             *   但旧现场的不可写残留（proot 下权限映射变更留下的 EACCES）会把整组负控制
+             *   变成「红在写不进去」而不是「红在识破破坏」。故先清：清不掉就退到本轮独占目录，
+             *   两种情形都保留「内容哈希进文件名」这条真性质。 */
+            const dir = pickDmgDir('rp_v3380_dmg');
             fs.mkdirSync(path.join(dir, path.dirname(rel)), { recursive: true });
             fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
             fs.writeFileSync(path.join(dir, 'config', 'num-gate.js'), NUM_GATE_STUB);
             fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
+            /* [v4.200.0] recall-data.js 自 v4.194.0 起还 import `../../config/text-face.js`（toStr 收敛）。
+             *   不 stage 真件，副本会红在 ERR_MODULE_NOT_FOUND 而不是红在识破破坏 ——
+             *   与 v3340/v3350 补 stage pure-time 同族。text-face 是零依赖叶子，拷真件不会
+             *   把判据要抓的东西带进来。 */
+            fs.copyFileSync(path.join(ROOT, 'config', 'text-face.js'), path.join(dir, 'config', 'text-face.js'));
             const target = path.join(dir, path.dirname(rel), 'h' + (hash >>> 0) + '_' + path.basename(rel));
             fs.writeFileSync(target, damagedSrc);
             const mod = await import(pathToFileURL(target).href);
@@ -1029,6 +1054,14 @@ test('L1 版本锚（下限形）+ 四源同版 + update-log 条目在册', () =
     const codeOnly = appSrc.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     assert.equal(codeOnly.includes('Number.isFinite(Number('), false,
         '真代码里不许有弱口径签名（注释里的说明不算）；一律走 numOrNull');
-    const gateUses = (codeOnly.match(/numOrSelf\(/g) || []).length;
-    assert.ok(gateUses >= 4, '覆盖值取值口调用点应 ≥ 4，实测 ' + gateUses);
+    /* [v4.200.0 修判据] 原式 `codeOnly.match(/numOrSelf\(/g)` 把**本地定义**也数成了调用点：
+     *   v3.38.0 时本件第 46 行有 `function numOrSelf(v, self) {`，于是 3 处真调用 + 1 处定义 = 4，
+     *   阈值 4 才成立。v4.x 把该定义收敛进 config/num-face.js 后，本件只剩 3 处调用，
+     *   阈值 4 变成一条**永远不可能满足**的判据 —— 它红的原因与「取值口是不是摆设」无关。
+     *   判据本意是「取值口不是摆设」，故按真调用点数：剔除定义行与 import 行后 ≥ 3。 */
+    const callSites = codeOnly.split(String.fromCharCode(10))
+        .filter((l) => l.indexOf('function numOrSelf(') < 0 && l.indexOf('import ') < 0)
+        .join(String.fromCharCode(10));
+    const gateUses = (callSites.match(/numOrSelf\(/g) || []).length;
+    assert.ok(gateUses >= 3, '覆盖值取值口真调用点应 ≥ 3（定义行与 import 行不计），实测 ' + gateUses);
 });

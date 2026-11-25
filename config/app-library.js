@@ -176,7 +176,13 @@ export const APP_CATEGORY = Object.freeze({
     keyboard: 'social',
     callscene: 'social',
     /* —— 系统与诊断（真系统能力）—— */
-    share: 'system'
+    share: 'system',
+    /* [v4.201.0] 试算台/协议解析/诊断归因的子 App 必须有真实类目，不能静默落入 system。 */
+    weibotext: 'content',
+    honeytext: 'social',
+    phonetext: 'social',
+    gamesprotocol: 'content',
+    diagnosereason: 'body'
 });
 
 /** 应用库入口的伪 appId（**不**进入 APPS：它没有自己的模块与路由，

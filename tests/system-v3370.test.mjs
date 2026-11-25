@@ -905,6 +905,22 @@ const NUM_GATE_STUB = 'export function numOrNull(v) {\n'
     + '    const n = Number(v);\n'
     + '    return Number.isFinite(n) ? n : null;\n'
     + '}\n';
+/* 选一个本次可写的破坏副本根目录：优先沿用固定名（缓存可见），
+ *   残留不可写时退到带 pid 的独占目录（保证整组负控制不会因环境而假红）。 */
+function pickDmgDir(name) {
+    const fixed = path.join(os.tmpdir(), name);
+    try {
+        fs.rmSync(fixed, { recursive: true, force: true, maxRetries: 3 });
+        fs.mkdirSync(fixed, { recursive: true });
+        fs.accessSync(fixed, fs.constants.W_OK);
+        return fixed;
+    } catch {
+        const alt = fixed + '_' + process.pid;
+        fs.rmSync(alt, { recursive: true, force: true, maxRetries: 3 });
+        fs.mkdirSync(alt, { recursive: true });
+        return alt;
+    }
+}
 /** 造一份破坏副本并**落盘**（只写文件，不加载）。副本按**真目录结构**建。 */
 function writeDamagedCopy(rel, from, to) {
     const src = read(rel);
@@ -954,7 +970,11 @@ for (const [title, key, kind, judge, expect] of NEG) {
              *   这里把哈希写进文件名，既保证内容变了就重新加载，也让缓存键与内容一致。 */
             let hash = 0;
             for (let i = 0; i < damagedSrc.length; i += 1) hash = (hash * 31 + damagedSrc.charCodeAt(i)) | 0;
-            const dir = path.join(os.tmpdir(), 'rp_v3370_dmg');
+            /* [v4.200.0] 固定目录是**故意的**（同一内容同一路径，才看得出 ESM 缓存），
+             *   但旧现场的不可写残留（proot 下权限映射变更留下的 EACCES）会把整组负控制
+             *   变成「红在写不进去」而不是「红在识破破坏」。故先清：清不掉就退到本轮独占目录，
+             *   两种情形都保留「内容哈希进文件名」这条真性质。 */
+            const dir = pickDmgDir('rp_v3370_dmg');
             fs.mkdirSync(path.join(dir, path.dirname(rel)), { recursive: true });
             fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
             fs.writeFileSync(path.join(dir, 'config', 'num-gate.js'), NUM_GATE_STUB);

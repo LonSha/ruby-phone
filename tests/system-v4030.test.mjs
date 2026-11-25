@@ -70,7 +70,13 @@ test('A2 上限与枚举是冻结常量且数值自洽', () => {
 test('A3 内核只 import 一处(全仓唯一数值取值实现)+ 零 storage/window/fetch', () => {
     const imports = core.match(/^import[\s\S]*?from\s*['"][^'"]+['"];/gm) || [];
     const sources = imports.map((s) => (s.match(/from\s*['"]([^'"]+)['"]/) || [])[1]);
-    for (const s of sources) assert.equal(s, '../../config/num-gate.js', '内核不得依赖:' + s);
+    /* [v4.200.0 修判据] 允许集从「只有 num-gate」放成「num-gate + text-face」。
+     *   真因：v4.194.0 把 31 份 toStr 复制件收敛进 config/text-face.js，本内核的
+     *   文本读取面因此多了**一条正当依赖**（零依赖叶子，无 storage / 无时钟 / 无 IO）。
+     *   原判据写死「只许 num-gate」，于是把 v4.194.0 的正当事判成红灯。
+     *   放宽的边界很清楚：**只加这一条**，其它任何来源照样红（白名单之外一律拦）。 */
+    const ALLOWED = new Set(['../../config/num-gate.js', '../../config/text-face.js']);
+    for (const s of sources) assert.ok(ALLOWED.has(s), '内核不得依赖:' + s);
     /* 判据只扫**真实 import 来源与调用式**,不扫文档注释里的名词(与 v4.01.0 那次误判同一教训) */
     assert.equal(/import[\s\S]*?from\s*['"][^'"]*storage['"]/.test(core), false);
     assert.equal(/window\./.test(core.replace(/\/\*[\s\S]*?\*\//g, '')), false);

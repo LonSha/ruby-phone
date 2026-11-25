@@ -127,9 +127,25 @@ test('B2 19 个私有形：本地定义已删、import 内核、不许再 re-exp
     }
 });
 
+/* [v4.200.0] 纯兼容壳：自己不调 toStr，而是转出给下游用。
+ *   B3 的原意是「不是删了没人用的死定义」，而「同文件调用点」在壳上是个**错误代理** ——
+ *   壳的调用点天然在下游。故对壳改判「下游必须真有调用点」，比原判据更严（多钉一份文件）。
+ *   逐个都写清是谁在调，新加壳必须同时给出下游路径。 */
+const RE_EXPORT_SHELL = {
+    'apps/cardtable/cardtable-data.js': 'apps/cardtable/cardtable-app.js',
+};
 test('B3 每个转调文件都真有 toStr 调用点（不是删了没人用的死定义）', () => {
     const callpat = /(^|[^A-Za-z0-9_$.])toStr\(/;
     for (const rel of EQ_EXPORT.concat(EQ_PRIV)) {
+        if (Object.prototype.hasOwnProperty.call(RE_EXPORT_SHELL, rel)) {
+            const consumer = RE_EXPORT_SHELL[rel];
+            const cbody = read(consumer).split('\n')
+                .filter((l) => l.indexOf('text-face.js') < 0 && l.indexOf('export { toStr }') < 0).join('\n');
+            const fromShell = cbody.indexOf('./' + path.basename(rel)) >= 0;
+            assert.ok(fromShell, consumer + ' 必须真的从本壳导入（否则下游调用点与壳无关）');
+            assert.ok(callpat.test(cbody), consumer + ' 必须真有 toStr 调用点（壳的调用点在下游）');
+            continue;
+        }
         const raw = read(rel);
         /* 扣掉 import 行与 re-export 行之后再数。 */
         const body = raw.split('\n').filter((l) => l.indexOf('text-face.js') < 0 && l.indexOf('export { toStr }') < 0).join('\n');

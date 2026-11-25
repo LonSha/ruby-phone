@@ -144,6 +144,10 @@ HG['bag'] = (rect(5, 8, 14, 12, Y, K, 1) + rect(9, 5, 6, 3, W, K, 1)
 # ── appId → 字形（按真实语义） ──────────────────────────────────────────────
 APP_GLYPHS = {
     'wechat': 'chat', 'weibo': 'wave', 'honey': 'heart', 'phone': 'chat',
+    # [v4.200.0] 试算台/协议解析/诊断归因子 App 复用所属母 App 的像素语义，
+    # 但必须各自有生成物，不能因 icon 字形相同而退回 emoji。
+    'weibotext': 'wave', 'honeytext': 'heart', 'phonetext': 'chat',
+    'gamesprotocol': 'play', 'diagnosereason': 'chart',
     'wangxiang': 'bag', 'peek': 'person', 'cheat': 'key', 'dirtytalk': 'heart',
     'profile': 'person', 'chars': 'person', 'loverspace': 'flame', 'date': 'star',
     'avatarframe': 'star', 'shop': 'cart', 'taobao': 'cart', 'block': 'lock',
