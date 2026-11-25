@@ -18,5 +18,10 @@ d.versions = Object.fromEntries(
     [[ver, { version: ver, date, title, items }], ...Object.entries(d.versions)]
 );
 d.latest = ver;
+/* head 与 latest 是两个字段，但所有同名断言都要求它们相等
+ *   （tests/system-v4460：head 必须跟上 latest；system-v4188：五源同源 head = 当前版本）。
+ *   本工具首版只写 latest，落地就会让「升版本」这一步自带一条红 —— 工具漏一个字段，
+ *   下游得靠测试才发现，正是这类脚本最该修的地方。 */
+d.head = ver;
 fs.writeFileSync(p, JSON.stringify(d, null, 2) + '\n');
-console.log('已插入', ver, '条目数', items.length, 'latest =', d.latest);
+console.log('已插入', ver, '条目数', items.length, 'latest =', d.latest, 'head =', d.head);

@@ -152,10 +152,43 @@ export class WeiboView {
         const ipLocation = profile.ipLocation || 'IP属地：未知';
         const verifyText = profile.verifyText || '微博个人认证';
 
-        const tabCount = 3;
-        const tabIdx = this.currentTab === 'hotSearch' ? 0 : this.currentTab === 'recommend' ? 1 : 2;
-        const indicatorWidth = 100 / tabCount;
-
+        /* [v4.203.0 · 照现实] 官方微博 16.11.3 的结构是**底栏五格**：
+         *   首页 / 视频 / 发现 / 消息 / 我。个人主页在「我」下面，
+         *   **不在首页顶部堆一张资料卡**。旧实现把「热搜 / 推荐 / 我的」做成顶部三页签、
+         *   又把头像资料卡钉在首页顶部，与官方结构差两层（导航位置 + 资料卡归属）。
+         *
+         *   本次按官方收口，但**不重写内容**（20 处 currentTab 依赖不动）：
+         *   · 顶部只保留首页内的子切换「热搜 / 推荐」——官方首页顶部也是子 tab；
+         *   · 底栏五格是主导航：「首页」= 热搜/推荐，「我」= 我的微博；
+         *   · 「视频 / 发现 / 消息」本仓无实现：照官方位置与文案列出，
+         *     标 is-disabled + aria-disabled 并降到 opacity .38，点了给一句提示。
+         *   · 资料卡只在「我」（currentTab === 'myPosts'）时显示 —— 官方就是这个层级。 */
+        const isProfileTab = this.currentTab === 'myPosts';
+        const subTabs = [
+            { key: 'hotSearch', label: '热搜' },
+            { key: 'recommend', label: '推荐' },
+        ];
+        const subIdx = this.currentTab === 'recommend' ? 1 : 0;
+        const indicatorWidth = 100 / subTabs.length;
+        const navItems = [
+            { key: 'home', label: '首页', icon: 'fa-house', on: !isProfileTab },
+            { key: 'video', label: '视频', icon: 'fa-clapperboard', disabled: true },
+            { key: 'discover', label: '发现', icon: 'fa-compass', disabled: true },
+            { key: 'message', label: '消息', icon: 'fa-comment-dots', disabled: true },
+            { key: 'me', label: '我', icon: 'fa-user', on: isProfileTab },
+        ];
+        const bottomNav = navItems.map((it) => {
+            if (it.disabled) {
+                return `<button class="weibo-navitem is-disabled" data-act="weibo-soon" data-what="${it.label}" aria-disabled="true">`
+                    + `<i class="fa-solid ${it.icon}"></i><span>${it.label}</span></button>`;
+            }
+            if (it.key === 'home') {
+                return `<button class="weibo-navitem${it.on ? ' is-on' : ''}" data-act="weibo-goto" data-goto="home">`
+                    + `<i class="fa-solid ${it.icon}"></i><span>${it.label}</span></button>`;
+            }
+            return `<button class="weibo-navitem${it.on ? ' is-on' : ''}" data-act="weibo-goto" data-goto="me">`
+                + `<i class="fa-solid ${it.icon}"></i><span>${it.label}</span></button>`;
+        }).join('');
         const html = `
             <!-- 🔥 核心修复：把背景直接画在最外层的不滚动容器上 -->
             <div class="weibo-app weibo-home-mode" style="${bannerStyle}">
@@ -167,7 +200,7 @@ export class WeiboView {
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
                     </div>
-                    <div class="weibo-nav-title">微博</div>
+                    <div class="weibo-nav-title">${isProfileTab ? '我' : '微博'}</div>
                     <div class="weibo-nav-right">
                         <button class="weibo-nav-btn" id="weibo-search-toggle-btn" title="搜索微博">
                             <i class="fa-solid fa-magnifying-glass"></i>
@@ -177,17 +210,16 @@ export class WeiboView {
                         </button>
                     </div>
                 </div>
-
                 <div class="weibo-search-bar ${this._isSearchOpen ? 'is-open' : ''}">
                     <i class="fa-solid fa-magnifying-glass"></i>
                     <input id="weibo-search-input" type="text" value="${this._escapeAttr(this._lastSearchQuery)}" placeholder="搜索相关微博">
                     <button id="weibo-search-submit" title="搜索">搜索</button>
                 </div>
-
+                ${isProfileTab ? `
                 <!-- 背景图展示区占位 -->
                 <div class="weibo-banner-spacer" style="height: 85px; flex-shrink: 0;"></div>
 
-                <!-- 头像和信息 -->
+                <!-- 头像和信息（只在「我」下面，官方层级） -->
                 <div class="weibo-profile-wrapper">
                     <div class="weibo-avatar-wrapper">
                         ${avatarHtml}
@@ -214,22 +246,21 @@ export class WeiboView {
                             <div class="weibo-ip-location">${ipLocation}</div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Tab栏 -->
+                </div>` : ''}
+                <!-- Tab栏（首页内的子切换；「我」下面没有子 tab） -->
+                ${isProfileTab ? '' : `
                 <div class="weibo-tabs">
-                    <div class="weibo-tab ${this.currentTab === 'hotSearch' ? 'active' : ''}" data-tab="hotSearch">热搜</div>
-                    <div class="weibo-tab ${this.currentTab === 'recommend' ? 'active' : ''}" data-tab="recommend">推荐</div>
-                    <div class="weibo-tab ${this.currentTab === 'myPosts' ? 'active' : ''}" data-tab="myPosts">我的</div>
-                    <div class="weibo-tab-indicator" style="width: ${indicatorWidth}%; transform: translateX(${tabIdx * 100}%);"></div>
-                </div>
-
+                    ${subTabs.map((t) => `<div class="weibo-tab ${this.currentTab === t.key ? 'active' : ''}" data-tab="${t.key}">${t.label}</div>`).join('')}
+                    <div class="weibo-tab-indicator" style="width: ${indicatorWidth}%; transform: translateX(${subIdx * 100}%);"></div>
+                </div>`}
                 <!-- Tab内容 -->
                 <div class="weibo-tab-content">
                     ${this.currentTab === 'hotSearch' ? this.renderHotSearchList() :
                 this.currentTab === 'recommend' ? this.renderRecommendList() :
                     this.renderMyPostsList()}
                 </div>
+                <!-- 底栏五格（官方 16.11.3 结构） -->
+                <nav class="weibo-bottomnav">${bottomNav}</nav>
             </div>
         `;
 
@@ -2236,6 +2267,34 @@ export class WeiboView {
         this._bindRecommendPullRefresh();
         this._syncRecommendRefreshIndicatorByState();
 
+        /* [v4.203.0 · 照现实] 底栏五格（官方 16.11.3）：
+         *   · 「首页」⇒ currentTab 归 hotSearch（官方首页默认落在热搜/推荐流）；
+         *   · 「我」⇒ currentTab 归 myPosts（资料卡与我的微博都在这一层）；
+         *   · 「视频 / 发现 / 消息」本仓无实现，点击给一句真话，不静默无反应
+         *     —— 静默会被当成「按钮坏了」，排查成本比一句提示高得多。 */
+        document.querySelectorAll('[data-act="weibo-goto"]').forEach((btn) => {
+            btn.onclick = () => {
+                const goal = btn.dataset.goto;
+                const target = goal === 'me' ? 'myPosts' : 'hotSearch';
+                if (this.currentTab === target) {
+                    this.render();
+                    return;
+                }
+                this.switchTab(target, { force: false });
+            };
+        });
+        document.querySelectorAll('[data-act="weibo-soon"]').forEach((btn) => {
+            btn.onclick = (ev) => {
+                if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+                const what = btn.dataset.what || '该入口';
+                try {
+                    if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+                        window.alert('「' + what + '」本机未实现。');
+                    }
+                } catch (_e) { /* 宿主无 alert 时不制造新崩溃 */ }
+            };
+        });
+
         // 绑定动态内容区的事件（如帖子点击、删除等）
         this.bindDynamicContentEvents();
     }
@@ -2871,8 +2930,22 @@ export class WeiboView {
     switchTab(targetTab, options = {}) {
         const forceRefresh = options.force === true;
         if (this.currentTab === targetTab && !forceRefresh) return;
-
+        /* [v4.203.0 · 照现实] 底栏五格之后的层级变化：
+         *   官方微博的结构是「首页」与「我」两个**顶层页面**，各自有独立的
+         *   头部（标题）、内容区与底栏高亮；资料卡只属于「我」。
+         *   旧 switchTab 只替换 .weibo-tab-content，从不重建外层结构 ——
+         *   于是「首页 ⇄ 我」之间的切换会出现：标题不变、资料卡不出现/不消失、
+         *   底栏高亮停在旧格。这不是样式问题，是**渲染粒度错了**。
+         *   故这里判断「是否跨越 myPosts 这一层」：跨越就整体重渲染，
+         *   同层（热搜 ⇄ 推荐）仍走原来的局部替换，保留滚动位置、不闪烁。
+         *   20 处 currentTab 依赖因此一行不用改。 */
+        const wasProfileLayer = this.currentTab === 'myPosts';
+        const willProfileLayer = targetTab === 'myPosts';
         this.currentTab = targetTab;
+        if (wasProfileLayer !== willProfileLayer) {
+            this.render();
+            return;
+        }
 
         // 1. 切换 Tab 按钮的高亮颜色
         document.querySelectorAll('.weibo-tab').forEach(tab => {

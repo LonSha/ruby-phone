@@ -48,25 +48,49 @@ export class WeiboApp {
     // ========================================
     // 🎯 主渲染入口
     // ========================================
-
     render() {
-        // 确保CSS已加载后再渲染，防止闪烁与点击卡死
+        /* [v4.203.0 · 修真缺陷] 原判据是 `if (cssLink && !cssLink.sheet)` ——「样式没就绪就先别渲染」。
+         *   问题：`link.sheet` 在**跨源**时恒为 null（Chromium 规范行为，无 CORS 头不给 CSSOM）。
+         *   本仓的 <link> 由 import.meta.url 拼成 http://127.0.0.1:<每次随机端口>/apps/weibo/weibo.css，
+         *   端口变了就是跨源 —— 于是这条守卫**每次都为真**：注册一个 {once:true} 的 load 监听后 return，
+         *   而 load 早在这一次调用之前就触发过了，监听器永远等不到第二次 load。
+         *   结果不是「晚一点渲染」，是**整个渲染被静默吞掉**：
+         *     实测（Chromium 131 / 390x844）第二次 render() 后 renderMs=0、domTitle 仍是旧值、
+         *     资料卡不出现、底栏 opacity 读到 1 —— 看上去像「样式没生效」，其实是 DOM 根本没重绘。
+         *   取舍：不拿「样式是否就绪」去 gate「是否渲染」。
+         *     样式晚到只是短暂 FOUC（几十毫秒）；整页不渲染是功能消失。后者严重得多，
+         *     所以先渲染，样式确认到位后再补一次（补渲染幂等，此时用户通常还没滚动）。
+         *   [定案] 就绪判据换掉：不用 sheet（跨源不可靠），改用 load/error 事件落 dataset 标记 +
+         *     resource timing 兜底（缓存命中时 load 可能早于本函数执行）。 */
         const cssLink = document.getElementById('weibo-css');
-        if (cssLink && !cssLink.sheet) {
-            cssLink.addEventListener('load', () => this.weiboView.render(), { once: true });
-            cssLink.addEventListener('error', () => {
-                console.error('Weibo CSS failed to load');
-                this.weiboView.render();
-            }, { once: true });
-
-            setTimeout(() => {
-                if (this.weiboView.currentView === 'home' && !document.querySelector('.weibo-app')) {
-                    this.weiboView.render();
-                }
-            }, 1500);
-            return;
-        }
         this.weiboView.render();
+        if (cssLink && cssLink.dataset.rpCssReady !== '1') {
+            this._hookCssReady(cssLink);
+        }
+    }
+
+    /* 样式就绪只用来「知道什么时候补一次渲染」，不用来决定要不要渲染。
+     *   幂等：_cssHookBound 保证一生只挂一次监听，避免重复 addEventListener 累积。 */
+    _hookCssReady(cssLink) {
+        if (this._cssHookBound) return;
+        this._cssHookBound = true;
+        const markReady = (reRender) => {
+            if (cssLink.dataset.rpCssReady === '1') return;
+            cssLink.dataset.rpCssReady = '1';
+            if (!reRender) return;
+            try { this.weiboView.render(); } catch (_e) { /* 补渲染失败不掩盖首发渲染 */ }
+        };
+        cssLink.addEventListener('load', () => markReady(true), { once: true });
+        /* error 也标 ready：否则样式永久加载失败时，每次 render 都会重新进这条分支，
+         *   等于把「样式挂了」放大成「页面反复重建」。 */
+        cssLink.addEventListener('error', () => markReady(false), { once: true });
+        /* 缓存命中 / 监听挂晚了：load 不会再触发。resource timing 里 responseEnd>0 就是
+         *   「这次请求确实下载完了」的证据，且跨源也能看到（不像 link.sheet）。 */
+        try {
+            const href = cssLink.href;
+            const alreadyLoaded = href && performance.getEntriesByName(href).some((e) => e.responseEnd > 0);
+            if (alreadyLoaded) markReady(true);
+        } catch (_e) { /* performance 不可用时退回等 load */ }
     }
 
     handleExternalRecommendUpdate() {
