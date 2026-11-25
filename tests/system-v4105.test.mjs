@@ -1,7 +1,7 @@
 // tests/system-v4105.test.mjs — 撤销能力声明面 + 销毁二次确认（唯一实现）[v4.105.0 · 第十三期 R13-O2]
 //
 // 本套件守五件事：
-//   ① A 面 声明面自洽：89 条声明与 `config/apps.js` 的 APPS **双向**对账（条数 / id 集合 /
+//   ① A 面 声明面自洽：一条一声明与 `config/apps.js` 的 APPS **双向**对账（条数 / id 集合 /
 //      中文名逐字一致），三档计数 = 11 / 19 / 59，每条 why 非空且不得写「不适用」；
 //      未知 appId 必须按最保守口径（irreversible + unknown:true），不伪造一个「可撤销」。
 //   ② B 面 声明 ↔ 磁盘事实对账（本套件的核心）：undo 档的 App 目录里**必须**真的出现
@@ -76,11 +76,17 @@ function dirCount(dirId, needle) {
  * ============================================================ */
 
 test('A1 声明条数 = APPS 条数，id 集合双向相等，无重复无占位', () => {
-    assert.equal(APPS.length, 89, 'APPS 真源应当是 89 件（本版基线；变了就要同步声明表）');
+    /* ★ [v4.200.0 修既有] 本条原来写死 89。v4.191.0 起 APPS 真源已长到 105（试算内核形态的
+     *   16 件并入），声明表却停在 89 ⇒ 这条判据连红多版，且看着像「本版引入的新红」。
+     *   教训与 v4105 守的正是同一件事：**判据不许写死一个会随仓增长的量**。故这里改成
+     *   「声明表必须与真源等长」，条数只在断言消息里出现。 */
+    const DECL_EXPECT = 105;
+    assert.equal(APPS.length, UNDO.UNDO_DECLARATIONS.length, '★ APPS 真源与声明表必须等长（真源 ' + String(APPS.length) + ' / 声明 ' + String(UNDO.UNDO_DECLARATIONS.length) + '）');
+    assert.equal(DECL_EXPECT, 105, '本版基线：105 件 App（变了要同步这条基线注释与 A4 的三档读数）');
     const decl = UNDO.UNDO_DECLARATIONS;
-    assert.equal(decl.length, 89, '★ 声明必须一条一 App（目录 88 ≠ App 89：apps/memory 承载 memory + graph）');
+    assert.equal(decl.length, 105, '★ 声明必须一条一 App（目录数 ≠ App 数：apps/memory 承载 memory + graph，apps/<父>/ 还承载试算内核）');
     const ids = decl.map((d) => String(d.appId));
-    assert.equal(new Set(ids).size, 89, 'appId 不许重复（重复会让 undoModeCounts 多算一件）');
+    assert.equal(new Set(ids).size, 105, 'appId 不许重复（重复会让 undoModeCounts 多算一件）');
     const missing = APP_IDS.filter((id) => !ids.includes(id));
     const extra = ids.filter((id) => !APP_IDS.includes(id));
     assert.deepEqual(missing, [], '★ APPS 里有而声明里没有的 App：' + missing.join(' / '));
@@ -108,10 +114,10 @@ test('A3 每条 why 非空、不得是「不适用」，且档位只能是三档
 
 test('A4 三档计数 = 11 / 19 / 59（读数写死，变动必须是有意识的）', () => {
     const c = UNDO.undoModeCounts();
-    assert.equal(c.total, 89);
+    assert.equal(c.total, 105);
     assert.equal(c.undo, 11, 'undo 档 = 接了回收站的 11 件');
     assert.equal(c.confirm, 19, 'confirm 档 = 本版补齐二次确认的 19 件');
-    assert.equal(c.irreversible, 59, 'irreversible 档 = 如实记账的 59 件（含 4 件「全目录零破坏性入口」）');
+    assert.equal(c.irreversible, 75, 'irreversible 档 = 如实记账的 75 件（含 3 件「全目录零破坏性入口」+ 16 件试算内核/规则引擎）');
     assert.equal(c.undo + c.confirm + c.irreversible, c.total);
 });
 
@@ -125,8 +131,8 @@ test('A5 未知 appId 按最保守口径：irreversible + unknown 标记，绝�
 
 test('A6 一句话总述带三档数字（UI 与判据共用，不许第二份实现）', () => {
     const line = UNDO.undoSummaryLine();
-    assert.ok(line.includes('89'), line);
-    assert.ok(line.includes('11') && line.includes('19') && line.includes('59'), line);
+    assert.ok(line.includes('105'), line);
+    assert.ok(line.includes('11') && line.includes('19') && line.includes('75'), line);
 });
 
 /* ============================================================
@@ -292,7 +298,10 @@ test('D2 视图卡真渲染（有 _undoFaceHtml、有 h.push 卡、有 import �
     assert.ok(v.indexOf("import { undoFaceText } from './diagnose-data.js';") >= 0, '① 必须 import 转发函数');
     assert.ok(/_undoFaceHtml\(pkg\) \{/.test(v), '② 必须有排版方法');
     assert.ok(/this\._undoFaceHtml\(pkg\)/.test(v), '③ 必须在页面装配处真调用（只写方法不调用 = 零消费）');
-    assert.ok(/销毁动作分级（89 件 App 删了能不能回来）/.test(v), '③ 卡片标题必须可辨认');
+    assert.ok(/销毁动作分级（/.test(v) && /件 App 删了能不能回来）/.test(v), '③ 卡片标题必须可辨认');
+    /* ★ 标题里的条数必须按真源算，不许写死：写死 89 正是本套件在本版转红的那条根因
+     *   —— 同一族缺陷在判据自己身上复发过一次，故在此显式禁止。 */
+    assert.equal(/\d+ 件 App 删了能不能回来/.test(v), false, '★ 标题条数不许写死（必须来自 undoFace.appsTotal）');
     assert.ok(/dg-note dg-bad/.test(v), '★ 面缺席时必须是红档（不许画成绿）');
 });
 

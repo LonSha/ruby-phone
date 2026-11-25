@@ -742,9 +742,15 @@ test('D2 不碰宿主对象、不落数据库、不跨 App 读（源直读 roles
     const app = read(NS_APP);
     const imports = [...app.matchAll(/from '[^']+'/g)].map((m) => m[0]);
     for (const im of imports) {
-        /* [v3.58.0 · 计划 O5] 写回执的唯一实现同为**允许面**（三件基本 + 取数门 + 写回执）。 */
+        /* [v3.58.0 · 计划 O5] 写回执的唯一实现同为**允许面**（三件基本 + 取数门 + 写回执）。
+         * [v4.200.0 修既有] 取数门在 v4.x 里被拆成了三件**同族归一内核**：`num-gate.js`（取数）、
+         *   `num-face.js`（数值归一：numOrSelf / numOrNullOf）、`text-face.js`（文本归一：toStr）。
+         *   原来只登记了 num-gate ⇒ 本 App 一旦按新口径改用 numOrSelf/toStr 就当场转红，
+         *   而那不是「跨 App 读」，是「读同一个取数面」。故把这三件 + 写回执一起登记为允许面；
+         *   白名单之外一律照旧红（下面这条断言仍是排他断言，不是放宽成「任意 config/」）。 */
         assert.ok(im.includes('./needsim-data.js') || im.includes('./needsim-view.js')
-            || im.includes('num-gate.js') || im.includes('write-receipt.js'),
+            || im.includes('num-gate.js') || im.includes('num-face.js')
+            || im.includes('text-face.js') || im.includes('write-receipt.js'),
             'App 不许 import 别的东西：' + im);
     }
 });

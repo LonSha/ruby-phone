@@ -79,7 +79,29 @@ function makeCopy(withUpstream) {
   }
   return { dir: dir, upstream: null };
 }
-function UP_ROOT() { return process.env.RP_UPSTREAM_ROOT || '/home/user/lonsha-memory-plugin'; }
+/* ★ [v4.200.0 修既有] 上游根原来写死 `/home/user/lonsha-memory-plugin`。在 proot 下那个
+ *   兄弟仓的 `.js` 文件 `open()` 报 EPERM（`existsSync` 也返回 false，`accessSync` EPERM），
+ *   于是 `makeCopy(true)` 静默**一个文件都没 stage**，D4 直接 ENOENT、D5 探针 exit 2 ——
+ *   两条负控制红在「上游缺席」，不是红在判据上（v3204 是同一环境态的另一个面）。
+ *   修法：候选表 + **真可读**校验（accessSync R_OK，不只看 existsSync）。语义不变：
+ *   仍然只读一份**真实上游**的冻结文件，不放宽任何断言；顺序确定（env 优先，其次原写死路径，
+ *   最后是本仓旁边的同名仓副本）。全候选都不可读时退回原写死路径，让失败信息与以前一致。 */
+function UP_ROOT() {
+    const cands = [
+        process.env.RP_UPSTREAM_ROOT,
+        '/home/user/lonsha-memory-plugin',
+        path.resolve(ROOT, '..', 'mem'),
+        '/home/user/_rl6/mem',
+    ];
+    for (const c of cands) {
+        if (!c) continue;
+        try {
+            fs.accessSync(path.join(c, 'branch-guard.js'), fs.constants.R_OK);
+            return c;
+        } catch (_e) { /* 试下一个候选 */ }
+    }
+    return process.env.RP_UPSTREAM_ROOT || '/home/user/lonsha-memory-plugin';
+}
 process.on('exit', () => {
   for (const d of temps) { try { fs.rmSync(d, { recursive: true, force: true }); } catch (_e) { /* 忽略 */ } }
 });

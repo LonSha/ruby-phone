@@ -32,8 +32,14 @@
  *   · 不持任何模块级可变状态（`makeRng` 的游标关在闭包里，一份 rng 一份游标）。
  * ============================================================ */
 'use strict';
-import { numOrNull } from '../../config/num-gate.js';
 import { toStr } from '../../config/text-face.js';
+/* ★ [v4.200.0 修既有] 取数转发不再在本件重定义一份：`cardtable-data.js` 早在 v3.57.0 就导出了
+ *   `numOrNullOf`（薄转发到唯一取值门），但本件又抄了一份本地实现 ⇒ 那份导出在**绑定级**零消费
+ *   （bind-consumption-audit 报「名字级判绿但绑定级无消费」）。判据给的两条路里选了「补接线」：
+ *   本件改用 data 的导出，重复实现消失、导出也有了真消费方。
+ *   注意：v3570 要求「引用唯一取值门」的那张名单里登记的是 `cardtable-data.js`（不是本件），
+ *   故本件不再直接 import num-gate 不破坏那条判据。 */
+import { numOrNullOf } from './cardtable-data.js';
 
 /* ── 牌面词表（封闭）──────────────────────────────────────── */
 export const CT_MAJOR = Object.freeze(['愚者', '魔术师', '女祭司', '女皇', '皇帝', '教皇', '恋人', '战车', '力量', '隐士', '命运之轮', '正义', '倒吊人', '死神', '节制', '恶魔', '塔', '星星', '月亮', '太阳', '审判', '世界']);
@@ -55,7 +61,6 @@ export const CT_REJECT = Object.freeze({
 
 /* ── 取数/列表面（薄转发，保持与 v3.51.0 逐字同义）────────── */
 function listOf(v) { return Array.isArray(v) ? v : []; }
-function numOrNullOf(v) { return numOrNull(v); }
 
 /** 塔罗 78 张自动拼名：0..21 大阿卡纳，22..77 四花色×14。越界给空串。 */
 export function tarotNameOf(index) {

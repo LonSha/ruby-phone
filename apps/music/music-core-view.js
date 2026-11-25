@@ -51,7 +51,7 @@ export class MusicCoreView {
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
-            .replace(/"/g, '"');
+            .replace(/"/g, '&quot;');
     }
 
     _sec(t) {

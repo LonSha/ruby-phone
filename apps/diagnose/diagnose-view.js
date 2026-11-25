@@ -1993,7 +1993,7 @@ export class DiagnoseView {
                 + '（URL 非空、覆盖率显示覆盖，实际是空图）：' + escapeHtml(unmapped.join(' · ')) + '</div>';
         }
         if (!missing.length && !unmapped.length) {
-            html += '<div class=' + Q + 'dg-note' + Q + '>全部 89 件 App 都有像素图标，且在册 id 都能落到磁盘上。'
+            html += '<div class=' + Q + 'dg-note' + Q + '>全部 ' + String(face.total) + ' 件 App 都有像素图标，且在册 id 都能落到磁盘上。'
                 + '新增 App 若忘了跑生成器，这里会当场点名。</div>';
         }
         return html;
@@ -2155,7 +2155,7 @@ export class DiagnoseView {
          *   都是「平台级声明是否成立」的读数（一张问图标齐不齐，一张问删了能不能回来）。
          *   放在这里而不是页面尾部：用户最需要看到它的时候，正是他准备点「清空」之前。 */
         h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>静音叙事桥（勿扰的解释素材自洽吗）</h3>' + this._silenceFaceHtml(pkg) + '</section>');
-        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>销毁动作分级（89 件 App 删了能不能回来）</h3>' + this._undoFaceHtml(pkg) + '</section>');
+        h.push('  <section class=' + Q + 'dg-card' + Q + '><h3>销毁动作分级（' + String((pkg && pkg.undoFace && pkg.undoFace.appsTotal) || 0) + ' 件 App 删了能不能回来）</h3>' + this._undoFaceHtml(pkg) + '</section>');
         /* [v3.58.0 · 计划 O4] 会话世代栅栏卡紧跟在消费面矩阵**之后**：两张卡常被混为一谈，
          *   摆在一起才看得出分工 —— 矩阵答「哪些 App **接上了**平台面」（接线在场），
          *   本卡答「这些接线**真的挡下过谁**」（行为发生过）。接线在场不等于行为发生过。 */
