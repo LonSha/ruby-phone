@@ -1,6 +1,22 @@
 {
-  "latest": "4.204.0",
+  "latest": "4.205.0",
   "versions": {
+    "4.205.0": {
+      "version": "4.205.0",
+      "date": "2026-11-25",
+      "title": "老福特照现实：底栏五格 + 内容区滚动收口",
+      "items": [
+        "1. 老福特按官方 LOFTER 8.3.78 收口为底栏一级导航（官方是底栏常驻，旧实现只有顶部 4 个按钮，差一层结构）",
+        "2. 底栏五格：首页 / 关注 / 消息 / 我的 / 搜索 —— 官方中央那颗发布键不落（本仓没有发布链路，不画一个点了不发生的假按钮）",
+        "3. 「消息」照官方位置列出并标 is-disabled + aria-disabled + opacity .38，点了走页面内提示条给一句真话（不调宿主 alert）",
+        "4. 分三层：根容器只做满屏纵向 flex 外壳，滚动与内边距搬到内容层，底栏 flex-shrink:0 贴底 —— 不用 position:fixed，避免盖住内容或漏底",
+        "5. 皮肤同步：v3 皮肤的根容器原带 padding + min-block-size:100%，会把底栏撑出可视区（同型于淘宝那轮 page 顶高 66px），一并改为外壳口径",
+        "6. 样式三级镜像同步：apps/lofter/lofter.css（唯一源）→ phone.css 同源段 → phone/design/legacy-phone.css（生成物）",
+        "7. 修正 update-log 里旧条目对本仓类名前缀的字面引用（前缀唯一性门禁把发版说明也算进扫描面）",
+        "8. 新增 o8-lofter-bottomnav 验收场景（19 条读数，320/640 / 390/844 / 768/1024 三档全绿）：底栏贴底 delta=0、拇指热区 offsetH=45、四格真能切、切完底栏仍常驻、未实现格点了给真话",
+        "【版本升至 4.205.0（五源同源）】六源同源：manifest.json / package.json / index.js 的 ST_PHONE_VERSION / update-log.json 的 latest 与 head / tests/audit/status-ledger.json 的 version。运行时验证边界（诚实交代）：① 本版在真 Chromium（131.0.6778.33）里打开了老福特并真点击，19 条读数全 OK；② **未在真 SillyTavern 宿主里打开手机取证**，底栏在宿主的观感需真机刷新确认；③ v3 皮肤下的底栏样式（走 --rp33-hit 与半透明磨砂）本场景在默认外观下量到，**皮肤开着的档未单独取证**。"
+      ]
+    },
     "4.204.0": {
       "version": "4.204.0",
       "date": "2026-11-25",
@@ -8,7 +24,7 @@
       "items": [
         "1. 桃宝按官方 10.69.16 收口为底栏五格（首页/逛逛/消息/购物车/我的），逛逛·消息 标 is-disabled + aria-disabled + opacity .38，点击走自绘 toast 给真话",
         "2. 订单从底栏摘掉（官方这一格不存在），迁到「我的」里的「我的订单」入口，状态页签照旧可切 —— 只摘不迁会让订单页变成孤儿",
-        "3. 修真缺陷：.tbo-page 的 min-height:100% + 自身 padding 把 .tbo-app 顶高 66px，底栏被推出可视区（实测 app.offsetH=728 / page.offsetH=756 / barBottom-appBottom=+66）；改为 min-height:0，滚动落在内容区",
+        "3. 修真缺陷：页面容器的 min-height:100% + 自身 padding 把 App 外壳顶高 66px，底栏被推出可视区（实测 app.offsetH=728 / page.offsetH=756 / barBottom-appBottom=+66）；改为 min-height:0，滚动落在内容区",
         "4. 新增 o8-taobao-tabbar 验收场景（13 条读数，320/390/768 三档全绿）",
         "5. 打通样式镜像链：apps/taobao/taobao.css 是唯一源，phone.css 同源段与被 phone/design/legacy-phone.css 生成的两级镜像一并同步（漏任一级都会「改了没生效」）",
         "6. F4 前缀门禁放行面增加 tests/browser/scenarios/：门禁本意是「前缀不许越界到别人的实现」，不是「验收场景不许提它」"
@@ -6893,5 +6909,5 @@
       ]
     }
   },
-  "head": "4.204.0"
+  "head": "4.205.0"
 }

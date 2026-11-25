@@ -54,6 +54,26 @@ const TABS = [
     { key: 'me', label: '我的' },
     { key: 'search', label: '搜索' },
 ];
+/* [v4.205.0 · 照现实] 底栏一级导航（官方 LOFTER 8.3.78 是底栏常驻，不是顶部四个按钮）。
+ *
+ * 官方底栏形如「首页 / 关注 / ⨁ / 消息 / 我的」—— 正中那颗 ⨁ 是**发布键**。
+ * 本仓没有「发布」这条链路（生成侧归宿主、本 App 不替宿主调模型，见 lofter-app.js 文件头【①】），
+ * 所以**不画一颗点了不发生的假键**：宁可少一格，不做假按钮。
+ *
+ * 落法：
+ *   · 首页 / 关注 / 我的 三格与官方同位同文案，且都真能切（`data-tab`，走原有 setTab）；
+ *   · 「消息」照官方的**位置**（在「我的」左边）列出，但标 `is-disabled` —— 本仓没有站内信落地，
+ *     点一下给一句「本机还没做」的真话，不静默无反应（静默会被当成按钮坏了）；
+ *   · 「搜索」是官方**顶部**的入口，本仓没有顶部搜索框，这里落在最后一格 —— 这是本仓的唯一
+ *     位置偏离，理由写在这儿：不落这一格，`search` 这一整面（含搜索面板）就在一级导航里没有入口。
+ *   图标用 Font Awesome（与 weibo / xhs 底栏同一套，宿主已提供），不额外引字体。 */
+const LOF_NAV = [
+    { key: 'home', label: '首页', icon: 'fa-house' },
+    { key: 'follow', label: '关注', icon: 'fa-heart' },
+    { key: 'message', label: '消息', icon: 'fa-comment-dots', disabled: true },
+    { key: 'me', label: '我的', icon: 'fa-user' },
+    { key: 'search', label: '搜索', icon: 'fa-magnifying-glass' },
+];
 /* 作者类型的人话表**不在这里手写**：单一真源是数据层的 `LOFTER_TYPE_LABELS`
  * （键按 `LOFTER_ACTIVE_TYPES.concat(LOFTER_IDLE_TYPES)` 现取）。改类型清单时它跟着走。 */
 const MY_FACES = [
@@ -114,6 +134,20 @@ export class LofterView {
         const tabs = TABS;
         const cur = app.tab();
         const parts = [];
+        /* [v4.205.0 · 照现实] 官方 LOFTER 8.3.78 是**底栏一级导航**，不是把四个页签
+         *   平铺在顶部当按钮。旧实现是顶部一块 4 列网格（.lof-tabs，每格还带副标题），
+         *   与官方差一层：官方底栏常驻，进入二级页也不消失。
+         *
+         *   改法刻意保守（本文件只有 4 处 cur 依赖，不重写内容层）：
+         *   · 外层包一个 .lof-app（纵向 flex，不写 height:100%），底栏排在最后自然贴底；
+         *   · 顶部那块 4 列网格**保留**（它承载 faceOf 副标题，是读数不是装饰），
+         *     但降级为「内容区里的页签条」—— 滚走也不影响底栏常驻；
+         *   · 底栏照官方 LOFTER：首页 / 关注 / 消息 / 我的（官方另有中央发布键，
+         *     本仓没有「发布」这条链路，不画一个点了不发生的假键，故不落）。
+         *     四格里首页(=home) / 关注(=follow) / 我的(=me) / 搜索(=search) 全可用，
+         *     「消息」照官方位置列出并标 is-disabled（本仓无站内信落地，点了给真话）。
+         *   先渲染内容区，再把底栏拼在最后 —— 不引入新的状态机。 */
+        parts.push('<div class="lof-app"><div class="lof-main">');
         parts.push('<div class="lof-header"><h2>\u{1f58b} 老福特</h2>'
             + '<span class="lof-header-sub">中文同人圈</span></div>');
         parts.push('<div class="lof-face lof-face-' + meta.tone + '">');
@@ -137,7 +171,36 @@ export class LofterView {
         parts.push(this._writerPanel());
         parts.push(this._stylePanel());
         parts.push(this._settingsPanel());
+        parts.push('</div>');           /* /.lof-main */
+        parts.push(this._bottomNavHTML(cur));
+        parts.push('</div>');           /* /.lof-app */
         return parts.join('\n');
+    }
+    /* ---------- 底栏（照官方 LOFTER 8.3.78） ----------
+     * 只画与派事件：真正的切换仍走 App.setTab（data-tab 已在 _onDelegated 里接好）。
+     * 「消息」用 data-act="lof-soon" 单独一条路 —— 它**不是**页签，不混进 data-tab 语义，
+     * 否则测 / 读数里「页签数」会把一格未实现的入口也算成页签。
+     *
+     * 为什么底栏不用 position:fixed：绝对定位会脱离 .lof-app 的高度约束，在宿主里
+     *   容易盖住内容或漏出底边（微博那轮实测过 nav 溢出 appH 8px）。这里靠 flex 贴底：
+     *   .lof-app 是纵向 flex + flex:1（**不写 height:100%** —— 那会让它在根容器的
+     *   overflow:hidden 里溢出，底栏被裁掉，淘宝那轮 page 顶高 66px 是同一族缺陷），
+     *   .lof-main 是 flex:1 + min-height:0 且自己滚，底栏 flex-shrink:0。 */
+    _bottomNavHTML(cur) {
+        const items = LOF_NAV.map((it) => {
+            if (it.disabled) {
+                return '<button class="lof-navitem is-disabled" data-act="lof-soon" data-what="'
+                    + this._esc(it.label) + '" aria-disabled="true">'
+                    + '<i class="fa-solid ' + it.icon + '"></i>'
+                    + '<span>' + this._esc(it.label) + '</span></button>';
+            }
+            return '<button class="lof-navitem' + (cur === it.key ? ' is-on' : '') + '"'
+                + ' data-tab="' + it.key + '"'
+                + (cur === it.key ? ' aria-current="page"' : '')
+                + '><i class="fa-solid ' + it.icon + '"></i>'
+                + '<span>' + this._esc(it.label) + '</span></button>';
+        });
+        return '<nav class="lof-bottomnav">' + items.join('') + '</nav>';
     }
     /* ---------- 首页 ---------- */
     _homePanel() {
@@ -552,9 +615,18 @@ export class LofterView {
     _onDelegated(e) {
         const app = this.app;
         const t = e && e.target;
-        const el = (t && t.closest) ? t.closest('.lof-tab,.lof-subtab,[data-open],[data-like],[data-fav],[data-later],[data-follow],[data-subcol],[data-untag],[data-tag],[data-reply],[data-colpick]') : null;
+        const el = (t && t.closest) ? t.closest('.lof-tab,.lof-navitem,.lof-subtab,[data-open],[data-like],[data-fav],[data-later],[data-follow],[data-subcol],[data-untag],[data-tag],[data-reply],[data-colpick]') : null;
         if (!el) return;
         const ds = el.dataset || {};
+        /* [v4.205.0 · 照现实] 底栏里「本仓没实现」的那一格（官方有、本仓没链路）。
+         * 给一句真话而不是静默无反应 —— 静默会被当成「按钮坏了」，排查成本比一句提示高得多。
+         * 走页面内 .lof-flash 提示条，不调宿主 alert（宿主 alert 会卡住 SillyTavern 的消息流）。 */
+        if (ds.act === 'lof-soon') {
+            const what = ds.what || '该入口';
+            this._flash = '「' + what + '」本机还没做。';
+            this.refresh();
+            return;
+        }
         if (ds.tab) { app.setTab(ds.tab); this._article = ''; app.clearRef(); this.refresh(); return; }
         if (ds.myface) { this._myFace = ds.myface; this.refresh(); return; }
         if (ds.open) {

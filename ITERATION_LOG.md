@@ -1,3 +1,14 @@
+迭代 317 · v4.205.0 · 老福特照现实：底栏五格 + 内容区滚动收口（2026-11-25）
+- 1. 老福特按官方 LOFTER 8.3.78 收口为底栏一级导航（官方是底栏常驻，旧实现只有顶部 4 个按钮，差一层结构）
+- 2. 底栏五格：首页 / 关注 / 消息 / 我的 / 搜索 —— 官方中央那颗发布键不落（本仓没有发布链路，不画一个点了不发生的假按钮）
+- 3. 「消息」照官方位置列出并标 is-disabled + aria-disabled + opacity .38，点了走页面内提示条给一句真话（不调宿主 alert）
+- 4. 分三层：根容器只做满屏纵向 flex 外壳，滚动与内边距搬到内容层，底栏 flex-shrink:0 贴底 —— 不用 position:fixed，避免盖住内容或漏底
+- 5. 皮肤同步：v3 皮肤的根容器原带 padding + min-block-size:100%，会把底栏撑出可视区（同型于淘宝那轮 page 顶高 66px），一并改为外壳口径
+- 6. 样式三级镜像同步：apps/lofter/lofter.css（唯一源）→ phone.css 同源段 → phone/design/legacy-phone.css（生成物）
+- 7. 修正 update-log 里旧条目对本仓类名前缀的字面引用（前缀唯一性门禁把发版说明也算进扫描面）
+- 8. 新增 o8-lofter-bottomnav 验收场景（19 条读数，320/640 / 390/844 / 768/1024 三档全绿）：底栏贴底 delta=0、拇指热区 offsetH=45、四格真能切、切完底栏仍常驻、未实现格点了给真话
+- 【版本升至 4.205.0（五源同源）】六源同源：manifest.json / package.json / index.js 的 ST_PHONE_VERSION / update-log.json 的 latest 与 head / tests/audit/status-ledger.json 的 version。运行时验证边界（诚实交代）：① 本版在真 Chromium（131.0.6778.33）里打开了老福特并真点击，19 条读数全 OK；② **未在真 SillyTavern 宿主里打开手机取证**，底栏在宿主的观感需真机刷新确认；③ v3 皮肤下的底栏样式（走 --rp33-hit 与半透明磨砂）本场景在默认外观下量到，**皮肤开着的档未单独取证**。
+
 迭代 316 · v4.200.0 · 桌面重构 v2 上屏的真因修复：base 样式收口为单源（`ensureGlobalPhoneCSS` 不再注入未分层 phone.css）+ O1 判据改向 + 真 Chromium 取证（2026-11-24）
 - **【版本升至 4.200.0（五源同源）】桌面重构 v2 上屏（真因修复）：本版治的不是「新桌面没写」，而是**新桌面写了却一条样式都不生效**。用户报障原话「不是已经完成了桌面 UI 更改吗，为什么这个版本我实际看还是原样」。**
 - **真因（现场取证，不是推测）**：RubyPhone 的 base 样式有**两条来源同时在跑**——① manifest 的 css 入口 `phone/design/rp-entry.css` 静态 @import 分层副本 `layer(rp.legacy) → legacy-phone.css`；② `phone/font-scale.js` 的 `ensureGlobalPhoneCSS()` 在运行时 `fetch(./phone.css)` 并把整份文本塞进 `<style id="st-phone-global-css">`。后者是**未分层（0 个 @layer）+ 2008 处 !important** 的原始表（phone.css 653185 字节）。CSS 级联里 !important 恒压任何 @layer 内的普通声明，于是 `rp-desktop-v2.css` 的 31 条桌面规则（全在 @layer rp.components、零 !important）被逐条压死：`home-screen.js:99` 明明挂上了 `data-rp-desktop="2"`，用户看到的桌面仍与旧版一字不差。

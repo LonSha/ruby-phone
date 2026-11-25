@@ -476,7 +476,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.204.0';
+const ST_PHONE_VERSION = '4.205.0';
 const ST_PHONE_CSS_REVISION = '20261124-style-layer-single-source';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -722,21 +722,17 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-11-24",
+    date: "2026-11-25",
     items: [
-        "【版本升至 4.200.0（五源同源）】桌面重构 v2 上屏（真因修复）：本版治的不是「新桌面没写」，而是**新桌面写了却一条样式都不生效**。用户报障原话「不是已经完成了桌面 UI 更改吗，为什么这个版本我实际看还是原样」。",
-        "**真因（现场取证，不是推测）**：RubyPhone 的 base 样式有**两条来源同时在跑**——① manifest 的 css 入口 `phone/design/rp-entry.css` 静态 @import 分层副本 `layer(rp.legacy) → legacy-phone.css`；② `phone/font-scale.js` 的 `ensureGlobalPhoneCSS()` 在运行时 `fetch(./phone.css)` 并把整份文本塞进 `<style>`（id 为 st-phone-global-css）。后者是**未分层（0 个 @layer）+ 2008 处 !important** 的原始表（phone.css 653185 字节）。CSS 级联里 !important 恒压任何 @layer 内的普通声明，于是 `rp-desktop-v2.css` 的 31 条桌面规则（全在 @layer rp.components、零 !important）被逐条压死：`home-screen.js:99` 明明挂上了 `data-rp-desktop 属性（值 2）`，用户看到的桌面仍与旧版一字不差。",
-        "**逐类对拍（机器读数，可复算）**：`app-grid` desktop-v2 1 条 vs phone.css 带 !important 8 条；`app-icon` 11:13；`app-icon-bg` 4:9；`app-icon-emoji` 2:4；`app-name` 1:6；`home-time` 6:10；`home-page-dot` 3:3；`dock` 5:21；`wallpaper` 1:1；`home-custom-icon-img` 1:1。**唯一未被压的是 `time-large` 与 `app-badge`**（phone.css 里对这两个类名没有 !important 规则）—— 这正是「看起来像新桌面又不太像」的观感来源。",
-        "**修法（收口，不是加第二条 !important）**：`ensureGlobalPhoneCSS()` 不再生产第二份 base 样式，改为**只摘掉**升级后残留的无层 `<style>`（id 为 st-phone-global-css）（幂等）。base 样式从此只有一条来源。函数名与签名保留：`index.js` 4 处调用点与 `tests/font-scale.test.mjs` 的方法表都以它为契约，改名会牵动无关面。顺带收益：不再有 653KB 文本 + 631KB 静态副本的双份解析。",
-        "**同时修掉一处漂移**：`phone/design/legacy-phone.css`（生成物）时间停在 11-22 / 提交 baf87bf，而源 `phone.css` 已到 11-23 / 4.187.0 —— 即「分层版旧样式」本身也落后了一个提交。本版重跑 `scripts/gen-legacy-layer.mjs`：源 19810 行 → 产物 631368 字节，`--check` 一致。这也是判据 G2 钉住的那一格。",
-        "新增 `tests/system-v4200-layer.test.mjs`（A/B/C/V/G 五段 16 条）：A1 base 分支不得再 `fetch(ST_PHONE_GLOBAL_CSS_URL)`、不得 `createElement`、不得写 `textContent`（旧形三件套逐件拦）；A2 契约面保留（id 仍是 `st-phone-global-css`，语义是摘除且幂等）；A3 **行为级**：假 DOM 下调用 `ensureGlobalPhoneCSS()` 必须真把残留节点摘掉（源码写了 remove ≠ 运行时真调用）；A4 像素皮肤分支仍在、非 pixel 包走摘除、失败静默；B1 `node scripts/gen-legacy-layer.mjs --check` 必须报一致（不重写生成逻辑，直接用生成器当代门，避免两份取数漂移）；B2 manifest css 入口必须 @import 皮肤层，且旧表必须以 `layer(rp.legacy)` 下沉；B3 **剥离注释后**统计：皮肤层与 legacy 产物真规则里 `!important` 计数必须为 0（注释里写到的不算——首版实测被文件头注释骗过一次）；C1 `home-screen` 必须把 ` data-rp-desktop 属性（值 2）` 拼进 DOM，`getDesktopV2()` 必须默认开（只有显式 '0' 才关）；C2 皮肤层**每条真规则**都必须带 `data-rp-desktop 属性（值 2）` 且以 `#phone-panel-content .phone-screen` 开头（默认零命中＝可回退）；V1 版本下限形 ≥ 4.200.0；V2 五源同源 + items ≥ 8 + 公告与条目逐字同源。五条负控制全部实测转红：G1 改 legacy 产物一字节 ⇒ B1 的 --check 退出码 1；G2 去掉皮肤层外层 @layer ⇒ B3 红；G3 把根表 fetch 写回 ⇒ A1 红；G4 把属性从 DOM 字符串里摘掉 ⇒ C1 红；G5 插一条 `!important` ⇒ B3 红且 C2 的抽取器认得这条新规则。",
-        "**交棒改写（同族形态登记）**：「同一个样式表有两份落点，一份分层一份未分层且带 !important」这个形态不会让任何语法门变红，也不会让既有判据变红 —— 它在源码上完全合法，只在**真宿主里**表现为「写了等于没写」。本仓已登记的第 N 类假绿由此再补一条：**样式的来源数必须是 1**，多一条来源就让所有 `@layer` 皮肤失效而无任何告警。判据 B3 把「皮肤层必须零 !important」与「base 层必须单源」两件事分开钉，避免将来有人用加 !important 的方式把皮肤层弄「生效」。",
-        "**运行时验证边界（诚实交代）**：① 本版**未在真 SillyTavern 宿主里打开手机取证**，桌面是否真的变样需用户在真机刷新后确认；② 每条对拍读数（1:8 / 4:9 / 5:21 …）都由脚本现扫 `phone.css` 与 `rp-desktop-v2.css` 得出，可重跑复算；③ 浏览器层**本版已跑真 Chromium 取证**（Chromium 131.0.6778.33 / 390×844 单档）：O1 场景 17 条读数全 OK，其中 `prod-css-loaded` 由旧的「`#st-phone-global-css` 必须存在」**改向为「必须不存在」**，并新增两条归因锚（`dv2Skin=loaded` 证明皮肤分层表真被解析、`rules=7127` 证明分层入口整张都在），读数原文 `legacyStyle=absent dv2Skin=loaded rules=7127 | 17 ok / 0 fail`；④ 门与单次驱动的默认外部样式表同步从 `phone.css` 改为 `phone/design/rp-entry.css`（`--styles` 可显式覆盖并如实打屏）—— 把根 phone.css 当外部表注入，等价于把「压死皮肤层」的那个来源搬进浏览器层，那样量到的只是被压死后的旧外观。",
-        "**同版附带：LonSha 记忆插件侧真因已定位（跨仓）**：`css/lonsha-panel-v5.css` 63 条规则里 62 条以 `.lsm5-*` 新类名为选择器，而 `.lsm5-*` 在 `dashboard-v2.js` / `dashboard-shell.js` / `index.js` 里的产出计数为 **0**；对照 `dashboard-v2.js:582` 确实把 `data-ui-rev`（值 5） 写上了。即「属性到位、样式到位、DOM 类名缺席 ⇒ 零效果」。该项属 `LonSha/lonsha-memory-plugin` 仓，不在本仓改动面内。",
-        "【本版同时落地】纯整数日历内核 `config/pure-time.js`（Hinnant `civil_from_days` 整数算法，零 `Date` / 零时钟 / 零宿主状态），并接线五个 App 的数据层：`bilibili` / `lofter` / `pixiv` / `periodmath` / `wallet` 不再构造 `Date`。App 重构台账随之翻态：`refactored` 37 → **42**、`core_impure` 42 → **37**、`pending` 64 → **59**。",
-        "**为什么这不算「为扫而扫」**：这些 `new Date(ts)` 多数并不读时钟（时钟早已由 `wallNow()` 显式注入），它干的是「把已知 epoch 换算成年月日」—— 用的是**宿主本地时区**。同一毫秒在不同时区的机器上得出不同的月份键 / 日键，于是 `groupByMonth` 的归档分组、`lastCoinDay` 与 `alertedKey` 的「今天已做过」幂等判定全部不可复现；而纯度扫描只能按文本把 `new Date` 一律算作不纯，**分不清「读了时钟」和「只换了个算法」**。逐字等价的对拍读数：`partsOf / ymOf / dayKeyOf` 与 `Date` 的 UTC 字段对拍 **3016 例 mismatch 0**（含 1970 / 2000-02-29 / 2024-02-29 / 1900-03-01 / 2100-03-01 边界 + 随机 ±2×10¹² ms）；`lofter.groupByMonth` 与 `pixiv.groupByMonth` 在 801 条样本上产出与旧实现**同一份月份键序列**。前提是本机 **TZ=UTC**；非 UTC 机器由调用方把偏移显式传进 `partsOf(ts, offsetMin)`。",
-        "**本版自己抓到的缺陷（两个「假绿」）**：① `tests/system-v3340` 的 D1 原本是 `imports.length === 1`，那是 v3.34.0 给 lofter 数据层拍的**单文件快照**（同仓 wallet / bilibili / periodmath 的数据层早已 3~4 条 import），拿条数当判据会把「数据层多接一个零依赖叶子」这种正当事判成红灯；改成它真正要保护的形状（每条依赖都必须是两层写的 `../../config/<叶子>.js`、数值口径仍取自 `num-gate`），并补 `D1b` 负控制：三层级写法 / 引 App 私有件 / 丢 num-gate 三种坏样本必须各自被抓，两条零依赖叶子必须放行。② `v3340` 的 I1~I8 与 `v3350` 的 I1~I6 是「造破坏副本 → 加载 → 判据必须转红」，副本只 stage 了 `num-gate` 桩，数据层新接 `pure-time` 之后副本一 import 就 `ERR_MODULE_NOT_FOUND` —— 那 14 条会**红在加载失败上而不是红在识破破坏**（真正的破坏永远验不到）。两处镜像各补拷一次真件。另删掉自己预留的 `tzResolver` 工厂：`dead-exports` 门当场报它零消费，预留接口不算接口。",
-        "**运行时验证边界（诚实交代）**：① 本版**未在真 SillyTavern 宿主 / 真机里打开这五个 App 取证**，只验了数据层函数的逐字等价、静态门与台账；② 等价性前提是 TZ=UTC（本机 `date +%Z%z` = UTC+0000），**换到非 UTC 机器时月/日键会与原实现不同** —— 这是本版有意的修正（把时区从隐式吃宿主状态改成显式参数），但对已有存档里的旧键不做迁移，属已知边界；③ 台账的 `refactored` 只证明「内核在场 + 内核文本面上不碰时间/随机/DOM/存储/网络」，**不证明**行为等价、接线完整或真机跑对；④ 键格式有意保持历史原样：`bilibili` 的 `lastCoinDay` 仍是不补零的 `2026-11-5`（已落盘的存档，改成补零会让老用户升级当天被判成「今天没领过」而多领一次硬币）。 这五处的共性正是本仓反复登记的同一种形态 —— **看起来没坏但显示不对**：不报错、不崩溃，只把「结构面对了」当成「行为面也对」，本层只能挡住机制面。 —— 本层**不能保证**真机观感与交互，只能保证机制面不漂。",
+        "1. 老福特按官方 LOFTER 8.3.78 收口为底栏一级导航（官方是底栏常驻，旧实现只有顶部 4 个按钮，差一层结构）",
+        "2. 底栏五格：首页 / 关注 / 消息 / 我的 / 搜索 —— 官方中央那颗发布键不落（本仓没有发布链路，不画一个点了不发生的假按钮）",
+        "3. 「消息」照官方位置列出并标 is-disabled + aria-disabled + opacity .38，点了走页面内提示条给一句真话（不调宿主 alert）",
+        "4. 分三层：根容器只做满屏纵向 flex 外壳，滚动与内边距搬到内容层，底栏 flex-shrink:0 贴底 —— 不用 position:fixed，避免盖住内容或漏底",
+        "5. 皮肤同步：v3 皮肤的根容器原带 padding + min-block-size:100%，会把底栏撑出可视区（同型于淘宝那轮 page 顶高 66px），一并改为外壳口径",
+        "6. 样式三级镜像同步：apps/lofter/lofter.css（唯一源）→ phone.css 同源段 → phone/design/legacy-phone.css（生成物）",
+        "7. 修正 update-log 里旧条目对本仓类名前缀的字面引用（前缀唯一性门禁把发版说明也算进扫描面）",
+        "8. 新增 o8-lofter-bottomnav 验收场景（19 条读数，320/640 / 390/844 / 768/1024 三档全绿）：底栏贴底 delta=0、拇指热区 offsetH=45、四格真能切、切完底栏仍常驻、未实现格点了给真话",
+        "【版本升至 4.205.0（五源同源）】六源同源：manifest.json / package.json / index.js 的 ST_PHONE_VERSION / update-log.json 的 latest 与 head / tests/audit/status-ledger.json 的 version。运行时验证边界（诚实交代）：① 本版在真 Chromium（131.0.6778.33）里打开了老福特并真点击，19 条读数全 OK；② **未在真 SillyTavern 宿主里打开手机取证**，底栏在宿主的观感需真机刷新确认；③ v3 皮肤下的底栏样式（走 --rp33-hit 与半透明磨砂）本场景在默认外观下量到，**皮肤开着的档未单独取证**。",
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

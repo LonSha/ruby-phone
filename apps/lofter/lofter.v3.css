@@ -22,7 +22,21 @@
     #phone-panel[data-rp-ios="3"] .lof-root { --rp33-accent: var(--rp33-brand-lofter); --rp36-accent-text: var(--rp36-text-brand-lofter); --rp33-accent-soft: color-mix(in srgb, var(--rp33-brand-lofter) 14%, transparent); --rp33-accent-ring: color-mix(in srgb, var(--rp33-brand-lofter) 40%, transparent); --rp33-on-accent: color-mix(in srgb, var(--lt-sys-black) 88%, var(--rp33-accent)); }
 
     /* ===== 屏：外壳（页面底 / 页头 / 状态条 / 回执） ===== */
-    #phone-panel[data-rp-ios="3"] .lof-root { gap: var(--rp33-sp-3); min-block-size: 100%; box-sizing: border-box; padding: var(--rp33-sp-2) var(--rp33-margin) var(--rp33-sp-8); background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    /* [v4.205.0 · 照现实] 底栏改造后根容器不再承担内边距与「最低满屏」：
+       它现在是「满屏纵向 flex + overflow:hidden」的框子，内边距与滚动都搬到 .lof-main。
+       若这里仍留 padding: … var(--rp33-sp-8) + min-block-size:100%，底栏会被撑出可视区
+       （淘宝那轮实测过同型缺陷：page 的 padding 把 app 顶高 66px，底栏落在屏外）。 */
+    #phone-panel[data-rp-ios="3"] .lof-root { gap: 0; min-block-size: 0; block-size: 100%; overflow: hidden; box-sizing: border-box; padding: 0; background: var(--rp33-bg); color: var(--rp33-label); font: var(--lt-type-subhead); font-family: var(--lt-font-ios); -webkit-font-smoothing: antialiased; }
+    /* 真正滚的那块：原根容器上的内边距与间距原样搬到这里（视觉与改造前一致）。 */
+    #phone-panel[data-rp-ios="3"] .lof-main { gap: var(--rp33-sp-3); padding: var(--rp33-sp-2) var(--rp33-margin) var(--rp33-sp-8); overflow-y: auto; }
+    /* 底栏（官方 LOFTER 8.3.78 是一级导航且常驻）：0.5px 上分割线 + 半透明磨砂底，
+       高度走 --rp33-hit（44pt 拇指下限）而不是固定 48px —— 皮肤下跟系统热区尺寸走。 */
+    #phone-panel[data-rp-ios="3"] .lof-bottomnav { min-block-size: var(--rp33-hit); border-block-start: 0.5px solid var(--rp33-sep); background: color-mix(in srgb, var(--rp33-bg) 88%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    #phone-panel[data-rp-ios="3"] .lof-navitem { gap: 2px; padding: var(--rp33-sp-1) 0; border: 0; background: none; color: var(--rp33-label-2); font: 500 var(--lt-ios-caption2-size) / 1 var(--lt-font-ios); cursor: pointer; }
+    #phone-panel[data-rp-ios="3"] .lof-navitem i { font-size: 20px; line-height: 20px; }
+    #phone-panel[data-rp-ios="3"] .lof-navitem.is-on { color: var(--rp36-accent-text); }
+    /* 未实现入口：整颗 .38 灰，点了给真话（真话在视图里，不在这里）。 */
+    #phone-panel[data-rp-ios="3"] .lof-navitem.is-disabled { opacity: 0.38; cursor: default; }
     #phone-panel[data-rp-ios="3"] .lof-header { align-items: baseline; gap: var(--rp33-sp-2); padding: var(--rp33-sp-2) var(--rp33-sp-1) 0; }
     #phone-panel[data-rp-ios="3"] .lof-header h2 { margin: 0; font: var(--lt-type-largetitle); letter-spacing: var(--lt-ios-largetitle-track); color: var(--rp33-label); }
     #phone-panel[data-rp-ios="3"] .lof-header-sub { color: var(--rp33-label-2); font: var(--lt-type-footnote); }

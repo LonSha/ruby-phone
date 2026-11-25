@@ -15743,8 +15743,29 @@ input:checked + .toggle-slider:before {
 .dat-debt-when { font-family: 'Times New Roman', serif; color: #64748b; margin-left: auto; }
 /* ---------- [v3.34.0] 老福特 App（.lof-*） ---------- */
 /* 缝合自 Perigee js/lofter.js。四处不缝：不直连模型 / 不落 Dexie 与不写 chat.history /
-   不共用别的 App 的粉丝池 / 不存图也不收外链。样式投递走机制 A（打包进本文件）。 */
-.lof-root { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+   不共用别的 App 的粉丝池 / 不存图也不收外链。样式投递走机制 A（打包进本文件）。
+   [v4.205.0 · 照现实] 官方 LOFTER 8.3.78 的底栏是**一级导航且常驻**（切页、进二级页都不消失）。
+   旧实现没有外壳层：根容器自己就是滚动容器，加了底栏也会被内容一起推走。
+   现在分三层：
+     根容器（视图挂载点）—— 只做「满屏 + 纵向 flex + 不许自己滚」的框子（不设 padding，否则底栏离线 12px）
+     app 层 —— 一层多余但必要的中间层（视图里已包好），承接 height:100%
+     main 层 —— 真正滚的那块，原来的 padding / gap 搬到这里
+     底栏 —— flex-shrink:0 贴底，不用 position:fixed
+   为什么不用 position:fixed：绝对定位会脱离 app 层的高度约束，在宿主里容易盖住内容
+   或漏出底边（微博那轮实测过 nav 溢出 appH 8px）。 */
+.lof-root { padding: 0; display: flex; flex-direction: column; gap: 0; height: 100%; min-height: 0; box-sizing: border-box; overflow: hidden; }
+.lof-app { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; box-sizing: border-box; }
+.lof-main { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box; }
+/* 底栏：白底（浅）/ 近黑（深）由 .lof.v3 覆盖，这里给不带皮肤时的默认形态。
+   44px 是拇指可点下限，实测取 48px（图标 19 + 文字 10 + 上下内边距），与微博 16.11.3 同高。 */
+.lof-bottomnav { display: flex; align-items: stretch; flex-shrink: 0; box-sizing: border-box; min-block-size: 48px; border-top: 0.5px solid rgba(255,255,255,.08); background: rgba(20,20,22,.96); }
+.lof-navitem { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; box-sizing: border-box; min-inline-size: 0; padding: 6px 0 7px; border: 0; background: none; color: #8a8a93; font-size: 10px; line-height: 1; font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.lof-navitem i { font-size: 19px; line-height: 19px; }
+.lof-navitem.is-on { color: #12b5a5; }
+.lof-navitem:active { opacity: .6; }
+/* 本仓没实现的入口（「消息」）：照官方位置与文案列出，但整颗降到 .38 并标 aria-disabled，
+   点了给一句「本机还没做」的真话 —— 静默无反应会被当成按钮坏了。 */
+.lof-navitem.is-disabled { opacity: .38; cursor: default; }
 .lof-header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .lof-header h2 { font-size: 18px; margin: 0; color: #f0f0f0; }
 .lof-header-sub { font-size: 11px; color: #64748b; }
