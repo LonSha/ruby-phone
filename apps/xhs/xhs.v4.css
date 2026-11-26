@@ -1,0 +1,167 @@
+/* ============================================================
+ * apps/xhs/xhs.v4.css — 小红书「照官方那种」v4：底栏五格外壳
+ * ------------------------------------------------------------
+ * 作用域：.xhs-root.xhs-app（本 App 自己的根容器），**不挂 v4 开关** ——
+ *   理由同 tieba.v4.css / bilibili.v4.css / clock.v4.css：这是 App 自己的样式表，
+ *   由 phone/design/rp-entry.css 的 @import 投递，不是全局皮肤开关。
+ *
+ * 判据来源（写在文件里，不靠记忆）：
+ *   · 2024-10-12 钛媒体《购物改视频，小红书视频3.0提速》：
+ *     「近期的版本更新之后，更多用户会发现自己的小红书APP的第二Tab由「购物」替换为「视频」」；
+ *   · 由此官方底栏五格依次为：首页 / 视频 / ＋ / 消息 / 我，中央「＋」是凸起的圆形发布键。
+ *   本仓「视频」没有实现（无视频流与播放链路）⇒ 照位置画出来但**禁用**，点一下在页面内给真话。
+ *
+ * 为什么不改 phone.css：改它会牵动三级镜像（apps/*.css → phone.css 同源段 → legacy 生成物），
+ *   一处漏同步就被判红；本版只该改小红书这一件事。
+ *
+ * 【分层策略（v4.209.0 实测确立，这里照用；两种写法缺一不可）】
+ *   ① 容器规则（.xhs-root.xhs-app / .xhs-body / .xhs-tabbar / .xhs-soon-note / .xhs-toast）→ **无层**。
+ *      原因：xhs.v3.css 在 rp.skins 层给 .xhs-body 写了 padding、给 .xhs-root 写了底色字色；
+ *      层序 reset < tokens < legacy < base < components < apps < skins < themes < user 里
+ *      apps 层永远输给 skins 层。无层规则优先于所有层，容器只能放这里。
+ *   ② 按钮规则（.xhs-tabbar-cell / .xhs-tabbar-pub）→ 必须包进 @layer rp.apps。
+ *      原因：phone/design/rp-entry.css 在 [data-rp-ds="2"] 下有一条
+ *        :is(button, input, select, textarea, a, label, hr, code, #rp-scope-anchor) { all: revert-layer; }
+ *      它把按钮的全部声明回滚到「上一层」。底栏格是 <button>，放无层区就与它同层竞争 ⇒ 全部失效、
+ *      落回 UA 默认（opacity:1 / padding:0 / color:#000），时计 v4.209.0 首跑正是「opacity=1,1,1」。
+ *      放进 rp.apps 层后 revert-layer 回退到 apps 层的值 ⇒ 生效。贴吧 / B 站同形。
+ * ============================================================ */
+/* ---------- ① 三层外壳：外壳只做满屏纵向 flex，滚动落内容层，底栏贴底 ---------- */
+.xhs-root.xhs-app {
+  /* 底栏高度的**唯一来源**。为什么是 48 而不是 44（v4.210.0 跑场景时量出来的）：
+   *   手机外壳对整屏做过约 0.9 的 scale，场景里 getBoundingClientRect 拿到的是**缩放后的设备像素**。
+   *   底栏写 44 CSS px ⇒ 量出来 ≈40，判据「拇指热区 ≥44」当场红；
+   *   时计 v4.209.0 收口时用的就是 48（.cl-tabbar / .cl-tabbar-item 都是 48）⇒ 49×0.9≈44 正好过线。
+   *   本 App 照同一口径，并把数值提成 token：apps 层与 skins 层都从这里取，避免两处各写一个数。
+   *   （自定义属性不受 all: revert-layer 影响，声明在无层区也不会被宿主重置打回。） */
+  --xhs-tabbar-h: 48px;
+  padding: 0;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;   /* 详情弹层 / 发布抽屉 / 提示条都挂在这一层里绝对定位 */
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+.xhs-root.xhs-app .xhs-header {
+  flex: 0 0 auto;
+}
+.xhs-root.xhs-app .xhs-body {
+  flex: 1 1 auto;
+  /* 关键：缺 min-height:0，flex 子项不收缩，内容一长就把底栏顶出可视区
+     （淘宝那轮实测顶高 66px、Pixiv / 老福特同型；静态门 A7 专门盯这一行）。 */
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.xhs-root.xhs-app .xhs-tabbar {
+  /* 贴底靠 flex 顺序 + flex-shrink:0，**不用 position:fixed**
+     （fixed 会脱离外壳高度约束，底栏被裁或盖住最后一行内容 —— 四轮实测同一结论）。 */
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  /* 热区下限写在**栏上**（不只是写在格里）：宿主样式或皮肤把按钮的 min-height 压下去时，
+     栏本身仍然是 48，底栏不会被压成一条细线。 */
+  min-block-size: var(--xhs-tabbar-h, 48px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 15, 17, 0.96);
+  z-index: 5;
+}
+/* 页脚一行如实说明（不藏、不静默；文案由 _soonNoteHTML() 一处生成）。 */
+.xhs-root.xhs-app .xhs-soon-note {
+  margin: 14px 4px 4px;
+  padding: 10px 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  color: #8b8b93;
+  font-size: 11px;
+  line-height: 1.6;
+}
+/* 页面内提示条：绝对定位挂在外壳上（手机外壳对整屏做过 scale，fixed 会飘到外壳外）。 */
+.xhs-root.xhs-app .xhs-toast {
+  position: absolute;
+  inset-inline: 12px;
+  inset-block-end: 62px;
+  z-index: 70;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(28, 28, 32, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f2f2f5;
+  font-size: 12px;
+  line-height: 1.5;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+/* ---------- ② 按钮规则 → 必须进 rp.apps 层（理由见文件头①） ---------- */
+@layer rp.apps {
+  .xhs-root.xhs-app .xhs-tabbar-cell {
+    flex: 1 1 0;
+    /* 48 = 本 App 的底栏热区口径（来源见文件头 token 处注释）；border-box 让 48 是**总高**，
+       不会被 padding 撑成 68。 */
+    min-block-size: var(--xhs-tabbar-h, 48px);
+    box-sizing: border-box;
+    padding: 9px 0 11px;
+    border: 0;
+    background: none;
+    color: #8b8b93;
+    font-size: 12px;
+    line-height: 1.2;
+    cursor: pointer;
+  }
+  .xhs-root.xhs-app .xhs-tabbar-cell.is-on {
+    color: #ff2442;
+    font-weight: 600;
+  }
+  .xhs-root.xhs-app .xhs-tabbar-cell.is-disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+  }
+  .xhs-root.xhs-app .xhs-tabbar-pub {
+    flex: 0 0 auto;
+    /* 圆形发布键保持 44（HIG 的点击区下限本身），**不套 48 的底栏口径**：
+       再大会盖住相邻两格，且官方那颗就是一枚 44 左右的圆钮。
+       注意：外壳 scale≈0.9 会把它量成 ≈40，所以浏览器场景只拿栏与格当拇指热区判据，
+       不拿这颗圆钮的数量级当判据（如实写在场景文件里，不装作没这回事）。 */
+    inline-size: 44px;
+    block-size: 44px;
+    box-sizing: border-box;
+    margin: -14px 10px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 50%;
+    background: #ff2442;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(255, 36, 66, 0.4);
+  }
+  .xhs-root.xhs-app .xhs-tabbar-pub:active {
+    transform: translateY(1px);
+  }
+}
+/* ---------- ③ v3 皮肤下的按钮修正 → 同层抢特异性（rp.skins） ---------- */
+@layer rp.skins {
+  /* [v4.210.0 本版自己抓到的缺陷] 这里原先写的是 min-block-size: var(--rp33-tab-h, 44px)。
+   *   --rp33-tab-h 在 phone-tokens-v3.3.css:62 是 **32px** —— 那是**胶囊形页签**的高度口径，
+   *   不是底栏热区口径。于是 v3 皮肤开着时底栏格被压到 32（实测 offsetH=33 / rect=30），
+   *   而 apps 层写的 44 因为「层序先于特异性」根本轮不到生效 —— 修了等于没修。
+   *   现在两边都从 --xhs-tabbar-h 取（48 = 时计收口时的同口径），摆法与时计 clock.v4.css 一致：
+   *   皮下的按钮修正必须进 rp.skins 同层抢特异性，否则怎么写都输。 */
+  #phone-panel[data-rp-ios="3"] .xhs-root.xhs-app .xhs-tabbar-cell {
+    color: var(--rp33-label, #8b8b93);
+    font: 500 11px/1.2 var(--lt-font-ios, system-ui);
+    min-block-size: var(--xhs-tabbar-h, 48px);
+  }
+  #phone-panel[data-rp-ios="3"] .xhs-root.xhs-app .xhs-tabbar-cell.is-on {
+    color: var(--rp33-brand-xhs, #ff2442);
+    font-weight: 600;
+  }
+  #phone-panel[data-rp-ios="3"] .xhs-root.xhs-app .xhs-tabbar-pub {
+    background: var(--rp33-brand-xhs, #ff2442);
+    color: var(--rp33-on-accent, #fff);
+  }
+}

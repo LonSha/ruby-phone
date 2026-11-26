@@ -13,8 +13,23 @@
 import { windowOf, patchOf, keepState, line as windowLine } from '../../config/list-window.js';
 import { numeralText } from '../../config/num-face.js';
 
+/* [v4.210.0 · 照官方那种] **面表**与**格表**必须分开写（时计 v4.209.0 确立的口径）：
+ *   · `TABS` = 真有实现、真能切的一级面；
+ *   · `NAV_CELLS` = 底栏照官方**位置**列出来的格。
+ *   两者混成一张表时，「格数」会被误当成「面数」，双向对账就成了一句空话。
+ *   官方结构（判据不是记忆）：2024-10-12 钛媒体《购物改视频，小红书视频3.0提速》——
+ *   「近期的版本更新之后，更多用户会发现自己的小红书APP的第二Tab由「购物」替换为「视频」」；
+ *   底栏五格依次是 首页 / 视频 / ＋ / 消息 / 我，中间的「＋」是凸起的圆形发布键。 */
 const TABS = [
-  { key: 'feed', label: '发现' },
+  { key: 'feed', label: '首页' },
+  { key: 'messages', label: '消息' },
+  { key: 'me', label: '我' },
+];
+/** 底栏格表：官方五格。视频格未实现（本仓无视频流与播放链路）⇒ 照位置画出来但禁用。 */
+const NAV_CELLS = [
+  { key: 'feed', label: '首页' },
+  { key: 'video', label: '视频', disabled: true, why: '本机没有视频流与播放链路' },
+  { key: 'compose', label: '发布', act: 'xhs-compose' },
   { key: 'messages', label: '消息' },
   { key: 'me', label: '我' },
 ];
@@ -54,6 +69,8 @@ export class XhsView {
 
   render(container) {
     this.container = container;
+    /* [v4.210.0] 整段重绘会冲掉提示条节点：先收回计时器与悬挂引用。 */
+    this._clearToast();
     container.innerHTML = this._shell();
     this._bindHeaderEvents();
     this._bindTabs();
@@ -71,6 +88,7 @@ export class XhsView {
           <div class="xhs-masonry" id="xhs-masonry">
             <!-- 笔记卡片动态流 -->
           </div>
+          ${this._soonNoteHTML()}
         </main>`
       : (this.tab === 'messages' ? this._messagesHTML() : this._meHTML());
     const detail = feed
@@ -95,32 +113,86 @@ export class XhsView {
             </div>
           </div>
         </div>`;
-    /* [v4.202.0 · 照现实] 官方小红书 9.55 的底栏是**五格**：
-     *   首页 / 购物 / ＋ / 消息 / 我 —— 中间那个「＋」是凸起的圆形发布键，
-     *   不是页头右上角的一颗小加号。旧实现把发布放在页头、底栏只有三格，
-     *   与官方结构差两层（格数 + 发布键位置）。
-     *   这里把「＋」原样搬到底栏正中：左右各两格，中间独立成一个 flex 单元。
-     *   `data-tab` 只给真正的页签；「＋」用 `data-act="xhs-compose"`，不混入页签语义。 */
-    const tabs = TABS.map((t, i) => {
-      const btn = `<button class="xhs-nav${this.tab === t.key ? ' is-on' : ''}" data-tab="${t.key}">${t.label}</button>`;
-      /* 「购物」在本仓没有对应实现：照官方**位置与文案**列出，但明确 disabled，点了给一句提示。 */
-      if (i === 0) return btn + '<button class="xhs-nav is-disabled" data-act="xhs-soon" data-what="购物" aria-disabled="true">购物</button>';
-      if (i === 1) return '<button class="xhs-nav-pub" data-act="xhs-compose" aria-label="发布笔记"><i class="fa-solid fa-plus"></i></button>' + btn;
-      return btn;
-    }).join('');
+    /* [v4.210.0 · 照官方那种] 底栏结构在 `_tabbarHtml()` 一处生成（格表 NAV_CELLS 派生，不写死格数）：
+     *   官方五格 首页 / 视频 / ＋ / 消息 / 我，中央「＋」是凸起的圆形发布键。
+     *   `data-tab` 只给**真面**；「＋」用 `data-act="xhs-compose"`（真动作）、视频格用
+     *   `data-act="xhs-soon"`（禁用 + 页面内真话），两者都不切面。 */
     return `
-      <div class="xhs-root">
+      <div class="xhs-root xhs-app">
         <header class="xhs-header">
           <button aria-label="返回" class="xhs-back-btn" id="xhs-back-btn"><i class="fa-solid fa-chevron-left"></i></button>
-          <div class="xhs-header-title">${this.tab === 'messages' ? '消息' : (this.tab === 'me' ? '我' : '发现')}</div>
-          <button class="xhs-post-btn" id="xhs-open-compose-btn" title="发布新笔记"><i class="fa-solid fa-plus"></i></button>
+          <div class="xhs-header-title">${this._titleOf(this.tab)}</div>
         </header>
         ${body}
         ${detail}
         ${compose}
-        <nav class="xhs-navbar">${tabs}</nav>
+        ${this._tabbarHtml()}
       </div>
     `;
+  }
+  /* ---------- 1b. 底栏（照官方五格）与页面内提示条 ---------- */
+  /** 页头标题与面表同源（不写第二份字符串：改了 `TABS` 就跟着改）。 */
+  _titleOf(key) {
+    const hit = this._tabs().find((t) => t.key === key);
+    return hit ? hit.label : '首页';
+  }
+  /** 面表（真有实现的一级面）。 */
+  _tabs() { return TABS.slice(); }
+  /** 格表（官方五格；含未实现的视频格与中央发布键）。 */
+  _navCells() { return NAV_CELLS.slice(); }
+  /**
+   * 底栏 HTML。三条硬约束（与贴吧 / 时计同口径）：
+   *   · 真面用 `data-tab`，未实现格用 `data-act`（**不带 data-tab**）—— 带上就会去切一个不存在的面；
+   *   · 高亮走 `aria-current="page"`，不只靠颜色；
+   *   · 中央「＋」是 `data-act="xhs-compose"` 的**真动作**（打开发布抽屉），不是格。
+   */
+  _tabbarHtml() {
+    const items = this._navCells().map((cell) => {
+      if (cell.act) {
+        return '<button type="button" class="xhs-tabbar-pub" data-act="' + cell.act + '"'
+          + ' aria-label="发布笔记" title="发布新笔记">'
+          + '<i class="fa-solid fa-plus"></i></button>';
+      }
+      if (cell.disabled) {
+        return '<button type="button" class="xhs-tabbar-cell is-disabled"'
+          + ' data-act="xhs-soon" data-what="' + esc(cell.label) + '"'
+          + ' data-why="' + esc(cell.why || '') + '"'
+          + ' aria-disabled="true" aria-current="false">' + esc(cell.label) + '</button>';
+      }
+      const on = this.tab === cell.key;
+      return '<button type="button" class="xhs-tabbar-cell' + (on ? ' is-on' : '') + '"'
+        + ' data-tab="' + cell.key + '" aria-current="' + (on ? 'page' : 'false') + '">'
+        + esc(cell.label) + '</button>';
+    }).join('');
+    return '<nav class="xhs-tabbar" role="navigation" aria-label="主导航">' + items + '</nav>';
+  }
+  /** 首页页脚一行如实说明（藏起来会被读成「没有视频」，静默会被读成「按钮坏了」）。 */
+  _soonNoteHTML() {
+    const soon = this._navCells().filter((c) => c.disabled).map((c) => c.label);
+    if (!soon.length) return '';
+    return '<div class="xhs-soon-note">底栏照官方列了『' + esc(soon.join(' / '))
+      + '』一格：本机没有视频流与播放链路，故置灰；点一下会在这里说明。『＋』是真的，点了打开发布抽屉。</div>';
+  }
+  /* 页面内提示条：**不碰宿主 alert**（SillyTavern 的消息流会被 alert 卡住）。只保留一条，
+     重复点击刷新文案并重置计时；整段重绘前由 `_clearToast` 收掉，免留「看不见但还在数」的定时器。 */
+  _toast(msg) {
+    const root = this.container && this.container.querySelector
+      ? this.container.querySelector('.xhs-app')
+      : null;
+    if (!root) return;
+    this._clearToast();
+    const bar = document.createElement('div');
+    bar.className = 'xhs-toast';
+    bar.setAttribute('role', 'status');
+    bar.textContent = String(msg || '');
+    root.appendChild(bar);
+    this._toastEl = bar;
+    this._toastTimer = setTimeout(() => { this._clearToast(); }, 2600);
+  }
+  _clearToast() {
+    if (this._toastTimer) { clearTimeout(this._toastTimer); this._toastTimer = null; }
+    if (this._toastEl && this._toastEl.parentNode) this._toastEl.parentNode.removeChild(this._toastEl);
+    this._toastEl = null;
   }
 
   _messagesHTML() {
@@ -189,7 +261,7 @@ export class XhsView {
     this.container.querySelectorAll('[data-tab]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const key = btn.dataset.tab;
-        if (!TABS.some((t) => t.key === key) || key === this.tab) return;
+        if (!this._tabs().some((t) => t.key === key) || key === this.tab) return;
         this.tab = key;
         this.render(this.container);
       });
@@ -206,10 +278,11 @@ export class XhsView {
     }
     const mePost = this.container.querySelector('#xhs-me-compose');
     if (mePost) mePost.addEventListener('click', () => this._openCompose());
-    /* [v4.202.0] 底栏中央「＋」与「购物」：
-     *   · ＋ 走与页头那颗**同一个** _openCompose()（单一入口，不另写一份打开逻辑）；
-     *   · 购物在本仓无实现，点击必须给一句真话，不能静默无反应 ——
-     *     静默会被当成「按钮坏了」，排查成本比一句提示高得多。 */
+    /* [v4.210.0 · 照官方那种] 底栏两类键分两条路，均不切面：
+     *   · ＋（data-act=xhs-compose）是**真动作**：走与「我」页那颗「发一篇」**同一个** _openCompose()
+     *     （单一入口，不另写一份打开逻辑）；
+     *   · 视频（data-act=xhs-soon）在本仓无实现：点击必须给一句真话 —— 静默会被当成「按钮坏了」。
+     *     旧实现这里调 window.alert：那会卡住 SillyTavern 的消息流，本版改成页面内提示条。 */
     this.container.querySelectorAll('[data-act="xhs-compose"]').forEach((btn) => {
       btn.addEventListener('click', () => this._openCompose());
     });
@@ -217,11 +290,8 @@ export class XhsView {
       btn.addEventListener('click', (ev) => {
         ev.preventDefault();
         const what = btn.dataset.what || '该入口';
-        try {
-          if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-            window.alert('「' + what + '」本机未实现。');
-          }
-        } catch (_e) { /* 宿主无 alert 时不制造新崩溃 */ }
+        const why = btn.dataset.why || '';
+        this._toast('「' + what + '」本机还没做' + (why ? '：' + why : '') + '。');
       });
     });
   }
@@ -486,9 +556,6 @@ export class XhsView {
     });
 
     const composeDrawer = this.container.querySelector('#xhs-compose-drawer');
-    this.container.querySelector('#xhs-open-compose-btn')?.addEventListener('click', () => {
-      this._setOpen(composeDrawer, true);
-    });
     this.container.querySelector('#xhs-compose-close')?.addEventListener('click', () => {
       this._setOpen(composeDrawer, false);
     });

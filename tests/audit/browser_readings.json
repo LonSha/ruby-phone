@@ -1,17 +1,17 @@
 {
   "schema": "browser-readings@1",
   "why": "R13-O1 第 3 步交付物：浏览器层**真跑一次**的读数台账。本文件由 tools/browser-readings.mjs 从 gate.mjs 的真实输出逐行搬运，不重算任何判据。",
-  "measured_at": "2026-11-26T02:21:16.496Z",
-  "version": "4.209.0",
+  "measured_at": "2026-11-26T04:29:15.649Z",
+  "version": "4.210.0",
   "browser": "playwright-cache:chromium-1148",
   "mode": "replay",
   "source": {
-    "log": "../../../../tmp/rp_gate_v4209.log",
-    "bytes": 257805,
-    "sha256": "f4a6b80f9940a13af2a3550874d9b93093b711932c522b3ebcd68fce4f04854a"
+    "log": "../../../../tmp/rp_gate_v4210.log",
+    "bytes": 275679,
+    "sha256": "e4508043a8a57fafeb3085ff4476c0f21fe63540f0aab097fb24d5a2e61144c9"
   },
   "elapsed_ms": 0,
-  "scenes": 30,
+  "scenes": 31,
   "viewports": 4,
   "viewport_list": [
     "320x568",
@@ -19,12 +19,12 @@
     "768x1024",
     "1280x800"
   ],
-  "total_reads": 1452,
+  "total_reads": 1560,
   "fail_reads": 6,
   "min_reads_per_scene": 12,
   "scene_coverage": {
-    "on_disk": 30,
-    "measured": 30,
+    "on_disk": 31,
+    "measured": 31,
     "missing": [],
     "extra": [],
     "complete": true
@@ -118,6 +118,10 @@
       "reads": 80,
       "fail": 0
     },
+    "o8-xhs-bottomnav.scen.js": {
+      "reads": 108,
+      "fail": 0
+    },
     "r13-other-side.scen.js": {
       "reads": 52,
       "fail": 0
@@ -156,7 +160,7 @@
       "scene": "o2-longlist-10k.scen.js",
       "viewport": "320x568",
       "name": "o2-scroll-after-app-switch",
-      "detail": "before=8332 after=8400 delta=68（>2px 即位置没记住） heapBefore=38 heapAfter=38 nodesBefore=2251 nodesAfter=2206"
+      "detail": "before=8332 after=8400 delta=68（>2px 即位置没记住） heapBefore=40 heapAfter=40 nodesBefore=2251 nodesAfter=2206"
     },
     {
       "scene": "o2-longlist-10k.scen.js",
