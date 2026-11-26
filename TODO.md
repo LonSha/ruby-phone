@@ -46,6 +46,9 @@
 > 图标资产口径（`phone/icons/` 的命名与产出方式），故留待单独一轮。19 道静态门除 `check:file`（rc=2「门
 > `browser` 没有登记主读数」，HEAD 上同样 rc=2，非本轮引入）外全绿。
 >
+> **[v4.209.0 浏览器层：新增红 0 条 / 已知红 6 条，其中 2 条本版新登记]** 全矩阵 30 场景 × 4 视口 = 1452 读数，6 条 FAIL 全是存量：4 条 o6m-background-throttle（账本里本就标了 flaky，runningAnims 受真帧驱动）+ 2 条 o2-scroll-after-app-switch（320x568 delta=68 / 768x1024 delta=64；用 git stash 在 HEAD 复现同一 delta，非本版引入）。台账 tests/audit/browser_readings.json 已从 24 场景 992 读数重生到 30 场景 1452 读数。
+> **v4.210.0 待办**：apps/wechat/chat-view.js 的窗口化重算 —— 重开时渲染条数变少（nodes 2251 → 2206），恢复的 scrollTop 落在与原窗口不同的行边界上，差约一行高（68 / 64px）。修法方向二选一：① 恢复后等一次排版再复校（现在只在 maxTop === 0 时重试一次，非零但未排完的情况没人管）；② 改按消息锚点（message id + 行内偏移）记账，而不是纯 px —— 纯 px 在窗口化列表里天然会漂。
+
 > **第二十三期（2026-11-17，已收口 · 历史留档）**：`R23-O1～O9` 收口 8/9（`O8` 未开工，已移交 `R24-O9`），
 > `R23-X1～X9` 全部交付（`config/v23-trace.js` 166 行 + 32 条判据）。下方记录保留为历史。
 >
@@ -108,7 +111,7 @@
 > ④`R21-O7`/`O8`/`O9` `FORWARD=2` 纯转发层 + 跨 App 一物多账 + 事件派发无订阅 ⇒ 三笔结构性收尾。
 
 ---
-> **最近更新：v4.208.0**（时计「照现实」：底栏一级导航 + 今天/时计两格真一级面；官方还有『闹钟/秒表/计时器』三格 —— 本机没有对应链路，**不画假键**，改为页脚如实说明。详见 [ITERATION_LOG.md](ITERATION_LOG.md) 迭代 320）
+> **最近更新：v4.209.0**（时计口径改为「照官方那种」：官方四格『世界时钟/闹钟/秒表/计时器』照位置画全，本机没做的三格**画出来但置灰**、点一下在页面内给一句真话（不用宿主 alert）；外加本版挖出的两条层叠陷阱——按钮规则会被 `all: revert-layer` 打回 UA 默认、容器规则进层后又会被 v3 皮肤压死，两者互为反向必须成对守（静态门 A10 钉住）。详见 [ITERATION_LOG.md](ITERATION_LOG.md) 迭代 321）
 > **上一更新：v4.199.0**（App 重构：回改沿用了 8 个版本却没有出处的「20 版 60 只 App」这个数，22 处文字改为不带手抄数的「App 重构」；新增 tools/gen_app_ledger.mjs + tests/audit/app-refactor-ledger.json 把「已重构 8 / 待重构 93 / 目录 101 / id 105」变成机器可读账；判据 tests/system-v4199.test.mjs 16 条，全绿）
 > **上一更新：v4.198.0**（App 重构计划第八批：跨 App 重复口径收敛第六炮 —— HTML 转义面 `esc`，18 份逐字全等的复制件收敛为 `config/esc-face.js`；判据 tests/system-v4198.test.mjs 14 条，三道静态门禁全绿）
 > **上一更新：v4.197.0**（App 重构计划第七批：跨 App 重复口径收敛第五炮 —— 宽松文本规整读取面 `str`，24 份逐字等价的复制件收敛为 `config/loose-str-face.js`；判据 tests/system-v4197.test.mjs 10 条，19 道门禁全绿）

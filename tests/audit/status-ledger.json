@@ -1,12 +1,12 @@
 {
   "schema": "status-ledger@1",
   "generated_by": "tools/gen_status_ledger.mjs",
-  "version": "4.208.0",
+  "version": "4.209.0",
   "version_sources": {
-    "package": "4.200.0",
-    "manifest": "4.200.0",
-    "update_log_latest": "4.200.0",
-    "index_const": "4.200.0"
+    "package": "4.209.0",
+    "manifest": "4.209.0",
+    "update_log_latest": "4.209.0",
+    "index_const": "4.209.0"
   },
   "version_same": true,
   "gates": {
@@ -66,7 +66,7 @@
     "check_chain_len": 21
   },
   "tests": {
-    "test_files": 553,
+    "test_files": 554,
     "audit_dir_exists": true,
     "audit_files": 59
   },
@@ -88,6 +88,12 @@
       "o6-motion-throttle.scen.js",
       "o7-perf-probe.scen.js",
       "o7-reopen-leak.scen.js",
+      "o8-clock-bottomnav.scen.js",
+      "o8-lofter-bottomnav.scen.js",
+      "o8-pixiv-bottomnav.scen.js",
+      "o8-taobao-tabbar.scen.js",
+      "o8-tieba-bottomnav.scen.js",
+      "o8-weibo-bottomnav.scen.js",
       "r13-other-side.scen.js",
       "r13-usage-pattern.scen.js",
       "r14-affair-live.scen.js",
@@ -97,7 +103,7 @@
       "r14-travel-progress.scen.js",
       "r21-windowed-stream.scen.js"
     ],
-    "scenario_count": 24,
+    "scenario_count": 30,
     "probe_scenarios": 25,
     "infra": {
       "runner": true,
@@ -112,7 +118,7 @@
     "app_dirs": 101,
     "apps_ids": 105,
     "index_lines": 15602,
-    "css_bytes": 653185,
+    "css_bytes": 659226,
     "crossrepo": {
       "produced_faces": 30
     }
@@ -133,7 +139,7 @@
         "id": "mechanism",
         "label": "公开夹具验机制",
         "suite_scope": "tests/ 下不含 \".sourcematerial\" 的套件",
-        "suite_files": 551,
+        "suite_files": 552,
         "runnable": true,
         "why": "不读私有素材 ⇒ 干净检出即可跑（本组永远是「可跑」，缺的只是「跑没跑」）"
       },
@@ -158,7 +164,7 @@
       "manifest.json",
       "update-log.json"
     ],
-    "sha256_16": "ec2c64101c928730"
+    "sha256_16": "6931f898d757f076"
   },
   "unknown": [],
   "unknown_count": 0

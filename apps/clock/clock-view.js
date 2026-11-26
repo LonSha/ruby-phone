@@ -63,6 +63,20 @@ export class ClockView {
     ];
   }
 
+  /* [v4.209.0 · 照官方那种] 底栏格表 = 官方四格（世界时钟 / 闹钟 / 秒表 / 计时器）
+   *   ＋ 本仓自有的「今天」一格（排最后，不打乱官方四格的相对位置）。
+   *   未实现的三格**画出来但禁用**（is-disabled + aria-disabled，点击走页面内提示条给真话），
+   *   不再像 v4.208.0 那样整格不画 —— 藏起来会被读成「这个 App 没有这些功能」，
+   *   静默会被读成「按钮坏了」，两种都不对（贴吧「消息」那轮确立的口径）。 */
+  _navCells() {
+    return [
+      { key: 'clock', label: '世界时钟' },
+      { key: 'alarm', label: '闹钟', disabled: true, why: '本机没有闹钟调度与唤醒链路' },
+      { key: 'stopwatch', label: '秒表', disabled: true, why: '本机没有秒表计时链路' },
+      { key: 'timer', label: '计时器', disabled: true, why: '本机没有倒计时链路' },
+      { key: 'today', label: '今天', own: true }
+    ];
+  }
   _switchTab(key) {
     const ok = this._tabs().some((t) => t.key === key);
     this._tab = ok ? key : 'today';
@@ -85,6 +99,8 @@ export class ClockView {
 
   refresh() {
     if (!this._root) return;
+    /* [v4.209.0] 整段重绘会把提示条节点冲掉，先收回计时器与悬挂引用，否则会留一颗「看不见但还在数」的定时器。 */
+    this._clearToast();
     this._root.innerHTML = this._buildHTML();
     this._bindEvents();
   }
@@ -168,32 +184,59 @@ export class ClockView {
     parts.push('<label class="cl-toggle"><input type="checkbox" id="cl-diag" ' + (this.app.settings.showDiagnostics ? 'checked' : '') + '><span>显示诊断</span></label>');
     parts.push('</div>');
 
-    /* [v4.208.0 · 照现实] 官方「时钟」还有『闹钟 / 秒表 / 计时器』三格：
-     *   本机没有闹钟调度面、也没有秒表与倒计时链路，画出来就是三个点了不发生的假键。
-     *   故**不画**，改为页脚一行如实说明 —— 藏起来会被读成「这个 App 没有这些功能」，
-     *   画出来又是假控件，两种都不对。 */
-    parts.push('<div class="cl-absent">官方「时钟」还有『闹钟 / 秒表 / 计时器』三格：'
-      + '本机没有闹钟调度、秒表与倒计时链路，画出来就是点了不发生的假键，故不画。</div>');
+    /* [v4.209.0 · 照官方那种] 官方「时钟」的『闹钟 / 秒表 / 计时器』三格**照位置画出来但禁用**
+     *   （底栏 is-disabled + aria-disabled，点了在页面内给一句真话）。本仓没有闹钟调度、
+     *   秒表与倒计时链路，所以它们不能切面；但藏起来会被读成「这个 App 没有这些功能」，
+     *   静默会被读成「按钮坏了」——都不对，故「画出来 + 当场说实话」是唯一不撒谎的形态。 */
+    parts.push('<div class="cl-absent">底栏照官方列了『闹钟 / 秒表 / 计时器』三格：'
+      + '本机没有闹钟调度、秒表与倒计时链路，故三格置灰不可切，点一下会告诉你这一格为什么还没做。</div>');
 
     parts.push('</div>');
     parts.push(this._tabbarHtml());
     return parts.join('\n');
   }
 
-  /* [v4.208.0 · 照现实] 底栏一级导航（结构与口音参照 iOS「时钟」的底部页签）。
-   *   只落**本仓真有的两格**：今天 / 时计 —— 两个真一级面，不凑格。
+  /* [v4.209.0 · 照官方那种] 底栏一级导航（结构与格位照 iOS「时钟」的底部页签）。
    *   判据来源写在这里，不靠记忆：Apple 官方支持两篇 ——
    *     ·「在 iPhone 上使用计时器或秒表」：「轻点『秒表』」；
    *     ·「在 iPhone 上的『时钟』中查看世界时间」：「前往『时钟』App。轻点『世界时钟』」。
-   *   即「时钟」的一级入口在**页面底部**的页签上，不是页头的小胶囊。 */
+   *   即「时钟」的一级入口在**页面底部**的页签上，不是页头的小胶囊。
+   *   格位：官方四格原样（世界时钟 / 闹钟 / 秒表 / 计时器）+ 本仓自有「今天」排最后。
+   *   未实现格**带 data-act 而不是 data-tab**：它不切面，只在页面内给一句真话。 */
   _tabbarHtml() {
-    const items = this._tabs().map((t) => {
+    const items = this._navCells().map((t) => {
+      if (t.disabled) {
+        return '<button type="button" class="cl-tabbar-item is-disabled"'
+          + ' data-act="cl-soon" data-what="' + this._esc(t.label) + '"'
+          + ' data-why="' + this._esc(t.why || '') + '"'
+          + ' aria-disabled="true" aria-current="false">'
+          + this._esc(t.label) + '</button>';
+      }
       const on = this._tab === t.key;
       return '<button type="button" class="cl-tabbar-item' + (on ? ' is-on' : '') + '"'
         + ' data-tab="' + t.key + '" aria-current="' + (on ? 'page' : 'false') + '">'
         + this._esc(t.label) + '</button>';
     }).join('');
     return '<nav class="cl-tabbar" role="navigation" aria-label="主导航">' + items + '</nav>';
+  }
+
+  /* 页面内提示条（不碰宿主 alert —— 那会卡住 SillyTavern 的消息流）。
+   *   生命周期：只保留一条，重复点击刷新文案并重置计时；重绘/切面时由 _clearToast 收掉。 */
+  _toast(msg) {
+    if (!this._root) return;
+    this._clearToast();
+    const bar = document.createElement('div');
+    bar.className = 'cl-toast';
+    bar.setAttribute('role', 'status');
+    bar.textContent = String(msg || '');
+    this._root.appendChild(bar);
+    this._toastEl = bar;
+    this._toastTimer = setTimeout(() => { this._clearToast(); }, 2600);
+  }
+  _clearToast() {
+    if (this._toastTimer) { clearTimeout(this._toastTimer); this._toastTimer = null; }
+    if (this._toastEl && this._toastEl.parentNode) this._toastEl.parentNode.removeChild(this._toastEl);
+    this._toastEl = null;
   }
 
   /* ════════ [v4.112.0 · R13-X1] 「今天」面板 ════════
@@ -291,6 +334,13 @@ export class ClockView {
         if (!t || !t.getAttribute) return;
         const tab = t.getAttribute('data-tab');
         if (tab) { this._switchTab(tab); this.refresh(); return; }
+        /* [v4.209.0] 未实现格：不切面、不静默，只给一句真话（页面内提示条，不碰宿主 alert）。 */
+        if (t.getAttribute('data-act') === 'cl-soon') {
+          const what = t.getAttribute('data-what') || '这一格';
+          const why = t.getAttribute('data-why') || '';
+          this._toast('「' + what + '」本机还没做' + (why ? '：' + why : '') + '。');
+          return;
+        }
         const appId = t.getAttribute('data-today-app');
         if (appId) {
           /* [v4.119.0 · R14-O3] 有靶心就投靶心（落到那一条），没靶心只开 App。

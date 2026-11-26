@@ -1,11 +1,11 @@
 {
   "schema": "browser-known-failures@1",
-  "note": "浏览器层存量红点冻结账本。门（scripts/browser-gate-run.mjs）只拦「本账本之外的新增 FAIL」；修好一条请把它改成 status=fixed（保留作回归证据链），确不修的写 wontfix 并说明理由。到期版本未清空则本门 exit 1 点名。",
+  "note": "浏览器层存量红点冻结账本。门（scripts/browser-gate-run.mjs）只拦「本账本之外的新增 FAIL」；修好一条请把它改成 status=fixed（保留作回归证据链），确不修的写 wontfix 并说明理由。到期版本未清空则本门 exit 1 点名。 追加说明（v4.209.0）：o2-longlist-10k 的两条此前不在账本里，是按「新增红点必须处置」的纪律当场登记的存量缺陷（已在 HEAD 复现，非本版引入），条目带 reason / since / verified_on_head 三个字段留证；账本 version 仍是冻结时的 4.100.0，不回写成 4.209.0 —— 因为本文件的 version 是「冻结发生的那一版」，不是「最后一次改文件的版本」。",
   "version": "4.100.0",
   "expires_at": "4.110.0",
-  "updated_at": "2026-10-31",
-  "total": 138,
-  "distinct": 138,
+  "updated_at": "2026-11-26",
+  "total": 140,
+  "distinct": 140,
   "scenes": {
     "o1-app-data-states.scen.js": [
       {
@@ -997,6 +997,28 @@
         "hits": 1,
         "status": "open",
         "excerpt": "Cannot read properties of null (reading 'querySelectorAll')"
+      }
+    ],
+    "o2-longlist-10k.scen.js": [
+      {
+        "viewport": "320x568",
+        "name": "o2-scroll-after-app-switch",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "before=8332 after=8400 delta=68（>2px 即位置没记住） heapBefore=38 heapAfter=38 nodesBefore=2251 nodesAfter=2206",
+        "reason": "存量红点，本版（v4.209.0）未引入：已在 HEAD 上用同一场景、同一视口复现完全相同的 delta（8332→8400，68px），本次六源抬版只改 clock 两件与台账文档，不碰微信渲染。归因范围：微信 v4.159.0 / v4.201.0 重写后窗口化渲染的条数变少（nodes 2251→2206），恢复值落在与原窗口不同的行边界上。修法指向 chat-view 的窗口重算，留给 v4.210.0，不在时计发布里夹带。",
+        "since": "unknown(<=4.159.0)",
+        "verified_on_head": true
+      },
+      {
+        "viewport": "768x1024",
+        "name": "o2-scroll-after-app-switch",
+        "hits": 1,
+        "status": "open",
+        "excerpt": "before=5805 after=5869 delta=64（>2px 即位置没记住） heapBefore=40 heapAfter=40 nodesBefore=2251 nodesAfter=2206",
+        "reason": "存量红点，本版（v4.209.0）未引入：已在 HEAD 上用同一场景、同一视口复现完全相同的 delta（8332→8400，68px），本次六源抬版只改 clock 两件与台账文档，不碰微信渲染。归因范围：微信 v4.159.0 / v4.201.0 重写后窗口化渲染的条数变少（nodes 2251→2206），恢复值落在与原窗口不同的行边界上。修法指向 chat-view 的窗口重算，留给 v4.210.0，不在时计发布里夹带。",
+        "since": "unknown(<=4.159.0)",
+        "verified_on_head": true
       }
     ]
   },

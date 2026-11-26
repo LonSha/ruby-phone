@@ -476,7 +476,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.208.0';
+const ST_PHONE_VERSION = '4.209.0';
 const ST_PHONE_CSS_REVISION = '20261124-style-layer-single-source';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -722,18 +722,21 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-11-25",
+    date: "2026-11-26",
     items: [
-        "1. 时计按现实收口为底栏一级导航。判据两条 Apple 官方支持原文（不是记忆、不靠猜）：①「在 iPhone 上使用计时器或秒表」——「轻点『秒表』」；②「在 iPhone 上的『时钟』中查看世界时间」——「前往『时钟』App。轻点『世界时钟』」。两篇合起来说明：一级入口在**页面底部的页签**上，不是页头的一排小胶囊（旧实现正是页头胶囊）。",
-        "2. 只落**两格**：今天 / 时计 —— 本仓真有的两个一级面。官方还有『闹钟 / 秒表 / 计时器』三格：本机没有闹钟调度面、也没有秒表与倒计时链路，画出来就是三个点了不发生的假键，故**不画**，改为时计面页脚一行如实说明（.cl-absent，验收里 absent-note-is-honest 钉住「说了是假键才不画」这件事）。",
-        "3. 三层外壳收口（与 LOFTER / Pixiv / 贴吧 同一套口径）：外层 .cl-root.cl-app（满屏纵向 flex、overflow:hidden、padding 归零）→ 滚动层 .cl-scroll（flex 1 1 auto + **min-height:0**，承接原内边距）→ 底栏 .cl-tabbar（flex-shrink:0 贴底，**不用 position:fixed**）。min-height:0 是必需项：缺它 flex 子项不收缩，底栏会被内容顶出可视区。",
-        "4. 底栏格数是真功能面的函数，不是装饰：两格都对应 _tabs() 里真有的面，点击走既有容器级委托（data-tab 在 _bindEvents 的委托里已接好，逐按钮挂监听会在每次重绘后失效 —— 本仓治过同款）。",
-        "5. 样式走独立皮肤表 apps/clock/clock.v4.css，由 phone/design/rp-entry.css 的 @import 投递（贴吧 / B 站两轮已确立的形态）。本轮**未改 phone.css**，故不牵动三级镜像（apps/*.css → phone.css 同源段 → legacy 生成物），也不存在段边界截断风险。",
-        "6. v3 皮肤同步：皮肤原先把 padding + min-block-size:100% 写在 .cl-root 上（老福特 / 淘宝 / Pixiv 都踩过「底栏被撑出可视区」），本版在 clock.v4.css 里把外壳归零、内边距搬到滚动层，并在 [data-rp-ios=\"3\"] 下单独给了底栏配色。",
-        "7. 新增浏览器验收场景 tests/browser/scenarios/o8-clock-bottomnav.scen.js（14 条读数，真 Chromium 131.0.6778.33）。关键读数：nav-flush-to-shell-bottom delta=0；nav-thumb-height offsetH=44（≥44 下限）；nav-item-count=2 且文案为「今天/时计」；nav-current-highlight aria-current=page；switch-to-clock-face 真切面且第二格变 page；no-fake-nav-cells 底栏只有两个 data-tab 且都属于 _tabs()；shell-three-layers-add-up scroll 611 + nav 44 == shell 655（±2 内）——「底栏没有被内容顶出可视区」有机器读数；back-to-today-keeps-nav 切回后仍贴底；same-shell-reused 外壳与底栏各只有一份。",
-        "8. 三档视口 320x640 / 390x844 / 768x1024 全绿（14 ok / 0 fail ×3）。",
-        "9. 【验证边界如实交代】① 未在真 SillyTavern 宿主里开手机取证，底栏观感仍需真机刷新确认；② v3 皮肤档位只做了 CSS 口径同步，**未单独开 v3 皮肤取证**；③ phone.css 内旧的 .cl-tabs / .cl-tab 规则仍在（那套是旧页头胶囊），两套类名不同、v4 底栏不命中旧规则，属已知不动的存量。",
-        "【版本升至 4.208.0（五源同源）】六源同源：manifest.json / package.json / index.js 的 ST_PHONE_VERSION / update-log.json 的 latest 与 head / tests/audit/status-ledger.json 的 version。"
+        "1. 口径变更（用户裁决）：v4.208.0 走的是「官方三格不画、只落两格」，本版改为**照官方那种**——官方四格（世界时钟 / 闹钟 / 秒表 / 计时器）**照位置画全**，本机没有能力的三格**画出来但禁用**，点一下在页面内给一句真话。理由写在这里：藏起来会被读成「这个 App 没有这些功能」，画成静默不响的键会被读成「按钮坏了」；位置与文案照官方 + 能力如实标禁用 + 点击给真话，三者同时成立才不算假控件。这条口径此后作为各 App 的默认判据，不再逐次请示。",
+        "2. 底栏格表与面表分开：_navCells() 列五格（世界时钟 / 闹钟 / 秒表 / 计时器 / 今天），_tabs() 仍只列**真能切的两个面**（今天 / 时计）。两个概念必须分开写，否则「格数」会被误当成「面数」，双向对账就成了一句空话。官方四格的相对顺序不得被自有面打乱，「今天」排最后。",
+        "3. 禁用三格的结构：is-disabled + aria-disabled=true + data-act=cl-soon + data-what/data-why，**不带 data-tab**。不带 data-tab 是硬的：带上了就会走 data-tab 分支去切一个不存在的面，等于把「没做」实现成「切了但白屏」。",
+        "4. 点击给真话：新增页面内提示条 _toast()，挂在 .cl-app 上（position:absolute，不用 fixed——手机外壳对整屏做过约 0.9 的 scale，fixed 会飘到外壳外），2.6 秒自收，role=status。**明确不用宿主 alert**（alert 会卡住 SillyTavern 的消息流）。refresh() 开头先 _clearToast()：整段重绘会冲掉节点，不清就会留一颗「看不见但还在数」的定时器。",
+        "5. 【本版自己抓到的缺陷：v4.208.0 的「三档全绿」是假绿】实测底栏格根本没吃到本 App 的样式，一直在用 UA 默认值：opacity=1（置灰消失）、padding=0、color:rgb(0,0,0)、min-height:44px。而 v4.208.0 的判据 nav-thumb-height ≥44 恰好被 UA 的 44 满足、nav-flush delta=0 恰好被 UA 的按钮排布满足 ⇒ 全绿。诊断证据链：getComputedStyle 三格 opacity=1,1,1 → 注入 !important 样式能生效（说明层叠正常，不是选择器写错）→ 遍历 CSSOM 确认 clock.v4.css 的 16 条规则都在表里 → 反查 rp-entry.css 才发现 all: revert-layer。",
+        "6. 坑①（按钮）：phone/design/rp-entry.css:65 有 :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root)在 data-rp-ds=2 时 :is(button, input, select, textarea, a, label, hr, code, #rp-scope-anchor) { all: revert-layer; }。本仓底栏格是 <button>，若 App 样式表是「无层」的，这些规则与那条重置同层竞争 ⇒ 全部被回滚成 UA 默认。修法：按钮规则进 @layer rp.apps（贴吧 tieba.v4.css:18 / B 站 bilibili.v4.css:27 同形态）。修后实测 opacity=0.38,0.38,0.38、padding=8px 4px 全部回来。",
+        "7. 坑②（容器）：把容器规则一起塞进 @layer rp.apps 会立刻踩第二个坑——层序是 reset < tokens < legacy < base < components < apps < skins < themes < user，而 clock.v3.css 在 rp.skins 层给 .cl-root 写了 padding:8px 16px 32px。层序**先于**特异性，所以 apps 层里的 .cl-root.cl-app 怎么写都输，底栏被 32px 的 padding-bottom 顶离外壳底（实测 navBottom=713 / shellBottom=742，差 29px）。修法：容器规则（.cl-root.cl-app / .cl-scroll / .cl-tabbar / .cl-absent）留在**无层**（无层优先于所有层），v3 下的按钮修正放进 @layer rp.skins 同层抢特异性。两条坑互为反向：修好一个立刻弄坏另一个，所以必须成对守。",
+        "8. 静态门由 A1~A7 扩到 A1~A10：新增 A8（格面双向对账：官方四格一个不少、多出来的只能是本仓自有面、官方顺序不得被打乱、自有面排最后）、A9（不许用宿主 alert，必须有 _toast 与 _clearToast）、A10（分层位次：按钮进 rp.apps、容器留无层、v3 按钮修正进 rp.skins；并带「前提变了」断言——rp-entry.css 里若不再有 all: revert-layer，A10 的前提要重估）。10/10 绿。",
+        "9. 交棒改写的下限形纪律（本版自查三条）：① 静态门与浏览器场景一律不把版本号写死 —— A1~A10 里没有任何 4.209.0 字面量，判据按形态判；② 修工具缺陷时选择主动改写而不是绕过 —— ST_PHONE_CURRENT_UPDATE 的同步自检从「抽出来再 JSON.parse」改成逐字 includes 比对，因为原来的写法会被条目里的英文引号搞坏转义层级（自检脚本自己的缺陷也要修，不能用它报错来顶替真判据）；③ 抬版后回跑历史版本锚套件，确认不因抬版假红 —— 本轮正是靠这一步抓到两个自己造成的假红（收尾条多了编号前缀、形态锚被写成六源同源），修完才敢提交。",
+        "10. 浏览器场景重写为 21 条读数（真 Chromium 131.0.6778.33，真盒模型 + 真点击 + 真计算样式）：nav-flush-to-shell-bottom delta=0、nav-thumb-height 44、五格文案与顺序、official-four-in-order（世界时钟/闹钟/秒表/计时器）、own-cell-last（今天）、disabled-count=3、disabled-look opacity 0.38×3、disabled-has-no-datatab、disabled-click-says-truth（「闹钟」本机还没做：本机没有闹钟调度与唤醒链路。）、disabled-click-does-not-switch（today→today）、toast-single-instance、switch-to-clock-face、absent-note-is-honest（文案含「闹钟」与「置灰」）、toast-cleared-after-refresh（重绘后 0 个提示条）、shell-three-layers-add-up（scroll 611 + nav 44 == shell 655）、back-to-today-keeps-nav、same-shell-reused。",
+        "11. 三档视口 320x640 / 390x844 / 768x1024 全绿（21 ok / 0 fail ×3）。",
+        "12. 【运行时验证边界如实交代】① 仍未在真 SillyTavern 宿主里开手机取证，底栏观感需真机刷新确认；② 本轮浏览器环境的宿主属性是 data-rp-ios=3 + data-rp-ds=2 + data-rp-refresh=4（即 v3 皮肤开着、新设计系统重置开着），与历史各 App 回归同环境；v4.208.0 当时「v3 档未单独取证」，本轮两类规则（容器 / 按钮）都是在这个 v3 开着的档位下验过的，覆盖度高于上一版；③ phone.css 里旧的 .cl-tabs / .cl-tab（页头胶囊）仍在，类名不同、v4 底栏不命中，属已知不动的存量。 一句话版本（与边界文档同源）：本仓能保证的是机制面与读数面；真机上的视觉排版、真实网络往返、宿主存储迁移与渲染帧耗时不能保证 —— 遇到「看起来没坏但显示不对」的问题，属于需真机复现后再修的那一类。",
+        "【版本升至 4.209.0（五源同源）】六源：manifest.json / package.json / index.js 的 ST_PHONE_VERSION / update-log.json 的 latest 与 head / tests/audit/status-ledger.json 的 version；ST_PHONE_CURRENT_UPDATE 由脚本从 update-log.json 逐字重写并自检。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

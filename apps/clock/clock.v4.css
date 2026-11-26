@@ -16,6 +16,39 @@
  *   一处漏同步就被 G2/B1 判红，而本版只该改时计这一件事。
  * ============================================================ */
 
+/* ---------- [v4.209.0 修] 整个文件必须包进 @layer rp.apps ----------
+ * 原因（本轮实测踩到，写在这里防止再犯）：
+ *   phone/design/rp-entry.css:65 有一条
+ *     :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root)[data-rp-ds="2"]
+ *       :is(button, input, select, textarea, a, label, hr, code, #rp-scope-anchor) { all: revert-layer; }
+ *   它把**按钮等元素的全部声明回滚到上一层**。本 App 的底栏格是 <button>，
+ *   若本文件是「无层」的，这些规则与那条重置规则同层竞争 ⇒ 全部失效，
+ *   元素落回 UA 默认（color:#000 / padding:0 / min-height:44px / opacity:1）。
+ *   贴吧 tieba.v4.css:18 与 B 站 bilibili.v4.css:27 都是 `@layer rp.apps {` 包全文，
+ *   本文件此前漏了，于是 v4.208.0 的「全绿」是判据太松造成的假绿（nav ≥44 被 UA 的 44 满足）。
+ * ------------------------------------------------------------------ */
+/* ---------- 分层策略（v4.209.0 实测修，写在这里不靠记忆） ----------
+ * 本文件分两种写法，**上线前必须先搞清打断点在哪**：
+ *
+ * ① 容器规则（.cl-root.cl-app / .cl-scroll / .cl-tabbar / .cl-absent）→ **无层**。
+ *    原因：v3 皮肤（apps/clock/clock.v3.css，rp.skins 层）在 `#phone-panel[data-rp-ios="3"]`
+ *    下给 .cl-root 写了 padding: 8px 16px 32px 与 min-block-size:100%（= --rp33-sp-2/-margin/-sp-8）。
+ *    层序是 reset < tokens < legacy < base < components < apps < skins < themes < user，
+ *    所以「apps 层里的规则」永远输给「skins 层里的 v3 皮肤」。把容器规则放进 apps 层，
+ *    实测底栏就被 32px 的 padding-bottom 顶离外壳底 29px（822 实测 navBottom=713 / shellBottom=742）。
+ *    无层规则优先于所有层，因此容器必须留在无层区 —— 这是能压过皮肤的唯一位次。
+ *
+ * ② 按钮规则（.cl-tabbar-item 系列）→ 必须包进 @layer rp.apps。
+ *    原因：phone/design/rp-entry.css:65 有一条
+ *      :is(#phone-panel, #phone-floating-entry-root, #phone-sms-popup-root)[data-rp-ds="2"]
+ *        :is(button, input, select, textarea, a, label, hr, code, #rp-scope-anchor) { all: revert-layer; }
+ *    它把按钮的全部声明回滚到「上一层」。底栏格是 <button>，放在无层区时与它同层竞争 ⇒
+ *    全部失效，落回 UA 默认（opacity:1 / padding:0 / color:#000），v4.209.0 首跑就是这样
+ *    「opacity=1,1,1」的。放进 rp.apps 层后，revert-layer 回退到 apps 层的值 ⇒ 生效。
+ *    贴吧 tieba.v4.css:18 / B 站 bilibili.v4.css:27 同样是 @layer rp.apps 包全文；
+ *    本 App 因为**是唯一有 v3 皮肤同时又要改容器 padding 的**，才需要这种「容器无层 + 按钮入层」的拆法。
+ * ------------------------------------------------------------------ */
+
 /* ---------- 三层外壳：外壳只做满屏纵向 flex，滚动落内容层，底栏贴底 ---------- */
 .cl-root.cl-app {
   padding: 0;
@@ -26,6 +59,7 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  position: relative;         /* v4.209.0：提示条以它为定位锚，不用 position:fixed */
 }
 
 .cl-app .cl-scroll {
@@ -54,6 +88,9 @@
   backdrop-filter: blur(10px);
 }
 
+/* ---------- 按钮规则开始入层（理由见上文 ②）：躲开 all: revert-layer ---------- */
+@layer rp.apps {
+
 .cl-app .cl-tabbar-item {
   flex: 1 1 0;
   min-height: 48px;           /* 拇指热区下限，与既有两个已收口 App 同口径 */
@@ -69,6 +106,12 @@
 }
 
 .cl-app .cl-tabbar-item.is-on { color: #dbeafe; font-weight: 600; }
+.cl-app .cl-tabbar-item.is-disabled {
+  /* [v4.209.0] 照官方的「画出来但禁用」：看得出不能点，但仍在原位、仍有文案。 */
+  opacity: .38;
+  cursor: default;
+}
+.cl-app .cl-tabbar-item.is-disabled:active { transform: none; }
 .cl-app .cl-tabbar-item.is-on::after {
   content: '';
   display: block;
@@ -79,6 +122,8 @@
   background: #60a5fa;
 }
 
+} /* @layer rp.apps —— 按钮规则到此为止 */
+
 /* 「官方有、本机没有」的如实说明（页脚一行，不伪装成控件）。 */
 .cl-absent {
   font-size: 12px;
@@ -87,6 +132,27 @@
   padding: 8px 10px;
   border-radius: 8px;
   background: rgba(148, 163, 184, .10);
+}
+
+/* [v4.209.0] 页面内提示条：绝对定位挂在 .cl-app 上（cl-app 已有 position:relative），
+ *   不用 position:fixed —— 手机外壳对整屏做过约 0.9 的 scale，fixed 会飘到外壳外。 */
+.cl-toast {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 60px;
+  max-width: calc(100% - 32px);
+  box-sizing: border-box;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .94);
+  border: 1px solid rgba(148, 163, 184, .28);
+  color: #e2e8f0;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  z-index: 3;
+  pointer-events: none;
 }
 
 /* ---------- v3 皮肤同步 ----------
@@ -106,6 +172,11 @@
   background: var(--rp33-bg);
   border-top: 0.5px solid var(--rp33-sep);
 }
+/* v3 皮肤下的按钮修正：必须放进 rp.skins —— 与皮肤同层才可能靠特异性赢过
+ * clock.v3.css 里的 `#phone-panel[data-rp-ios="3"] .cl-tabbar-item { min-block-size: var(--rp33-hit) }`。
+ * 放在 rp.apps 层里的话，层序先于特异性，怎么写都输。 */
+@layer rp.skins {
+
 #phone-panel[data-rp-ios="3"] .cl-app .cl-tabbar-item {
   min-block-size: var(--rp33-hit);
   color: var(--rp33-label-2);
@@ -118,3 +189,5 @@
 #phone-panel[data-rp-ios="3"] .cl-app .cl-tabbar-item.is-on::after {
   background: var(--rp33-accent);
 }
+
+} /* @layer rp.skins */
