@@ -1,0 +1,73 @@
+/* ============================================================
+   apps/honey/honey.v4.css — 蜜语「照现实」v4.215.0：底栏四格外壳
+   ------------------------------------------------------------
+   作用域：.honey-app（本 App 自己的根容器），**不挂 v4 开关** ——
+     由 phone/design/rp-entry.css 的 @import 投递（registry 门机制 C）。
+   四格（推荐 / 直播 / 关注 / 我的）来自 view 的 HN_FACES 单一真源；
+   底栏在内容层之后、进正常流，滚动区自己吃掉剩余高度。
+
+   【分层策略（同 xhs/bilibili/clock）】
+     · 容器规则（.honey-app / .honey-content / .honey-bottomnav）→ 无层；
+       honey.v3.css 在 rp.skins 层给 .honey-app 写了底色，层序 apps < skins，
+       容器放层内会被 v3 皮肤压掉；无层规则优先于所有层。
+     · 按钮规则（.honey-tab）→ 必须包进 @layer rp.apps：宿主 [data-rp-ds=2]
+       对 button 施加 all: revert-layer，无层按钮声明会被整段回滚成 UA 默认
+       （底栏置灰 / padding 0 的假绿形态）。
+   纪律：不用 position:fixed（底栏进正常流，固定定位会跑到手机壳外）；
+     滚动层 min-height:0（父是 flex 列时不写就压不下去）；
+     热区下限 min-height:48px / min-width:44px（写在 CSS 不靠内联）。
+   ============================================================ */
+.honey-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.honey-app > .honey-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.honey-app > .honey-bottomnav {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  min-height: 48px;
+  border-top: 0.5px solid var(--rp-sep, rgba(0, 0, 0, 0.12));
+  background: var(--rp-bg, #fff);
+  box-sizing: border-box;
+}
+@layer rp.apps {
+  .honey-app > .honey-bottomnav > .honey-tab {
+    flex: 1 1 0;
+    min-height: 48px;
+    min-width: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    color: var(--rp-fg-muted, #8a8792);
+    font: 500 11px/1.2 var(--rp-font, system-ui);
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+  .honey-app > .honey-bottomnav > .honey-tab i {
+    font-size: 20px;
+    line-height: 20px;
+  }
+  .honey-app > .honey-bottomnav > .honey-tab.active,
+  .honey-app > .honey-bottomnav > .honey-tab[aria-current="page"] {
+    color: var(--rp-accent, #ff4785);
+  }
+  .honey-app > .honey-bottomnav > .honey-tab:active {
+    opacity: 0.7;
+  }
+}

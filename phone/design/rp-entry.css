@@ -58,6 +58,7 @@
 @import url("../../apps/worldpulse/worldpulse.v4.css"); /* [v4.213.0] 世界脉搏·照现实：作用域 .wp-app（底栏三分区：动态 / 世界桥 / 设置） */
 @import url("../../apps/plotline/plotline.v4.css");     /* [v4.214.0] 剧情线·照现实：作用域 .pn-app（底栏四格：故事 / 欠账 / 世界 / 工具） */
 @import url("../../apps/place/place.v4.css");           /* [v4.215.0] 地点图景·照客户形态：作用域 .pl-root，四格（这里/在场/去哪/更多） */
+@import url("../../apps/honey/honey.v4.css");           /* [v4.215.0] 蜜语·照现实：作用域 .honey-app，底栏四格（推荐/直播/关注/我的） */
 
 
 /* ---------- 宿主护盾（未分层，必须在层外） ----------

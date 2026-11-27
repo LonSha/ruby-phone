@@ -13,11 +13,30 @@ import { childRuntime } from '../../config/runtime-lifecycle.js';
 import { numOrNull } from '../../config/num-gate.js';
 /* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。本件空态最多（36 处），分形落在四处用户会停下来的地方：关注列表 / Tag 历史 / 视频池 / 已通过好友。 */
 import { FACE_ATTR } from '../../config/empty-face.js';
+/* ============================================================
+ * [v4.215.0 · 照现实] 蜜语底栏四格单一真源
+ * ------------------------------------------------------------
+ * 旧版四格 tab（推荐 / 直播 / 关注 / 私密）在五个页面里各抄一份，
+ * 位置在顶部、且「读不到」没有单独归因。本版把四格提升为唯一真源 HN_FACES：
+ *   · 底栏由它渲染，标题跟着当前格走；
+ *   · 每一格都先说「这一格读不读得到」（归因卡进外壳），
+ *     否则「直播读不到 / 关注没通过 / 私密没数据」会长成同一张「空的」脸。
+ * 现有 currentPage 分派（recommend/live/follow/mine 与子页 history/settings）
+ * 与 tab 点击绑定（#honey-tab-*）原样保留 —— 改造只在外壳层，不碰 9490 行业务。
+ * ============================================================ */
+export const HN_FACES = Object.freeze([
+    { key: 'recommend', label: '推荐', icon: 'fa-fire',      page: 'recommend' },
+    { key: 'live',      label: '直播', icon: 'fa-tower-broadcast', page: 'live' },
+    { key: 'follow',    label: '关注', icon: 'fa-user-group', page: 'follow' },
+    { key: 'mine',      label: '我的', icon: 'fa-user-lock',  page: 'mine' }
+]);
+
 export class HoneyView {
     constructor(app) {
         this.app = app;
         this._rt = childRuntime('honey-view');
         this.currentPage = 'recommend';
+        this._hnFace = 'recommend'; // [v4.215.0] 底栏当前格（单一真源 HN_FACES 的 key）
         this.currentSceneData = null;
         this.selectedTopic = null;
         this.giftOptions = [
@@ -341,6 +360,27 @@ export class HoneyView {
         document.head.appendChild(linkEl);
     }
 
+    /* ===== [v4.215.0 · 照现实] 底栏（从 HN_FACES 单一真源渲染） =====
+     * 四个 tab 原先在五个页面模板里各抄一份（顶部 div），现统一由本方法生成：
+     *   · 保留原 id="honey-tab-*" 与 class="honey-tab" —— 现有 bindXXXEvents 的点击绑定原样命中；
+     *   · 升级为 <button> + data-hn-face + aria-current（读屏与判据都认）；
+     *   · 当前格由参数（各页面模板写死的那格）决定，并同步 this._hnFace。
+     * 四格都有真实现（推荐/直播/关注/我的），故没有禁用格 —— 不画装样子的按钮。
+     */
+    _bottomNavHtml(active) {
+        this._hnFace = active;
+        const cells = HN_FACES.map((f) => {
+            const on = f.key === active;
+            return '<button type="button" class="honey-tab' + (on ? ' active' : '') + '"'
+                + ' id="honey-tab-' + f.key + '" data-hn-face="' + f.key + '"'
+                + ' role="tab" aria-current="' + (on ? 'page' : 'false') + '"'
+                + ' aria-selected="' + (on ? 'true' : 'false') + '">'
+                + '<i class="fa-solid ' + f.icon + '"></i><span>' + this._escapeHtml(f.label) + '</span>'
+                + '</button>';
+        }).join('');
+        return '<nav class="honey-bottomnav" role="navigation" aria-label="主导航">' + cells + '</nav>';
+    }
+
     render() {
         this._cleanupTransient();
         this._syncSessionState();
@@ -544,13 +584,6 @@ export class HoneyView {
                     </div>
                 </div>
 
-                <div class="honey-tabs">
-                    <div class="honey-tab active" id="honey-tab-recommend">推荐</div>
-                    <div class="honey-tab" id="honey-tab-live">直播</div>
-                    <div class="honey-tab" id="honey-tab-follow">关注</div>
-                    <div class="honey-tab" id="honey-tab-mine">私密</div>
-                </div>
-
                 <div class="honey-content">
                     <div class="honey-recommend-wrap">
                         <div class="honey-pull-refresh-indicator" id="honey-pull-refresh-indicator">
@@ -561,6 +594,8 @@ export class HoneyView {
                         </div>
                     </div>
                 </div>
+
+                ${this._bottomNavHtml('recommend')}
             </div>
         `;
 
@@ -1531,13 +1566,6 @@ export class HoneyView {
                     </div>
                 </div>
 
-                <div class="honey-tabs">
-                    <div class="honey-tab" id="honey-tab-recommend">推荐</div>
-                    <div class="honey-tab active" id="honey-tab-live">直播</div>
-                    <div class="honey-tab" id="honey-tab-follow">关注</div>
-                    <div class="honey-tab" id="honey-tab-mine">私密</div>
-                </div>
-
                 <div class="honey-content">
                     <div class="honey-nai-placeholder ${hasGeneratedMedia ? 'has-generated-image' : ''}" style="${liveVideoUrl ? 'background: #000;' : ''}">
                         ${generatedImageHtml}
@@ -1593,6 +1621,8 @@ export class HoneyView {
                         ${giftPickerHtml}
                     </div>
                 </div>
+
+                ${this._bottomNavHtml('live')}
 
                 ${this.isScenePanelOpen ? `
                 <div class="honey-scene-modal" id="honey-scene-modal">
@@ -2862,18 +2892,13 @@ export class HoneyView {
                     <button class="honey-icon-btn" id="honey-settings-btn" title="蜜语设置"><i class="fa-solid fa-gear"></i></button>
                 </div>
 
-                <div class="honey-tabs">
-                    <div class="honey-tab" id="honey-tab-recommend">推荐</div>
-                    <div class="honey-tab" id="honey-tab-live">直播</div>
-                    <div class="honey-tab active" id="honey-tab-follow">关注</div>
-                    <div class="honey-tab" id="honey-tab-mine">私密</div>
-                </div>
-
                 <div class="honey-content">
                     <div class="honey-recommend-wrap">
                         <div class="honey-follow-list">${listHtml}</div>
                     </div>
                 </div>
+
+                ${this._bottomNavHtml('follow')}
                 <div class="honey-follow-video-modal" id="honey-follow-video-modal" aria-hidden="true">
                     <div class="honey-follow-video-modal-backdrop" data-action="close-follow-video-modal"></div>
                     <div class="honey-follow-video-modal-panel">
@@ -3111,13 +3136,6 @@ export class HoneyView {
                     <button class="honey-icon-btn" id="honey-settings-btn" title="蜜语设置"><i class="fa-solid fa-gear"></i></button>
                 </div>
 
-                <div class="honey-tabs">
-                    <div class="honey-tab" id="honey-tab-recommend">推荐</div>
-                    <div class="honey-tab" id="honey-tab-live">直播</div>
-                    <div class="honey-tab" id="honey-tab-follow">关注</div>
-                    <div class="honey-tab active" id="honey-tab-mine">私密</div>
-                </div>
-
                 <div class="honey-content">
                     <div class="honey-follow-list honey-mine-list">
                         <div class="honey-settings-card honey-mine-account-card">
@@ -3168,6 +3186,8 @@ export class HoneyView {
                         </div>
                     </div>
                 </div>
+
+                ${this._bottomNavHtml('mine')}
                 ${this._buildLiveVisibilityModalHtml()}
             </div>
         `;
