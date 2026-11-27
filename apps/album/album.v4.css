@@ -1,0 +1,132 @@
+/* ============================================================
+   album.v4.css — 相册·照现实（iPhone 照片）底栏三格外壳
+   ------------------------------------------------------------
+   作用域：.album-app（本 App 的样式表，不挂全机刷新开关）
+   层：@layer rp.apps —— 按钮规则必须在层内。理由（v4.208.0 实测踩到，
+     写在手机壳 rp-entry.css 里）：宿主在 data-rp-ds=2 时会
+     `:is(button, …) { all: revert-layer; }`，App 样式若是「无层」的，
+     底栏按钮会被整段回滚成 UA 默认（置灰、padding 0、高度 44 假绿）。
+   纪律：
+     · 不用 position: fixed（底栏进正常流，排在内容层之后；宿主滚动容器里
+       fixed 会跑到手机壳外面去）；
+     · 滚动层自己写 min-height: 0（父是 flex 列时，不写就压不下去 ——
+       老福特 / 淘宝 / Pixiv 都踩过「底栏被挤出可视区」）；
+     · 热区下限写在 CSS 里（.alb-nav-btn min-height 48），不靠内联样式。
+   ============================================================ */
+@layer rp.apps {
+  /* ---------- 外壳：三行布局＝顶栏 / 内容（可滚） / 底栏 ---------- */
+  .album-app.album-wallpaper-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    box-sizing: border-box;
+  }
+  .album-app .album-header {
+    flex: 0 0 auto;
+  }
+  .album-app .album-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+  }
+
+  /* ---------- 底栏：三格等分，48 热区，不压内容 ---------- */
+  .album-app .alb-nav {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: stretch;
+    gap: 0;
+    box-sizing: border-box;
+    padding: 2px 0 calc(2px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(20, 20, 22, 0.86);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+  .album-app .alb-nav-btn {
+    min-height: 48px;
+    min-width: 44px;
+    padding: 6px 4px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #8a8f98;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .album-app .alb-nav-btn .alb-nav-icon {
+    font-size: 17px;
+    line-height: 1;
+  }
+  .album-app .alb-nav-btn .alb-nav-label {
+    font-size: 10px;
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+  }
+  .album-app .alb-nav-btn.is-active {
+    color: #0a84ff;
+    background: rgba(10, 132, 255, 0.10);
+  }
+  .album-app .alb-nav-btn:focus-visible {
+    outline: 2px solid #0a84ff;
+    outline-offset: -2px;
+  }
+
+  /* ---------- 搜索面 ---------- */
+  .album-app .alb-search {
+    padding: 10px 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .album-app .alb-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .album-app .alb-search-icon {
+    font-size: 13px;
+    color: #8a8f98;
+    flex: 0 0 auto;
+  }
+  .album-app .alb-search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 28px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 14px;
+    outline: none;
+  }
+  .album-app .alb-search-meta {
+    font-size: 11px;
+    color: #8a8f98;
+    line-height: 1.5;
+  }
+  .album-app .alb-search-empty {
+    padding: 16px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 12px;
+    line-height: 1.6;
+    color: #9aa1ab;
+  }
+  .album-app .alb-search-grid {
+    margin-top: 2px;
+  }
+}

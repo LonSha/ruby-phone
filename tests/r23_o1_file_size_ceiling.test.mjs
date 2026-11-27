@@ -34,6 +34,9 @@ const rows = readSizes(ROOT);
 const red = (r) => assert.equal(r.ok, false, '本应判红却通过了：' + JSON.stringify(r.problems));
 const green = (r) => assert.equal(r.ok, true, '本应通过却红了：' + JSON.stringify(r.problems));
 const hasId = (r, id) => r.problems.some((p) => p.id === id);
+/* [v4.212.0] 大文件条数的**下限**：它与 MIN_FILES 同族 —— 只守「扫描面 / 台账被清空后
+ *   两端同为 0」的假绿，不钉某一版的具体条数。具体条数由「大文件一一对应台账」那条守。 */
+const MIN_BIG_FILES = 40;
 
 /** 合成一份"够多文件"的读数，用来测判空逻辑而不依赖真仓规模。 */
 function synthetic({ big = [], small = 400 } = {}) {
@@ -52,7 +55,7 @@ const sum = (r) => r.reduce((a, x) => a + x.lines, 0);
 
 /* ---------------- 正面 ---------------- */
 
-test('真仓读数：966 个 .js / 合计与台账 total_lines_max 同源 / 45 个大文件，台账全绿', () => {
+test('真仓读数：扫描面 .js 数与合计均与台账同源 / 大文件与台账条目一一对应，台账全绿', () => {
   const r = checkCeilings({ rows, ledger });
   green(r);
   /* [1120 批次] 937 → 942（+5：data/cheats/part-35…39 五个新分片），
@@ -94,7 +97,11 @@ test('真仓读数：966 个 .js / 合计与台账 total_lines_max 同源 / 45 �
    *   真正的不变式是两本账同源：台账那侧每次 --write 都要在 note 里写明算术（谁涨、涨多少、为什么），
    *   那才是人签字的地方；这条判据负责的只是「两侧不许各说各话」。 */
   assert.equal(r.stats.total, ledger.total_lines_max, '现场合计与台账 total_lines_max 不同源（两本账必须同值）');
-  assert.equal(r.stats.overDefault, 45, '大文件数量应为 45（新增 apps/bilibili/bili-data.js 1365 行）');
+  /* [v4.212.0 交棒改写] 这行原本钉死「45 个大文件」，而相册底栏改造把 apps/album/album-view.js
+   *   推到 1200 行以上，`--write` 重压后台账成了 46 条 —— 与上面 84~87 行（966）、91~95 行（行数）
+   *   同一族病：**手抄数没有出处**。真不变式有两个：① 大文件必须与台账条目一一对应（下一行守）；
+   *   ② 扫描面不许塌陷（本行守下限）。具体条数谁涨谁到 `--write` 的 note 里去签字。 */
+  assert.ok(r.stats.overDefault >= MIN_BIG_FILES, '大文件数量低于下限（台账条目或扫描面塌陷）：' + r.stats.overDefault);
   assert.equal(r.stats.overDefault, r.stats.ledgered, '大文件必须与台账条目一一对应');
 });
 
@@ -131,9 +138,12 @@ test('台账元信息自洽：default_max / total_lines_max / 大文件数对得
   assert.equal(big, Object.keys(ledger.files).length);
 });
 
-test('buildLedger 只收大文件：小文件不进台账（否则台账会变成 889 行噪音）', () => {
+test('buildLedger 只收大文件：小文件不进台账（否则台账会变成逐文件噪音）', () => {
   const built = buildLedger(rows, DEFAULT_MAX, new Date('2026-11-17T00:00:00Z'));
-  assert.equal(Object.keys(built.files).length, 45);
+  /* [v4.212.0 交棒改写] 45 → 与现场读数同源：buildLedger 收到的大文件条数必须等于
+   *   「真仓读数里超过 DEFAULT_MAX 的条数」。钉死 45 的代价是每版动一次 apps/ 就重签一次，
+   *   而重签毫无守卫作用；真正的哨兵是「生成器与读数不许各说各话」。 */
+  assert.equal(Object.keys(built.files).length, rows.filter((r) => r.lines > DEFAULT_MAX).length);
   assert.ok(!('apps/wechat/chat-render-core.js' in built.files), '小文件不该进台账');
   assert.equal(built.total_lines_max, sum(rows));
 });

@@ -476,8 +476,8 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.211.0';
-const ST_PHONE_CSS_REVISION = '20261127-line-app';
+const ST_PHONE_VERSION = '4.212.0';
+const ST_PHONE_CSS_REVISION = '20261127-album-bottomnav';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
 /* [v4.92.0] 像素皮肤：独立于 phone.css 的 pixel-skin.css（复古掌机 OS 视觉）。
@@ -725,16 +725,17 @@ const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
     date: "2026-11-27",
     items: [
-        "【版本升至 4.211.0（五源同源）】本版两件事：① 把第 2/3 层点名的最后一件 LINE 落地（apps/line 四件套 + 六处接线 + 14 条判据）；② 补上 registry 门缺失的第三种样式投递机制（入口 @import 链），清掉 wechat.v4.css 那条「从未被投递」的存量红。",
-        "【LINE 的四条机制】① 三态房间 1:1 / 群 / 官方 —— 官方号默认不参与未读计数（那是号的广播），开关可改；② 每房间消息环形上限 200 条，裁掉的条数落 dropped 留痕，界面上明说「挤掉 N 条」；③ 已读是读游标 readUpTo（读到第几条）而不是布尔，游标不在列表里（那条已被环形裁掉）⇒ 如实算全未读，不装作已读；④ 贴图是 12 条静态 id 到名字的对照表，零 URL、零网络。",
-        "【四条不缝】① 源自己发请求拉贴图与历史 —— 本件零网络、零 URL；② 源把已读写成布尔并塞进没有角色维度的宿主角色对象 —— 本件只记本会话读游标，切角色不会整本跟着走；③ 源起常驻定时器轮询新消息 —— 本件零定时器，消息由用户/宿主喂进来；④ 源按时间重排一份全局消息流 —— 本件按房间分账 + 环形上限，跨房间只出引用。",
-        "【接线六处 + 三处附带】APPS 图标（config/apps.js）· 懒加载路由（config/app-lazy-routes.js）· 会话键前缀 /^line_/（config/storage.js）· line_settings / line_state 登记 KEY_REGISTRY（scripts/keys-audit.mjs）· REBIND 表 lineApp（打开的会话 / 草稿 / 贴图选择 / 建会话表单 / 两步确认全是实例态，换会话必须丢）· v3 皮肤登记（config/style-skin-v3.js）；附带：默认皮肤打包进 phone.css、库类目 line→social、ST_PHONE_CSS_REVISION 一并抬。",
-        "【判据】tests/r24_line_sim.test.mjs 14 条：归一与环形留痕 / 五个上限被钉住 / 三态不塌 / 读游标（含游标被裁掉如实算全未读）/ 官方号开关真改读数 / 撤回只标记不删 / 截断留痕 / 拒建带人话原因 / 时间线只出引用不复制正文 / 注入块只出事实 / 六处接线齐 / 零网络零定时器零数据库零角色对象；外加 N1 / N2 两条破坏副本必须变红（游标找不到时改成返回 0、撤回改成 splice 删除）。",
-        "【存量红：不是本版引入，但本版修了机制】npm run registry 在 v4.210.0 上报 R3「apps/wechat/wechat.v4.css 从未被投递」。上一版把它记成「门禁识别面缺口，另案处理」—— 本版核到底：该文件确实由 phone/design/rp-entry.css 的 @import 投递（设计系统收编后全部 v4 皮肤都走这条唯一入口），而 registry 门只认「进 phone.css」与「JS 自注入」两种机制，于是恒定假红。",
-        "【修法是补机制，不是登记豁免】豁免条目是放行条，会连机制一起遮住（本仓 R3b 已为这件事立过纪律：豁免必须反向自证「两种机制都不适用」）。本版给 registry 加机制 C —— 入口样式表的 @import 链：入口自身进 R3c 本地引用检查，入口缺失 fail-closed 拒判，豁免反向自证也把 import 计入。修后读数：样式投递 192 · phone.css 打包 143 · JS 自注入 47 · 入口 @import 1 · 豁免 1 · 未覆盖 0。",
-        "【机制 C 的负控制（实跑过）】把 rp-entry.css 里那一行 @import 删掉再跑：入口 @import 0 · 未覆盖 1 · 报出 apps/wechat/wechat.v4.css，恢复后又转绿。说明它是真判定，不是把红灯糊成绿灯。",
-        "【顺手清理】method-consuming 报两条基线方法已被重新消费（RecallApp.roomOf / GlobalSocialStore.appendMessage），按官方 --update 重签，不是放宽。",
-        "【运行时验证边界】本版只验到静态接线与纯函数读数：LINE 页在浏览器与真机上一次都没有点过 —— 消息滚动的观感、贴图位在真宿主里的占位、移动端输入法下的发消息按钮位置都还没验。registry 机制 C 也只在**本机**的 rp-entry.css 上验过（真宿主是否按同一路径加载入口表，需要在真机上确认一次）。"
+        "【版本升至 4.212.0（五源同源）】本版照现实重写相册：改造前一屏到底（来源分组当主列表、根本没有搜索），现在按 iPhone 照片的结构改成底栏三格 —— 图库（按时间）/ 相簿（按来源）/ 搜索（按名字）。",
+        "【为什么三格不能挤成一屏】找一张照片的三条路完全不同：记得什么时候拍的走时间轴、记得哪个 App 存的走来源分组、只记得名字里的几个字走搜索。改造前把前两条塞进同一个筛选器、第三条不存在，于是「我知道有这张但翻不到」。",
+        "【图库】按剧情日分组（沿用 R21-X4 的 album-story-face 判定，时间不详单独成组并点名），不再把来源分组当主列表 —— 来源轴挪到相簿格。",
+        "【相簿】按来源分组（哪个 App 存进来的），沿用既有 renderSourceSections，语义与官方「相簿」对齐。",
+        "【搜索】匹配口径只在一处：文件名 / 路径 / 来源中文名，小写后子串命中。两种空态分开说 —— 「还没输入」与「输入了没结果」是两件不同的事，各有 data-search-face 与不同处置（前者提示能搜什么，后者提示换个词或回图库翻）。",
+        "【交互细节】输入时只重画结果区，不整页重绘（整页重绘会丢焦点与光标位置）；切格时先清掉选择态（换面后索引全变，留着会选错人）；进搜索格自动聚焦输入框（与官方一致，省一次点击）。",
+        "【样式纪律】新增 apps/album/album.v4.css：按钮规则进 @layer rp.apps（否则宿主 data-rp-ds=2 的 all: revert-layer 会把底栏按钮回滚成 UA 默认 —— v4.208.0 实测踩过的假绿形态）；底栏进正常流、不用 position: fixed；滚动层自己写 min-height: 0（老福特/淘宝/Pixiv 都踩过「底栏被挤出可视区」）；热区下限 48px 写在 CSS 里。样式经 phone/design/rp-entry.css 的 @import 投递（registry 门本版新补的机制 C 正好认这条）。",
+        "【判据】tests/apps-album-v4.test.mjs 12 条：三格与 ALBUM_FACES 单一真源 / 面判定只许一处 / 底栏排在 main 之后且只渲染一次 / aria 双标（aria-current + aria-selected）/ 样式纪律四条 / 两种空态分开说 / 输入只重画结果区 / @import 真投递 / 视图不走原生 alert；外加 N1~N3 三条破坏副本（删掉搜索格、热区压到 30px、面判定复制一份）必须让对应判据转红。",
+        "【本版自己抓到的一处判据缺陷】A5 首跑红在「底栏不许用 position: fixed」，而违规证据其实是 CSS 文件头那句**说明**「不用 position: fixed」—— 子串判据把注释当成了代码。处置是先剥注释再判（与本仓 v2.68.0 dead-export E6、registry 机制 B 同一族：证据面不许混入非证据），不是把断言放宽。",
+        "【存量判据全部复跑】引用 album-view.js 的 7 个历史套件（r25_o3 媒体生命周期 / r27_o1 宿主播听器平衡 / v296 / v3240 / v4109 / v4155 / v4999）在本版改动后 103/103 全绿 —— 改结构没有偷改它们钉住的语义。",
+        "【运行时验证边界】本版只验到结构面与静态判据：三格在真机上滚动手感、搜索输入法下的输入行为、底栏在 data-rp-ds=2 与 data-rp-ios=3 各档下的观感都还没在真机看过。这类形态的通用标志语仍是「看起来没坏但显示不对」—— 真机复现后再修。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

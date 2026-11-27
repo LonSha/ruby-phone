@@ -54,6 +54,7 @@
 @import url("../../apps/tieba/tieba.v4.css");    /* 贴吧·照现实重写：作用域 .tb-app（同上，不挂 v4 开关） */
 @import url("../../apps/clock/clock.v4.css");    /* 时计·照现实重写：作用域 .cl-root.cl-app（底栏一级导航外壳） */
 @import url("../../apps/xhs/xhs.v4.css");        /* 小红书·照官方那种：作用域 .xhs-root.xhs-app（底栏五格外壳） */
+@import url("../../apps/album/album.v4.css");    /* [v4.212.0] 相册·照现实：作用域 .album-app（底栏三格 + 搜索面） */
 
 
 /* ---------- 宿主护盾（未分层，必须在层外） ----------

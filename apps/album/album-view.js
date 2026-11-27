@@ -22,7 +22,20 @@ import { faceOf, faceHtml, FACE_ATTR } from '../../config/empty-face.js';
  *   本视图只排桥已经定好的 label / line / view。 */
 
 /* [v4.154.0 · R21-X4] 相册 CSS 版本参数随时间角标 / 剧情日子分组一起抬（防浏览器缓存）。 */
-export const ALBUM_CSS_URL = new URL('./album.css?v=1.4.0&r=20261115-album-story-day', import.meta.url).href;
+export const ALBUM_CSS_URL = new URL('./album.css?v=1.5.0&r=20261127-album-bottomnav', import.meta.url).href;
+
+/* [v4.212.0] 照现实（iPhone 照片）：底栏三格 = 图库 / 相簿 / 搜索。
+ *   ★ 单一真源：底栏按钮、标题、面内容分派全部从这张表取，判据按形态钉它
+ *     （tests/apps-album-v4.test.mjs）。加一格就在这里加一行，别处不许再写一份。
+ *   · library —— 时间轴（按剧情日分组，时间不详单独成组）
+ *   · albums  —— 按来源分组的相簿格（来源 = 哪个 App 存的）
+ *   · search  —— 文件名 / 来源名过滤，两种空态分开说（还没输入 ≠ 输入了没结果）
+ */
+export const ALBUM_FACES = Object.freeze([
+    { id: 'library', label: '图库', icon: 'fa-images', hint: '按时间' },
+    { id: 'albums', label: '相簿', icon: 'fa-folder-open', hint: '按来源' },
+    { id: 'search', label: '搜索', icon: 'fa-magnifying-glass', hint: '' },
+]);
 
 export class AlbumView {
     constructor(app) {
@@ -50,6 +63,11 @@ export class AlbumView {
         this._replayPick = '';
         this._replayAct = 0;
         this._replayViewer = '';
+        /* [v4.212.0] 底栏三格的当前面与搜索词 —— 都是**现场态**（换页即丢，不落盘）。
+         *   相册没有「上次看的是哪一格」这种需求：每次进 App 都从图库开始，
+         *   与官方一致；搜索词也不跨次保留（留着会让下一次进来看不到全部照片）。 */
+        this._face = 'library';
+        this._search = '';
     }
 
     loadCSS() {
@@ -92,14 +110,17 @@ export class AlbumView {
         const allSelected = visibleImages.length > 0 && visibleImages.every(image => this.selectedPaths.has(image.path));
         const activeSourceLabel = this.getActiveSourceLabel();
         const wallpaperStyle = this.getWallpaperStyle();
+        /* [v4.212.0] 标题取底栏当前格（照现实：官方顶栏写的是你所在的分区名），
+         *   选择模式下仍然让位给「已选 N 项」—— 那比分区名重要。 */
+        const faceLabel = this._faceLabel();
         const html = `
-            <div class="album-app album-wallpaper-shell${this.selectionMode ? ' album-selecting' : ''}" style="${wallpaperStyle}">
+            <div class="album-app album-wallpaper-shell${this.selectionMode ? ' album-selecting' : ''}" data-alb-face="${this.escapeAttr(this._face)}" style="${wallpaperStyle}">
                 <header class="album-header">
                     <button type="button" class="album-icon-btn" id="album-back" aria-label="返回">
                         <i class="fa-solid ${this.selectionMode ? 'fa-xmark' : 'fa-chevron-left'}"></i>
                     </button>
                     <div class="album-title-wrap">
-                        <div class="album-title">${this.selectionMode ? `已选 ${selectedCount} 项` : '相册'}</div>
+                        <div class="album-title">${this.selectionMode ? `已选 ${selectedCount} 项` : this.escapeHtml(faceLabel)}</div>
                     </div>
                     <div class="album-header-actions">
                         ${this.selectionMode ? '' : `
@@ -122,21 +143,9 @@ export class AlbumView {
                 </header>
                 ${this.selectionMode ? '' : this.renderSourceMenu(sourceGroups)}
                 <main class="album-body">
-                    ${this.images.length ? `
-                        <div class="album-body-toolbar">
-                            <span>${this.escapeHtml(activeSourceLabel)} · ${visibleImages.length} 项${(Number(this._mediaReleasedTotal) || 0) > 0 ? ` · 已释放 ${Number(this._mediaReleasedTotal)}` : ''}</span>
-                            <div class="album-body-toolbar-actions">
-                                <button type="button" class="album-source-filter" id="album-source-filter" aria-haspopup="menu" aria-expanded="false">
-                                    <span>分类</span>
-                                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-                                </button>
-                                <button type="button" id="album-select-toggle">选择</button>
-                            </div>
-                        </div>
-                        ${this.renderSourceSections(visibleImages)}
-                        <div class="album-total-count">共 ${this.images.length} 个项目</div>
-                    ` : this.renderEmpty()}
+                    ${this._renderFaceBody(visibleImages, activeSourceLabel, allSelected)}
                 </main>
+                ${this.selectionMode ? '' : this.renderBottomNav()}
             </div>
         `;
 
@@ -150,6 +159,108 @@ export class AlbumView {
             _mlHost.dataset.mlReleased = String(Number(this._mediaReleasedTotal) || 0);
         }
         requestAnimationFrame(() => this.bindEvents());
+    }
+
+    /* ══════════ [v4.212.0] 底栏三格：图库 / 相簿 / 搜索 ══════════
+     * 【为什么要有这一层】改造前相册只有一屏：来源分组当主列表、搜索根本没有。
+     *   官方（iPhone 照片）是「图库按时间 / 相簿按来源 / 搜索按名字」三格并列，
+     *   用户找一张照片的路径完全不同 —— 所以三格不能挤成一屏的筛选器。
+     * 【纪律】面判定只在 `_renderFaceBody` 一处；底栏按钮、标题、面内容全从
+     *   `ALBUM_FACES` 取，别处不许再写第二份 if / 第二张标签表。
+     */
+
+    /** 当前格的中文名（取不到就回落图库，不编一个不存在的名字）。 */
+    _faceLabel() {
+        const hit = ALBUM_FACES.find((f) => f.id === this._face);
+        return hit ? hit.label : ALBUM_FACES[0].label;
+    }
+
+    /** 面内容分派（唯一判定处）。 */
+    _renderFaceBody(visibleImages, activeSourceLabel, allSelected) {
+        if (this._face === 'search') return this.renderSearchFace();
+        if (!this.images.length) return this.renderEmpty();
+        const released = Number(this._mediaReleasedTotal) || 0;
+        const toolbar = `
+            <div class="album-body-toolbar">
+                <span>${this.escapeHtml(activeSourceLabel)} · ${visibleImages.length} 项${released > 0 ? ` · 已释放 ${released}` : ''}</span>
+                <div class="album-body-toolbar-actions">
+                    <button type="button" class="album-source-filter" id="album-source-filter" aria-haspopup="menu" aria-expanded="false">
+                        <span>分类</span>
+                        <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" id="album-select-toggle">选择</button>
+                </div>
+            </div>`;
+        /* 图库 = 时间轴（剧情日分组，时间不详单独成组）；相簿 = 来源分组（哪个 App 存的）。 */
+        const body = (this._face === 'albums')
+            ? this.renderSourceSections(visibleImages)
+            : this.renderStoryDaySections(visibleImages);
+        const tail = `<div class="album-total-count">共 ${this.images.length} 个项目${allSelected ? ' · 已全选' : ''}</div>`;
+        return toolbar + body + tail;
+    }
+
+    /** 底栏（排在内容层之后，不覆盖内容；热区与 aria 都在 CSS/属性里交代）。 */
+    renderBottomNav() {
+        const cur = this._face;
+        const tabs = ALBUM_FACES.map((f) => {
+            const on = f.id === cur;
+            return `
+                <button type="button" class="alb-nav-btn${on ? ' is-active' : ''}" role="tab"
+                        data-alb-face="${this.escapeAttr(f.id)}"
+                        aria-selected="${on ? 'true' : 'false'}"${on ? ' aria-current="page"' : ''}>
+                    <i class="fa-solid ${this.escapeAttr(f.icon)} alb-nav-icon" aria-hidden="true"></i>
+                    <span class="alb-nav-label">${this.escapeHtml(f.label)}</span>
+                </button>`;
+        }).join('');
+        return `<nav class="alb-nav" role="tablist" aria-label="相册分区">${tabs}</nav>`;
+    }
+
+    /** 搜索面：两种空态分开说 —— 还没输入 ≠ 输入了没结果。 */
+    renderSearchFace() {
+        const q = String(this._search || '').trim();
+        const hits = this._matchSearch(q);
+        return `
+            <div class="alb-search">
+                <div class="alb-search-bar">
+                    <i class="fa-solid fa-magnifying-glass alb-search-icon" aria-hidden="true"></i>
+                    <input type="search" id="album-search-input" class="alb-search-input"
+                           value="${this.escapeAttr(this._search)}" placeholder="搜索照片（文件名 / 来源）"
+                           aria-label="搜索照片" autocomplete="off">
+                </div>
+                <div class="alb-search-meta" id="album-search-meta">${this._searchMetaHtml(q, hits.length)}</div>
+                <div class="alb-search-results" id="album-search-results">${this._searchResultsHtml(q, hits)}</div>
+            </div>`;
+    }
+
+    _searchMetaHtml(q, hitCount) {
+        return q
+            ? `命中 ${hitCount} 项（共 ${this.images.length} 项）`
+            : `共 ${this.images.length} 项 · 按文件名或来源名搜`;
+    }
+
+    _searchResultsHtml(q, hits) {
+        if (hits.length) {
+            return `<div class="album-grid alb-search-grid">${hits.map((image) => this.renderTile(image)).join('')}</div>`;
+        }
+        return q
+            ? `<div class="alb-search-empty" data-search-face="no-hit">没找到「${this.escapeHtml(q)}」—— 这个相册里没有文件名或来源名带这几个字的东西。换个词，或者回图库按时间翻。</div>`
+            : `<div class="alb-search-empty" data-search-face="idle">还没输入。可以按文件名，也可以按来源名（是哪个 App 存进来的）。</div>`;
+    }
+
+    /** 匹配口径只在这一处：文件名 / 路径 / 来源中文名，全部小写后子串命中。 */
+    _matchSearch(q) {
+        const key = String(q || '').trim().toLowerCase();
+        if (!key) return [];
+        return this.images.filter((image) => {
+            const name = String(image?.filename || image?.path || '').toLowerCase();
+            let src = '';
+            try {
+                src = String(this.app.albumData.getSourceDefinition(image?.sourceKey)?.label || '');
+            } catch (_e) {
+                src = '';
+            }
+            return name.includes(key) || src.toLowerCase().includes(key);
+        });
     }
 
     getVisibleImages() {
@@ -747,7 +858,51 @@ export class AlbumView {
         });
         root.querySelector('#album-select-all')?.addEventListener('click', () => this.toggleSelectAll());
         root.querySelector('#album-delete-selected')?.addEventListener('click', () => this.deleteSelectedImages());
-        root.querySelectorAll('.album-tile-main').forEach(tile => {
+        /* [v4.212.0] 格子绑定抽成一处：搜索面输入时会**新建**结果格节点，
+         *   那条路径也要挂同一套点击/错误处理 —— 复制一份就是两条会漂移的实现。 */
+        this._bindTiles(root);
+        /* [v4.212.0] 底栏三格：切面不整页刷新数据（images 已在 render 里取过），
+         *   只换面 + 重画。选择态在手时先清掉（换面后索引全变，留着会选错人）。 */
+        root.querySelectorAll('.alb-nav-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const next = btn.dataset.albFace || ALBUM_FACES[0].id;
+                if (next === this._face) return;
+                this._face = next;
+                this.sourceMenuOpen = false;
+                this.selectionMode = false;
+                this.selectedPaths.clear();
+                this.render();
+                /* 官方的搜索格一进去光标就在框里 —— 这里也聚焦一次，省一次点击。
+                 *   注意必须取**新**节点：render 已经把整棵子树换掉了。 */
+                if (next === 'search') {
+                    requestAnimationFrame(() => {
+                        (document.querySelector('.phone-view-current') || document).querySelector('#album-search-input')?.focus?.();
+                    });
+                }
+            });
+        });
+        /* [v4.212.0] 搜索输入：只重画结果区（整页重绘会丢焦点与光标位置）。 */
+        const searchInput = root.querySelector('#album-search-input');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                this._search = searchInput.value;
+                const q = String(this._search || '').trim();
+                const hits = this._matchSearch(q);
+                const meta = root.querySelector('#album-search-meta');
+                if (meta) meta.textContent = this._searchMetaHtml(q, hits.length);
+                const box = root.querySelector('#album-search-results');
+                if (box) {
+                    box.innerHTML = this._searchResultsHtml(q, hits);
+                    this._bindTiles(box);
+                }
+            });
+        }
+    }
+
+    /** 格子（点击预览 / 选择 + 两种媒体各自的错误面）：只挂一次，按容器身份判重。 */
+    _bindTiles(scope) {
+        const host = scope || document;
+        host.querySelectorAll('.album-tile-main').forEach(tile => {
             tile.addEventListener('click', () => {
                 const index = Number.parseInt(tile.dataset.index, 10);
                 if (this.selectionMode) {
@@ -757,7 +912,7 @@ export class AlbumView {
                 this.openPreview(index);
             });
         });
-        root.querySelectorAll('.album-tile img').forEach(img => {
+        host.querySelectorAll('.album-tile img').forEach(img => {
             img.addEventListener('error', async () => {
                 img.closest('.album-tile')?.classList.add('is-broken');
                 const index = Number.parseInt(img.closest('.album-tile')?.dataset?.index || '', 10);
@@ -765,7 +920,7 @@ export class AlbumView {
                 await this.handleMissingImage(image);
             }, { once: true });
         });
-        root.querySelectorAll('.album-tile video').forEach(video => {
+        host.querySelectorAll('.album-tile video').forEach(video => {
             video.pause?.();
             video.addEventListener('error', () => {
                 video.closest('.album-tile')?.classList.add('is-broken');
