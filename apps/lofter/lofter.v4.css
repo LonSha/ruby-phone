@@ -1,0 +1,44 @@
+/* ============================================================
+ * apps/lofter/lofter.v4.css — 老福特「照现实」v4.215.0 底栏分层样式
+ * ------------------------------------------------------------
+ * lofter 走机制 A（样式打包进 lofter.css，另有 v3 皮肤 lofter.v3.css），
+ * 本文件由 lofter.css 顶部 @import 投递。容器规则无层，按钮规则进 @layer rp.apps；
+ * 底栏不用 position:fixed，热区 ≥48/44。
+ * ============================================================ */
+.lof-app > .lof-bottomnav {
+    display: flex;
+    align-items: stretch;
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    min-height: 48px;
+    border-top: 0.5px solid rgba(255, 255, 255, 0.08);
+    background: rgba(20, 20, 22, 0.96);
+}
+
+@layer rp.apps {
+    .lof-navitem {
+        flex: 1 1 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        box-sizing: border-box;
+        min-height: 48px;
+        min-width: 44px;
+        padding: 6px 0 7px;
+        border: 0;
+        background: none;
+        color: #8a8a93;
+        font-size: 10px;
+        line-height: 1;
+        font-family: inherit;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .lof-navitem i { font-size: 19px; line-height: 19px; }
+    .lof-navitem.is-on { color: #12b5a5; }
+    .lof-navitem:active { opacity: .6; }
+    .lof-navitem.is-disabled { opacity: .38; cursor: default; }
+}

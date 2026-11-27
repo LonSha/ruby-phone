@@ -74,6 +74,9 @@ const LOF_NAV = [
     { key: 'me', label: '我的', icon: 'fa-user' },
     { key: 'search', label: '搜索', icon: 'fa-magnifying-glass' },
 ];
+/* [v4.215.0 · 照现实] 对外统一真源名：保留 LOF_NAV 的实现语义，补一个 *_FACES 别名供静态门钉住。
+ *   不另写一份格表，LF_FACES 与 LOF_NAV 是同一个数组引用。 */
+export const LF_FACES = LOF_NAV;
 /* 作者类型的人话表**不在这里手写**：单一真源是数据层的 `LOFTER_TYPE_LABELS`
  * （键按 `LOFTER_ACTIVE_TYPES.concat(LOFTER_IDLE_TYPES)` 现取）。改类型清单时它跟着走。 */
 const MY_FACES = [
@@ -187,20 +190,21 @@ export class LofterView {
      *   overflow:hidden 里溢出，底栏被裁掉，淘宝那轮 page 顶高 66px 是同一族缺陷），
      *   .lof-main 是 flex:1 + min-height:0 且自己滚，底栏 flex-shrink:0。 */
     _bottomNavHTML(cur) {
-        const items = LOF_NAV.map((it) => {
+        const items = LF_FACES.map((it) => {
+            const label = this._esc(it.label);
             if (it.disabled) {
                 return '<button class="lof-navitem is-disabled" data-act="lof-soon" data-what="'
-                    + this._esc(it.label) + '" aria-disabled="true">'
+                    + label + '" data-lf-face="' + it.key + '" aria-disabled="true">'
                     + '<i class="fa-solid ' + it.icon + '"></i>'
-                    + '<span>' + this._esc(it.label) + '</span></button>';
+                    + '<span>' + label + '</span></button>';
             }
             return '<button class="lof-navitem' + (cur === it.key ? ' is-on' : '') + '"'
-                + ' data-tab="' + it.key + '"'
+                + ' data-tab="' + it.key + '" data-lf-face="' + it.key + '"'
                 + (cur === it.key ? ' aria-current="page"' : '')
                 + '><i class="fa-solid ' + it.icon + '"></i>'
-                + '<span>' + this._esc(it.label) + '</span></button>';
+                + '<span>' + label + '</span></button>';
         });
-        return '<nav class="lof-bottomnav">' + items.join('') + '</nav>';
+        return '<nav class="lof-bottomnav" role="navigation" aria-label="老福特主导航">' + items.join('') + '</nav>';
     }
     /* ---------- 首页 ---------- */
     _homePanel() {
