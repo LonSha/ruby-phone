@@ -1,0 +1,32 @@
+/* apps/weather/weather.v4.css — 天气「照现实」v4.215.0 底栏分层样式
+ * 由 weather-view.js 的 _loadV4CSS() 幂等注入 link 投递。容器无层，按钮进 @layer rp.apps；
+ * 不用 position:fixed，热区 ≥48/44。 */
+.wth-root > .wth-tabbar {
+    display: flex;
+    gap: 6px;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    min-height: 48px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 6px;
+}
+
+@layer rp.apps {
+    .wth-tab {
+        flex: 1 1 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        min-width: 44px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 9px;
+        padding: 9px 4px;
+        font-size: 12px;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.05);
+        color: #94a3b8;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .wth-tab.is-on { color: #7dd3fc; background: rgba(56, 189, 248, 0.12); }
+}

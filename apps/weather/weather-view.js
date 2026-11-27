@@ -47,6 +47,8 @@ const TABS = [
     { key: 'records', label: '记录' },
     { key: 'settings', label: '设置' },
 ];
+/* [v4.215.0 · 照现实] 底栏真源别名：WTH_FACES 与 TABS 同一引用，不另写格表。 */
+export const WTH_FACES = TABS;
 
 const DASH = String.fromCharCode(45, 45);
 
@@ -73,7 +75,19 @@ export class WeatherView {
 
     /* ---------- 1. 挂载与重绘 ---------- */
 
+    /* [v4.215.0 · 照现实] weather 样式走独立 weather.css，v4 分层样式走 link 幂等注入。 */
+    _loadV4CSS() {
+        if (typeof document === 'undefined' || !document.head) return;
+        if (document.getElementById('wth-v4-css')) return;
+        const link = document.createElement('link');
+        link.id = 'wth-v4-css';
+        link.rel = 'stylesheet';
+        link.href = new URL('./weather.v4.css', import.meta.url).href;
+        document.head.appendChild(link);
+    }
+
     render() {
+        this._loadV4CSS();
         const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
         if (!container) return;
         container.innerHTML = '';
@@ -244,9 +258,13 @@ export class WeatherView {
             + '<span class="wth-face-icon">' + meta.icon + '</span>'
             + '<span class="wth-face-label">' + this._esc(meta.label) + '</span></div>'
             + (this._flash ? '<div class="wth-flash">' + this._esc(this._flash) + '</div>' : '');
-        const tabs = ['<nav class="wth-tabbar">']
-            .concat(TABS.map((t) => '<button class="wth-tab' + (this.tab === t.key ? ' is-on' : '')
-                + '" data-act="tab" data-tab="' + t.key + '">' + t.label + '</button>'))
+        const tabs = ['<nav class="wth-tabbar" role="navigation" aria-label="天气主导航">']
+            .concat(WTH_FACES.map((t) => {
+                const on = this.tab === t.key;
+                return '<button class="wth-tab' + (on ? ' is-on' : '') + '" data-act="tab" data-tab="' + t.key
+                    + '" data-wth-face="' + t.key + '"' + (on ? ' aria-current="page"' : '')
+                    + '>' + this._esc(t.label) + '</button>';
+            }))
             .concat(['</nav>'])
             .join('');
         return head + page + tabs;
