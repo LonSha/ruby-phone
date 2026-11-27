@@ -1,0 +1,53 @@
+/* ============================================================
+ *  RubyPhone — SillyTavern 虚拟智能手机 UI
+ *  作者 (Author): LonSha
+ * 版权 (c) 2026 LonSha。采 MIT 许可。
+ * ============================================================ */
+/* ============================================================
+ * apps/weibo/weibo.v4.css — 微博「照现实」v4.215.0 底栏分层样式
+ * ------------------------------------------------------------
+ * 由 apps/weibo/weibo.css 顶部 @import 投递（weibo 走独立 <link id="weibo-css">，
+ * 不走 rp-entry.css）。容器规则放无层，按钮规则进 @layer rp.apps，
+ * 避免宿主 all:revert-layer 把交互态回滚掉；底栏不用 position:fixed，
+ * 靠 flex 自然贴底；格热区 ≥48/44。
+ * ============================================================ */
+
+/* 容器：无层，跟随 .weibo-app 的 flex 纵向流贴底 */
+.weibo-app > .weibo-bottomnav {
+    display: flex;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    min-height: 48px;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 0.5px solid rgba(0, 0, 0, 0.08);
+}
+
+/* 按钮：进 rp.apps 层，保证不被宿主 revert-layer 回滚 */
+@layer rp.apps {
+    .weibo-navitem {
+        flex: 1 1 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        box-sizing: border-box;
+        min-height: 48px;
+        min-width: 44px;
+        padding: 6px 0 7px;
+        border: 0;
+        background: none;
+        color: #8a8a8a;
+        font-size: 10px;
+        line-height: 1;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .weibo-navitem i { font-size: 19px; line-height: 19px; }
+    .weibo-navitem.is-on { color: #f5730a; }
+    .weibo-navitem:active { opacity: .6; }
+    /* 本仓未实现的入口：视频 / 发现 / 消息，照官方位置列出但明确不可用 */
+    .weibo-navitem.is-disabled { opacity: .38; cursor: default; }
+}

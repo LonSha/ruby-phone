@@ -21,6 +21,18 @@ import { captureSessionToken, guardSessionWrite } from '../../config/session-gat
 /* [v4.109.0 · R13-O6] 空态四态（统一属性常量）。四处空态处置各不相同，先把区别挂到属性上。 */
 import { FACE_ATTR } from '../../config/empty-face.js';
 
+/* [v4.215.0 · 照现实] 微博主导航五格单一真源（官方 16.11.3：首页 / 视频 / 发现 / 消息 / 我）。
+ *   · 首页/我可点，沿用现有 data-act=weibo-goto + data-goto=home|me 绑定；
+ *   · 视频/发现/消息本仓未实现，保留官方位置与文案，标 disabled + aria-disabled；
+ *   · 顶部「热搜/推荐」是首页内部子 tab，不属于主导航，故不进 WB_FACES。 */
+export const WB_FACES = [
+    { key: 'home', label: '首页', icon: 'fa-house', goto: 'home' },
+    { key: 'video', label: '视频', icon: 'fa-clapperboard', disabled: true },
+    { key: 'discover', label: '发现', icon: 'fa-compass', disabled: true },
+    { key: 'message', label: '消息', icon: 'fa-comment-dots', disabled: true },
+    { key: 'me', label: '我', icon: 'fa-user', goto: 'me' },
+];
+
 export class WeiboView {
     constructor(weiboApp) {
         this.app = weiboApp;
@@ -41,6 +53,23 @@ export class WeiboView {
         this._profileBrokenPathSet = new Set();
         this._isSearchOpen = false;
         this._lastSearchQuery = '';
+    }
+
+    /* [v4.215.0 · 照现实] 从 WB_FACES 单一真源渲染主底栏。
+     *   沿用 v4.203.0 的 DOM 语义（data-act/data-goto/data-what/is-on/is-disabled/aria-disabled），
+     *   不碰 bindHomeEvents 里 2275/2286 的现有绑定，也不把首页子 tab 混进主导航。 */
+    _bottomNavHtml(activeFace) {
+        const navHtml = WB_FACES.map((it) => {
+            const label = this._escapeAttr(it.label);
+            if (it.disabled) {
+                return `<button class="weibo-navitem is-disabled" data-act="weibo-soon" data-what="${label}" data-wb-face="${it.key}" aria-disabled="true">`
+                    + `<i class="fa-solid ${it.icon}"></i><span>${label}</span></button>`;
+            }
+            const on = it.key === activeFace;
+            return `<button class="weibo-navitem${on ? ' is-on' : ''}" data-act="weibo-goto" data-goto="${it.goto}" data-wb-face="${it.key}"${on ? ' aria-current="page"' : ''}>`
+                + `<i class="fa-solid ${it.icon}"></i><span>${label}</span></button>`;
+        }).join('');
+        return `<nav class="weibo-bottomnav" role="navigation" aria-label="微博主导航">${navHtml}</nav>`;
     }
 
     // ========================================
@@ -164,31 +193,13 @@ export class WeiboView {
          *     标 is-disabled + aria-disabled 并降到 opacity .38，点了给一句提示。
          *   · 资料卡只在「我」（currentTab === 'myPosts'）时显示 —— 官方就是这个层级。 */
         const isProfileTab = this.currentTab === 'myPosts';
+        const bottomFace = isProfileTab ? 'me' : 'home';
         const subTabs = [
             { key: 'hotSearch', label: '热搜' },
             { key: 'recommend', label: '推荐' },
         ];
         const subIdx = this.currentTab === 'recommend' ? 1 : 0;
         const indicatorWidth = 100 / subTabs.length;
-        const navItems = [
-            { key: 'home', label: '首页', icon: 'fa-house', on: !isProfileTab },
-            { key: 'video', label: '视频', icon: 'fa-clapperboard', disabled: true },
-            { key: 'discover', label: '发现', icon: 'fa-compass', disabled: true },
-            { key: 'message', label: '消息', icon: 'fa-comment-dots', disabled: true },
-            { key: 'me', label: '我', icon: 'fa-user', on: isProfileTab },
-        ];
-        const bottomNav = navItems.map((it) => {
-            if (it.disabled) {
-                return `<button class="weibo-navitem is-disabled" data-act="weibo-soon" data-what="${it.label}" aria-disabled="true">`
-                    + `<i class="fa-solid ${it.icon}"></i><span>${it.label}</span></button>`;
-            }
-            if (it.key === 'home') {
-                return `<button class="weibo-navitem${it.on ? ' is-on' : ''}" data-act="weibo-goto" data-goto="home">`
-                    + `<i class="fa-solid ${it.icon}"></i><span>${it.label}</span></button>`;
-            }
-            return `<button class="weibo-navitem${it.on ? ' is-on' : ''}" data-act="weibo-goto" data-goto="me">`
-                + `<i class="fa-solid ${it.icon}"></i><span>${it.label}</span></button>`;
-        }).join('');
         const html = `
             <!-- 🔥 核心修复：把背景直接画在最外层的不滚动容器上 -->
             <div class="weibo-app weibo-home-mode" style="${bannerStyle}">
@@ -259,8 +270,8 @@ export class WeiboView {
                 this.currentTab === 'recommend' ? this.renderRecommendList() :
                     this.renderMyPostsList()}
                 </div>
-                <!-- 底栏五格（官方 16.11.3 结构） -->
-                <nav class="weibo-bottomnav">${bottomNav}</nav>
+                <!-- 底栏五格（官方 16.11.3 结构；WB_FACES 单一真源） -->
+                ${this._bottomNavHtml(bottomFace)}
             </div>
         `;
 
