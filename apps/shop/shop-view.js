@@ -31,6 +31,8 @@ const TABS = [
     { key: 'orders', label: '单' },
     { key: 'settings', label: '设置' },
 ];
+/* [v4.215.0 · 照现实] 底栏真源别名：SHP_FACES 与 TABS 同一引用。 */
+export const SHP_FACES = TABS;
 
 const DASH = String.fromCharCode(45, 45);
 
@@ -61,7 +63,18 @@ export class ShopView {
 
     /* ---------- 1. 挂载与重绘 ---------- */
 
+    /* [v4.215.0 · 照现实] v4 分层样式走 link 幂等注入投递。 */
+    _loadV4CSS() {
+        if (typeof document === 'undefined' || !document.head) return;
+        if (document.getElementById('shp-v4-css')) return;
+        const link = document.createElement('link');
+        link.id = 'shp-v4-css'; link.rel = 'stylesheet';
+        link.href = new URL('./shop.v4.css', import.meta.url).href;
+        document.head.appendChild(link);
+    }
+
     render() {
+        this._loadV4CSS();
         const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
         if (!container) return;
         container.innerHTML = '';
@@ -351,9 +364,9 @@ export class ShopView {
             + '<span class="shp-face-label">' + this._esc(meta.label) + '</span></div>'
             + (this._flash ? '<div class="shp-flash">' + this._esc(this._flash) + '</div>' : '');
 
-        const tabs = ['<nav class="shp-navbar">']
-            .concat(TABS.map((t) => '<button class="shp-nav' + (this.tab === t.key ? ' is-on' : '')
-                + '" data-act="tab" data-tab="' + t.key + '">' + t.label + '</button>'))
+        const tabs = ['<nav class="shp-navbar" role="navigation" aria-label="主导航">']
+            .concat(SHP_FACES.map((t) => '<button class="shp-nav' + (this.tab === t.key ? ' is-on' : '')
+                + '" data-act="tab" data-tab="' + t.key + '" data-shp-face="' + t.key + '"' + (this.tab === t.key ? ' aria-current="page"' : '') + '>' + t.label + '</button>'))
             .concat(['</nav>'])
             .join('');
         return head + page + tabs;

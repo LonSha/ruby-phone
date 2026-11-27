@@ -55,6 +55,8 @@ const TABS = [
     { key: 'form', label: '收拾' },
     { key: 'policy', label: '策略' }
 ];
+/* [v4.215.0 · 照现实] 底栏真源别名：MSD_FACES 与 TABS 同一引用。 */
+export const MSD_FACES = TABS;
 
 /** 视图层：六页签（曲库 / 歌词 / 队列 / 来源 / 收拾 / 策略）。 */
 export class MusicdeskView {
@@ -68,7 +70,18 @@ export class MusicdeskView {
         this._draft = { reply: '', sources: '' };
         this._boundRoot = null;
     }
+    /* [v4.215.0 · 照现实] v4 分层样式走 link 幂等注入投递。 */
+    _loadV4CSS() {
+        if (typeof document === 'undefined' || !document.head) return;
+        if (document.getElementById('msd-v4-css')) return;
+        const link = document.createElement('link');
+        link.id = 'msd-v4-css'; link.rel = 'stylesheet';
+        link.href = new URL('./musicdesk.v4.css', import.meta.url).href;
+        document.head.appendChild(link);
+    }
+
     render() {
+        this._loadV4CSS();
         const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
         if (!container) return;
         container.innerHTML = '';
@@ -104,9 +117,9 @@ export class MusicdeskView {
     /** [v4.171.0] 底部页签条：页签从顶部挪到页内容之下，类名与 data-tab 一字未改。 */
     _tabsHTML() {
         const cur = this.app.tab();
-        return '<nav class="msd-tabs">' + TABS.map((t) =>
+        return '<nav class="msd-tabs" role="navigation" aria-label="主导航">' + MSD_FACES.map((t) =>
             '<button type="button" class="msd-tab' + (cur === t.key ? ' is-on' : '') +
-            '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>').join('') + '</nav>';
+            '" data-tab="' + t.key + '" data-msd-face="' + t.key + '"' + (cur === t.key ? ' aria-current="page"' : '') + '>' + this._esc(t.label) + '</button>').join('') + '</nav>';
     }
     _buildHTML() {
         const app = this.app;

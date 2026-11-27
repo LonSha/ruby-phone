@@ -1,0 +1,55 @@
+/* ============================================================
+ * apps/kettle/kettle.v4.css — [v4.215.0 · 照现实] 底部主导航分层样式
+ * 纪律：真源单一（KTL_FACES=TABS）、按钮热区稳定、禁用/当前态明确、
+ *       不 fixed、不改旧 class、不用 !important。
+ * ============================================================ */
+@layer rp.apps {
+  .ktl-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    min-height: 56px;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgba(127,127,127,.24);
+    background: var(--rp-surface, rgba(255,255,255,.92));
+    box-shadow: 0 -2px 10px rgba(0,0,0,.05);
+  }
+  .ktl-tab {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--rp-muted, #667085);
+    font: inherit;
+    font-size: 12px;
+    line-height: 1.2;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ktl-tab:hover { background: rgba(127,127,127,.08); }
+  .ktl-tab:focus-visible { outline: 2px solid var(--rp-accent, #1677ff); outline-offset: 2px; }
+  .ktl-tab.is-on,
+  .ktl-tab.on { color: var(--rp-accent, #1677ff); font-weight: 600; }
+  .ktl-tab.is-on::before,
+  .ktl-tab.on::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 50%;
+    width: 18px;
+    height: 3px;
+    border-radius: 999px;
+    background: currentColor;
+    transform: translateX(-50%);
+  }
+  .ktl-tab[aria-current="page"] { color: var(--rp-accent, #1677ff); }
+  .ktl-tab[aria-disabled="true"] { opacity: .38; cursor: default; }
+}

@@ -58,6 +58,8 @@ const TABS = [
     { key: 'search', label: '检索' },
     { key: 'settings', label: '设置' },
 ];
+/* [v4.215.0 · 照现实] 底栏真源别名：MGZ_FACES 与 TABS 同一引用。 */
+export const MGZ_FACES = TABS;
 
 /** 时间读数的人话（数据层只给 `{unit, value}` 事实，文案在视图）。
  *  ★ 键**取真源常量**（`MAGAZINE_TIME_UNITS`），不手写 —— 手写就是第二个真源。 */
@@ -84,7 +86,18 @@ export class MagazineView {
             peopleIds: [], paste: '', search: '', name: '', translation: '',
         };
     }
+    /* [v4.215.0 · 照现实] v4 分层样式走 link 幂等注入投递。 */
+    _loadV4CSS() {
+        if (typeof document === 'undefined' || !document.head) return;
+        if (document.getElementById('mgz-v4-css')) return;
+        const link = document.createElement('link');
+        link.id = 'mgz-v4-css'; link.rel = 'stylesheet';
+        link.href = new URL('./magazine.v4.css', import.meta.url).href;
+        document.head.appendChild(link);
+    }
+
     render() {
+        this._loadV4CSS();
         const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
         if (!container) return;
         container.innerHTML = '';
@@ -130,9 +143,9 @@ export class MagazineView {
     /** 页签条（沿用旧键面：mgz-tabs / mgz-tab / mgz-tab-label + data-tab）。 */
     _tabsHTML() {
         const cur = this.app.tab();
-        const parts = ['<div class="mgz-tabs">'];
-        for (const t of TABS) {
-            parts.push('<button class="mgz-tab' + (cur === t.key || (cur === 'reader' && t.key === 'list') ? ' is-on' : '') + '" data-tab="' + t.key + '">');
+        const parts = ['<div class="mgz-tabs" role="navigation" aria-label="主导航">'];
+        for (const t of MGZ_FACES) {
+            parts.push('<button class="mgz-tab' + (cur === t.key || (cur === 'reader' && t.key === 'list') ? ' is-on' : '') + '" data-tab="' + t.key + '" data-mgz-face="' + t.key + '"' + ((cur === t.key || (cur === 'reader' && t.key === 'list')) ? ' aria-current="page"' : '') + '>');
             parts.push('<span class="mgz-tab-label">' + this._esc(t.label) + '</span>');
             parts.push('</button>');
         }

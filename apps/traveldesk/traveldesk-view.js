@@ -29,6 +29,8 @@ const TABS = [
     { key: 'party', label: '行' },
     { key: 'settle', label: '结' },
 ];
+/* [v4.215.0 · 照现实] 底栏真源别名：TV_FACES 与 TABS 同一引用。 */
+export const TV_FACES = TABS;
 
 export class TraveldeskView {
     constructor(app) {
@@ -56,7 +58,18 @@ export class TraveldeskView {
         return this.root;
     }
 
+    /* [v4.215.0 · 照现实] v4 分层样式走 link 幂等注入投递。 */
+    _loadV4CSS() {
+        if (typeof document === 'undefined' || !document.head) return;
+        if (document.getElementById('tv-v4-css')) return;
+        const link = document.createElement('link');
+        link.id = 'tv-v4-css'; link.rel = 'stylesheet';
+        link.href = new URL('./traveldesk.v4.css', import.meta.url).href;
+        document.head.appendChild(link);
+    }
+
     render(vm) {
+        this._loadV4CSS();
         const el = this._mount();
         if (!el) return;
         el.innerHTML = this._html(vm);
@@ -98,9 +111,9 @@ export class TraveldeskView {
     }
 
     _navHtml() {
-        return '<nav class="tv-navbar">' + TABS.map((t) =>
+        return '<nav class="tv-navbar" role="navigation" aria-label="主导航">' + TV_FACES.map((t) =>
             '<button class="tv-nav' + (this.tab === t.key ? ' is-on' : '') + '" data-act="tab" data-tab="'
-            + t.key + '">' + t.label + '</button>').join('') + '</nav>';
+            + t.key + '" data-tv-face="' + t.key + '"' + (this.tab === t.key ? ' aria-current="page"' : '') + '>' + t.label + '</button>').join('') + '</nav>';
     }
 
     /* ---------- 2. 账（贴回 JSON + 台账） ---------- */

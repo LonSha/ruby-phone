@@ -53,6 +53,8 @@ const TABS = [
     /* [v4.111.0 · R13-X8] 复述：与「召回」同一个主题 —— 召回管取回的路，复述管取回之后怎么讲。 */
     { key: 'narrate', label: '复述' },
 ];
+/* [v4.215.0 · 照现实] 底栏真源别名：RCL_FACES 与 TABS 同一引用。 */
+export const RCL_FACES = TABS;
 /** 复述因由的人话（键面**取内核真源**，不手写标识符形 —— 本仓 J7 形态）。 */
 const NARRATE_GAP_LABEL = {
     [RECALL_NARRATIVE_GAPS.NO_CHAT]: '拿不到聊天（这不等于没聊过）',
@@ -85,7 +87,18 @@ export class RecallView {
         this._narrateTopic = '';
         this._narrate = null;
     }
+    /* [v4.215.0 · 照现实] v4 分层样式走 link 幂等注入投递。 */
+    _loadV4CSS() {
+        if (typeof document === 'undefined' || !document.head) return;
+        if (document.getElementById('rcl-v4-css')) return;
+        const link = document.createElement('link');
+        link.id = 'rcl-v4-css'; link.rel = 'stylesheet';
+        link.href = new URL('./recall.v4.css', import.meta.url).href;
+        document.head.appendChild(link);
+    }
+
     render() {
+        this._loadV4CSS();
         const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
         if (!container) return;
         container.innerHTML = '';
@@ -137,10 +150,10 @@ export class RecallView {
      *  类名与 data-tab 一字未改（样式与 click 分派都按旧键面找得到）。 */
     _tabsHTML() {
         const cur = this.app.tab();
-        const parts = ['<div class="rcl-tabs">'];
-        for (const t of TABS) {
+        const parts = ['<div class="rcl-tabs" role="navigation" aria-label="主导航">'];
+        for (const t of RCL_FACES) {
             parts.push('<button type="button" class="rcl-tab' + (cur === t.key ? ' is-on' : '')
-                + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>');
+                + '" data-tab="' + t.key + '" data-rcl-face="' + t.key + '"' + (cur === t.key ? ' aria-current="page"' : '') + '>' + this._esc(t.label) + '</button>');
         }
         parts.push('</div>');
         return parts.join('');

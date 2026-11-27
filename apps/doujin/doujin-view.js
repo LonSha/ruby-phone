@@ -43,6 +43,8 @@ const TABS = [
     { key: 'cart', label: '收银台' },
     { key: 'shelf', label: '台账' }
 ];
+/* [v4.215.0 · 照现实] 底栏真源别名：DJN_FACES 与 TABS 同一引用。 */
+export const DJN_FACES = TABS;
 
 /** 四态色调（**键面取真源**，不写标识符形 —— 本仓 J7 形态）。
  * ★ 四项必须**逐行各自写出自己的色**：四项挤在一行时，改错一项
@@ -67,7 +69,18 @@ export class DoujinView {
         this._listingInput = '';
         this._priceInput = '';
     }
+    /* [v4.215.0 · 照现实] v4 分层样式走 link 幂等注入投递。 */
+    _loadV4CSS() {
+        if (typeof document === 'undefined' || !document.head) return;
+        if (document.getElementById('djn-v4-css')) return;
+        const link = document.createElement('link');
+        link.id = 'djn-v4-css'; link.rel = 'stylesheet';
+        link.href = new URL('./doujin.v4.css', import.meta.url).href;
+        document.head.appendChild(link);
+    }
+
     render() {
+        this._loadV4CSS();
         const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
         if (!container) return;
         container.innerHTML = '';
@@ -496,10 +509,10 @@ export class DoujinView {
      *  类名与 data-tab 一字未改（样式与 click 分派都按旧键面找得到）。 */
     _tabsHTML() {
         const cur = this.app.tab();
-        const parts = ['<div class="djn-tabs">'];
-        for (let i = 0; i < TABS.length; i++) {
-            const t = TABS[i];
-            parts.push('<button class="djn-tab' + (t.key === cur ? ' on' : '') + '" data-tab="' + this._esc(t.key) + '">'
+        const parts = ['<div class="djn-tabs" role="navigation" aria-label="主导航">'];
+        for (let i = 0; i < DJN_FACES.length; i++) {
+            const t = DJN_FACES[i];
+            parts.push('<button class="djn-tab' + (t.key === cur ? ' on' : '') + '" data-tab="' + this._esc(t.key) + '" data-djn-face="' + t.key + '"' + (t.key === cur ? ' aria-current="page"' : '') + '>'
                 + this._esc(t.label) + '<span class="djn-tab-n">' + this._esc(String(this._tabCount(t.key))) + '</span></button>');
         }
         parts.push('</div>');

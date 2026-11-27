@@ -63,6 +63,8 @@ const TABS = [
 ];
 
 /** 视图层：五页签（书架 / 跨度六档 / 口吻六族 / 台账 / 策略），六档六族分开画。 */
+export const SBR_FACES = TABS;
+
 export class SourcebookView {
     constructor(app, shell, storage) {
         this.app = app;
@@ -130,9 +132,10 @@ export class SourcebookView {
     /** [v4.170.0] 底部页签条：页签从顶部挪到页内容之下，类名与 data-tab 一字未改。 */
     _tabsHTML() {
         const cur = this.app.tab();
-        return '<nav class="sbr-tabs">' + TABS.map((t) =>
+        return '<nav class="sbr-tabs" aria-label="时光胶囊主导航">' + SBR_FACES.map((t) =>
             '<button type="button" class="sbr-tab' + (cur === t.key ? ' is-on' : '')
-            + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>').join('') + '</nav>';
+            + '" data-tab="' + t.key + '" data-sbr-face="' + t.key + '"'
+            + (cur === t.key ? ' aria-current="page"' : '') + '>' + this._esc(t.label) + '</button>').join('') + '</nav>';
     }
     /* ---------- 面板 ①：书架 ---------- */
     _shelfPanel() {

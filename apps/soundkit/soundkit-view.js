@@ -58,6 +58,8 @@ const TABS = [
     { key: 'share', label: '分享' },
     { key: 'settings', label: '设置' },
 ];
+/* [v4.215.0 · 照现实] 底栏真源别名：SND_FACES 与 TABS 同一引用。 */
+export const SND_FACES = TABS;
 
 export class SoundkitView {
     constructor(app, shell, storage) {
@@ -73,7 +75,18 @@ export class SoundkitView {
             code: '', slot: 'message'
         };
     }
+    /* [v4.215.0 · 照现实] v4 分层样式走 link 幂等注入投递。 */
+    _loadV4CSS() {
+        if (typeof document === 'undefined' || !document.head) return;
+        if (document.getElementById('snd-v4-css')) return;
+        const link = document.createElement('link');
+        link.id = 'snd-v4-css'; link.rel = 'stylesheet';
+        link.href = new URL('./soundkit.v4.css', import.meta.url).href;
+        document.head.appendChild(link);
+    }
+
     render() {
+        this._loadV4CSS();
         const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
         if (!container) return;
         container.innerHTML = '';
@@ -126,10 +139,10 @@ export class SoundkitView {
      *  类名与 data-tab 一字未改（样式与事件都按旧键面找得到）。 */
     _tabsHTML() {
         const cur = this.app.tab();
-        const parts = ['<div class="snd-tabs">'];
-        for (const t of TABS) {
+        const parts = ['<div class="snd-tabs" role="navigation" aria-label="主导航">'];
+        for (const t of SND_FACES) {
             parts.push('<button type="button" class="snd-tab' + (cur === t.key ? ' is-on' : '')
-                + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>');
+                + '" data-tab="' + t.key + '" data-snd-face="' + t.key + '"' + (cur === t.key ? ' aria-current="page"' : '') + '>' + this._esc(t.label) + '</button>');
         }
         parts.push('</div>');
         return parts.join('');

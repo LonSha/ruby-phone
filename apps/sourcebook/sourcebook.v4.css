@@ -1,0 +1,10 @@
+@layer rp.apps {
+  .sbr-tabs > .sbr-tab {
+    min-height: 44px;
+    min-width: 0;
+  }
+  .sbr-tabs > .sbr-tab:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -2px;
+  }
+}

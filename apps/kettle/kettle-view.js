@@ -44,6 +44,8 @@ const TABS = [
     { key: 'ledger', label: '台账' },
     { key: 'policy', label: '策略' }
 ];
+/* [v4.215.0 · 照现实] 底栏真源别名：KTL_FACES 与 TABS 同一引用。 */
+export const KTL_FACES = TABS;
 
 /** 视图层：五页签（记录 / 轮次三档 / 选项四态 / 台账 / 策略）。 */
 export class KettleView {
@@ -57,7 +59,18 @@ export class KettleView {
         this._draft = { partner: '', shop: '', at: '', reply: '' };
         this._boundRoot = null;
     }
+    /* [v4.215.0 · 照现实] v4 分层样式走 link 幂等注入投递。 */
+    _loadV4CSS() {
+        if (typeof document === 'undefined' || !document.head) return;
+        if (document.getElementById('ktl-v4-css')) return;
+        const link = document.createElement('link');
+        link.id = 'ktl-v4-css'; link.rel = 'stylesheet';
+        link.href = new URL('./kettle.v4.css', import.meta.url).href;
+        document.head.appendChild(link);
+    }
+
     render() {
+        this._loadV4CSS();
         const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
         if (!container) return;
         container.innerHTML = '';
@@ -113,9 +126,9 @@ export class KettleView {
      *   类名与 data-tab 一字未改 —— 只是位置换了，切换仍走 app.setTab。 */
     _tabsHTML() {
         const cur = this.app.tab();
-        return '<nav class="ktl-tabs">' + TABS.map((t) =>
+        return '<nav class="ktl-tabs" role="navigation" aria-label="主导航">' + KTL_FACES.map((t) =>
             '<button type="button" class="ktl-tab' + (cur === t.key ? ' is-on' : '')
-            + '" data-tab="' + t.key + '">' + this._esc(t.label) + '</button>').join('') + '</nav>';
+            + '" data-tab="' + t.key + '" data-ktl-face="' + t.key + '"' + (cur === t.key ? ' aria-current="page"' : '') + '>' + this._esc(t.label) + '</button>').join('') + '</nav>';
     }
     /* ---------- 面板 ①：记录 ---------- */
     _notePanel() {
