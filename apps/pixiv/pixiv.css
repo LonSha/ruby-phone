@@ -1,3 +1,5 @@
+/* [v4.215.0 · 照现实] 机制 A 的样式入口：v4 分层样式从这里 @import 投递。 */
+@import url("./pixiv.v4.css");
 /* [v3.35.0] Pixiv App（.pxv-*） */
 /* 缝合自 Perigee js/pixiv-illust.js + pixiv-novel.js + pixiv-comments.js。
    四块不缝：不直连模型 / 不落 IndexedDB 也不碰宿主对象 / 不共用别的 App 的池 /

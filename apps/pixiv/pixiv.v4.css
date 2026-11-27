@@ -1,0 +1,42 @@
+/* ============================================================
+ * apps/pixiv/pixiv.v4.css — Pixiv「照现实」v4.215.0 底栏分层样式
+ * 由 pixiv.css 顶部 @import 投递（机制 A）。容器无层，按钮进 @layer rp.apps；
+ * 不用 position:fixed，热区 ≥48/44。
+ * ============================================================ */
+.pxv-app > .pxv-bottomnav {
+    display: flex;
+    align-items: stretch;
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    min-height: 48px;
+    border-top: 0.5px solid rgba(255, 255, 255, 0.08);
+    background: rgba(20, 20, 22, 0.96);
+}
+
+@layer rp.apps {
+    .pxv-navitem {
+        flex: 1 1 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        box-sizing: border-box;
+        min-height: 48px;
+        min-width: 44px;
+        padding: 6px 0 7px;
+        border: 0;
+        background: none;
+        color: #8a8a93;
+        font-size: 10px;
+        line-height: 1;
+        font-family: inherit;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .pxv-navitem i { font-size: 19px; line-height: 19px; }
+    .pxv-navitem.is-on { color: #0096fa; }
+    .pxv-navitem:active { opacity: .6; }
+    .pxv-navitem.is-disabled { opacity: .38; cursor: default; }
+}

@@ -85,6 +85,8 @@ const PXV_NAV = [
     { key: 'notice', label: '通知', icon: 'fa-bell', disabled: true },
     { key: 'me', label: '我的', icon: 'fa-user' },
 ];
+/* [v4.215.0 · 照现实] 统一真源名：PXV_FACES 复用 PXV_NAV 同一数组引用，不另写格表。 */
+export const PXV_FACES = PXV_NAV;
 /* 「我的」五格的真源是 App 投影里的 `meTabs`；这里只给每格配人话标签，
  * 顺序与投影一致（favorites / following / history / works / settings）。 */
 const MY_FACES = [
@@ -197,20 +199,21 @@ export class PixivView {
      * ⚠ DELEGATE_KEYS 里必须加 'act'，否则点击冒泡到根容器时找不到委派目标
      *   —— 表现是「点了完全没反应」，且不报错（本仓最贵的一类静默缺陷）。 */
     _bottomNavHTML(cur) {
-        const items = PXV_NAV.map((it) => {
+        const items = PXV_FACES.map((it) => {
+            const label = this._esc(it.label);
             if (it.disabled) {
                 return '<button class="pxv-navitem is-disabled" data-act="pxv-soon" data-what="'
-                    + this._esc(it.label) + '" aria-disabled="true">'
+                    + label + '" data-pxv-face="' + it.key + '" aria-disabled="true">'
                     + '<i class="fa-solid ' + it.icon + '"></i>'
-                    + '<span>' + this._esc(it.label) + '</span></button>';
+                    + '<span>' + label + '</span></button>';
             }
             return '<button class="pxv-navitem' + (cur === it.key ? ' is-on' : '') + '"'
-                + ' data-tab="' + it.key + '"'
+                + ' data-tab="' + it.key + '" data-pxv-face="' + it.key + '"'
                 + (cur === it.key ? ' aria-current="page"' : '')
                 + '><i class="fa-solid ' + it.icon + '"></i>'
-                + '<span>' + this._esc(it.label) + '</span></button>';
+                + '<span>' + label + '</span></button>';
         });
-        return '<nav class="pxv-bottomnav">' + items.join('') + '</nav>';
+        return '<nav class="pxv-bottomnav" role="navigation" aria-label="Pixiv 主导航">' + items.join('') + '</nav>';
     }
     /* ---------- 作品面 ---------- */
     _novelPanel() {
