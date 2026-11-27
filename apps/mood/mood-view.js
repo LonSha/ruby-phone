@@ -48,6 +48,8 @@ const TABS = [
     { key: 'axes', label: '维度', icon: 'fa-solid fa-chart-simple' },
     { key: 'memory', label: '记忆', icon: 'fa-solid fa-brain' },
 ];
+/* [v4.215.0 · 照现实] 底栏真源别名：MOOD_FACES 与 TABS 同一引用，不另写格表。 */
+export const MOOD_FACES = TABS;
 
 /** 维度页展示的八条（顺序固定：先正向骨架，再负向三条）。 */
 const AXIS_ROWS = ['vitality', 'longing', 'intimacy', 'contentment', 'lust', 'anxiety', 'dejection', 'possessiveness'];
@@ -96,8 +98,20 @@ export class MoodView {
 
     /* ---------- 1. 生命周期 ---------- */
 
+    /* [v4.215.0 · 照现实] mood 无独立主 CSS（样式内联在 STYLE），v4 分层样式走 link 幂等注入。 */
+    _loadV4CSS() {
+        if (typeof document === 'undefined' || !document.head) return;
+        if (document.getElementById('mood-v4-css')) return;
+        const link = document.createElement('link');
+        link.id = 'mood-v4-css';
+        link.rel = 'stylesheet';
+        link.href = new URL('./mood.v4.css', import.meta.url).href;
+        document.head.appendChild(link);
+    }
+
     render(drives, jiwen, memory) {
         this._state = { drives, jiwen, memory };
+        this._loadV4CSS();
         const shell = this.app && this.app.phoneShell;
         if (!shell || typeof shell.setContent !== 'function') return;
         const html = this._layout(drives, jiwen, memory);
@@ -130,10 +144,12 @@ export class MoodView {
     /* ---------- 3. 骨架 ---------- */
 
     _tabbarHTML() {
-        const parts = ['<nav class="mood-tabbar">'];
-        for (const t of TABS) {
-            parts.push('<button class="mood-tab' + (this.tab === t.key ? ' is-on' : '') + '" data-act="tab" data-tab="' + t.key + '">'
-                + '<i class="' + t.icon + '"></i><span class="mood-tab-label">' + t.label + '</span></button>');
+        const parts = ['<nav class="mood-tabbar" role="navigation" aria-label="心境主导航">'];
+        for (const t of MOOD_FACES) {
+            const on = this.tab === t.key;
+            parts.push('<button class="mood-tab' + (on ? ' is-on' : '') + '" data-act="tab" data-tab="' + t.key
+                + '" data-mood-face="' + t.key + '"' + (on ? ' aria-current="page"' : '') + '>'
+                + '<i class="' + t.icon + '"></i><span class="mood-tab-label">' + esc(t.label) + '</span></button>');
         }
         parts.push('</nav>');
         return parts.join('');

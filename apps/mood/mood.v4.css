@@ -1,0 +1,35 @@
+/* ============================================================
+ * apps/mood/mood.v4.css — 心境「照现实」v4.215.0 底栏分层样式
+ * 由 mood-view.js 的 _loadV4CSS() 幂等注入 <link id="mood-v4-css"> 投递。
+ * 容器无层，按钮进 @layer rp.apps；不用 position:fixed，热区 ≥48/44。
+ * ============================================================ */
+.mood-root > .mood-tabbar {
+    display: flex;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    min-height: 48px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    background: #0d1524;
+}
+
+@layer rp.apps {
+    .mood-tab {
+        flex: 1 1 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        min-height: 48px;
+        min-width: 44px;
+        padding: 8px 0 10px;
+        border: 0;
+        background: none;
+        color: #64748b;
+        font-size: 11px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .mood-tab.is-on { color: #f472b6; }
+    .mood-tab-label { line-height: 1.1; }
+}
