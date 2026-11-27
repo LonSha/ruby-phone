@@ -135,6 +135,31 @@ function pickHeadlessMode(exe) {
   return 'new';
 }
 
+/* ---------- fail-closed 判定（纯函数，供本模块与判据同口径复用） ----------
+ * 本仓纪律：未执行不得计通过。`runScenario` 里最贵的假绿来自三态：
+ *   ① stdout 里根本没有 `<pre id="__result">`（浏览器崩了 / --dump-dom 没吐页面）；
+ *   ② 有 `<pre>` 但 `scriptRan=false`（模块解析失败、场景体提前抛错）；
+ *   ③ 进程超时被 SIGKILL（半截 DOM 的读数不可信）。
+ * 三态的共同现场都是「0 条读数、进程 exit 0、stderr 只有噪声」，旧代码把前两态的某些
+ * 组合误判成 executed=true；这里把所有判定收敛到一处，任何 fail-open 都必须显式命名。
+ * @returns {{executed:boolean, reason?:string}} 只回答「这一跑算不算执行过」。
+ */
+export function classifyRun({ matched, scriptRan, timedOut, reportCount }) {
+  if (timedOut) {
+    return { executed: false, reason: '浏览器进程超时被终止 —— 读数不可信，不得计通过' };
+  }
+  if (!matched) {
+    return { executed: false, reason: 'stdout 未匹配到 <pre id="__result"> —— 页面没有产出读数节点，不得计通过' };
+  }
+  if (!scriptRan) {
+    return { executed: false, reason: '页内场景脚本未执行（模块解析失败或提前抛错） —— 0 条读数不代表没问题' };
+  }
+  if (!Number.isFinite(reportCount) || reportCount < 1) {
+    return { executed: false, reason: '页面脚本已跑但 0 条读数 —— 判据被掏空等同没测，不得计通过' };
+  }
+  return { executed: true };
+}
+
 /**
  * 跑一个浏览器场景。
  * @param {{root:string, scenarios?:string[]|string, body?:string, styles?:string[],
@@ -286,14 +311,12 @@ flush();
         scriptRan = !!(parsed && parsed.scriptRan);
       } catch (_e) { reports = []; scriptRan = false; }
     }
-    if (m && !scriptRan) {
-      // 页内脚本**根本没跑**（模块解析失败 / 提前抛错），此时「0 条读数」不代表「没问题」。
-      //   本轮就是这个形态先骗过了一次：场景体里混进块内 import ⇒ 模块语法错误 ⇒
-      //   `<pre>` 保持初始值 ⇒ 读数 0 条、exit 0、stderr 干净。故这一态必须显式报未执行。
+    const verdict = classifyRun({ matched: !!m, scriptRan, timedOut, reportCount: reports.length });
+    if (!verdict.executed) {
       return {
-        executed: false, reason: '页内场景脚本未执行（模块解析失败或提前抛错）',
+        executed: false, reason: verdict.reason,
         reports: [], served: [], browser: version, stderr: stderr.slice(-4000),
-        timedOut, pageRan: false,
+        timedOut, pageRan: scriptRan,
       };
     }
     return {
@@ -316,6 +339,15 @@ flush();
  *   「同一个读数在两个脚本里显示成不同结论」。判据在各场景文件里，格式化只做展示。 */
 export function printReports(r, label = '') {
   console.log(`${label} executed=${r.executed} pageRan=${r.pageRan} browser=${r.browser} timedOut=${r.timedOut}`);
+  /* 防线二：即使上游运行器忘记设置 executed=false，这里也必须把
+   * pageRan=false / timedOut / 0 条读数当「未执行」处理，绝不打印「全部读数通过」。 */
+  if (!r.executed || r.pageRan === false || r.timedOut === true || !Array.isArray(r.reports) || r.reports.length === 0) {
+    const why = r.reason || (!r.executed ? '未执行' :
+      r.timedOut ? '超时（读数不可信）' :
+      r.pageRan === false ? '页内脚本未执行' : '0 条读数');
+    console.log('  未执行（不得计通过）：' + why);
+    return { pass: 0, fail: 1, total: 1 };
+  }
   if (!r.executed) { console.log('  未执行（不得计通过）：' + r.reason); return { pass: 0, fail: 1, total: 1 }; }
   let pass = 0;
   let fail = 0;
