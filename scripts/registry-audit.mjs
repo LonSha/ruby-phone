@@ -184,13 +184,19 @@ const deadWide = FIXTURE_MODE ? []
 
 
 /* ---------- R3：样式投递覆盖 ----------
- * 每个 App 的 `.css` 必须被**两种投递机制之一**覆盖，否则样式从不生效（界面裸奔，且不报错）：
+ * 每个 App 的 `.css` 必须被**三种投递机制之一**覆盖，否则样式从不生效（界面裸奔，且不报错）：
  *   · 机制 A —— 被打包进全局 `phone.css`（类前缀族能在其中找到）；
- *   · 机制 B —— 由某 JS 文件按文件名引用（自注入 `<link>`，见 diary / honey / music / weibo）。
- * 口径说明（为什么用「两种机制之一」而不是「必须进 phone.css」）：
- *   实测本仓**并存两种投递机制**，且都是有意为之。若只认 phone.css，会把四个自注入 App
- *   判成缺口（假阳性）。判据必须覆盖真实存在的全部合法机制。
+ *   · 机制 B —— 由某 JS 文件按文件名引用（自注入 `<link>`，见 diary / honey / music / weibo）；
+ *   · 机制 C —— 由入口样式表的 `@import` 链引入（phone/design/rp-entry.css，设计系统收编后
+ *              全部 v4 皮肤都走这条路：rp-entry.css 是唯一入口，宿主只加载它）。
+ * 口径说明（为什么用「三种机制之一」而不是「必须进 phone.css」）：
+ *   实测本仓**并存三种投递机制**，且都是有意为之。若只认 phone.css，会把自注入 App 与
+ *   全部 v4 皮肤判成缺口（假阳性）。判据必须覆盖真实存在的全部合法机制。
+ * 机制 C 的来历（v4.211.0 实测踩到）：wechat.v4.css 一直由 rp-entry.css 第 52 行 @import 投递，
+ *   但旧判据只认 A/B ⇒ R3 恒定报「从未被投递」，而 v4.209.0 的交付说明里把它记成「门禁识别面
+ *   缺口，另案处理」。这一版把它补成机制，而不是登记豁免 —— 豁免条目是放行条，会连机制一起遮住。
  * 豁免清单：仅收「有意识的转发壳 / 兼容壳」，逐条写明理由。 */
+const CSS_ENTRY_SHEETS = ['phone/design/rp-entry.css'];
 const CSS_DELIVERY_EXEMPT = (() => {
   /* 夹具可自带 config/css-exempt.json 覆盖本清单，使 R3b 的机制代码在合成仓库上可复现
    *   （内置清单是按真仓库固定路径写的，夹具天然不含）。非夹具下恒定使用内置清单。 */
@@ -276,6 +282,26 @@ const cssNotes = [];
       }
     }
   };
+  /* 机制 C：入口样式表的 @import 链（v4.211.0）。
+   *   入口自身也进 R3c —— 它是最可能积累旧路径的一份文件，而宿主只加载它一个。
+   *   活性自证：入口不存在 ⇒ 机制 C 的证据面消失 ⇒ fail-closed 拒判（不静默退化成「只认 A/B」）。 */
+  const importedCss = new Set();
+  for (const entry of CSS_ENTRY_SHEETS) {
+    const abs = path.join(root, entry);
+    if (!fs.existsSync(abs)) {
+      console.error(`[registry] 入口样式表 ${entry} 不存在 —— fail-closed 拒判（机制 C 的证据面消失了）`);
+      process.exit(2);
+    }
+    checkCssRefs(entry, abs);
+    const src = (() => { try { return fs.readFileSync(abs, 'utf8'); } catch { return ''; } })();
+    for (const m of src.matchAll(/@import\s+(?:url\(\s*['"]?([^'")]+)['"]?\s*\)|['"]([^'"]+)['"])/g)) {
+      const raw = (m[1] || m[2] || '').trim();
+      if (!raw || /^(data:|https?:|\/\/|#)/.test(raw)) continue;
+      const clean = raw.split('?')[0].split('#')[0];
+      if (!/\.css$/i.test(clean)) continue;
+      importedCss.add(path.posix.normalize(path.posix.join(path.posix.dirname(entry), clean)));
+    }
+  }
   const appsRoot = path.join(root, 'apps');
   if (!fs.existsSync(appsRoot)) {
     console.error('[registry] apps/ 目录不存在 —— fail-closed 拒判');
@@ -305,8 +331,11 @@ const cssNotes = [];
       const viaBundle = fams.length > 0 && fams.every((k) => new RegExp('\\.' + k + '-').test(phoneCss));
       // 机制 B：有 JS 把该文件名当作**路径字面量**引用（收紧判据，见上方 jsRefsCss 说明）
       const viaLink = jsRefsCss(cf, rel);
-      const mode = viaBundle ? 'bundle' : (viaLink ? 'link' : 'missing');
+      // 机制 C：入口样式表的 @import 链（v4.211.0）
+      const viaImport = importedCss.has(rel);
+      const mode = viaBundle ? 'bundle' : (viaLink ? 'link' : (viaImport ? 'import' : 'missing'));
       cssNotes.push({ rel, mode, fams: fams.length });
+
     }
   }
   if (cssTotal < MIN_CSS) {
@@ -343,13 +372,17 @@ const cssNotes = [];
       const bundled = fams.length > 0 && fams.every((k) => new RegExp('\\.' + k + '-').test(phoneCss2));
       const base = e.file.split('/').pop();
       const linked = jsRefsCss(base, e.file);
-      if (bundled || linked) obsoleteCssExempt.push(`${e.file}（${bundled ? '已进 phone.css' : '已有 JS 引用'}）`);
+      const imported2 = importedCss.has(e.file);
+      if (bundled || linked || imported2) {
+        obsoleteCssExempt.push(`${e.file}（${bundled ? '已进 phone.css' : (linked ? '已有 JS 引用' : '已由入口 @import 投递')}）`);
+      }
     }
   }
   var cssStats = {
     total: cssTotal,
     bundle: cssNotes.filter((c) => c.mode === 'bundle').length,
     link: cssNotes.filter((c) => c.mode === 'link').length,
+    imported: cssNotes.filter((c) => c.mode === 'import').length,
     exempt: cssNotes.filter((c) => c.mode === 'exempt').length
   };
 }
@@ -358,7 +391,7 @@ const cssNotes = [];
 const bucketPrefixes = prefixes.filter((p) => !WIDE_META.test(p));
 console.log(`[registry] APPS id ${appIds.length} · 懒加载分支 ${branchIds.length} · 会话键前缀 ${prefixes.length}` +
   `（其中宽匹配 ${prefixes.filter((p) => WIDE_META.test(p)).length} 条，已登记 ${REGEX_WIDE_ALLOWLIST.length} 类）`);
-console.log(`[registry] 样式投递 ${cssStats.total} 个 · phone.css 打包 ${cssStats.bundle} · JS 自注入 ${cssStats.link} · 豁免 ${cssStats.exempt} · 未覆盖 ${cssMissing.length}` +
+console.log(`[registry] 样式投递 ${cssStats.total} 个 · phone.css 打包 ${cssStats.bundle} · JS 自注入 ${cssStats.link} · 入口 @import ${cssStats.imported} · 豁免 ${cssStats.exempt} · 未覆盖 ${cssMissing.length}` +
   ` · 样式内本地引用失效 ${cssRefsLocal.length}`);
 
 if (listMode) {

@@ -120,6 +120,7 @@ export const APP_LAZY_ROUTES = [
     { id: "ucrules", module: "./apps/games/undercover/undercover-rules-app.js", key: "ucRulesApp", cls: "UndercoverRulesApp", errTitle: "谁是卧底规则App" },
     { id: "bilifmt", module: "./apps/bilibili/bili-format-app.js", key: "biliFmtApp", cls: "BiliFormatApp", errTitle: "B站换算App" },
     { id: "musiccore", module: "./apps/music/music-core-app.js", key: "musicCoreApp", cls: "MusicCoreApp", errTitle: "歌词与模式App" },
+    { id: "line", module: "./apps/line/line-app.js", key: "lineApp", cls: "LineApp", errTitle: "LINE App" },
 ];
 
 /* 索引（appId → 行）：装配器查表用，一次建好避免每次 openApp 线性扫。 */

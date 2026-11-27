@@ -169,6 +169,9 @@ APP_GLYPHS = {
     #   ucrules -> person（6 人空桌围坐）/ bilifmt -> chart（计数换算格子）
     #   musiccore -> music（LRC 时间轴 + 播放模式拨盘）。
     'ucrules': 'person', 'bilifmt': 'chart', 'musiccore': 'music',
+    # [v4.211.0] LINE：人话气泡语义（chat）。它是第 2/3 层点名的最后一件，
+    #   与 comms（会话台）/ social（朋友圈）同为 chat 字形，但底色自成一格（官方绿）。
+    'line': 'chat',
     # [v4.189.0 与更早遗留] 这 8 个 App 也从未建过字形条目（同族欠账，
     #   本版一并闭合）：pokereval/wwrules 是 v4.189.0 的两件规则试算器，
     #   iot/share/callscene/social/daily/keyboard 更早。语义：
@@ -214,6 +217,9 @@ BG_OVERRIDE = {
 
     'mofo': PAL['dkblue'], 'diary': PAL['yellow'], 'memory': PAL['blue'],
     'ucrules': PAL['dkbrown'], 'bilifmt': PAL['pink'], 'musiccore': PAL['dkblue'],
+    # [v4.211.0] LINE 官方绿（#06c755 取 16 色盘里最近的 green），与 comms 的灰蓝、
+    #   social 的橙都不同色，桌面网格上能一眼挑出来。
+    'line': PAL['green'],
     'pokereval': PAL['red'], 'wwrules': PAL['dkblue'],
     'iot': PAL['blue'], 'share': PAL['dkgreen'], 'callscene': PAL['green'],
     'social': PAL['green'], 'daily': PAL['yellow'], 'keyboard': PAL['gray'],

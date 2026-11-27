@@ -56,6 +56,7 @@ export const PIXEL_ICON_FILES = Object.freeze({
     'keyboard': 'keyboard',
     'ledger': 'ledger',
     'lexiscore': 'lexiscore',
+    'line': 'line',
     'lofter': 'lofter',
     'loverspace': 'loverspace',
     'magazine': 'magazine',

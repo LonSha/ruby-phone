@@ -60,6 +60,7 @@ export const SKIN_V3 = Object.freeze([
     {appId: "kettle", css: "./apps/kettle/kettle.v3.css", detect: ["ktl"], family: "companion"},
     {appId: "ledger", css: "./apps/ledger/ledger.v3.css", detect: ["lg"], family: "finance"},
     {appId: "lexiscore", css: "./apps/lexiscore/lexiscore.v3.css", detect: ["ls"], family: "companion"},
+    {appId: "line", css: "./apps/line/line.v3.css", detect: ["ln"], family: "social"},
     {appId: "lofter", css: "./apps/lofter/lofter.v3.css", detect: ["lof"], family: "social"},
     {appId: "loverspace", css: "./apps/loverspace/loverspace.v3.css", detect: ["lov"], family: "companion"},
     {appId: "magazine", css: "./apps/magazine/magazine.v3.css", detect: ["mgz"], family: "social"},

@@ -1,0 +1,65 @@
+/* [v4.159.0] LINE App（.ln-*）—— 与 weather.css / taobao.css 同族：默认皮肤（非 v3）。
+ * 只写「这个 App 自己的样子」，不碰别的 App 的类名；零 !important。 */
+.ln-root { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.ln-header h2 { font-size: 18px; margin: 0; color: #f0f0f0; }
+.ln-header-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+.ln-face { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; font-size: 13px; }
+.ln-face-ok { background: rgba(34,197,94,.12); color: #4ade80; }
+.ln-face-warn { background: rgba(251,191,36,.12); color: #fbbf24; }
+.ln-face-err { background: rgba(239,68,68,.12); color: #f87171; }
+.ln-face-icon { font-size: 18px; }
+.ln-face-label { flex: 1; }
+.ln-flash { background: rgba(6,199,85,.14); color: #4ade80; border-radius: 8px; padding: 8px 12px; font-size: 12px; }
+.ln-banner { font-size: 11px; color: #64748b; line-height: 1.55; background: rgba(255,255,255,.03); border-radius: 8px; padding: 8px 12px; }
+.ln-list-title { font-size: 13px; margin: 0 0 8px; color: #e2e8f0; display: flex; align-items: baseline; gap: 6px; }
+.ln-count { font-size: 10px; color: #64748b; font-weight: 400; }
+.ln-empty { font-size: 12px; color: #64748b; padding: 6px 0; }
+.ln-rooms, .ln-open, .ln-new, .ln-timeline, .ln-stats, .ln-settings { background: rgba(255,255,255,.03); border-radius: 10px; padding: 12px; }
+.ln-room { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 8px; cursor: pointer; }
+.ln-room:hover { background: rgba(255,255,255,.05); }
+.ln-room.is-open { background: rgba(6,199,85,.12); }
+.ln-room-main { flex: 1; min-width: 0; }
+.ln-room-title { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #e2e8f0; }
+.ln-room-icon { font-size: 13px; }
+.ln-room-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ln-room-kind { font-size: 10px; color: #94a3b8; background: rgba(255,255,255,.06); border-radius: 4px; padding: 0 5px; }
+.ln-room-muted { font-size: 10px; color: #64748b; }
+.ln-room-last { font-size: 11px; color: #94a3b8; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ln-room-last-empty { color: #475569; }
+.ln-room-meta { font-size: 10px; color: #475569; margin-top: 2px; }
+.ln-unread { min-width: 18px; text-align: center; font-size: 10px; color: #fff; background: #06c755; border-radius: 9px; padding: 1px 5px; }
+.ln-members { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.ln-member { font-size: 10px; color: #94a3b8; background: rgba(255,255,255,.06); border-radius: 4px; padding: 1px 6px; }
+.ln-msgs { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
+.ln-msg { background: rgba(255,255,255,.04); border-radius: 8px; padding: 6px 10px; }
+.ln-msg.is-mine { background: rgba(6,199,85,.14); }
+.ln-msg.is-recalled { opacity: .5; }
+.ln-msg-head { display: flex; gap: 8px; align-items: baseline; font-size: 10px; color: #64748b; }
+.ln-msg-from { color: #94a3b8; font-weight: 600; }
+.ln-msg-body { font-size: 13px; color: #e2e8f0; line-height: 1.5; word-break: break-word; }
+.ln-msg-sticker { color: #2dd4bf; }
+.ln-msg-note { font-size: 10px; color: #fbbf24; }
+.ln-msg-acts { display: flex; gap: 6px; margin-top: 4px; }
+.ln-compose { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.ln-compose-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.ln-input { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: rgba(0,0,0,.25); color: #e5e7eb; font-size: 13px; font-family: inherit; }
+.ln-sticker { flex: 1; min-width: 120px; }
+.ln-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.ln-btn { border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; background: rgba(255,255,255,.1); color: #e2e8f0; }
+.ln-btn-primary { background: #06c755; color: #04140a; font-weight: 600; }
+.ln-mini { border: none; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; background: rgba(255,255,255,.1); color: #cbd5e1; flex-shrink: 0; }
+.ln-mini:disabled { opacity: .38; cursor: default; }
+.ln-form-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.ln-new-id, .ln-new-name { flex: 1; min-width: 110px; }
+.ln-new-kind { flex: 0 0 96px; }
+.ln-new-members { margin-bottom: 0; }
+.ln-warn { font-size: 11px; color: #fbbf24; margin-top: 6px; }
+.ln-hint { font-size: 10px; color: #475569; line-height: 1.55; margin-top: 6px; }
+.ln-tl-row { display: flex; gap: 8px; align-items: baseline; font-size: 11px; color: #94a3b8; padding: 4px 0; cursor: pointer; }
+.ln-tl-row:hover { color: #e2e8f0; }
+.ln-tl-room { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ln-tl-from { color: #64748b; }
+.ln-tl-what { color: #2dd4bf; }
+.ln-tl-clock { color: #475569; font-variant-numeric: tabular-nums; }
+.ln-stat-row { display: flex; justify-content: space-between; font-size: 12px; color: #94a3b8; padding: 2px 0; }
+.ln-toggle { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #cbd5e1; padding: 4px 0; gap: 6px; }

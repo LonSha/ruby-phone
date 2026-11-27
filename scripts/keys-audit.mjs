@@ -483,6 +483,8 @@ const KEY_REGISTRY = [
     { key: 'diagnose_reason_v1', scope: 'chat', note: '[v4.192.0] 诊断归因文案：最近一次试算的取值与文案（随会话隔离）' },
   { key: 'weather_settings', scope: 'chat', note: '[v3.27.0] 天气设置（注入开关 / 新鲜度小时数 / 注入条数）' },
   { key: 'weather_state', scope: 'chat', note: '[v3.27.0] 天气观测（角色与用户两槽；温度以整数存，过期标「未必是当下的」）' },
+  { key: 'line_settings', scope: 'chat', note: '[v4.159.0] LINE 设置（注入开关 / 已读回执开关 / 官方号是否算未读）' },
+  { key: 'line_state', scope: 'chat', note: '[v4.159.0] LINE 会话账（三种房间 / 每房间环形上限 / 读游标 readUpTo / 撤回留痕；超限拒建并给人话原因）' },
     { key: 'widget_settings', scope: 'chat', note: '[v3.28.0] 自定义组件设置（注入开关 / 注入条数 / 新建默认尺寸）' },
     { key: 'widget_templates', scope: 'chat', note: '[v3.28.0] 组件库（名称 / 尺寸 / html / css / notes / 变量声明与文本默认值；不执行代码）' },
     { key: 'widget_instances', scope: 'chat', note: '[v3.28.0] 桌面实例（哪个组件摆在哪 + 每个实例的变量赋值）' },

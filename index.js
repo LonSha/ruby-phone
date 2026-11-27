@@ -476,8 +476,8 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.210.0';
-const ST_PHONE_CSS_REVISION = '20261124-style-layer-single-source';
+const ST_PHONE_VERSION = '4.211.0';
+const ST_PHONE_CSS_REVISION = '20261127-line-app';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
 /* [v4.92.0] 像素皮肤：独立于 phone.css 的 pixel-skin.css（复古掌机 OS 视觉）。
@@ -564,7 +564,8 @@ const ST_PHONE_REBIND_APP_KEYS = [
     'pixivApp',       // [v3.35.0] Pixiv：有未提交草稿（作品三格 / 续章正文 / 评论框 / 插画登记 / 文风与作者）、
                       //             选中面与展开项（_open / _myFace / _promptFor / _replyTo / _chapter
                       //             皆为视图态），换会话必须丢草稿重取，必须进表
-    'magazineApp',    // [v3.36.0] 杂志：有未提交的稿件草稿（取材页的选人与贴回文本）与视图态，
+    'magazineApp',
+    'lineApp',        // [v4.159.0 · 第 2 层最后一件] LINE：有未提交草稿（正文 / 选中贴图 / 建会话表单）、    // [v3.36.0] 杂志：有未提交的稿件草稿（取材页的选人与贴回文本）与视图态，
                       //             换会话必须丢草稿重取，必须进表
     'soundkitApp',    // [v3.37.0] 白盒音效盒：有未提交的配方草稿（音符表 / 名字 / 音量）、
                       //             分享码草稿与 CSS 探针（_draft / _cssProbe 皆为视图态），
@@ -722,21 +723,18 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-11-26",
+    date: "2026-11-27",
     items: [
-        "1. 口径承接：v4.209.0 时计确立的「照官方那种」三条硬判据原样搬到小红书 —— 位置与文案照官方、本机没有的能力画出来但禁用、点击在页面内给真话（绝不用宿主 alert，alert 会卡住 SillyTavern 的消息流）。本版不重新请示口径，按上一版已裁决的默认判据执行。",
-        "2. 官方结构取证（写进文件，不靠记忆）：2024-10-12 钛媒体《购物改视频，小红书视频3.0提速》原文——「近期的版本更新之后，更多用户会发现自己的小红书APP的第二Tab由「购物」替换为「视频」」。由此官方底栏五格依次为 首页 / 视频 / ＋ / 消息 / 我，中央「＋」是凸起的圆形发布键。检索还交叉到 2023-01-05 首次替换后被回退、2023-02 与 2024-09 两度再试的经过，说明这不是一次临时改版。判据写进 xhs-view.js 文件头、xhs.v4.css 文件头、浏览器场景文件头三处。",
-        "3. 结构改动：TABS（面表，真能切的三个面）与 NAV_CELLS（格表，底栏五格）拆开写；底栏改由 _tabbarHtml() 一处生成，删掉原先按索引 i===0 / i===1 硬插格子的写法 —— 那种写法在格表顺序一变就静默错位，且没有任何判据能发现。格数不再等于面数这件事，由静态门 A8 双向对账守。",
-        "4. 「视频」格：is-disabled + aria-disabled=true + data-act=xhs-soon + data-what / data-why，**不带 data-tab**（带上就会走 data-tab 分支去切一个不存在的面，等于把「没做」实现成「切了但白屏」）。点击走页面内提示条 _toast()，文案含格名与原因，2.6 秒自收，role=status。",
-        "5. 页头发布入口去掉：照官方，发布入口只在底栏正中那颗「＋」（.xhs-tabbar-pub，data-act=xhs-compose），「我」页的「发一篇」保留。window.alert 在本文件清零。",
-        "6. 【本版自己抓到的缺陷形态】浏览器场景首跑 4 条红，四档视口全部是同一条读数 nav-thumb-height 量出 31：底栏格实际只有 33（未缩放）。根因是 xhs.v4.css 的 rp.skins 段写了 min-block-size: var(--rp33-tab-h, 44px)，而 --rp33-tab-h 在 phone-tokens-v3.3.css:62 是 32px —— 那是胶囊形页签的口径，不是底栏热区口径；层序上 rp.skins 赢 rp.apps，所以 apps 层写的 44 根本轮不到生效。同源的第二条缺陷：底栏本身没写热区下限，宿主压按钮高度时整条栏会被压成细线。",
-        "7. 修法：把底栏高度提成单一 token --xhs-tabbar-h: 48px（无层声明，自定义属性不受 all: revert-layer 影响），apps 与 skins 两处都从它取；栏上同时写 min-block-size。为什么是 48 不是 44：外壳对整屏做过约 0.9 的 scale（实测 .xhs-app offsetH=728 / rect=655），CSS 写 44 会被量成约 40，低于 HIG 的 44 热区下限；时计 v4.209.0 收口时用的就是 48，本版照同口径。中央圆钮保持 44 不计入热区判据，理由写在场景注释里。",
-        "8. 静态门 A11（新增）盯这条：token 只许定义一次、apps 与 skins 都必须从 token 取、skins 段里不许再出现 --rp33-tab-h、且底栏本身必须有热区下限。四条断言各自带失败文案，写明再这么写就会掉回 32。",
-        "9. 浏览器场景 o8-xhs-bottomnav：108 条读数 × 四档视口（320x568 / 390x844 / 768x1024 / 1280x800）全绿，真 Chromium 131.0.6778.33。除贴底、五格顺序、置灰、点击真话、切面复用同一外壳外，另加两条不缩放读数（nav-css-min-block / cell-css-min-block，读计算样式而不是 getBoundingClientRect），把「热区下限真的写在 CSS 里」与「缩放后仍过线」分开量，免得改一边蒙住另一边。",
-        "10. 静态门 A1~A11 全部绿：底栏是 nav + 中文无障碍名 / 真格与 _tabs() 一一对应 / 高亮走 aria-current / 底栏排在内容层之后且模板只出现一次 / 视频格四要素齐备 / 皮肤表由入口 @import 投递且不用 position:fixed / 滚动层 min-height:0 / 格面双向对账（官方四格一个不少、多出来的只许是发布、发布必须是真动作、中央「＋」下标必须是 2）/ 无 alert / 分层位次（容器留无层、按钮进 rp.apps、v3 修正进 rp.skins）/ 热区数值单一来源。",
-        "11. 交棒改写的下限形纪律（本版自查三条）：① 静态门与场景一律不写死版本号，判据按形态判；② 上一版裁定的「浏览器层通过这句话不成立」继续沿用 —— 本版只说全矩阵真跑一次、新增红 0、已知红逐条有名有姓；③ 修自己写错的判据而不是放宽判据：本轮首跑红的 4 条全是我自己 CSS 里的真缺陷，没有一条被改成调低阈值放过。",
-        "12. 【运行时验证边界】① 仍未在真 SillyTavern 宿主里开手机，底栏观感与提示条位置需真机刷新确认；② 本轮浏览器环境的宿主属性是 data-rp-ios=3 + data-rp-ds=2 + data-rp-refresh=4（v3 皮肤开着、新设计系统重置开着），容器与按钮两类规则都在这个档位下验过；③ phone.css 里旧的 .xhs-tab / .xhs-navbar / .cl-tabs 等旧类名仍在，v4 新类名不命中，属已知不动的存量。一句话版本（与边界文档同源）：本仓能保证的是机制面与读数面；真机上的视觉排版、真实网络往返、宿主存储迁移与渲染帧耗时不能保证。这里要说清：真机上属于「看起来没坏但显示不对」的那一类问题，本仓既不能保证不出现，也不能保证一出现就被发现 —— 只能等真机复现后再修。",
-        "【版本升至 4.210.0（五源同源）】六源：manifest.json / package.json / index.js 的 ST_PHONE_VERSION / update-log.json 的 latest 与 head / tests/audit/status-ledger.json 的 version；ST_PHONE_CURRENT_UPDATE 与 update-log.json 的当版条目逐字同源（同一份真源生成）。"
+        "【版本升至 4.211.0（五源同源）】本版两件事：① 把第 2/3 层点名的最后一件 LINE 落地（apps/line 四件套 + 六处接线 + 14 条判据）；② 补上 registry 门缺失的第三种样式投递机制（入口 @import 链），清掉 wechat.v4.css 那条「从未被投递」的存量红。",
+        "【LINE 的四条机制】① 三态房间 1:1 / 群 / 官方 —— 官方号默认不参与未读计数（那是号的广播），开关可改；② 每房间消息环形上限 200 条，裁掉的条数落 dropped 留痕，界面上明说「挤掉 N 条」；③ 已读是读游标 readUpTo（读到第几条）而不是布尔，游标不在列表里（那条已被环形裁掉）⇒ 如实算全未读，不装作已读；④ 贴图是 12 条静态 id 到名字的对照表，零 URL、零网络。",
+        "【四条不缝】① 源自己发请求拉贴图与历史 —— 本件零网络、零 URL；② 源把已读写成布尔并塞进没有角色维度的宿主角色对象 —— 本件只记本会话读游标，切角色不会整本跟着走；③ 源起常驻定时器轮询新消息 —— 本件零定时器，消息由用户/宿主喂进来；④ 源按时间重排一份全局消息流 —— 本件按房间分账 + 环形上限，跨房间只出引用。",
+        "【接线六处 + 三处附带】APPS 图标（config/apps.js）· 懒加载路由（config/app-lazy-routes.js）· 会话键前缀 /^line_/（config/storage.js）· line_settings / line_state 登记 KEY_REGISTRY（scripts/keys-audit.mjs）· REBIND 表 lineApp（打开的会话 / 草稿 / 贴图选择 / 建会话表单 / 两步确认全是实例态，换会话必须丢）· v3 皮肤登记（config/style-skin-v3.js）；附带：默认皮肤打包进 phone.css、库类目 line→social、ST_PHONE_CSS_REVISION 一并抬。",
+        "【判据】tests/r24_line_sim.test.mjs 14 条：归一与环形留痕 / 五个上限被钉住 / 三态不塌 / 读游标（含游标被裁掉如实算全未读）/ 官方号开关真改读数 / 撤回只标记不删 / 截断留痕 / 拒建带人话原因 / 时间线只出引用不复制正文 / 注入块只出事实 / 六处接线齐 / 零网络零定时器零数据库零角色对象；外加 N1 / N2 两条破坏副本必须变红（游标找不到时改成返回 0、撤回改成 splice 删除）。",
+        "【存量红：不是本版引入，但本版修了机制】npm run registry 在 v4.210.0 上报 R3「apps/wechat/wechat.v4.css 从未被投递」。上一版把它记成「门禁识别面缺口，另案处理」—— 本版核到底：该文件确实由 phone/design/rp-entry.css 的 @import 投递（设计系统收编后全部 v4 皮肤都走这条唯一入口），而 registry 门只认「进 phone.css」与「JS 自注入」两种机制，于是恒定假红。",
+        "【修法是补机制，不是登记豁免】豁免条目是放行条，会连机制一起遮住（本仓 R3b 已为这件事立过纪律：豁免必须反向自证「两种机制都不适用」）。本版给 registry 加机制 C —— 入口样式表的 @import 链：入口自身进 R3c 本地引用检查，入口缺失 fail-closed 拒判，豁免反向自证也把 import 计入。修后读数：样式投递 192 · phone.css 打包 143 · JS 自注入 47 · 入口 @import 1 · 豁免 1 · 未覆盖 0。",
+        "【机制 C 的负控制（实跑过）】把 rp-entry.css 里那一行 @import 删掉再跑：入口 @import 0 · 未覆盖 1 · 报出 apps/wechat/wechat.v4.css，恢复后又转绿。说明它是真判定，不是把红灯糊成绿灯。",
+        "【顺手清理】method-consuming 报两条基线方法已被重新消费（RecallApp.roomOf / GlobalSocialStore.appendMessage），按官方 --update 重签，不是放宽。",
+        "【运行时验证边界】本版只验到静态接线与纯函数读数：LINE 页在浏览器与真机上一次都没有点过 —— 消息滚动的观感、贴图位在真宿主里的占位、移动端输入法下的发消息按钮位置都还没验。registry 机制 C 也只在**本机**的 rp-entry.css 上验过（真宿主是否按同一路径加载入口表，需要在真机上确认一次）。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

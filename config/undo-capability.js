@@ -1,5 +1,5 @@
 /* ============================================================
- * config/undo-capability.js — 105 个 App 的撤销能力**唯一声明面** [v4.105.0 · R13-O2]
+ * config/undo-capability.js — 106 个 App 的撤销能力**唯一声明面** [v4.105.0 · R13-O2]
  * ------------------------------------------------------------
  * 【本面治的欠债（修前实测处境，可复算）】
  *   计划书原文 P2 读数：`grep -rl 'undo|撤销'` 命中 336 处 / 13 个 app，
@@ -27,12 +27,12 @@
  *      故本面把它们归 irreversible/none，并在理由里点名说明，不让词面混进来。
  *   ② 目录数 vs App 数：`apps/memory/` 一个目录承载两件 App（memory + graph）；v4.191.0 起又多了「同目录承载一件试算内核」的形态（见文件末尾那 16 条）
  *      （`memory-app.js` / `graph-app.js`，v255 dirMap 与 lazy 分支实证）。
- *      本面按 **APPS 真源长度**（`config/apps.js` 的 APPS.length，当前 105）登记，
+ *      本面按 **APPS 真源长度**（`config/apps.js` 的 APPS.length，当前 106）登记，
  *      目录口径会把 graph 漏掉 —— 那正是 system-v3550 首版踩过的坑。
  *
  * 【为什么声明放在常量表而不是各 App 自己的 data 层】
  *   计划书原文的路径是「每个 app 的数据层导出一个 `undoCapability()`」。
- *   本版**不那样做**，理由是可复算的：105 个 App 里有 15 个没有 `*-data.js`
+ *   本版**不那样做**，理由是可复算的：106 个 App 里有 15 个没有 `*-data.js`
  *   （accessdesk / affairs / backupdesk / caphealth / comms / creationdesk / mood /
  *   notifications / search / settings / taskentry / timeweaver / wangxiang / workflow /
  *   worldpulse），它们的销毁逻辑写在 `*-app.js` 里。要求「每个 data 层导出」会逼着
@@ -73,7 +73,7 @@ export const UNDO_MODES = Object.freeze({
 export const UNDO_MODE_ORDER = Object.freeze(['undo', 'confirm', 'irreversible']);
 
 /**
- * 声明表：105 条，一条一 App。
+ * 声明表：106 条，一条一 App。
  * 字段：{ appId, name, mode, why }
  *   · `name` 与 `config/apps.js` 的 APPS 中文名一致（判据双向对账）；
  *   · `why` 在 undo / irreversible 两档**必填且不得是「不适用」**；
@@ -200,6 +200,7 @@ export const UNDO_DECLARATIONS = Object.freeze([
     Object.freeze({ appId: 'ucrules', name: '谁是卧底规则', mode: 'irreversible', why: '规则引擎（`apps/games/undercover/` 的 `-rules` 三件）：规则表与词库的**只读**推导，破坏性符号与四字中文词双 0（同目录 only 的销毁形符号在 `undercover-data` 的局内状态里，属主件）。本档登记「无自有销毁入口」。' }),
     Object.freeze({ appId: 'bilifmt', name: 'B站换算', mode: 'irreversible', why: '试算内核（`apps/bilibili/bili-format*.js`）：把播放量 / 时长 / 分P 折成可读换算，纯函数。`apps/bilibili/` 的 4 处「清空 / 删除」全在 bili 主件的收藏与历史入口里（bili 已单独登记为「无自有销毁入口」）。本件自身不删任何东西。' }),
     Object.freeze({ appId: 'musiccore', name: '歌词与模式', mode: 'irreversible', why: '试算内核（`apps/music/music-core*.js`）：歌词行解析 + 播放模式换算，纯函数、不落盘。`apps/music/` 里那 1 处 `recycleBin.registerRestorer(` 与 20 处「清空 / 删除 / 重置」全属 music 主件（已登记为 undo 档的恢复器与销毁面）—— 本件不新增恢复器，也不新增销毁入口。' }),
+    Object.freeze({ appId: 'line', name: 'LINE', mode: 'confirm', why: '会话本体（`apps/line/line-data.js` 的 line_state）：拉下「关掉这个会话」会连同里面的消息一起没，故在视图层需两步确认（`line-view.js` 的 `_armed` 对话框键：再点一次才真关）。消息撤回不进这一档：它只把 `recalled` 标记上去、条目还在，没有东西被销毁。本件未接回收站（不假装能恢复）。' }),
 ]);
 
 /** 按 appId 取声明（未知 appId 返回 null，不伪造）。 */

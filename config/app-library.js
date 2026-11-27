@@ -73,6 +73,7 @@ export const APP_CATEGORY = Object.freeze({
     socialguard: 'social',
     stickerdesk: 'social',
     peek: 'social',
+    line: 'social',
     comms: 'social',
     affairs: 'social',
 

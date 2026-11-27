@@ -80,13 +80,13 @@ test('A1 声明条数 = APPS 条数，id 集合双向相等，无重复无占位
      *   16 件并入），声明表却停在 89 ⇒ 这条判据连红多版，且看着像「本版引入的新红」。
      *   教训与 v4105 守的正是同一件事：**判据不许写死一个会随仓增长的量**。故这里改成
      *   「声明表必须与真源等长」，条数只在断言消息里出现。 */
-    const DECL_EXPECT = 105;
+    const DECL_EXPECT = 106;
     assert.equal(APPS.length, UNDO.UNDO_DECLARATIONS.length, '★ APPS 真源与声明表必须等长（真源 ' + String(APPS.length) + ' / 声明 ' + String(UNDO.UNDO_DECLARATIONS.length) + '）');
-    assert.equal(DECL_EXPECT, 105, '本版基线：105 件 App（变了要同步这条基线注释与 A4 的三档读数）');
+    assert.equal(DECL_EXPECT, 106, '本版基线：106 件 App（变了要同步这条基线注释与 A4 的三档读数）');
     const decl = UNDO.UNDO_DECLARATIONS;
-    assert.equal(decl.length, 105, '★ 声明必须一条一 App（目录数 ≠ App 数：apps/memory 承载 memory + graph，apps/<父>/ 还承载试算内核）');
+    assert.equal(decl.length, 106, '★ 声明必须一条一 App（目录数 ≠ App 数：apps/memory 承载 memory + graph，apps/<父>/ 还承载试算内核）');
     const ids = decl.map((d) => String(d.appId));
-    assert.equal(new Set(ids).size, 105, 'appId 不许重复（重复会让 undoModeCounts 多算一件）');
+    assert.equal(new Set(ids).size, 106, 'appId 不许重复（重复会让 undoModeCounts 多算一件）');
     const missing = APP_IDS.filter((id) => !ids.includes(id));
     const extra = ids.filter((id) => !APP_IDS.includes(id));
     assert.deepEqual(missing, [], '★ APPS 里有而声明里没有的 App：' + missing.join(' / '));
@@ -112,11 +112,11 @@ test('A3 每条 why 非空、不得是「不适用」，且档位只能是三档
     }
 });
 
-test('A4 三档计数 = 11 / 19 / 59（读数写死，变动必须是有意识的）', () => {
+test('A4 三档计数 = 11 / 20 / 75（读数写死，变动必须是有意识的）', () => {
     const c = UNDO.undoModeCounts();
-    assert.equal(c.total, 105);
+    assert.equal(c.total, 106);
     assert.equal(c.undo, 11, 'undo 档 = 接了回收站的 11 件');
-    assert.equal(c.confirm, 19, 'confirm 档 = 本版补齐二次确认的 19 件');
+    assert.equal(c.confirm, 20, 'confirm 档 = 本版补齐二次确认的 20 件（v4.211.0 新增 LINE：关会话需两步确认）');
     assert.equal(c.irreversible, 75, 'irreversible 档 = 如实记账的 75 件（含 3 件「全目录零破坏性入口」+ 16 件试算内核/规则引擎）');
     assert.equal(c.undo + c.confirm + c.irreversible, c.total);
 });
@@ -131,8 +131,8 @@ test('A5 未知 appId 按最保守口径：irreversible + unknown 标记，绝�
 
 test('A6 一句话总述带三档数字（UI 与判据共用，不许第二份实现）', () => {
     const line = UNDO.undoSummaryLine();
-    assert.ok(line.includes('105'), line);
-    assert.ok(line.includes('11') && line.includes('19') && line.includes('75'), line);
+    assert.ok(line.includes('106'), line);
+    assert.ok(line.includes('11') && line.includes('20') && line.includes('75'), line);
 });
 
 /* ============================================================
@@ -154,9 +154,9 @@ test('B2 反过来也要成立：磁盘上有恢复器的 App 必须都声明成
         + '（这份声明面就没意义了）');
 });
 
-test('B3 confirm 档 19 件的目录里必须真的出现 confirmDestroy(，且插入点不少于 38 处', () => {
+test('B3 confirm 档 20 件的目录里必须真的出现 confirmDestroy(，且插入点不少于 38 处', () => {
     const claims = UNDO.UNDO_DECLARATIONS.filter((d) => d.mode === 'confirm').map((d) => String(d.appId));
-    assert.equal(claims.length, 19);
+    assert.equal(claims.length, 20);
     const bad = claims.filter((id) => !dirHas(id, 'confirmDestroy('));
     assert.deepEqual(bad, [], '★ 声明说「每个销毁入口都问了」但磁盘上没有守卫：' + bad.join(' / '));
     const total = claims.reduce((n, id) => n + dirCount(id, 'confirmDestroy('), 0);
@@ -381,7 +381,7 @@ test('E3 负控制：把一件 confirm 档改成 irreversible，B3/B5 判据必�
         'downgrade-mode'
     );
     const claims = mod.UNDO_DECLARATIONS.filter((d) => d.mode === 'confirm').map((d) => String(d.appId));
-    assert.equal(claims.length, 18, '★ 破坏后 confirm 档少了一件 —— B3 的「必须 19 件」判据必须报红');
+    assert.equal(claims.length, 19, '★ 破坏后 confirm 档少了一件 —— B3 的「必须 20 件」判据必须报红');
     assert.equal(claims.includes('annidate'), false);
     const irr = mod.UNDO_DECLARATIONS.filter((d) => d.mode === 'irreversible').map((d) => String(d.appId));
     assert.ok(irr.includes('annidate'));

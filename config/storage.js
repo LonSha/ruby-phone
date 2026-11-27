@@ -185,6 +185,12 @@ export class PhoneStorage {
             //   与 ^piggy_ 同族的单条前缀覆盖两键（无元字符、无需宽匹配登记）。
             //   观测随会话隔离：换角色后那是另一个城市的另一天气。
             /^weather_/,
+            // [v4.159.0] LINE（line_settings / line_state）：
+            //   与 ^weather_ 同族的单条前缀覆盖两键（无元字符、无需宽匹配登记）。
+            //   会话与读游标随会话隔离：换角色后那是另一段关系的另一本聊天记录
+            //   （源把消息与已读挂在没有角色维度的宿主对象上，切角色后整本跟着走）。
+            /^line_/,
+
             // [v3.29.0] 桃宝（taobao_settings / taobao_products / taobao_cart / taobao_orders / taobao_grabs）：
             //   与 ^shop_ 同族的单条前缀覆盖五键（无元字符、无需宽匹配登记）。
             //   目录、车、订单与抓取记录随会话隔离：换角色后那是另一个角色的另一个店。
