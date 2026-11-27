@@ -9,16 +9,46 @@
  *
  * 只读：数据全部来自 this.app.projection()（内部只读桥，不写任何状态）。
  * 结构：_esc + _draw + _bind（与 place-view 同风格）。
+ *
+ * [v4.214.0] 照现实重排成「客户端」形态：改造前这一页是十二张卡片一路往下堆
+ *   （归因 / 来源 / 阶段 / 承诺 / 支线 / 认知 / 并行 / 秘密 / 回响 / 剧情板 / 目标 / 设置），
+ *   想查「有哪些承诺还没兑现」得滚过六七张卡，想改设置得滚到底。
+ *   现在按底栏四格分开（单一真源 PN_FACES）：
+ *     · story 故事 —— 归因 / 来源 / 当前阶段（剧情走到哪一步）
+ *     · owed  欠账 —— 承诺 / 支线（答应过什么、哪些线还在推进）
+ *     · world 世界 —— 认知 / 并行 / 秘密 / 回响（世界另一端同时在发生什么）
+ *     · tools 工具 —— 剧情板 / 目标 / 设置
+ *   纪律：面判定只在 `_renderFaceBody` 一处；归因卡进**外壳**（每一格都先说明读不读得到，
+ *   否则「读不到」在三格上都会被误读成「没有」）；样式走 apps/plotline/plotline.v4.css
+ *   （@layer rp.apps，入口 rp-entry.css 的 @import 投递）；当前格是现场态，不落盘。
  * ============================================================ */
 'use strict';
 import { PROMISE_STATUS, ARC_STATUS } from './plotline-data.js';
 import { FACE_ATTR } from '../../config/empty-face.js';
+
+/**
+ * 底栏四格：单一真源。
+ *   ★ 底栏按钮、标题、面内容分派全部从这张表取（tests/apps-plotline-v4.test.mjs 按形态钉它）。
+ *   · story —— 读不读得到 + 这份读数是谁的 + 当前阶段
+ *   · owed  —— 承诺（还没兑现的）与支线（还在推进的）
+ *   · world —— 认知范围 / 并行线 / 秘密 / 回响
+ *   · tools —— 剧情板 / 目标查询 / 设置
+ */
+export const PN_FACES = Object.freeze([
+    { id: 'story', label: '故事', icon: 'fa-book-open' },
+    { id: 'owed', label: '欠账', icon: 'fa-handshake-angle' },
+    { id: 'world', label: '世界', icon: 'fa-earth-asia' },
+    { id: 'tools', label: '工具', icon: 'fa-screwdriver-wrench' },
+]);
+
 export class PlotlineView {
     constructor(app) {
         this.app = app;
         this.container = null;
         /** 最近一次渲染用的读数包（供绑定回调判断是否可用） */
         this._pkg = null;
+        /* [v4.214.0] 当前格：现场态，只活在这一屏（换页即丢，不落盘）。 */
+        this._face = PN_FACES[0].id;
     }
     render(container) {
         if (!container) return;
@@ -46,32 +76,76 @@ export class PlotlineView {
         const knowledge = (pkg && pkg.knowledge) || [];
         const boundaries = (pkg && pkg.boundaries) || [];
         const src = (pkg && pkg.src) || null;
+        const ctx = { face, stage, promises, arcs, knowledge, boundaries, src, pkg };
         const html = [
-            '<div class="pn-root">',
+            '<div class="pn-root pn-app" data-pn-face="' + this._esc(this._face) + '">',
             '  <header class="pn-header">',
             '    <button aria-label="返回" class="pn-nav" id="pn-home"><i class="fa-solid fa-chevron-left"></i></button>',
-            '    <h2>剧情线</h2>',
+            '    <h2>' + this._esc('剧情线 · ' + this._faceLabel()) + '</h2>',
             '    <button aria-label="刷新" class="pn-nav" id="pn-refresh"><i class="fa-solid fa-rotate"></i></button>',
             '  </header>',
             '  <div class="pn-body">',
-            this._reasonCard(face),
-            this._sourceCard(src),
-            this._stageCard(face, stage),
-            this._promiseCard(face, promises),
-            this._arcCard(face, arcs),
-            this._knowledgeCard(face, knowledge, boundaries),
-            this._parallelCard(face, (pkg && pkg.parallels) || []),
-            this._secretCard(face, (pkg && pkg.secrets) || []),
-            this._echoCard(face, (pkg && pkg.recallEchoes) || [], (pkg && pkg.echoLives) || []),
-            this._boardCard(),
-            this._goalCard(),
-            this._settingsCard(),
+            this._renderFaceBody(ctx),
             '  </div>',
+            this._renderBottomNav(),
             '</div>'
         ].join('\n');
         try { this.container.innerHTML = html; } catch (_e) { /* 宿主容器不可用：不抛 */ }
         this._bind();
     }
+    /* ══════════ [v4.214.0] 底栏四格 ══════════ */
+
+    /** 当前格的中文名（取不到就回落第一格，不编一个不存在的名字）。 */
+    _faceLabel() {
+        for (let i = 0; i < PN_FACES.length; i += 1) {
+            if (PN_FACES[i].id === this._face) return PN_FACES[i].label;
+        }
+        return PN_FACES[0].label;
+    }
+
+    /**
+     * 面内容分派（唯一判定处）。卡函数签名一字未改，只是分组。
+     *   归因卡放在**每一格的最前面**：读不到的原因必须始终可见 —— 否则同一句
+     *   「读不到」在四格上会被分别误读成「没有承诺 / 没有秘密 / 没有设置」。
+     */
+    _renderFaceBody(c) {
+        const head = this._reasonCard(c.face);
+        if (this._face === 'owed') {
+            return [head, this._promiseCard(c.face, c.promises), this._arcCard(c.face, c.arcs)].join('\n');
+        }
+        if (this._face === 'world') {
+            return [
+                head,
+                this._knowledgeCard(c.face, c.knowledge, c.boundaries),
+                this._parallelCard(c.face, (c.pkg && c.pkg.parallels) || []),
+                this._secretCard(c.face, (c.pkg && c.pkg.secrets) || []),
+                this._echoCard(c.face, (c.pkg && c.pkg.recallEchoes) || [], (c.pkg && c.pkg.echoLives) || [])
+            ].join('\n');
+        }
+        if (this._face === 'tools') {
+            return [head, this._boardCard(), this._goalCard(), this._settingsCard()].join('\n');
+        }
+        return [head, this._sourceCard(c.src), this._stageCard(c.face, c.stage)].join('\n');
+    }
+
+    /** 底栏（排在内容层之后，进正常流，不覆盖内容；热区写在 CSS 里）。 */
+    _renderBottomNav() {
+        const cur = this._face;
+        const parts = ['<nav class="pn-btm" role="tablist" aria-label="剧情线分区">'];
+        for (let i = 0; i < PN_FACES.length; i += 1) {
+            const f = PN_FACES[i];
+            const on = f.id === cur;
+            parts.push('<button type="button" class="pn-btm-btn' + (on ? ' on' : '') + '" role="tab"'
+                + ' data-pn-face="' + this._esc(f.id) + '"'
+                + ' aria-selected="' + (on ? 'true' : 'false') + '"'
+                + (on ? ' aria-current="page"' : '') + '>'
+                + '<i class="fa-solid ' + this._esc(f.icon) + ' pn-btm-icon" aria-hidden="true"></i>'
+                + '<span class="pn-btm-label">' + this._esc(f.label) + '</span></button>');
+        }
+        parts.push('</nav>');
+        return parts.join('');
+    }
+
     /** 归因卡：读不到时**先说读不到**（五态分开），不与「世界是空的」同形 */
     _reasonCard(face) {
         const tone = face.reason === 'ready' ? 'ok' : (face.reason === 'empty' ? 'warn' : 'off');
@@ -562,6 +636,15 @@ export class PlotlineView {
             try { win.dispatchEvent(new win.CustomEvent('phone:goHome')); } catch (_e) { /* 宿主无事件：忽略 */ }
         });
         q('#pn-refresh')?.addEventListener('click', () => this._draw());
+        /* [v4.214.0] 底栏四格：切格只重画（数据在 _draw 里现取，不写任何状态）。 */
+        el.querySelectorAll('.pn-btm-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const next = btn.dataset.pnFace || PN_FACES[0].id;
+                if (next === this._face) return;
+                this._face = next;
+                this._draw();
+            });
+        });
         /* [v4.38.0 · R5-X2] 目标树三处点选（**只读或本机**动作，不写任何事实）：
          *   看一条 / 在计划里勾上 / 取消勾选。 */
         q('#pn-goal-look')?.addEventListener('click', () => this._goalLookup());

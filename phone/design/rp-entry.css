@@ -56,6 +56,7 @@
 @import url("../../apps/xhs/xhs.v4.css");        /* 小红书·照官方那种：作用域 .xhs-root.xhs-app（底栏五格外壳） */
 @import url("../../apps/album/album.v4.css");    /* [v4.212.0] 相册·照现实：作用域 .album-app（底栏三格 + 搜索面） */
 @import url("../../apps/worldpulse/worldpulse.v4.css"); /* [v4.213.0] 世界脉搏·照现实：作用域 .wp-app（底栏三分区：动态 / 世界桥 / 设置） */
+@import url("../../apps/plotline/plotline.v4.css");     /* [v4.214.0] 剧情线·照现实：作用域 .pn-app（底栏四格：故事 / 欠账 / 世界 / 工具） */
 
 
 /* ---------- 宿主护盾（未分层，必须在层外） ----------

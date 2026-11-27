@@ -38,12 +38,28 @@
  * ============================================================ */
 import fs from 'node:fs';
 
+/* 镜像树**默认排除**的目录（与 git 的交付面一致）。
+ *   · `.git` / `node_modules`：不是交付物，且体量大；
+ *   · `.sourcematerial`：`.gitignore` 内的源材料库（wuku / 世界书原始 json）。它在部分
+ *     环境是 0600 且**不可 chmod**（proot 假 root、只读挂载），`fs.copyFileSync` 直接
+ *     抛 EACCES —— 而本函数的纪律只容忍 ENOENT、其它错误码立刻抛，于是整族镜像门
+ *     先炸在 copyfile 上，看起来像「判据坏了」。
+ *     归入默认排除而不是逐文件手写：镜像类测试观测的是「门禁在退化输入上的行为」，
+ *     **不是**「仓库那一瞬间的完整文件集合」；一份根本不在交付里、也不许被读的东西，
+ *     不该参与这个观测。v4.214.0 把 v299 / v301 / v302 / v303 四处同源假红一次性收到这里。
+ * 需要的调用方可继续传 `opts.filter`，两者取交集（排除集永远生效）。 */
+const MIRROR_EXCLUDE = new Set(['.git', 'node_modules', '.sourcematerial']);
+
 /** fs.cpSync 的瞬态容忍版：ENOENT 时清掉半成品重试，最多 4 次；其它错误立即抛。 */
 export function copyTreeSafe(src, dest, opts = {}) {
     const userFilter = typeof opts.filter === 'function' ? opts.filter : null;
     const cpOpts = Object.assign({}, opts, {
         recursive: true,
-        filter: userFilter ? (p) => Boolean(userFilter(p)) : undefined,
+        filter: (p) => {
+            const segs = String(p).split(/[\\/]/);
+            if (segs.some((seg) => MIRROR_EXCLUDE.has(seg))) return false;
+            return userFilter ? Boolean(userFilter(p)) : true;
+        },
     });
     let lastErr = null;
     for (let attempt = 1; attempt <= 4; attempt += 1) {

@@ -1,0 +1,77 @@
+/* ============================================================
+   plotline.v4.css — 剧情线·照现实（客户端形态）底栏四格
+   ------------------------------------------------------------
+   作用域：.pn-app（本 App 的样式表，不挂全机刷新开关）
+   层：@layer rp.apps —— 按钮规则必须在层内。理由（v4.208.0 实测踩到，
+      写在手机壳 rp-entry.css 里）：宿主在 data-rp-ds=2 时会
+      `:is(button, …) { all: revert-layer; }`，App 样式若是「无层」的，
+      底栏按钮会被整段回滚成 UA 默认（置灰、padding 0、高度 44 假绿）。
+   投递：phone/design/rp-entry.css 的 @import（registry 门的「机制 C」认这条链）。
+   纪律：
+     · 不用 position: fixed —— 底栏进正常流，排在内容层之后；宿主滚动容器里
+       固定定位会跑到手机壳外面去；
+     · 滚动层自己写 min-height: 0（父是 flex 列时不写就压不下去，
+       老福特 / 淘宝 / Pixiv 都踩过「底栏被挤出可视区」）；
+     · 热区下限写在 CSS 里（.pn-btm-btn min-height 48 / min-width 44），不靠内联。
+   ============================================================ */
+@layer rp.apps {
+  /* ---------- 外壳：顶栏 / 内容（可滚） / 底栏 三行 ---------- */
+  .pn-app {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    box-sizing: border-box;
+  }
+  .pn-app .pn-header {
+    flex: 0 0 auto;
+  }
+  .pn-app .pn-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ---------- 底栏：四格等分，48 热区，不压内容 ---------- */
+  .pn-app .pn-btm {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    align-items: stretch;
+    gap: 0;
+    box-sizing: border-box;
+    padding: 2px 0 calc(2px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(12, 16, 22, 0.9);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+  .pn-app .pn-btm-btn {
+    min-height: 48px;
+    min-width: 44px;
+    padding: 6px 4px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #7f8b9c;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .pn-app .pn-btm-btn.on {
+    color: #6cc7ff;
+  }
+  .pn-app .pn-btm-icon {
+    font-size: 16px;
+    line-height: 1;
+  }
+  .pn-app .pn-btm-label {
+    font-size: 11px;
+    line-height: 1.2;
+  }
+}

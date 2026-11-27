@@ -337,7 +337,16 @@ function mutateOnce(src, from, to) {
 }
 function mirror(mut) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'v301-mir-'));
-    copyTreeSafe(ROOT, dir, { filter: (src) => !src.split(path.sep).includes('.git') });
+    /* [v4.214.0] 镜像面排除 `.sourcematerial/`（.gitignore 内的源材料库：纯 .json、
+     *   门禁从不读它）。该目录在部分环境（proot 假 root、不能 chmod 的挂载）里是 0600
+     *   不可读，而 copyTreeSafe 只容忍 ENOENT、其它错误码立刻抛 —— 于是两道门一条都没跑，
+     *   整族负控制先炸在 copyfile 上，看起来像判据坏了。v299 同源处置。 */
+    copyTreeSafe(ROOT, dir, {
+        filter: (src) => {
+            const parts = src.split(path.sep);
+            return !parts.includes('.git') && !parts.includes('.sourcematerial');
+        },
+    });
     for (const [rel, fn] of Object.entries(mut)) {
         const body = fn(read(rel));
         assert.notEqual(body, read(rel), '破坏未发生（锚点没命中）：' + rel);

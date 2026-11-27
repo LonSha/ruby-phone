@@ -408,7 +408,15 @@ test('C7 真视图渲染：因果板卡片在场', async () => {
         const app = mkApp({}, store);
         const c = mkContainer(375, []);
         app.view.render(c);
-        const html = c.innerHTML;
+        /* [v4.214.0] 卡片按底栏四格分组（因果板在「工具」格，归因卡在每一格头部）。
+         *   这里把四格各画一遍、把看到的 DOM 合起来判 —— 判据钉的是「内容真被画出来、
+         *   不是白屏」，**不是**「它必须落在第一格」。只画第一格就判，等于把一次信息
+         *   架构调整误判成功能丢失。 */
+        const html = ['story', 'owed', 'world', 'tools'].map((f) => {
+            app.view._face = f;
+            app.view._draw();
+            return c.innerHTML;
+        }).join('\n');
         assert.ok(html.indexOf('线索与未完事项') >= 0, '卡片标题必须在场');
         assert.ok(html.indexOf('pn-cb-group') >= 0, '收口分组必须在场');
         assert.ok(html.indexOf('仅推测') >= 0, '推测边必须单列');
@@ -421,7 +429,13 @@ test('C8 真视图渲染：未装插件时显示归因（不画假板）', async
         const app = mkApp({}, store);
         const c = mkContainer(375, []);
         app.view.render(c);
-        const html = c.innerHTML;
+        /* 同上：四格各画一遍再合看（归因卡本来就在每一格头部，这里顺带钉住它没有
+         *   在某个格上被漏掉）。 */
+        const html = ['story', 'owed', 'world', 'tools'].map((f) => {
+            app.view._face = f;
+            app.view._draw();
+            return c.innerHTML;
+        }).join('\n');
         assert.ok(html.indexOf('因果面') >= 0 || html.indexOf('不可读') >= 0, '未装插件必须显示归因');
         assert.equal(html.indexOf('追这条线'), -1, '未装插件不得画追溯按钮');
     });
