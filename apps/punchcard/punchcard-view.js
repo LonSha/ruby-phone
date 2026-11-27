@@ -31,6 +31,8 @@ const TABS = [
     { key: 'history', label: '历史' },
     { key: 'settings', label: '设置' },
 ];
+/* [v4.215.0 · 照现实] 底栏真源别名：PCH_FACES 与 TABS 同一引用，不另写格表。 */
+export const PCH_FACES = TABS;
 
 const DASH = String.fromCharCode(45, 45);
 
@@ -57,8 +59,20 @@ export class PunchcardView {
 
     /* ---------- 1. 挂载与重绘 ---------- */
 
+    /* [v4.215.0 · 照现实] v4 分层样式走 link 幂等注入投递。 */
+    _loadV4CSS() {
+        if (typeof document === 'undefined' || !document.head) return;
+        if (document.getElementById('pch-v4-css')) return;
+        const link = document.createElement('link');
+        link.id = 'pch-v4-css';
+        link.rel = 'stylesheet';
+        link.href = new URL('./punchcard.v4.css', import.meta.url).href;
+        document.head.appendChild(link);
+    }
+
     render() {
-        const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
+        this._loadV4CSS();
+                const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
         if (!container) return;
         container.innerHTML = '';
         this._root = document.createElement('div');
@@ -257,9 +271,13 @@ export class PunchcardView {
             + '<span class="pch-face-label">' + this._esc(meta.label) + '</span></div>'
             + (this._flash ? '<div class="pch-flash">' + this._esc(this._flash) + '</div>' : '');
 
-        const tabs = ['<nav class="pch-tabbar">']
-            .concat(TABS.map((t) => '<button class="pch-tab' + (this.tab === t.key ? ' is-on' : '')
-                + '" data-act="tab" data-tab="' + t.key + '">' + t.label + '</button>'))
+        const tabs = ['<nav class="pch-tabbar" role="navigation" aria-label="主导航">']
+            .concat(PCH_FACES.map((t) => {
+                const on = this.tab === t.key;
+                return '<button class="pch-tab' + (on ? ' is-on' : '') + '" data-act="tab" data-tab="' + t.key
+                    + '" data-pch-face="' + t.key + '"' + (on ? ' aria-current="page"' : '')
+                    + '>' + this._esc(t.label) + '</button>';
+            }))
             .concat(['</nav>'])
             .join('');
         return head + page + tabs;

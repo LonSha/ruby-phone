@@ -1,0 +1,30 @@
+/* apps/piggy/piggy.v4.css — piggy「照现实」v4.215.0 底栏分层样式。
+ * 由 piggy-view.js 的 _loadV4CSS() 幂等注入 link 投递。容器无层，按钮进 @layer rp.apps；
+ * 不用 position:fixed，热区 ≥48/44。 */
+.pg-root > .pg-tabbar {
+    display: flex;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    min-height: 48px;
+    border-top: 1px solid rgba(255,255,255,.08);
+    background: #0d1524;
+}
+
+@layer rp.apps {
+    .pg-tab {
+        flex: 1 1 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        min-width: 44px;
+        padding: 10px 4px;
+        border: 0;
+        background: none;
+        font-size: 12px;
+        cursor: pointer;
+        color: #94a3b8;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .pg-tab.is-on { color: #f9a8d4; }
+}

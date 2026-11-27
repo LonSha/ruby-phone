@@ -35,6 +35,8 @@ const TABS = [
     { key: 'items', label: '条目' },
     { key: 'settings', label: '设置' },
 ];
+/* [v4.215.0 · 照现实] 底栏真源别名：AD_FACES 与 TABS 同一引用，不另写格表。 */
+export const AD_FACES = TABS;
 
 export class AnnidateView {
     constructor(app) {
@@ -63,8 +65,20 @@ export class AnnidateView {
         return root;
     }
 
+    /* [v4.215.0 · 照现实] v4 分层样式走 link 幂等注入投递。 */
+    _loadV4CSS() {
+        if (typeof document === 'undefined' || !document.head) return;
+        if (document.getElementById('ad-v4-css')) return;
+        const link = document.createElement('link');
+        link.id = 'ad-v4-css';
+        link.rel = 'stylesheet';
+        link.href = new URL('./annidate.v4.css', import.meta.url).href;
+        document.head.appendChild(link);
+    }
+
     render(vm) {
-        this._lastVm = vm || {};
+        this._loadV4CSS();
+                this._lastVm = vm || {};
         const el = this._mount();
         if (!el) return;
         el.innerHTML = this._html(this._lastVm);
@@ -231,9 +245,13 @@ export class AnnidateView {
         const page = this.tab === 'items' ? this._itemsHTML(vm)
             : (this.tab === 'settings' ? this._settingsHTML(vm) : this._todayHTML(vm));
         const r = vm.readings || {};
-        const tabs = ['<nav class="ad-tabbar">']
-            .concat(TABS.map((t) => '<button class="ad-tab' + (this.tab === t.key ? ' is-on' : '')
-                + '" data-act="tab" data-tab="' + t.key + '">' + t.label + '</button>'))
+        const tabs = ['<nav class="ad-tabbar" role="navigation" aria-label="主导航">']
+            .concat(AD_FACES.map((t) => {
+                const on = this.tab === t.key;
+                return '<button class="ad-tab' + (on ? ' is-on' : '') + '" data-act="tab" data-tab="' + t.key
+                    + '" data-ad-face="' + t.key + '"' + (on ? ' aria-current="page"' : '')
+                    + '>' + esc(t.label) + '</button>';
+            }))
             .concat(['</nav>'])
             .join('');
         return '<div class="ad-top"><div class="ad-title">纪念日</div>'

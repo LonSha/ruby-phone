@@ -46,6 +46,8 @@ const TABS = [
   { key: 'bag', label: '背包' },
   { key: 'history', label: '记录' },
 ];
+/* [v4.215.0 · 照现实] 底栏真源别名：GA_FACES 与 TABS 同一引用，不另写格表。 */
+export const GA_FACES = TABS;
 
 const STYLE = `
 <style>
@@ -112,7 +114,19 @@ export class GachaView {
 
   /* ---------- 1. 挂载与重绘 ---------- */
 
+  /* [v4.215.0 · 照现实] v4 分层样式走 link 幂等注入投递。 */
+  _loadV4CSS() {
+    if (typeof document === 'undefined' || !document.head) return;
+    if (document.getElementById('ga-v4-css')) return;
+    const link = document.createElement('link');
+    link.id = 'ga-v4-css';
+    link.rel = 'stylesheet';
+    link.href = new URL('./gacha.v4.css', import.meta.url).href;
+    document.head.appendChild(link);
+  }
+
   render() {
+    this._loadV4CSS();
     const shell = this.app && this.app.phoneShell;
     if (!shell) return;
     const html = this._html();
@@ -320,11 +334,15 @@ export class GachaView {
       : (this.tab === 'history' ? this._historyHTML() : this._gachaHTML());
     let balance = DASH;
     try { balance = numeralText(this.app.data.getBalance()); } catch (_e) { balance = DASH; }
-    const tabs = ['<nav class="ga-tabbar">']
-      .concat(TABS.map((t) => '<button class="ga-tab' + (this.tab === t.key ? ' is-on' : '')
-        + '" data-act="tab" data-tab="' + t.key + '">' + t.label + '</button>'))
-      .concat(['</nav>'])
-      .join('');
+    const tabs = ['<nav class="ga-tabbar" role="navigation" aria-label="主导航">']
+        .concat(GA_FACES.map((t) => {
+            const on = this.tab === t.key;
+            return '<button class="ga-tab' + (on ? ' is-on' : '') + '" data-act="tab" data-tab="' + t.key
+                + '" data-ga-face="' + t.key + '"' + (on ? ' aria-current="page"' : '')
+                + '>' + esc(t.label) + '</button>';
+        }))
+        .concat(['</nav>'])
+        .join('');
     return STYLE
       + '<div class="ga-root">'
       + '<div class="ga-head"><div class="ga-title">🎰 幸运转盘</div>'

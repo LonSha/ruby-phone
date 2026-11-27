@@ -40,6 +40,8 @@ const TABS = [
     { key: 'cards', label: '卡' },
     { key: 'settings', label: '设置' },
 ];
+/* [v4.215.0 · 照现实] 底栏真源别名：PG_FACES 与 TABS 同一引用，不另写格表。 */
+export const PG_FACES = TABS;
 
 const DASH = String.fromCharCode(45, 45);
 
@@ -66,8 +68,20 @@ export class PiggyView {
 
     /* ---------- 1. 挂载与重绘 ---------- */
 
+    /* [v4.215.0 · 照现实] v4 分层样式走 link 幂等注入投递。 */
+    _loadV4CSS() {
+        if (typeof document === 'undefined' || !document.head) return;
+        if (document.getElementById('pg-v4-css')) return;
+        const link = document.createElement('link');
+        link.id = 'pg-v4-css';
+        link.rel = 'stylesheet';
+        link.href = new URL('./piggy.v4.css', import.meta.url).href;
+        document.head.appendChild(link);
+    }
+
     render() {
-        const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
+        this._loadV4CSS();
+                const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
         if (!container) return;
         container.innerHTML = '';
         this._root = document.createElement('div');
@@ -285,9 +299,13 @@ export class PiggyView {
             + '<span class="pg-face-label">' + this._esc(meta.label) + '</span></div>'
             + (this._flash ? '<div class="pg-flash">' + this._esc(this._flash) + '</div>' : '');
 
-        const tabs = ['<nav class="pg-tabbar">']
-            .concat(TABS.map((t) => '<button class="pg-tab' + (this.tab === t.key ? ' is-on' : '')
-                + '" data-act="tab" data-tab="' + t.key + '">' + t.label + '</button>'))
+        const tabs = ['<nav class="pg-tabbar" role="navigation" aria-label="主导航">']
+            .concat(PG_FACES.map((t) => {
+                const on = this.tab === t.key;
+                return '<button class="pg-tab' + (on ? ' is-on' : '') + '" data-act="tab" data-tab="' + t.key
+                    + '" data-pg-face="' + t.key + '"' + (on ? ' aria-current="page"' : '')
+                    + '>' + this._esc(t.label) + '</button>';
+            }))
             .concat(['</nav>'])
             .join('');
         return head + page + tabs;
