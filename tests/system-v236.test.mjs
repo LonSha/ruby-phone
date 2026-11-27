@@ -161,8 +161,16 @@ const bridgeWin = (over = {}) => Object.assign({
 {
     ok('C1 世界脉搏视图有桥卡片（渲染真实可观测面）',
         /_bridgeCard\(\)/.test(VIEW_CODE) && /\$\{this\._bridgeCard\(\)\}/.test(VIEW_CODE));
+    /* [v4.213.0 交棒改写] 原判据钉的是「样式必须写在视图内联 <style> 里」。
+     *   v4.213.0 把世界脉搏整屏样式迁到 apps/worldpulse/worldpulse.v4.css
+     *   （@layer rp.apps，入口 phone/design/rp-entry.css 的 @import 投递）——
+     *   无层内联会压过层内规则，宿主 data-rp-ds=2 时还会被 all: revert-layer
+     *   打回 UA 默认。真不变式没变：这两条桥卡片的样式**必须由本 App 自己声明**，
+     *   不许指望宿主。所以判据改成二选一：视图内联，或本 App 的样式表；两边都没有才红。 */
+    const WP_SHEET = read('apps/worldpulse/worldpulse.v4.css');
     ok('C2 桥卡片样式随卡片一并声明（不靠宿主样式）',
-        /\.wp-bridge-line\{/.test(VIEW_CODE) && /\.wp-bridge-ok\{/.test(VIEW_CODE));
+        (/[.]wp-bridge-line\{/.test(VIEW_CODE) && /[.]wp-bridge-ok\{/.test(VIEW_CODE))
+        || (/[.]wp-bridge-line\s*\{/.test(WP_SHEET) && /[.]wp-bridge-ok\s*\{/.test(WP_SHEET)));
     ok('C3 ★ timeweaver 桥读取走单一真源（消除第二份实现，两份必然漂移）',
         /from '\.\.\/\.\.\/config\/world-bridge\.js'/.test(COL_CODE)
         && !/window\s*\.\s*lonsha_memory_bridge_v1/.test(COL_CODE),

@@ -1,0 +1,293 @@
+/* ============================================================
+   worldpulse.v4.css — 世界脉搏·照现实（客户端形态）底栏三分区
+   ------------------------------------------------------------
+   作用域：.wp-app（本 App 的样式表，不挂全机刷新开关）
+   层：@layer rp.apps —— 按钮规则必须在层内。理由（v4.208.0 实测踩到，
+      写在手机壳 rp-entry.css 里）：宿主在 data-rp-ds=2 时会
+      `:is(button, …) { all: revert-layer; }`，App 样式若是「无层」的，
+      底栏按钮会被整段回滚成 UA 默认（置灰、padding 0、高度 44 假绿）。
+      本表也是这个 App **唯一的样式来源**：v4.213.0 起视图不再输出内联
+      <style>（无层内联会压过层内规则，且同样会被 revert-layer 打回）。
+   投递：phone/design/rp-entry.css 的 @import（registry 门的「机制 C」认这条链）。
+   纪律：
+     · 不用 position: fixed —— 底栏进正常流，排在内容层之后；宿主滚动容器里
+       固定定位会跑到手机壳外面去；
+     · 滚动层自己写 min-height: 0（父是 flex 列时不写就压不下去，
+       老福特 / 淘宝 / Pixiv 都踩过「底栏被挤出可视区」）；
+     · 热区下限写在 CSS 里（.wp-nav-btn min-height 48、min-width 44），不靠内联。
+   ============================================================ */
+@layer rp.apps {
+  /* ---------- 外壳：三行布局＝顶栏 / 内容（可滚） / 底栏 ---------- */
+  .wp-app {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    box-sizing: border-box;
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: inherit;
+  }
+  .wp-app .wp-hero {
+    flex: 0 0 auto;
+    padding: 14px 18px 10px;
+  }
+  .wp-app .wp-hero-title {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 1px;
+  }
+  .wp-app .wp-hero-sub {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #8b949e;
+  }
+  .wp-app .wp-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 14px 14px;
+    box-sizing: border-box;
+  }
+
+  /* ---------- 卡片与行（沿用旧类名，v3 皮肤仍按这些类名认角色） ---------- */
+  .wp-app .wp-card {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 14px;
+    box-sizing: border-box;
+  }
+  .wp-app .wp-row { margin-bottom: 12px; }
+  .wp-app .wp-row:last-child { margin-bottom: 0; }
+  .wp-app .wp-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #c9d1d9;
+  }
+  .wp-app .wp-switch {
+    min-height: 44px;
+    padding: 5px 16px;
+    border: 1px solid #30363d;
+    border-radius: 20px;
+    background: #21262d;
+    color: #8b949e;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .wp-app .wp-switch.on {
+    background: #1f6feb;
+    border-color: #1f6feb;
+    color: #fff;
+  }
+  .wp-app .wp-styles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .wp-app .wp-style {
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    background: #21262d;
+    color: #c9d1d9;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .wp-app .wp-style.on {
+    border-color: #1f6feb;
+    background: #1f6feb22;
+    color: #79c0ff;
+  }
+  .wp-app .wp-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    background: #0d1117;
+    color: #e6edf3;
+    font-size: 13px;
+    box-sizing: border-box;
+  }
+  .wp-app .wp-range { width: 100%; min-height: 44px; }
+  .wp-app .wp-queue {
+    font-size: 11px;
+    color: #6e7681;
+    font-variant-numeric: tabular-nums;
+  }
+  .wp-app .wp-actions { display: flex; gap: 8px; }
+  .wp-app .wp-btn {
+    flex: 1;
+    min-height: 48px;
+    padding: 10px;
+    border: 0;
+    border-radius: 10px;
+    background: #238636;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .wp-app .wp-btn:disabled { opacity: 0.6; cursor: default; }
+  .wp-app .wp-btn-ghost {
+    flex: 0 0 auto;
+    border: 1px solid #30363d;
+    background: #21262d;
+    color: #c9d1d9;
+  }
+
+  /* ---------- 第一格：风格筛片 + 动态流 ---------- */
+  .wp-app .wp-filters {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 0 0 10px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .wp-app .wp-filters::-webkit-scrollbar { display: none; }
+  .wp-app .wp-chip {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 6px 12px;
+    border: 1px solid #30363d;
+    border-radius: 999px;
+    background: #21262d;
+    color: #c9d1d9;
+    font-size: 12px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .wp-app .wp-chip.on {
+    border-color: #1f6feb;
+    background: #1f6feb22;
+    color: #79c0ff;
+  }
+  .wp-app .wp-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .wp-app .wp-item {
+    padding: 10px 12px;
+    border: 1px solid #21262d;
+    border-left: 3px solid #1f6feb;
+    border-radius: 10px;
+    background: #161b22;
+  }
+  .wp-app .wp-item-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .wp-app .wp-item-style {
+    font-size: 11px;
+    font-weight: 700;
+    color: #79c0ff;
+  }
+  .wp-app .wp-item-time {
+    font-size: 10px;
+    color: #6e7681;
+    font-variant-numeric: tabular-nums;
+  }
+  .wp-app .wp-item-text {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #c9d1d9;
+    word-break: break-word;
+  }
+  .wp-app .wp-empty {
+    padding: 50px 20px;
+    text-align: center;
+    color: #8b949e;
+  }
+  .wp-app .wp-empty-icon { font-size: 40px; margin-bottom: 10px; }
+  .wp-app .wp-empty-sub {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: #6e7681;
+  }
+
+  /* ---------- 第二格：世界桥观测面 ---------- */
+  .wp-app .wp-bridge .wp-label { margin-bottom: 6px; }
+  .wp-app .wp-bridge-line {
+    font-size: 12px;
+    line-height: 1.9;
+    color: #8b949e;
+    word-break: break-word;
+  }
+  .wp-app .wp-bridge-ok { color: #3fb950; }
+  .wp-app .wp-bridge-warn { color: #d29922; }
+  .wp-app .wp-bridge-off { color: #6e7681; }
+  .wp-app .wp-bridge-hint {
+    margin-top: 6px;
+    font-size: 11px;
+    line-height: 1.7;
+    color: #6e7681;
+  }
+  .wp-app .wp-bridge-foot .wp-label { margin-bottom: 6px; }
+
+  /* ---------- 底栏：三格等分，48 热区，不压内容 ---------- */
+  .wp-app .wp-nav {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: stretch;
+    gap: 0;
+    box-sizing: border-box;
+    padding: 2px 0 calc(2px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(20, 20, 22, 0.86);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+  .wp-app .wp-nav-btn {
+    min-height: 48px;
+    min-width: 44px;
+    padding: 6px 4px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #8a8f98;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .wp-app .wp-nav-btn.is-active { color: #79c0ff; }
+  .wp-app .wp-nav-icon { font-size: 16px; line-height: 1; }
+  .wp-app .wp-nav-label { font-size: 11px; line-height: 1.2; }
+
+  /* 浅色主题（宿主切到浅色时不让深色底硬顶）：跟着宿主 token 走，不写第二套色板 */
+  .phone-panel[data-theme="light"] .wp-app,
+  .phone-panel[data-theme="light"] .wp-app .wp-card,
+  .phone-panel[data-theme="light"] .wp-app .wp-item {
+    background: #f7f7f9;
+    color: #1f2328;
+  }
+  .phone-panel[data-theme="light"] .wp-app .wp-label { color: #1f2328; }
+  .phone-panel[data-theme="light"] .wp-app .wp-item-text { color: #32383f; }
+  .phone-panel[data-theme="light"] .wp-app .wp-hero-sub { color: #6e7781; }
+  .phone-panel[data-theme="light"] .wp-app .wp-nav {
+    border-top-color: rgba(0, 0, 0, 0.10);
+    background: rgba(250, 250, 252, 0.9);
+  }
+  .phone-panel[data-theme="light"] .wp-app .wp-chip,
+  .phone-panel[data-theme="light"] .wp-app .wp-style,
+  .phone-panel[data-theme="light"] .wp-app .wp-switch {
+    background: #ececf1;
+    border-color: #d8d8de;
+    color: #32383f;
+  }
+}

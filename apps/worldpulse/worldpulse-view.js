@@ -1,8 +1,33 @@
-import { phoneNotice, phoneConfirm, phonePrompt } from '../../config/phone-feedback.js';
 /* ========================================================
- * worldpulse-view.js — 世界脉搏视图（开关/风格/阈值/手动脉冲/历史流）
+ * worldpulse-view.js — 世界脉搏视图（照现实那种：底栏三分区）
+ * --------------------------------------------------------
+ * [v4.213.0] 这一屏原来是「全塞在一滚里」：自动脉搏开关 / 风格 / 阈值 / 队列 /
+ *   跨插件世界桥观测面 / 动态流挨着排在同一列。后果有两个，都是信息架构问题：
+ *     ① 想看动态，得先滚过一整屏设置；
+ *     ② 想知道「桥为什么不通」，得滚到中段去翻一张只读卡片 —— 而那正是最该被
+ *        单独摆出来看的东西（本 App 要么陈述真世界、要么退回现编，这个分岔就藏在中段）。
+ *   现实里同类客户端不会这么排：信息流是第一格，观测面与设置各自成格。
+ *
+ *   三格（单一真源 WP_FACES）：
+ *     · feed     动态   —— 风格筛片 + 动态流（两种空态分开说：还没有动态 / 这颗筛片没有）
+ *     · bridge   世界桥 —— 跨插件世界桥只读观测面（真世界通到哪一步）
+ *     · settings 设置   —— 自动脉搏 / 风格 / 阈值 / 队列 / 手动脉冲 / 清空
+ *
+ *   【纪律】
+ *     · 面判定只在 `_renderFaceBody` 一处；底栏按钮、标题、面内容全从 WP_FACES 取，
+ *       别处不许再写第二份 if / 第二张标签表；
+ *     · 样式全部走 apps/worldpulse/worldpulse.v4.css（入口 phone/design/rp-entry.css
+ *       的 @import 投递，在 @layer rp.apps 内）。本视图**不再输出内联样式块**：
+ *       无层内联规则会压过层内规则，宿主 data-rp-ds=2 时还会被
+ *       `:is(button, …) { all: revert-layer; }` 打回 UA 默认（底栏按钮变灰、padding 0）；
+ *     · 现场态（`_face` / `_filter`）只活在这一屏：换页即丢，不落盘、不进 storage。
+ *
+ *   只读性不变：本视图只调 app 的读取面（getSettings / getHistory / getState /
+ *   bridgeStatus）与既有动作面（saveSettings / startListening / stopListening /
+ *   manualPulse / clearHistory），不自己写存储、不自己起定时器。
  * ======================================================== */
 'use strict';
+import { phoneConfirm } from '../../config/phone-feedback.js';
 import { WP_STYLES } from './worldpulse-engine.js';
 
 function esc(s) {
@@ -10,58 +35,134 @@ function esc(s) {
 }
 const STYLE_ICON = { '都市日常':'🏙️', '财经头条':'📈', '娱乐八卦':'🍉', '科幻未来':'🚀', '悬疑异闻':'🕵️', '自定义':'✍️' };
 
+/**
+ * 底栏三格：单一真源。
+ *   ★ 底栏按钮、标题、面内容分派全部从这张表取（判据按形态钉它，
+ *     tests/apps-worldpulse-v4.test.mjs）。加一格就在这里加一行。
+ *   · feed     —— 动态流（按风格筛片过滤，筛片只改这一屏的视图，不写设置）
+ *   · bridge   —— 世界桥只读观测面（桥通不通 / 通到哪一步 / 两个钟差多少）
+ *   · settings —— 脉搏怎么跳（开关 / 风格 / 频率 / 队列 / 手动脉冲 / 清空）
+ */
+export const WP_FACES = Object.freeze([
+    { id: 'feed', label: '动态', icon: 'fa-rss', hint: '主线之外，这个世界仍在运转' },
+    { id: 'bridge', label: '世界桥', icon: 'fa-tower-broadcast', hint: '跨插件世界桥：真世界通到哪一步' },
+    { id: 'settings', label: '设置', icon: 'fa-sliders', hint: '脉搏怎么跳：频率 / 风格 / 手动脉冲' },
+]);
+
 export class WorldpulseView {
-    constructor(app) { this.app = app; }
+    constructor(app) {
+        this.app = app;
+        /* [v4.213.0] 两个现场态：默认落第一格、不筛。不落盘（换页即丢）。 */
+        this._face = WP_FACES[0].id;
+        this._filter = 'all';
+    }
 
     render() {
         if (!this.app.phoneShell?.setContent) return;
-        this.app.phoneShell.setContent(this._css() + this._layout(), 'worldpulse-main');
+        this.app.phoneShell.setContent(this._layout(), 'worldpulse-main');
         this._bind();
     }
 
     _layout() {
-        const s = this.app.getSettings();
-        const history = this.app.getHistory().slice().reverse();  // 新→旧
-        const st = this.app.getState();
-        return `<div class="wp-wrap">
-          <div class="wp-hero">
+        return `<div class="wp-wrap wp-app" data-wp-face="${esc(this._face)}">
+          <header class="wp-hero">
             <div class="wp-hero-title">🌍 世界脉搏</div>
-            <div class="wp-hero-sub">主线之外，这个世界仍在运转 · ${history.length} 条动态</div>
-          </div>
-
-          ${this._bridgeCard()}
-          <div class="wp-card">
-            <div class="wp-row">
-              <span class="wp-label">自动脉搏</span>
-              <button class="wp-switch ${s.enabled?'on':''}" id="wp-toggle">${s.enabled?'开':'关'}</button>
-            </div>
-            <div class="wp-row">
-              <span class="wp-label">风格</span>
-              <div class="wp-styles">${Object.keys(WP_STYLES).map(k=>
-                `<button class="wp-style ${s.style===k?'on':''}" data-style="${k}">${STYLE_ICON[k]||''} ${k}</button>`).join('')}</div>
-            </div>
-            ${s.style==='自定义' ? `<div class="wp-row"><input class="wp-input" id="wp-custom" placeholder="自定义生成指令前缀…" value="${esc(s.customPrefix)}"></div>` : ''}
-            <div class="wp-row">
-              <span class="wp-label">每 ${s.threshold} 楼一次</span>
-              <input type="range" class="wp-range" id="wp-threshold" min="1" max="20" value="${s.threshold}">
-            </div>
-            <div class="wp-row wp-queue">队列 ${st.queue.length} · 已处理至第 ${st.lastFloorCount} 楼</div>
-            <div class="wp-row wp-actions">
-              <button class="wp-btn" id="wp-manual">⚡ 立即脉冲一次</button>
-              <button class="wp-btn wp-btn-ghost" id="wp-clear">清空历史</button>
-            </div>
-          </div>
-
-          <div class="wp-feed">
-            ${history.length === 0
-              ? `<div class="wp-empty"><div class="wp-empty-icon">🌍</div><div>还没有世界动态</div><div class="wp-empty-sub">开启自动脉搏，或点「立即脉冲一次」让世界呼吸</div></div>`
-              : history.map(e=>`
-                <div class="wp-item">
-                  <div class="wp-item-head"><span class="wp-item-style">${STYLE_ICON[e.style]||'🌍'} ${esc(e.style)}</span><span class="wp-item-time">第${e.floorCount}楼</span></div>
-                  <div class="wp-item-text">${esc(e.content)}</div>
-                </div>`).join('')}
-          </div>
+            <div class="wp-hero-sub">${esc(this._faceHint())}</div>
+          </header>
+          <div class="wp-body">${this._renderFaceBody()}</div>
+          ${this.renderBottomNav()}
         </div>`;
+    }
+
+    /** 当前格的说明（取不到就回落第一格，不编一个不存在的名字）。 */
+    _faceHint() {
+        const hit = WP_FACES.find((f) => f.id === this._face);
+        const head = hit ? hit.hint : WP_FACES[0].hint;
+        if (this._face !== 'feed') return head;
+        const n = this.app.getHistory().length;
+        return `${head} · ${n} 条动态`;
+    }
+
+    /** 面内容分派（唯一判定处）。 */
+    _renderFaceBody() {
+        if (this._face === 'bridge') return this._renderBridgeFace();
+        if (this._face === 'settings') return this._renderSettingsFace();
+        return this._renderFeedFace();
+    }
+
+    /** 底栏（排在内容层之后，进正常流，不覆盖内容；热区写在 CSS 里）。 */
+    renderBottomNav() {
+        const cur = this._face;
+        const tabs = WP_FACES.map((f) => {
+            const on = f.id === cur;
+            return `
+                <button type="button" class="wp-nav-btn${on ? ' is-active' : ''}" role="tab"
+                        data-wp-face="${esc(f.id)}"
+                        aria-selected="${on ? 'true' : 'false'}"${on ? ' aria-current="page"' : ''}>
+                    <i class="fa-solid ${esc(f.icon)} wp-nav-icon" aria-hidden="true"></i>
+                    <span class="wp-nav-label">${esc(f.label)}</span>
+                </button>`;
+        }).join('');
+        return `<nav class="wp-nav" role="tablist" aria-label="世界脉搏分区">${tabs}</nav>`;
+    }
+
+    /* ══════════ 第一格：动态 ══════════ */
+
+    _renderFeedFace() {
+        return `<div class="wp-filters" role="tablist" aria-label="按风格筛动态">${this._renderFilterChips()}</div>
+          <div class="wp-feed" id="wp-feed-list">${this._renderFeedList()}</div>`;
+    }
+
+    _renderFilterChips() {
+        const keys = ['all', ...Object.keys(WP_STYLES)];
+        return keys.map((k) => {
+            const on = k === this._filter;
+            const label = k === 'all' ? '🗂️ 全部' : `${STYLE_ICON[k] ?? ''} ${k}`;
+            return `<button type="button" class="wp-chip${on ? ' on' : ''}" role="tab"
+                        data-wp-filter="${esc(k)}"
+                        aria-selected="${on ? 'true' : 'false'}"${on ? ' aria-current="page"' : ''}>${esc(label)}</button>`;
+        }).join('');
+    }
+
+    /**
+     * 动态列表（新→旧）。两种空态分开说：
+     *   · 一条都没有 —— 告诉用户怎么让它呼吸起来；
+     *   · 有动态但这颗筛片没有 —— 报出总数，别让人误以为世界空了。
+     */
+    _renderFeedList() {
+        const history = this.app.getHistory().slice().reverse();
+        const rows = this._filter === 'all' ? history : history.filter((e) => e.style === this._filter);
+        if (!rows.length) {
+            if (history.length) {
+                return `<div class="wp-empty" data-wp-empty="filtered">
+                    <div class="wp-empty-icon">🔍</div>
+                    <div>这颗筛片下还没有动态</div>
+                    <div class="wp-empty-sub">共 ${history.length} 条动态 —— 换一颗筛片，或点「全部」。</div>
+                </div>`;
+            }
+            return `<div class="wp-empty" data-wp-empty="none">
+                <div class="wp-empty-icon">🌍</div>
+                <div>还没有世界动态</div>
+                <div class="wp-empty-sub">去「设置」开启自动脉搏，或点一次「立即脉冲一次」让世界呼吸。</div>
+            </div>`;
+        }
+        return rows.map((e) => `
+            <div class="wp-item">
+              <div class="wp-item-head"><span class="wp-item-style">${STYLE_ICON[e.style] ?? '🌍'} ${esc(e.style)}</span><span class="wp-item-time">第${esc(String(e.floorCount ?? ''))}楼</span></div>
+              <div class="wp-item-text">${esc(e.content)}</div>
+            </div>`).join('');
+    }
+
+    /* ══════════ 第二格：世界桥（只读观测面） ══════════ */
+
+    _renderBridgeFace() {
+        return `${this._bridgeCard()}
+          <div class="wp-card wp-bridge-foot">
+            <div class="wp-label">这一格为什么单独成格</div>
+            <div class="wp-bridge-hint">本 App 的平行事件要么陈述真世界、要么退回 LLM 现编 ——
+              这个分岔以前藏在设置卡中间，看不见就等于不存在。摆成单独一格，是为了让「桥没装 / 装了没开 /
+              对方引擎没就绪 / 两个钟对不上」这几种情况一眼分开。</div>
+          </div>`;
     }
 
     /**
@@ -114,7 +215,7 @@ export class WorldpulseView {
                 ? `<div class="wp-bridge-hint">被标过的平台：${ep.platforms.map(p => esc(p)).join(' · ')}`
                   + `（标签由登记方显式给出、不猜归类、不排重要性）</div>`
                 : '';
-            epHtml = `<div class="wp-bridge-line${cls}">${esc(ep.line || '')}</div>` + plats;
+            epHtml = `<div class="wp-bridge-line${cls}">${esc(ep.line ?? '')}</div>` + plats;
         } else if (st) {
             epHtml = `<div class="wp-bridge-line wp-bridge-off">事件来源：读取失败</div>`;
         }
@@ -127,34 +228,102 @@ export class WorldpulseView {
             const cls = ck.conflict ? ' wp-bridge-warn' : (ck.present ? ' wp-bridge-ok' : '');
             clockHtml = `<div class="wp-bridge-line${cls}">剧情时刻：${esc(ck.verdict)}`
                 + (ck.primaryDate ? '（' + esc(ck.primaryDate) + '）' : '') + `</div>`
-                + `<div class="wp-bridge-hint">${esc(ck.detail || '')}</div>`;
+                + `<div class="wp-bridge-hint">${esc(ck.detail ?? '')}</div>`;
         } else if (st) {
             clockHtml = `<div class="wp-bridge-line wp-bridge-off">剧情时刻：读取失败</div>`;
         }
         return `<div class="wp-card wp-bridge">
             <div class="wp-label">跨插件世界桥</div>
             <div class="wp-bridge-line ${wi.mounted ? (wi.reason === 'ready' ? 'wp-bridge-ok' : 'wp-bridge-warn') : 'wp-bridge-off'}">
-              WorldAxis：${esc(WA_TXT[wi.reason] || wi.reason || '未知')}${wi.reason === 'ready' && waRead && waRead.ok === false ? '（实际拉取失败：' + esc(waRead.reason || 'unknown') + '）' : ''}</div>
+              WorldAxis：${esc(WA_TXT[wi.reason] ?? wi.reason ?? '未知')}${wi.reason === 'ready' && waRead && waRead.ok === false ? '（实际拉取失败：' + esc(waRead.reason ?? 'unknown') + '）' : ''}</div>
             <div class="wp-bridge-line ${lo.mounted ? (lo.reason === 'ready' ? 'wp-bridge-ok' : 'wp-bridge-warn') : 'wp-bridge-off'}">
-              LonSha：${esc(LO_TXT[lo.reason] || lo.reason || '未知')}${lo.reason === 'ready' && loRead && loRead.ok === false ? '（实际拉取失败：' + esc(loRead.reason || 'unknown') + '）' : ''}</div>
+              LonSha：${esc(LO_TXT[lo.reason] ?? lo.reason ?? '未知')}${lo.reason === 'ready' && loRead && loRead.ok === false ? '（实际拉取失败：' + esc(loRead.reason ?? 'unknown') + '）' : ''}</div>
             ${bad ? `<div class="wp-bridge-line wp-bridge-warn">读不到时本 App 会退回 LLM 生成——两个世界就此对不上</div>` : ''}
             ${rep && rep.consistent === false ? `<div class="wp-bridge-line wp-bridge-warn">来源态与实际读取不一致：桥自述可用、这一次却拉不到——按「实际读取失败」处置</div>` : ''}
             ${rep && rep.summary ? `<div class="wp-bridge-hint">${esc(rep.summary)}</div>` : ''}
-            ${epHtml}            ${clockHtml}
+            ${epHtml}${clockHtml}
             <div class="wp-bridge-hint">真世界可用时，平行事件陈述真事件、不调 LLM；桥休眠时退回生成（不编数据顶替真世界）。
               「未安装」与「装了没开」是两件事——后者去 WorldAxis 面板开闸即可。</div>
           </div>`;
     }
+
+    /* ══════════ 第三格：设置 ══════════ */
+
+    _renderSettingsFace() {
+        const s = this.app.getSettings();
+        const st = this.app.getState();
+        return `<div class="wp-card">
+            <div class="wp-row">
+              <span class="wp-label">自动脉搏</span>
+              <button class="wp-switch ${s.enabled ? 'on' : ''}" id="wp-toggle" aria-pressed="${s.enabled ? 'true' : 'false'}">${s.enabled ? '开' : '关'}</button>
+            </div>
+            <div class="wp-row">
+              <span class="wp-label">风格</span>
+              <div class="wp-styles">${Object.keys(WP_STYLES).map(k =>
+                `<button class="wp-style ${s.style === k ? 'on' : ''}" data-style="${esc(k)}">${STYLE_ICON[k] ?? ''} ${esc(k)}</button>`).join('')}</div>
+            </div>
+            ${s.style === '自定义' ? `<div class="wp-row"><input class="wp-input" id="wp-custom" placeholder="自定义生成指令前缀…" value="${esc(s.customPrefix)}"></div>` : ''}
+            <div class="wp-row">
+              <span class="wp-label">每 ${s.threshold} 楼一次</span>
+              <input type="range" class="wp-range" id="wp-threshold" min="1" max="20" value="${s.threshold}">
+            </div>
+            <div class="wp-row wp-queue">队列 ${st.queue.length} · 已处理至第 ${st.lastFloorCount} 楼</div>
+            <div class="wp-row wp-actions">
+              <button class="wp-btn" id="wp-manual">⚡ 立即脉冲一次</button>
+              <button class="wp-btn wp-btn-ghost" id="wp-clear">清空历史</button>
+            </div>
+          </div>`;
+    }
+
+    /* ══════════ 绑定 ══════════ */
+
     _bind() {
-        const $ = id => document.getElementById(id);
+        const root = document.querySelector('.wp-app') ?? document;
+        const $ = (id) => document.getElementById(id);
         const rerender = () => this.render();
+
+        /* 底栏三格：切格不重取数据（数据在 render 里现取），只换面 + 重画。
+         * 换面后把滚动拉回顶部 —— 三格的高度不同，留在旧位置会落在半截。 */
+        root.querySelectorAll('.wp-nav-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const next = btn.dataset.wpFace ?? WP_FACES[0].id;
+                if (next === this._face) return;
+                this._face = next;
+                this.render();
+                requestAnimationFrame(() => {
+                    const body = document.querySelector('.wp-app .wp-body');
+                    if (body) body.scrollTop = 0;
+                });
+            });
+        });
+
+        /* 动态格的风格筛片：只重画列表，不整页重绘（整页重绘会把滚动位置顶回顶部）。 */
+        const chips = root.querySelectorAll('.wp-chip');
+        chips.forEach((chip) => {
+            chip.addEventListener('click', () => {
+                const next = chip.dataset.wpFilter ?? 'all';
+                if (next === this._filter) return;
+                this._filter = next;
+                chips.forEach((c) => {
+                    const on = (c.dataset.wpFilter ?? 'all') === next;
+                    c.classList.toggle('on', on);
+                    c.setAttribute('aria-selected', on ? 'true' : 'false');
+                    if (on) c.setAttribute('aria-current', 'page');
+                    else c.removeAttribute('aria-current');
+                });
+                const list = document.getElementById('wp-feed-list');
+                if (list) list.innerHTML = this._renderFeedList();
+            });
+        });
+
+        /* 设置格 */
         $('wp-toggle')?.addEventListener('click', () => {
             const s = this.app.getSettings();
             this.app.saveSettings({ enabled: !s.enabled, autoGenerate: !s.enabled });
             if (!s.enabled) this.app.startListening(); else this.app.stopListening();
             rerender();
         });
-        document.querySelectorAll('.wp-style').forEach(b => b.addEventListener('click', () => {
+        root.querySelectorAll('.wp-style').forEach(b => b.addEventListener('click', () => {
             this.app.saveSettings({ style: b.dataset.style }); rerender();
         }));
         $('wp-custom')?.addEventListener('change', e => this.app.saveSettings({ customPrefix: e.target.value }));
@@ -164,48 +333,6 @@ export class WorldpulseView {
             await this.app.manualPulse();
             rerender();
         });
-        $('wp-clear')?.addEventListener('click', () => { if (phoneConfirm('清空全部世界动态历史？')) { this.app.clearHistory(); rerender(); } });
-    }
-
-    _css() {
-        return `<style>
-.wp-wrap{padding:14px;background:#0d1117;min-height:100%;color:#e6edf3;font-family:inherit;}
-.wp-hero{padding:14px 4px 10px;}
-.wp-hero-title{font-size:22px;font-weight:800;letter-spacing:1px;}
-.wp-hero-sub{font-size:12px;color:#8b949e;margin-top:4px;}
-.wp-card{background:#161b22;border:1px solid #21262d;border-radius:14px;padding:12px;margin-bottom:14px;}
-.wp-row{margin-bottom:12px;}
-.wp-row:last-child{margin-bottom:0;}
-.wp-label{font-size:13px;font-weight:700;color:#c9d1d9;display:block;margin-bottom:8px;}
-.wp-switch{background:#21262d;border:1px solid #30363d;color:#8b949e;border-radius:20px;padding:5px 16px;font-size:12px;cursor:pointer;}
-.wp-switch.on{background:#1f6feb;border-color:#1f6feb;color:#fff;}
-.wp-styles{display:flex;flex-wrap:wrap;gap:6px;}
-.wp-style{background:#21262d;border:1px solid #30363d;color:#c9d1d9;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;}
-.wp-style.on{background:#1f6feb22;border-color:#1f6feb;color:#79c0ff;}
-.wp-input{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;padding:8px;font-size:13px;box-sizing:border-box;}
-.wp-range{width:100%;}
-.wp-queue{font-size:11px;color:#6e7681;}
-.wp-actions{display:flex;gap:8px;}
-.wp-btn{flex:1;background:#238636;border:none;color:#fff;border-radius:10px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;}
-.wp-btn:disabled{opacity:0.6;cursor:default;}
-.wp-btn-ghost{background:#21262d;border:1px solid #30363d;color:#c9d1d9;flex:0 0 auto;}
-.wp-feed{display:flex;flex-direction:column;gap:10px;}
-.wp-item{background:#161b22;border:1px solid #21262d;border-left:3px solid #1f6feb;border-radius:10px;padding:10px 12px;}
-.wp-item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
-.wp-item-style{font-size:11px;font-weight:700;color:#79c0ff;}
-.wp-item-time{font-size:10px;color:#6e7681;}
-.wp-item-text{font-size:13px;line-height:1.6;color:#c9d1d9;}
-.wp-empty{text-align:center;padding:50px 20px;color:#8b949e;}
-.wp-empty-icon{font-size:40px;margin-bottom:10px;}
-.wp-empty-sub{font-size:12px;color:#6e7681;margin-top:8px;line-height:1.7;}
-.wp-bridge .wp-label{margin-bottom:6px;}
-.wp-bridge-line{font-size:12px;line-height:1.9;color:#8b949e;}
-.wp-bridge-ok{color:#3fb950;}
-.wp-bridge-warn{color:#d29922;}
-.wp-bridge-off{color:#6e7681;}
-.wp-bridge-hint{font-size:11px;color:#6e7681;margin-top:6px;line-height:1.7;}
-</style>`;
+        $('wp-clear')?.addEventListener('click', () => { if (phoneConfirm('清空全部世界动态历史？')) { this.app.clearHistory(); this.render(); } });
     }
 }
-
-export default WorldpulseView;

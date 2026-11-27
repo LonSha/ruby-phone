@@ -200,7 +200,11 @@ test('v321 C2. ★★★ 世界脉动桥卡片：文案取自真源，视图**�
     assert.match(WPA_SRC, /readLonshaEventPlatforms/, '应用层从真源取数');
     assert.equal(WPA_SRC.split('eventPlatforms: epBlock()').length - 1 >= 2, true, '★ 两条返回路径都要带出该面（否则某条路径上读者拿到 undefined）');
     assert.match(WPV_SRC, /st\.eventPlatforms/, '视图真读它（不是躺在 app 里无人消费）');
-    assert.match(WPV_SRC, /esc\(ep\.line \|\| ''\)/, '文案直接取真源给出的行');
+    /* [v4.213.0 交棒改写] 这行原来钉死 `esc(ep.line || '')` —— 钉的是**运算符**，
+     *   不是不变式。v4.213.0 重排世界脉搏三格时顺手把它换成 `??`（与全仓取数口径的
+     *   方向一致，见 scripts/weak-coercion-audit.mjs），代码更稳而判据却红了。
+     *   真不变式是：文案直接取真源给出的那一行，视图不自己拼、不重判形态。 */
+    assert.match(WPV_SRC, /esc\(ep\.line (\|\||\?\?) ''\)/, '文案直接取真源给出的行');
     /* ★ 判据必须在**代码**上做，不在注释上做：本卡上方注释正**点名**这些状态串
      *   来说明「形态判断归真源、视图不许重判」；不剥注释就会把「禁用声明」读成「违规使用」
      *   （与 v320 B2 同族，本仓已犯过一次的形态）。 */

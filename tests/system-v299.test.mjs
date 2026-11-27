@@ -434,8 +434,18 @@ function mutateOnce(src, from, to) {
 /** 造一个全量镜像树（排除 .git）；mut 里的文件以「读完原版→变形」的方式覆盖 */
 function mirror(mut) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'v299-mir-'));
+    /* [v4.213.0] 镜像面排除 `.sourcematerial/`（.gitignore 内的源材料库：纯 .json、
+     *   体积数 MB、门禁从不读它）。理由不是「懒得复制」，是**复制会造成假红**：
+     *   该目录在部分环境（proot 假 root、不能 chmod 的挂载）里是 0600 不可读，
+     *   而 copyTreeSafe 的纪律只容忍 ENOENT、其它错误码立刻抛 —— 于是五道门
+     *   一条都没跑，整族负控制先炸在 copyfile 上，看起来像判据坏了。
+     *   排除它之后，镜像树的门禁面与 git 里的交付面一致（gitignore 的东西本来
+     *   就不在交付里，也不该参与「门禁在退化输入上怎么表现」这个观测）。 */
     copyTreeSafe(ROOT, dir, {
-        filter: (src) => !src.split(path.sep).includes('.git'),
+        filter: (src) => {
+            const parts = src.split(path.sep);
+            return !parts.includes('.git') && !parts.includes('.sourcematerial');
+        },
     });
     for (const [rel, fn] of Object.entries(mut)) {
         const body = fn(read(rel));
