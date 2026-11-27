@@ -63,6 +63,8 @@ const TABS = [
     { key: 'cart', label: '购物车', icon: 'fa-solid fa-cart-shopping' },
     { key: 'mine', label: '我的', icon: 'fa-solid fa-user' },
 ];
+/* [v4.215.0 · 照现实] 底栏真源别名：TBO_FACES 与 TABS 同一引用，不另写格表。 */
+export const TBO_FACES = TABS;
 
 /** 订单页的状态页签（键就是数据层 `ORDER_STATUS` 的键）。 */
 const ORDER_TABS = [
@@ -109,9 +111,20 @@ export class TaobaoView {
         this._hKey = null;
     }
 
-    /* ================= 1. 生命周期 ================= */
+    /* [v4.215.0 · 照现实] taobao v4 分层样式走 link 幂等注入投递。 */
+    _loadV4CSS() {
+        if (typeof document === 'undefined' || !document.head) return;
+        if (document.getElementById('tbo-v4-css')) return;
+        const link = document.createElement('link');
+        link.id = 'tbo-v4-css';
+        link.rel = 'stylesheet';
+        link.href = new URL('./taobao.v4.css', import.meta.url).href;
+        document.head.appendChild(link);
+    }
 
+    /* ================= 1. 生命周期 ================= */
     render() {
+        this._loadV4CSS();
         const c = (this.shell && typeof this.shell.getContentContainer === 'function')
             ? this.shell.getContentContainer()
             : null;
@@ -273,8 +286,8 @@ export class TaobaoView {
     _tabbarHTML() {
         const proj = this.app.projection() || {};
         const badge = { cart: proj.cartCount || 0, orders: proj.pendingCount || 0 };
-        const parts = ['<nav class="tbo-tabbar">'];
-        for (const t of TABS) {
+        const parts = ['<nav class="tbo-tabbar" role="navigation" aria-label="桃宝主导航">'];
+        for (const t of TBO_FACES) {
             const on = this.tabKey === t.key;
             const n = badge[t.key] || 0;
             /* [v4.204.0 · 照现实] 禁用格：照官方位置与文案列出，但必须**看得出不能点**
@@ -282,14 +295,14 @@ export class TaobaoView {
              *   不静默不是礼貌问题：静默无反应会被当成「按钮坏了」，排查成本比一句话高得多。 */
             if (t.disabled) {
                 parts.push('<button class="tbo-tab is-disabled" data-act="soon" data-what="' + this._esc(t.label) + '"'
-                    + ' aria-disabled="true" aria-label="' + this._esc(t.label) + '（本机未实现）">');
+                    + ' data-tbo-face="' + t.key + '" aria-disabled="true" aria-label="' + this._esc(t.label) + '（本机未实现）">');
                 parts.push('<i class="' + t.icon + '" aria-hidden="true"></i>');
                 parts.push('<span class="tbo-tab-label">' + this._esc(t.label) + '</span>');
                 parts.push('</button>');
                 continue;
             }
             parts.push('<button class="tbo-tab" data-act="tab" data-tab="' + this._esc(t.key) + '"'
-                + (on ? ' aria-current="page"' : '') + ' aria-label="' + this._esc(t.label) + '">');
+                + ' data-tbo-face="' + t.key + '"' + (on ? ' aria-current="page"' : '') + ' aria-label="' + this._esc(t.label) + '">');
             parts.push('<i class="' + t.icon + '" aria-hidden="true"></i>');
             parts.push('<span class="tbo-tab-label">' + this._esc(t.label) + '</span>');
             if (n > 0) parts.push('<i class="tbo-tab-badge">' + (n > 99 ? '99+' : n) + '</i>');
