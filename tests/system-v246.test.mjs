@@ -313,7 +313,13 @@ void defaultPlaceSettings;
     ok('J6 就绪时注入块非空且写明当前所在', app.promptBlock().includes('当前所在：老城 › 钟楼 › 顶层'));
     app.render();
     ok('J7 视图渲染出当前所在链', screen.innerHTML.includes('pl-chip') && screen.innerHTML.includes('钟楼'));
+    /* [v4.215.0 · 交棒］在场分组搬到「在场」格：判据钉的是「分组与楼层真被画出来」，
+     *   不是「它必须落在首屏」。切到那一格再渲染，判的仍是内容在场。 */
+    app.view._face = 'who';
+    app.render();
     ok('J8 视图渲染出在场分组与楼层', screen.innerHTML.includes('pl-group') && screen.innerHTML.includes('第12楼'));
+    app.view._face = 'here';
+    app.render();
 
     app.saveSettings({ injectToPrompt: false });
     ok('J9 关闭注入后块为空（开关不是摆设）', app.promptBlock() === '');

@@ -110,10 +110,17 @@ test('v311 C1. ★ 诊断卡真渲染场景头覆盖度行（真数据进 DOM）
         getSettings: () => ({ showDiagnostics: true }), saveSettings: () => {}
     };
     const view = new mod.PlaceView(app);
-    const el = { innerHTML: '', querySelector: () => null };
-    view.render(el);
-    assert.ok(el.innerHTML.includes('场景头覆盖'), '★ 场景头覆盖度行进 DOM');
-    assert.ok(el.innerHTML.includes('第9楼'), '★ 真列号进 DOM');
+    /* [v4.215.0 · 交棒］诊断卡搬到「更多」格：判据钉的是「这张卡真被画出来」，
+     *   不是「它必须在首屏」—— 四格各画一遍再合看 DOM。 */
+    let html = '';
+    for (const f of ['here', 'who', 'go', 'more']) {
+        view._face = f;
+        const el = { innerHTML: '', querySelector: () => null };
+        view.render(el);
+        html += el.innerHTML;
+    }
+    assert.ok(html.includes('场景头覆盖'), '★ 场景头覆盖度行进 DOM');
+    assert.ok(html.includes('第9楼'), '★ 真列号进 DOM');
 });
 
 test('v311 C2. ★ 上游旧版时不撒谎：如实说「需插件 v3.221 或更新」', async () => {
@@ -124,11 +131,18 @@ test('v311 C2. ★ 上游旧版时不撒谎：如实说「需插件 v3.221 或�
         getSettings: () => ({ showDiagnostics: true }), saveSettings: () => {}
     };
     const view = new mod.PlaceView(app);
-    const el = { innerHTML: '', querySelector: () => null };
-    view.render(el);
-    assert.ok(el.innerHTML.includes('上游这版没有场景头覆盖度'), '★ 没这面如实说没');
-    assert.ok(el.innerHTML.includes('v3.221'), '★ 给出升级所需版本');
-    assert.ok(!el.innerHTML.includes('尚未登记任何楼层的场景头'), '★ 不得把「没这面」渲染成「还没登记」');
+    /* [v4.215.0 · 交棒］诊断卡搬到「更多」格：判据钉的是「这张卡真被画出来」，
+     *   不是「它必须在首屏」—— 四格各画一遍再合看 DOM。 */
+    let html = '';
+    for (const f of ['here', 'who', 'go', 'more']) {
+        view._face = f;
+        const el = { innerHTML: '', querySelector: () => null };
+        view.render(el);
+        html += el.innerHTML;
+    }
+    assert.ok(html.includes('上游这版没有场景头覆盖度'), '★ 没这面如实说没');
+    assert.ok(html.includes('v3.221'), '★ 给出升级所需版本');
+    assert.ok(!html.includes('尚未登记任何楼层的场景头'), '★ 不得把「没这面」渲染成「还没登记」');
 });
 
 test('v311 C3. ★ 有面为空时不撒谎：说「尚未登记」而不是「上游没这面」', async () => {
@@ -139,10 +153,17 @@ test('v311 C3. ★ 有面为空时不撒谎：说「尚未登记」而不是「�
         getSettings: () => ({ showDiagnostics: true }), saveSettings: () => {}
     };
     const view = new mod.PlaceView(app);
-    const el = { innerHTML: '', querySelector: () => null };
-    view.render(el);
-    assert.ok(el.innerHTML.includes('尚未登记任何楼层的场景头'), '★ 空面如实说「未登记」');
-    assert.ok(!el.innerHTML.includes('需插件 v3.221'), '★ 不得把「还没登记」渲染成「没这面」');
+    /* [v4.215.0 · 交棒］诊断卡搬到「更多」格：判据钉的是「这张卡真被画出来」，
+     *   不是「它必须在首屏」—— 四格各画一遍再合看 DOM。 */
+    let html = '';
+    for (const f of ['here', 'who', 'go', 'more']) {
+        view._face = f;
+        const el = { innerHTML: '', querySelector: () => null };
+        view.render(el);
+        html += el.innerHTML;
+    }
+    assert.ok(html.includes('尚未登记任何楼层的场景头'), '★ 空面如实说「未登记」');
+    assert.ok(!html.includes('需插件 v3.221'), '★ 不得把「还没登记」渲染成「没这面」');
 });
 
 // ══════════ D 消费点下限 ══════════

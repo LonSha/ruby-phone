@@ -15,6 +15,19 @@
  *   本件原本已把「读不到 / 还没有 / 上游没这面」三种话分开写，但机器读不到这个区别：
  *   缺一个属性，判据/诊断只能靠读中文。本版把区别挂到属性上。 */
 import { FACE_ATTR } from '../../config/empty-face.js';
+/* 底栏四格（照客户端形态）：四件事的回答路径互不相干 ——
+ *   这里（我在哪 / 这栋楼长什么样）、在场（谁在 / 谁和谁可能共处）、
+ *   去哪（能去哪 / 去了有什么可参与）、更多（设置与自检）。
+ * 改造前十三张卡片一路往下堆：想看「谁在这个地方」得先滚过整页层级树，
+ * 想看「能不能去」得滚到最底部。图标与文案的单一真源就在这里，
+ * 底栏和标题都从 PL_FACES 取，不许在别处再写一份。 */
+export const PL_FACES = Object.freeze([
+    { key: 'here', label: '这里', icon: 'fa-location-dot' },
+    { key: 'who', label: '在场', icon: 'fa-users' },
+    { key: 'go', label: '去哪', icon: 'fa-route' },
+    { key: 'more', label: '更多', icon: 'fa-sliders' }
+]);
+
 
 export class PlaceView {
     constructor(app) {
@@ -27,6 +40,8 @@ export class PlaceView {
          *   选择本身不是数据。 */
         this._bandNames = [];
         this._bandEvidenced = false;
+        /* 当前格：**只活在这一屏**（四格是看的角度，不是保存的偏好）。 */
+        this._face = 'here';
     }
 
     render(container) {
@@ -55,40 +70,84 @@ export class PlaceView {
             '<div class="pl-root">',
             '  <header class="pl-header">',
             '    <button aria-label="返回" class="pl-nav" id="pl-home"><i class="fa-solid fa-chevron-left"></i></button>',
-            '    <h2>地点图景</h2>',
+            '    <h2>' + this._esc(this._faceLabel()) + '</h2>',
             '    <button aria-label="刷新" class="pl-nav" id="pl-refresh"><i class="fa-solid fa-rotate"></i></button>',
             '  </header>',
-            '  <div class="pl-body">',
-            this._reasonCard(face),
+            '  <div class="pl-body" id="pl-body">',
+            this._renderFaceBody(face, proj, src),
+            '  </div>',
+            this._btmNavHtml(),
+            '</div>'
+        ].join('\n');
+
+        try { this.container.innerHTML = html; } catch (_e) { /* 宿主容器不可用：不抛 */ }
+        this._bind();
+    }
+
+    /** 当前格的标题（跟着当前格走，不写死一个格名）。 */
+    _faceLabel() {
+        const hit = PL_FACES.filter((f) => f.key === this._face)[0];
+        return hit ? hit.label : PL_FACES[0].label;
+    }
+
+    /* 底栏：四格等分；热区（48 / 44）与层纪律写在 place.v4.css 里，不写内联样式。 */
+    _btmNavHtml() {
+        const cells = PL_FACES.map((f) => {
+            const on = f.key === this._face;
+            return [
+                '<button class="pl-btm-btn' + (on ? ' on' : '') + '"',
+                ' data-pl-face="' + this._esc(f.key) + '"',
+                ' role="tab"',
+                ' aria-current="' + (on ? 'page' : 'false') + '"',
+                ' aria-selected="' + (on ? 'true' : 'false') + '">',
+                '  <i class="fa-solid ' + this._esc(f.icon) + '"></i>',
+                '  <span>' + this._esc(f.label) + '</span>',
+                '</button>'
+            ].join('');
+        }).join('');
+        return '<nav class="pl-btm" role="tablist" aria-label="地点图景分区">' + cells + '</nav>';
+    }
+
+    /**
+     * 面分派：全件**唯一**一处按 this._face 分支。
+     *
+     * 【每一格都以归因卡开头，这是语义问题不是排版偏好】归因卡只放第一格的话，
+     *   二三四格在读数不可用时会分别被误读成「没有在场」「没有可去的地方」「没有设置」——
+     *   三种完全不同的故障长成同一张脸，读者看不见「读不到」这件事本身。
+     */
+    _renderFaceBody(face, proj, src) {
+        const head = this._reasonCard(face);
+        if (this._face === 'who') {
+            return [
+                head,
+                this._presenceCard(proj, face),
+                this._coPresenceCard(proj, face),
+                this._presenceBandCard(),
+            ].join('\n');
+        }
+        if (this._face === 'go') {
+            return [
+                head,
+                this._roamCard(proj, face),
+                this._districtCard(),
+            ].join('\n');
+        }
+        if (this._face === 'more') {
+            return [
+                head,
+                this._settingsCard(),
+                (this._showDiag() ? this._diagCards(proj) : ''),
+            ].join('\n');
+        }
+        return [
+            head,
             this._sourceCard(src),
             this._summaryCard(face, proj),
             this._currentCard(proj, face),
             this._headerCard(proj),
             this._treeCard(proj, face),
             this._visitHistoryCard(proj, face),
-            this._presenceCard(proj, face),
-            /* [v3.4.3 · F-3] 同楼同刻（事实面）：紧跟在「谁在这个地方」之后 ——
-             *   它读的是同一份 presence 的另一种切法（按「同一处 ≥2 人」分组），
-             *   两块放一起读者才能对照「谁在哪」与「哪处有两人以上」。 */
-            this._coPresenceCard(proj, face),
-            /* [v4.43.0 · R5-X3] 行踪时间带：与「同楼同刻」并列 —— 前者是**瞬时**读数，
-             *   本卡是**时间窗**读数（两人同地不同时间不算见面）。 */
-            this._presenceBandCard(),
-            /* [v4.05.0 · R3-X9] 探索卡:真正把「只能看」变成「能选」的那一块。
-             *   位置有讲究:它排在「谁在这个地方 / 同楼同刻」之后 ——
-             *   读者先看清原地有什么,再决定要去哪;排到最前面等于让人还没看当前就被劝出门。 */
-            this._roamCard(proj, face),
-            /* [v4.97.0 · R11-O3 第三批] 街区机会卡：紧跟在探索卡之后 —— 前者答「能去哪」，
-             *   本卡答「去了有什么可参与」（同一处地点的两种读数，读者顺路对照）。 */
-            this._districtCard(),
-            this._settingsCard(),
-            (this._showDiag() ? this._diagCards(proj) : ''),
-            '  </div>',
-            '</div>'
         ].join('\n');
-
-        try { this.container.innerHTML = html; } catch (_e) { /* 宿主容器不可用：不抛 */ }
-        this._bind();
     }
 
     _showDiag() {
@@ -688,6 +747,21 @@ export class PlaceView {
                 return Array.from(el.querySelectorAll(sel) || []);
             } catch (_e) { return []; }
         };
+        /* 底栏四格：只改现场态后重画，**不写盘**、不进任何持久层 ——
+         *   四格是「看它的角度」，不是用户的偏好；换页即丢是刻意的。
+         *   切格把滚动拉回顶部：四格高度差得远，留在旧位置会落在半截。 */
+        for (const btn of qa('[data-pl-face]')) {
+            btn.addEventListener('click', () => {
+                const k = String(btn.getAttribute('data-pl-face') || '');
+                if (!k || k === this._face) return;
+                this._face = k;
+                this._draw();
+                try {
+                    const b = (this.container && this.container.querySelector) ? this.container.querySelector('#pl-body') : null;
+                    if (b) b.scrollTop = 0;
+                } catch (_e) { /* 宿主无滚动面：忽略 */ }
+            });
+        }
         for (const btn of qa('.pl-roam-pick')) {
             btn.addEventListener('click', () => {
                 const key = btn.getAttribute('data-key') || '';
