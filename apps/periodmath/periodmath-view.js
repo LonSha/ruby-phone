@@ -29,6 +29,8 @@ const TABS = [
     { key: 'records', label: '记录' },
     { key: 'settings', label: '设置' },
 ];
+/* [v4.215.0 · 照现实] 底栏真源别名：PM_FACES 与 TABS 同一引用，不另写格表。 */
+export const PM_FACES = TABS;
 
 const PHASE_TEXT = {
     menstrual: '月经期',
@@ -67,8 +69,21 @@ export class PeriodmathView {
         return root;
     }
 
+    /* [v4.215.0 · 照现实] periodmath 样式逐字拼入 phone.css（无独立 link），
+     v4 分层样式走 link 幂等注入投递。 */
+    _loadV4CSS() {
+        if (typeof document === 'undefined' || !document.head) return;
+        if (document.getElementById('pm-v4-css')) return;
+        const link = document.createElement('link');
+        link.id = 'pm-v4-css';
+        link.rel = 'stylesheet';
+        link.href = new URL('./periodmath.v4.css', import.meta.url).href;
+        document.head.appendChild(link);
+    }
+
     render(vm) {
         this._lastVm = vm || {};
+        this._loadV4CSS();
         const el = this._mount();
         if (!el) return;
         el.innerHTML = this._html(this._lastVm);
@@ -197,9 +212,13 @@ export class PeriodmathView {
     _html(vm) {
         const page = this.tab === 'records' ? this._recordsHTML(vm)
             : (this.tab === 'settings' ? this._settingsHTML(vm) : this._todayHTML(vm));
-        const tabs = ['<nav class="pm-tabbar">']
-            .concat(TABS.map((t) => '<button class="pm-tab' + (this.tab === t.key ? ' is-on' : '')
-                + '" data-act="tab" data-tab="' + t.key + '">' + t.label + '</button>'))
+        const tabs = ['<nav class="pm-tabbar" role="navigation" aria-label="周期主导航">']
+            .concat(PM_FACES.map((t) => {
+                const on = this.tab === t.key;
+                return '<button class="pm-tab' + (on ? ' is-on' : '') + '" data-act="tab" data-tab="' + t.key
+                    + '" data-pm-face="' + t.key + '"' + (on ? ' aria-current="page"' : '')
+                    + '>' + esc(t.label) + '</button>';
+            }))
             .concat(['</nav>'])
             .join('');
         return '<div class="pm-top"><div class="pm-title">周期</div><span class="pm-top-meta">会话内隔离</span></div>'

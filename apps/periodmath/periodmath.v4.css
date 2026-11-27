@@ -1,0 +1,30 @@
+/* apps/periodmath/periodmath.v4.css — 周期「照现实」v4.215.0 底栏分层样式
+ * 由 periodmath-view.js 的 _loadV4CSS() 幂等注入 link 投递。容器无层，按钮进 @layer rp.apps；
+ * 不用 position:fixed，热区 ≥48/44。 */
+.pm-root > .pm-tabbar {
+    display: flex;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    min-height: 48px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    background: #0d151a;
+}
+
+@layer rp.apps {
+    .pm-tab {
+        flex: 1 1 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        min-width: 44px;
+        padding: 10px 0 12px;
+        border: 0;
+        background: none;
+        color: #6f8794;
+        font-size: 12px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .pm-tab.is-on { color: #7dd3fc; }
+}
