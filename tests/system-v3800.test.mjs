@@ -390,13 +390,14 @@ test('v3800 C3. A3 接线：record 真的解析记忆块，且解析的是**清�
     assert.equal(core.pendingMemoryBlock, null, '无块时必须清空（读旧块 = 假读数）');
 });
 
-test('v3800 C4. A2 接线：跨卡桶写全局键；换会话不清、清当前数据不清、清全部数据才清', () => {
+test('v3800 C4. A2 接线：显式世界记忆跨会话保留，清全部数据才清', async () => {
     const fake = { _m: {}, get(k) { return this._m[k]; }, set(k, v) { this._m[k] = v; }, remove(k) { delete this._m[k]; } };
     const core = new DATA.MemoryCore(fake);
-    core.record('ai', '```memo\nevent | 跨卡共同经历\n```', {}, { floor: 1 });
+    core.record('ai', '```memo\nevent | 跨卡共同经历\n```', {}, { floor: 1, sharedLevel: 'world' });
+    await core._sharedPending;
     const raw1 = fake._m[S.SHARED_MEMORY_KEY];
     assert.ok(raw1, '结构化块必须落到全局桶 ' + S.SHARED_MEMORY_KEY + '（落在会话桶里就不是跨卡层）');
-    assert.equal(JSON.parse(raw1).world.length, 1, '默认层级是 world（跨卡共同层）');
+    assert.equal(JSON.parse(raw1).world.length, 1, '显式指定 world 的事件可跨卡读取');
     /* 换会话：跨卡层必须活着 —— 它存在的全部理由就是不被会话边界切碎。 */
     core.reload();
     assert.ok(fake._m[S.SHARED_MEMORY_KEY] && JSON.parse(fake._m[S.SHARED_MEMORY_KEY]).world.length === 1, 'reload 把跨卡层清掉了');
@@ -404,7 +405,7 @@ test('v3800 C4. A2 接线：跨卡桶写全局键；换会话不清、清当前�
     core.clearCurrentChat();
     assert.equal(JSON.parse(fake._m[S.SHARED_MEMORY_KEY]).world.length, 1, 'clearCurrentChat 不该动跨卡层');
     /* 清全部数据：连跨卡层一起清（否则用户以为清干净了）。 */
-    core.clear();
+    assert.equal(await core.clear(), true);
     assert.equal(JSON.parse(fake._m[S.SHARED_MEMORY_KEY]).world.length, 0, 'clear() 没清掉全局桶');
     /* 三级检索面可用且逐档标来源。 */
     const res = core.recallShared({ text: '跨卡' }, 5);

@@ -1,3 +1,4 @@
+import { hasFollowingShutdown } from './investigation-core.js';
 /* ============================================================
  * cross-device-forensic-timeline-reconstructor.js
  * [v4.137.0 · V20 史诗级双计划 · R20-8]
@@ -56,8 +57,7 @@ export function reconstructForensicTimeline(state) {
 
     // 检测车载系统急刹停车后手机瞬间关机
     if (log.device === 'vehicle_infotainment' && log.eventType === 'EMERGENCY_BRAKE') {
-      const nextPhoneOff = state.timelineLogs.find(l => l.device === 'smartphone' && l.eventType === 'POWER_OFF' && Math.abs(l.timestamp - log.timestamp) < 60000);
-      if (nextPhoneOff) {
+      if (hasFollowingShutdown(state.timelineLogs, log.timestamp)) {
         anomalies.push({
           timestamp: log.timestamp,
           type: 'FLIGHT_OR_CRASH',

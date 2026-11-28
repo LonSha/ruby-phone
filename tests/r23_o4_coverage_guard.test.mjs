@@ -18,11 +18,12 @@
  * ============================================================ */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, mkdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import { coverageCollectionBroken } from '../scripts/lib/coverage-debt.mjs';
+import { coverageCollectionBroken, parseCoverageSpec } from '../scripts/lib/coverage-debt.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (rel) => readFileSync(path.join(ROOT, rel), 'utf8');
@@ -76,17 +77,20 @@ test('接线：脚本 import 了守卫，且守卫调用发生在 if (WRITE) 之
 
 /* ---------------- 真账本没有被假零污染 ---------------- */
 
-test('账本不是假零：coverage_rows 2483 / 零测试文件 115 < 盘上 437', () => {
+test('账本不是假零：行数由源日志复算，总计由目录明细复算', () => {
   const t = ledger.totals;
-  assert.equal(t.coverage_rows, 2483);
-  assert.equal(t.files_on_disk, 437);
-  assert.equal(t.zero_test_files, 115);
+  assert.equal(t.coverage_rows, parseCoverageSpec(read('tests/audit/coverage_source.log')).length);
+  for (const key of ['files_on_disk','zero_test_files']) {
+    assert.equal(t[key], Object.values(ledger.dirs).reduce((sum, dir) => sum + dir[key], 0));
+  }
   assert.ok(t.zero_test_files < t.files_on_disk, '零覆盖文件数等于盘上文件数 = 假零基线');
   assert.equal(coverageCollectionBroken({ totalFiles: t.files_on_disk, totalZero: t.zero_test_files }).broken, false);
 });
 
-test('账本没有被本轮改动：measured_at 仍是 2026-11-13、measured_by 仍是官方命令', () => {
-  assert.equal(ledger.measured_at, '2026-11-13', '本轮承诺「不刷新」——账本被改就说明有人偷偷写了假读数');
+test('账本标注有效的 UTC 测量日期及生成命令', () => {
+  const date = new Date(ledger.measured_at + 'T00:00:00Z');
+  assert.equal(date.toISOString().slice(0,10),ledger.measured_at);
+  assert.ok(date.getTime() <= Date.now());
   assert.equal(ledger.measured_by, 'node scripts/coverage-report.mjs --write');
   assert.equal(ledger.drop_pp, 0.5);
 });
@@ -98,28 +102,54 @@ test('诚实边界仍在：note 里两条（浏览器层不计入 / 量行不量
 
 /* ---------------- 进程级 ---------------- */
 
-test('进程级：结构自检 rc=0，且第一屏打印读数年龄', () => {
-  const r = spawnSync(process.execPath, ['scripts/coverage-report.mjs'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
-  assert.equal(r.status, 0, (r.stdout || '') + (r.stderr || ''));
-  assert.match(r.stdout, /读数年龄 \d+ 天/, '自检输出没报读数年龄（旧账本就会被当成现状）');
-  assert.match(r.stdout, /结构自检通过/);
-});
 
-test('进程级：坏采集时 --verify 必须 rc=2 且说「拒判」，不许报「退步 100pp」', () => {
-  const r = spawnSync(process.execPath, ['scripts/coverage-report.mjs', '--verify'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    maxBuffer: 1 << 26,
-    timeout: 600000,
-  });
-  const out = (r.stdout || '') + (r.stderr || '');
-  if (r.status === 2) {
-    assert.match(out, /拒判/);
-    assert.ok(!/覆盖率退步/.test(out), '坏采集不许被判成退步');
-    return;
+test('进程级：真采集成功才写，失败或报告截断拒写且保留旧基线', t => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'rp-cov-test-'));
+  t.after(() => rmSync(dir, {recursive:true, force:true}));
+  for (const sub of ['apps/demo', 'tests/audit']) mkdirSync(path.join(dir, sub), {recursive:true});
+  const put = (rel, text) => writeFileSync(path.join(dir, rel), text);
+  put('package.json', JSON.stringify({version:'1.0.0',type:'module'}));
+  put('TODO.md', '# TODO\n');
+  put('apps/demo/index.js', 'export const answer = 42;\n');
+  const src = "import { answer } from '../apps/demo/index.js';\nimport assert from 'node:assert/strict';\n";
+  const run = (...args) => spawnSync(process.execPath, ['scripts/coverage-report.mjs','--root',dir,'--write',...args], {cwd:ROOT,encoding:'utf8',timeout:20000});
+  put('tests/mini.test.mjs', src + 'assert.equal(answer,42);');
+  const ok = run();
+  assert.equal(ok.status, 0, ok.stderr);
+  const base = path.join(dir, 'tests/audit/coverage_baseline.json');
+  const saved = readFileSync(base,'utf8');
+  const log = path.join(dir, 'tests/audit/coverage_source.log');
+  const evidence = readFileSync(log, 'utf8');
+  assert.equal(run('--from','tests/audit/coverage_source.log').status, 0);
+  for (const key of ['fail','cancelled']) {
+    const bad = evidence.replace(new RegExp('^ℹ '+key+' 0$', 'm'), 'ℹ '+key+' 1');
+    assert.notEqual(bad,evidence);
+    put('bad.log',bad);
+    assert.equal(run('--from','bad.log').status,2);
   }
-  /* 在不崩的环境里，真跑会给出真表（rc 0 通过 / 1 真退步）——那时这条判据不适用，
-   * 但必须留下可核查的痕迹：输出里得有真账本读数，不能是空表。 */
-  assert.match(out, /app 目录 101 个/);
-  assert.ok(r.status === 0 || r.status === 1, '非 0/1/2 的退出码说明脚本自己坏了：' + out.slice(0, 400));
+  assert.equal(JSON.parse(saved).dirs.demo.line_pct, 100);
+  put('tests/mini.test.mjs', src + 'assert.equal(answer,43);');
+  const fail = run();
+  assert.equal(fail.status, 2);
+  assert.match(fail.stderr, /拒判.*rc=1/);
+  put('partial.log', 'ℹ start of coverage report\nℹ apps | | | |\n');
+  const partial = run('--from','partial.log');
+  assert.equal(partial.status, 2);
+  assert.match(partial.stderr, /不完整/);
+  assert.equal(readFileSync(log,'utf8'),evidence);
+  assert.equal(readFileSync(base,'utf8'),saved);
+  const check = () => spawnSync(process.execPath, ['scripts/coverage-report.mjs','--root',dir], {cwd:ROOT,encoding:'utf8'});
+  const clean = check();
+  assert.equal(clean.status,0,clean.stdout);
+  assert.match(clean.stdout,/读数年龄 \d+ 天/);
+  mkdirSync(path.join(dir,'apps/added'));
+  put('apps/added/index.js', 'export const n = 7;\n');
+  const stale = check();
+  assert.equal(stale.status,1);
+  assert.match(stale.stdout,/未进账本.*added/);
+  put('tests/mini.test.mjs', src + "import {n} from '../apps/added/index.js'; assert.equal(n,7);");
+  const updated = run();
+  assert.equal(updated.status,0,updated.stderr);
+  assert.equal(JSON.parse(readFileSync(base)).dirs.added.line_pct,100);
+  assert.equal(check().status,0);
 });

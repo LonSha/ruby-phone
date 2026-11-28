@@ -177,7 +177,7 @@
       "rel": "apps/calendar/calendar-data.js",
       "cls": "CalendarData",
       "name": "togglePinned",
-      "line": 318,
+      "line": 329,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -185,7 +185,7 @@
       "rel": "apps/calendar/calendar-view.js",
       "cls": "CalendarView",
       "name": "shiftMonth",
-      "line": 1264,
+      "line": 1277,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -529,7 +529,7 @@
       "rel": "apps/focus/focus-app.js",
       "cls": "FocusApp",
       "name": "sessionSeconds",
-      "line": 173,
+      "line": 178,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -537,7 +537,7 @@
       "rel": "apps/focus/focus-app.js",
       "cls": "FocusApp",
       "name": "recordLine",
-      "line": 318,
+      "line": 323,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -857,7 +857,7 @@
       "rel": "apps/memory/lonsha-bridge.js",
       "cls": "LonShaBridge",
       "name": "recordEvolutionLink",
-      "line": 321,
+      "line": 322,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -865,7 +865,7 @@
       "rel": "apps/memory/lonsha-bridge.js",
       "cls": "LonShaBridge",
       "name": "hasSupersedingEvolution",
-      "line": 334,
+      "line": 335,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -873,7 +873,7 @@
       "rel": "apps/memory/lonsha-bridge.js",
       "cls": "LonShaBridge",
       "name": "getHudRead",
-      "line": 599,
+      "line": 625,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -881,7 +881,7 @@
       "rel": "apps/memory/lonsha-bridge.js",
       "cls": "LonShaBridge",
       "name": "peekHolographicEvents",
-      "line": 684,
+      "line": 710,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -889,7 +889,7 @@
       "rel": "apps/memory/lonsha-bridge.js",
       "cls": "LonShaBridge",
       "name": "acknowledgeHolographicEvents",
-      "line": 697,
+      "line": 723,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -897,7 +897,7 @@
       "rel": "apps/memory/lonsha-bridge.js",
       "cls": "LonShaBridge",
       "name": "drainHolographicEvents",
-      "line": 701,
+      "line": 727,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -905,7 +905,7 @@
       "rel": "apps/memory/lonsha-bridge.js",
       "cls": "LonShaBridge",
       "name": "getEvolutionRead",
-      "line": 1043,
+      "line": 1069,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1017,7 +1017,7 @@
       "rel": "apps/memory/memory-data.js",
       "cls": "MemoryCore",
       "name": "memoryBlockLineNow",
-      "line": 287,
+      "line": 309,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1025,7 +1025,7 @@
       "rel": "apps/memory/memory-data.js",
       "cls": "MemoryCore",
       "name": "storyAgeOf",
-      "line": 497,
+      "line": 518,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -1033,7 +1033,7 @@
       "rel": "apps/memory/memory-data.js",
       "cls": "MemoryCore",
       "name": "storyAgeLine",
-      "line": 576,
+      "line": 597,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2945,7 +2945,7 @@
       "rel": "phone/home-screen.js",
       "cls": "HomeScreen",
       "name": "renderDiaryCard",
-      "line": 855,
+      "line": 865,
       "isStatic": false,
       "classInstantiated": true
     },
@@ -2953,7 +2953,7 @@
       "rel": "phone/home-screen.js",
       "cls": "HomeScreen",
       "name": "renderFeatureCard",
-      "line": 930,
+      "line": 940,
       "isStatic": false,
       "classInstantiated": true
     },

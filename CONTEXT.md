@@ -188,6 +188,7 @@ RubyPhone 是 SillyTavern 原生第三方扩展，**独立实现**（Zero-Databa
 - backupdesk 的 experience-pack / experience-import 提供逐项文字预览、JSON 导出与确认收藏去重，experience_received_v1 随会话隔离；附件只提示缺失，不回填原应用。
 - notification-center 的 away-review 提供每批5条、按应用分组、逐条审阅和重开游标，状态归原 AwayMode；已看不等于回复。
 - timeweaver-engine.js：纯函数内核（collectFragments 聚合 / composeLetter 本地规则成信），零 LLM、零副作用。
+- timeweaver-core.js：收藏册纯规则（解析旧档、按实际保存的首段去重、裁剪新信）；控制器读回确认入册才推进自动织信游标，换会话后忽略旧请求的返回。
 - timeweaver-app.js：控制器（composeAILetter LLM 升华 / saveLetter+listLetters 收藏册 / autoWeaveIfDue 定期织信 / shareLetterToMoments 朋友圈分享）。
 - timeweaver-collector.js：从聊天痕迹采样（含 collectLonshaRecall 读快照桥 recallAudit）。
 - timeweaver-view.js：视图（织信 / 收藏册 📚 / 回望 🔁 三个 tab）。

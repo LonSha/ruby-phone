@@ -28,7 +28,12 @@ function emptyTable() {
     return players;
 }
 
+import { UndercoverRulesView } from './undercover-rules-view.js';
 export class UndercoverRulesApp {
+    render() {
+        this._view ??= new UndercoverRulesView(this, this.shell);
+        this._view.render();
+    }
     constructor(shell, storage) {
         this.shell = shell;
         this.storage = storage;

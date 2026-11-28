@@ -8,6 +8,7 @@
  *   否则判据只是自述（本仓 E6 同族纪律）。
  * ============================================================ */
 import { test } from 'node:test';
+import { WorldpulseView } from '../apps/worldpulse/worldpulse-view.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -114,7 +115,13 @@ test('A7 动态两种空态分开说（一条都没有 ≠ 这颗筛片没有）
     const none = VIEW.slice(VIEW.indexOf('data-wp-empty="none"'), VIEW.indexOf('data-wp-empty="none"') + 260);
     const filt = VIEW.slice(VIEW.indexOf('data-wp-empty="filtered"'), VIEW.indexOf('data-wp-empty="filtered"') + 260);
     assert.notEqual(none, filt, '两种空态不许用同一句话');
-    assert.ok(filt.includes('${history.length}'), '筛空时要报出总条数（别让人以为世界空了）');
+    const view = new WorldpulseView({ getHistory: () => Object.freeze([{style: 'A', content:'old'}, {style: 'B', content:'middle'}, {style: 'A', content:'new'}]) });
+    view._filter = 'missing';
+    assert.match(view._renderFeedList(), /共 3 条动态/);
+    view._filter = 'A';
+    const html = view._renderFeedList();
+    assert.ok(html.includes('old') && html.includes('new') && html.indexOf('new') < html.indexOf('old'));
+    assert.ok(!html.includes('middle'));
 });
 
 test('A8 筛片只重画列表（不整页重绘，否则滚动位置被顶回顶部）', () => {

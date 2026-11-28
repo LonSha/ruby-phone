@@ -1,17 +1,17 @@
 {
   "schema": "browser-readings@1",
   "why": "R13-O1 第 3 步交付物：浏览器层**真跑一次**的读数台账。本文件由 tools/browser-readings.mjs 从 gate.mjs 的真实输出逐行搬运，不重算任何判据。",
-  "measured_at": "2026-11-26T04:29:15.649Z",
-  "version": "4.210.0",
+  "measured_at": "2026-11-28T15:15:47.131Z",
+  "version": "4.215.0",
   "browser": "playwright-cache:chromium-1148",
   "mode": "replay",
   "source": {
-    "log": "../../../../tmp/rp_gate_v4210.log",
-    "bytes": 275679,
-    "sha256": "e4508043a8a57fafeb3085ff4476c0f21fe63540f0aab097fb24d5a2e61144c9"
+    "log": "../../../tmp/rp-b16-onward-9tZcTP/browser-final.log",
+    "bytes": 286810,
+    "sha256": "c2096946a2c0a2ab113b187bea0063a76ab7c9719f0fa8aef032de070a4a1851"
   },
   "elapsed_ms": 0,
-  "scenes": 31,
+  "scenes": 32,
   "viewports": 4,
   "viewport_list": [
     "320x568",
@@ -19,23 +19,27 @@
     "768x1024",
     "1280x800"
   ],
-  "total_reads": 1560,
+  "total_reads": 1634,
   "fail_reads": 6,
   "min_reads_per_scene": 12,
   "scene_coverage": {
-    "on_disk": 31,
-    "measured": 31,
+    "on_disk": 32,
+    "measured": 32,
     "missing": [],
     "extra": [],
     "complete": true
   },
   "per_scene": {
+    "focus-v4.scen.js": {
+      "reads": 52,
+      "fail": 0
+    },
     "o1-app-data-states.scen.js": {
       "reads": 48,
       "fail": 0
     },
     "o1-app-enumeration.scen.js": {
-      "reads": 48,
+      "reads": 50,
       "fail": 0
     },
     "o1-chat-switch.scen.js": {
@@ -71,7 +75,7 @@
       "fail": 0
     },
     "o5-settings-ia.scen.js": {
-      "reads": 44,
+      "reads": 64,
       "fail": 0
     },
     "o6-longlist-extreme.scen.js": {
@@ -160,13 +164,13 @@
       "scene": "o2-longlist-10k.scen.js",
       "viewport": "320x568",
       "name": "o2-scroll-after-app-switch",
-      "detail": "before=8332 after=8400 delta=68（>2px 即位置没记住） heapBefore=40 heapAfter=40 nodesBefore=2251 nodesAfter=2206"
+      "detail": "before=8332 after=8400 delta=68（>2px 即位置没记住） heapBefore=38 heapAfter=38 nodesBefore=2253 nodesAfter=2208"
     },
     {
       "scene": "o2-longlist-10k.scen.js",
       "viewport": "768x1024",
       "name": "o2-scroll-after-app-switch",
-      "detail": "before=5805 after=5869 delta=64（>2px 即位置没记住） heapBefore=40 heapAfter=40 nodesBefore=2251 nodesAfter=2206"
+      "detail": "before=5805 after=5869 delta=64（>2px 即位置没记住） heapBefore=38 heapAfter=38 nodesBefore=2249 nodesAfter=2204"
     },
     {
       "scene": "o6-motion-throttle.scen.js",

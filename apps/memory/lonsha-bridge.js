@@ -1,3 +1,4 @@
+import { sendPhoneEvent } from '../../config/phone-fact-contract.js';
 import { captureSessionToken, guardSessionWrite } from '../../config/session-gate.js';
 import { RubyPhoneLonShaBidirectionalFeedbackHub } from './ruby-phone-lonsha-bidirectional-feedback-hub.js';
 import { KeystrokeBiometricsTypingHesitation } from '../wechat/keystroke-biometrics-typing-hesitation.js';
@@ -341,6 +342,27 @@ export class LonShaBridge {
      * 供 LonSha 插件在生成前召回时调用。[RB] 已升级为 BM25 稀疏检索
      * @returns [{content, score, layer, source:'rubyphone'}]
      */
+    _calendarHits(query, limit) {
+        const ctx = this.storage?.getContext?.();
+        const scope = ctx?.getCurrentChatId?.() && this.storage.currentConversationId;
+        const needle = String(query || '').trim().toLowerCase();
+        if (!scope || !needle || !limit) return [];
+        const raw = this.storage.get('calendar_memos');
+        const rows = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        const hits = new Map();
+        for (const m of Array.isArray(rows) ? rows : []) {
+            if (!m?.id || m.memoryScope !== scope || hits.has(m.id)) continue;
+            const content = `日历约定：${m.dateKey} ${m.time || ''} ${m.title}`;
+            if (!content.toLowerCase().includes(needle) && !needle.includes(String(m.title).toLowerCase())) continue;
+            const fact = { eventId:m.id, rootEventId:m.id, summary:content, chatId:scope, visibility:'private' };
+            const verdict = sendPhoneEvent(globalThis.window, 'calendar', fact, {chatId:scope, userDecision:'accept'});
+            if (verdict.lifecycle?.state !== 'accepted') continue;
+            hits.set(m.id, {id:m.id, content, app:'calendar', layer:'calendar', score:1, importance:5});
+            if (hits.size >= limit) break;
+        }
+        return [...hits.values()];
+    }
+
     recall(queryText, topN = 5) {
         if (!this.enabled || !this.memoryCore) return [];
         try {
@@ -394,6 +416,10 @@ export class LonShaBridge {
                 }
             } catch (_) { /* 演化过滤失败降级放行 */ }
             this.stats.injectCount++;
+            try {
+                const calendar = this._calendarHits(queryText, topN);
+                if (calendar.length) return [...calendar, ...res].slice(0, topN);
+            } catch { /* Calendar unavailable: preserve other recall sources. */ }
             return res;
         } catch (e) {
             console.warn('[LonShaBridge] 召回失败:', e);

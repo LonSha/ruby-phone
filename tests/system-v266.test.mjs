@@ -70,6 +70,8 @@ const FIXTURE_BETA_CSS = '.beta-card{}\n.beta-head{}\n';
 
 function makeFixture() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rp-reg-fx-'));
+  fs.mkdirSync(path.join(dir, 'phone/design'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'phone/design/rp-entry.css'), '');
   fs.mkdirSync(path.join(dir, 'config'));
   fs.writeFileSync(path.join(dir, 'config', 'apps.js'), FIXTURE_APPS);
   fs.writeFileSync(path.join(dir, 'config', 'storage.js'), FIXTURE_STORAGE);
@@ -108,6 +110,19 @@ function withFixture(fn) {
     try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* 忽略 */ }
   }
 }
+test('lazy CSS imports require a reachable parent, not a comment', () => {
+  withFixture(dir => {
+    const parent = path.join(dir, 'apps/beta/beta.css');
+    const child = path.join(dir, 'apps/beta/detail.css');
+    fs.writeFileSync(child, '.detail-box {}');
+    fs.writeFileSync(parent, '@import url("./detail.css");');
+    assert.equal(runAudit(dir).code, 0);
+    fs.writeFileSync(parent, '/* @import url("./detail.css"); */');
+    const r = runAudit(dir);
+    assert.equal(r.code, 1);
+    assert.match(r.out, /apps\/beta\/detail\.css/);
+  });
+});
 
 // ══════════════ 正控制 ══════════════
 test('v266-P1 门禁在真仓库上通过（41 App ↔ 41 分支，宽匹配全登记）', () => {

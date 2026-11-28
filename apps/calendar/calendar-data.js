@@ -11,6 +11,11 @@ import * as recycleBin from '../../config/recycle-bin.js';
 /* [v4.106.0 · R13-O4] 两个钟的唯一取数口：日程此前只有墙钟（`createdAt: Date.now()`）。 */
 import { stampPair } from '../../config/time-source.js';
 
+function holidayInputNumber(value) {
+    if (Number.isInteger(value)) return value;
+    return typeof value === 'string' && /^\d+$/.test(value.trim()) ? Number(value.trim()) : NaN;
+}
+
 export class CalendarData {
     constructor(storage) {
         this.storage = storage;
@@ -212,6 +217,17 @@ export class CalendarData {
         this.saveMemos();
         this.refreshDomainLifeEvent(memo);   // [v2.77.0] 时间线跟着改，而不是停在第一次写入
         delete memo.typeBeforeChange;
+        return true;
+    }
+
+    setMemoryAccess(id, enabled) {
+        const memo = this.getMemos().find(item => item.id === id);
+        const ctx = this.storage?.getContext?.();
+        const scope = ctx?.getCurrentChatId?.() && this.storage.currentConversationId;
+        if (!memo || !scope) return false;
+        if (enabled === true) memo.memoryScope = scope;
+        else delete memo.memoryScope;
+        this.saveMemos();
         return true;
     }
 
@@ -451,8 +467,8 @@ export class CalendarData {
 
     addHoliday({ title, month, day, globalReminder = true }) {
         const safeTitle = String(title || '').trim();
-        const safeMonth = Number.parseInt(month, 10);
-        const safeDay = Number.parseInt(day, 10);
+        const safeMonth = holidayInputNumber(month);
+        const safeDay = holidayInputNumber(day);
         if (!safeTitle || !this.isValidMonthDay(safeMonth, safeDay)) return null;
         const holiday = {
             id: `calendar_holiday_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -478,10 +494,10 @@ export class CalendarData {
             ? String(updates.title || '').trim()
             : holiday.title;
         const nextMonth = Object.prototype.hasOwnProperty.call(updates, 'month')
-            ? Number.parseInt(updates.month, 10)
+            ? holidayInputNumber(updates.month)
             : holiday.month;
         const nextDay = Object.prototype.hasOwnProperty.call(updates, 'day')
-            ? Number.parseInt(updates.day, 10)
+            ? holidayInputNumber(updates.day)
             : holiday.day;
         if (!nextTitle || !this.isValidMonthDay(nextMonth, nextDay)) return false;
 

@@ -6,6 +6,7 @@
  * ======================================================== */
 'use strict';
 
+import { viewText } from '../../config/view-text.js';
 export class PhoneTextView {
     constructor(app, shell) {
         this.app = app;
@@ -49,7 +50,7 @@ export class PhoneTextView {
 
     _html() {
         const o = this.app.lastOut;
-        const out = o ? JSON.stringify(o) : '还没试算过';
+        const out = o ? viewText(JSON.stringify(o)) : '还没试算过';
         return '<div class="pt-head">'
             + '<div class="pt-title">通话/短信 文本归一试算台</div>'
             + '<div class="pt-sub">同一输入 => 同一结果（内核纯函数，不取时钟不造随机）</div>'
@@ -62,7 +63,7 @@ export class PhoneTextView {
             + '<button type="button" data-act="avatar">头像地址归一</button>'
             + '<button type="button" data-act="ttsgender">TTS 性别归一</button>'
             + '<button type="button" data-act="constants">内核常量读数</button>'
-            + (this._flash ? '<div class="pt-flash">' + this._flash + '</div>' : '')
+            + (this._flash ? '<div class="pt-flash">' + viewText(this._flash) + '</div>' : '')
             + '<div class="pt-out">' + out + '</div>';
     }
 

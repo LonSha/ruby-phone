@@ -22,7 +22,12 @@ import { writeReceipt } from '../../config/write-receipt.js';
 
 const STATE_KEY = 'games_protocol_v1';
 
+import { GamesProtocolView } from './games-protocol-view.js';
 export class GamesProtocolApp {
+    render() {
+        this._view ??= new GamesProtocolView(this, this.shell);
+        this._view.render();
+    }
     constructor(shell, storage) {
         this.shell = shell;
         this.storage = storage;

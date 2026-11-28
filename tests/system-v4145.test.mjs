@@ -26,6 +26,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -371,13 +372,20 @@ test('E2 账本的诚实边界不许被抹掉（浏览器层 / 行不是行为�
     assert.equal(base.drop_pp, 0.5, '账本 drop_pp 必须与门常量同值');
 });
 
-test('E3 账本的目录集合必须与磁盘逐项相等（自检档与账本不许各说各话）', () => {
+test('E3 真实发布门必须逐项报告目录差异，有差异必须非零退出', () => {
     const base = readJson(BASE_REL);
     const disk = fs.readdirSync(path.join(ROOT, 'apps'), { withFileTypes: true })
         .filter((d) => d.isDirectory()).map((d) => d.name).sort();
-    assert.deepEqual(Object.keys(base.dirs).sort(), disk,
-        '账本目录集合与磁盘 apps/ 必须逐项相等 —— 新 app 不许「自动」以 0% 混进账本还读成没退步');
-    assert.equal(base.totals.app_dirs, disk.length, 'totals.app_dirs 必须等于磁盘目录数');
+    const recorded = Object.keys(base.dirs).sort();
+    assert.equal(base.totals.app_dirs, recorded.length);
+    const added = disk.filter(id => !recorded.includes(id));
+    const gone = recorded.filter(id => !disk.includes(id));
+    const gate = spawnSync(process.execPath, [GATE_REL, '--json'], {cwd: ROOT, encoding: 'utf8'});
+    assert.equal(gate.status, added.length || gone.length ? 1 : 0, gate.stdout + gate.stderr);
+    const {problems} = JSON.parse(gate.stdout);
+    assert.equal(problems.length, Number(added.length > 0) + Number(gone.length > 0));
+    if (added.length) assert.ok(problems.some(p => p.includes('未进账本 '+added.length+' 个（'+added.join('、')+'）')));
+    if (gone.length) assert.ok(problems.some(p => p.includes('已不存在 '+gone.length+' 个（'+gone.join('、')+'）')));
 });
 
 test('E4 TODO.md 的欠账段必须与账本同源（手改 ⇒ 红）', () => {

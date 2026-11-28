@@ -57,6 +57,7 @@ const UNDERCOVER_VOTE_SAMPLE = [
     '</谁是卧底投票>'
 ].join('\n');
 
+import { viewText } from '../../config/view-text.js';
 export class GamesProtocolView {
     constructor(app, shell) {
         this.app = app;
@@ -100,7 +101,7 @@ export class GamesProtocolView {
 
     _html() {
         const o = this.app.lastOut;
-        const out = o ? JSON.stringify(o) : '还没试算过';
+        const out = o ? viewText(JSON.stringify(o)) : '还没试算过';
         return '<div class="gp-head">'
             + '<div class="gp-title">游戏 AI 协议解析试算台</div>'
             + '<div class="gp-sub">同一段回包 => 同一份结构（内核纯函数，不取时钟不造随机）</div>'
@@ -120,7 +121,7 @@ export class GamesProtocolView {
             + '<button type="button" data-act="tally">票型归并</button>'
             + '<button type="button" data-act="statemsg">场上状态消息</button>'
             + '</div>'
-            + (this._flash ? '<div class="gp-flash">' + this._flash + '</div>' : '')
+            + (this._flash ? '<div class="gp-flash">' + viewText(this._flash) + '</div>' : '')
             + '<div class="gp-out">' + out + '</div>';
     }
 

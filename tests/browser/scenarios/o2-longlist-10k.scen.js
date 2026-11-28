@@ -168,6 +168,20 @@ report({
     detail: 'draft=' + JSON.stringify(before.draft) + ' scrollTop=' + before.top + ' atBottom=' + before.atBottom + '（必须 false：贴底的一致不算证据） heapMB=' + before.heap + ' nodes=' + before.nodes,
 });
 
+function readingPosition(container) {
+    if (!container) return null;
+    const viewport = container.getBoundingClientRect();
+    for (const row of container.querySelectorAll('.chat-message[data-message-id]')) {
+        const rect = row.getBoundingClientRect();
+        if (rect.height > 0 && rect.bottom > viewport.top && rect.top < viewport.bottom) {
+            // Client rects include the panel transform; compare local reading offsets.
+            const offset = (rect.top - viewport.top) * row.offsetHeight / rect.height;
+            return { id: row.dataset.messageId, offset };
+        }
+    }
+    return null;
+}
+const readingBefore = readingPosition(box);
 window.dispatchEvent(new CustomEvent('phone:goHome', { detail: {} }));
 await window.__sleep(900);
 report({
@@ -179,6 +193,12 @@ const back = await enterWechatRoom();
 await window.__sleep(900);
 const box2 = document.getElementById('chat-messages');
 const input2 = document.getElementById('chat-input');
+const readingAfter = readingPosition(box2);
+report({
+    name: 'o2-visible-message-after-app-switch',
+    ok: !!readingBefore && readingBefore.id === readingAfter?.id && Math.abs(readingAfter.offset - readingBefore.offset) <= 2,
+    detail: 'before=' + JSON.stringify(readingBefore) + ' after=' + JSON.stringify(readingAfter),
+});
 report({
     name: 'o2-reopen-after-app-switch',
     ok: !!(back.wechat && back.chat),
@@ -198,6 +218,9 @@ report({
 report({
     name: 'o2-scroll-after-app-switch',
     ok: !!(back.wechat && back.chat) && after.top >= 0 && Math.abs(after.top - before.top) <= 2,
-    detail: 'before=' + before.top + ' after=' + after.top + ' delta=' + (after.top - before.top) + '（>2px 即位置没记住） heapBefore=' + before.heap + ' heapAfter=' + after.heap + ' nodesBefore=' + before.nodes + ' nodesAfter=' + after.nodes,
+    detail: 'before=' + before.top + ' ledger=' + ledgerTop + ' target=' + box2?.dataset.csmTop
+        + ' landed=' + box2?.dataset.csmLanded + ' restoreMax=' + box2?.dataset.csmMax
+        + ' finalMax=' + (box2 ? box2.scrollHeight - box2.clientHeight : null)
+        + ' after=' + after.top + ' delta=' + (after.top - before.top) + '（>2px 即位置没记住） heapBefore=' + before.heap + ' heapAfter=' + after.heap + ' nodesBefore=' + before.nodes + ' nodesAfter=' + after.nodes,
 });
 done();

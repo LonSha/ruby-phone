@@ -8,11 +8,13 @@
 'use strict';
 import { TimeweaverView } from './timeweaver-view.js';
 import { buildNarrative } from './timeweaver-collector.js';
+import { planLetterSave, readLetterAlbum } from './timeweaver-core.js';
 
 export class TimeweaverApp {
     constructor(phoneShell, storage) {
         this.phoneShell = phoneShell;
         this.storage = storage;
+        this.sessionEpoch = 0;
         this.view = new TimeweaverView(this);
         // [v2.14.0] AI 信状态：{ loading, error, paragraphs, ts } 缓存本次会话
         this.aiLetter = null;
@@ -35,6 +37,7 @@ export class TimeweaverApp {
      *   而 `tw_last_auto` 游标已按新会话隔离为空，理应允许重新评估「新会话是否该织信」。
      */
     onChatChanged() {
+        this.sessionEpoch++;
         this.aiLetter = null;
         this.composeDraft = '';
         this._autoChecked = false;
@@ -46,28 +49,16 @@ export class TimeweaverApp {
      * @returns {{ok:boolean, total:number, reason?:string}}
      */
     async saveLetter(letter) {
+        const epoch = this.sessionEpoch;
         try {
-            if (!letter || !Array.isArray(letter.paragraphs) || !letter.paragraphs.length) {
-                return { ok: false, total: this.listLetters().length, reason: '空信不入册' };
-            }
-            const list = this.listLetters();
-            const ts = Number(letter.ts) || Date.now();
-            const sig = String(letter.paragraphs[0] || '').slice(0, 40);
-            if (list.some(x => Number(x.ts) === ts && String((x.paragraphs || [])[0] || '').slice(0, 40) === sig)) {
-                return { ok: false, total: list.length, reason: '已有同一封信' };
-            }
-            const rec = {
-                id: 'L' + ts.toString(36) + Math.random().toString(36).slice(2, 6),
-                ts,
-                savedAt: Date.now(),
-                title: String(letter.title || '一段被织起的时光').slice(0, 40),
-                source: letter.source === 'ai' ? 'ai' : 'local',
-                paragraphs: (letter.paragraphs || []).map(p => String(p || '').slice(0, 600)).filter(Boolean).slice(0, 12),
-                meta: (letter.meta && typeof letter.meta === 'object') ? letter.meta : {}
-            };
-            list.unshift(rec);
-            await this.storage.set('tw_letters', list.slice(0, 60));
-            return { ok: true, total: Math.min(list.length, 60) };
+            const list = readLetterAlbum(this.storage.get('tw_letters'));
+            const plan = planLetterSave(list, letter, Date.now(), Math.random().toString(36).slice(2, 6));
+            if (plan.reason) return { ok: false, total: list.length, reason: plan.reason };
+            await this.storage.set('tw_letters', plan.next);
+            if (epoch !== this.sessionEpoch) return { ok: false, total: 0, reason: '会话已切换' };
+            const actual = this.listLetters();
+            if (!actual.some(x => x.id === plan.next[0].id)) return { ok: false, total: actual.length, reason: '收藏未写入' };
+            return { ok: true, total: actual.length };
         } catch (e) {
             return { ok: false, total: this.listLetters().length, reason: String(e?.message || e) };
         }
@@ -75,9 +66,7 @@ export class TimeweaverApp {
     /** [v2.15.0] 读收藏册（新→旧） */
     listLetters() {
         try {
-            const raw = this.storage.get('tw_letters');
-            const v = (typeof raw === 'string') ? JSON.parse(raw) : raw;
-            return Array.isArray(v) ? v.filter(x => x && Array.isArray(x.paragraphs)) : [];
+            return readLetterAlbum(this.storage.get('tw_letters'));
         } catch (e) { return []; }
     }
     /**
@@ -87,6 +76,7 @@ export class TimeweaverApp {
      * @returns {Promise<{generated:boolean, reason?:string}>}
      */
     async autoWeaveIfDue(opts = {}) {
+        const epoch = this.sessionEpoch;
         try {
             const gapMs = Math.max(1, Number(opts.minGapDays) || 7) * 86400000;
             const last = Number(this.storage.get('tw_last_auto')) || 0;
@@ -100,11 +90,19 @@ export class TimeweaverApp {
             const am = this._vp()?.apiManager;
             if (am && typeof am.callAI === 'function') {
                 const ai = await this.composeAILetter();
+                if (epoch !== this.sessionEpoch) return { generated: false, reason: '会话已切换' };
                 if (ai && ai.paragraphs && ai.paragraphs.length) {
                     letter = { title: ai.title, paragraphs: ai.paragraphs, source: 'ai', ts: Date.now() };
                 }
             }
+            // Forced generations are distinct even within one clock tick.
+            if (opts.force) {
+                const used = new Set(this.listLetters().map(x => Number(x.ts)));
+                while (used.has(letter.ts)) letter.ts++;
+            }
             const saved = await this.saveLetter(letter);
+            if (epoch !== this.sessionEpoch) return { generated: false, reason: '会话已切换' };
+            if (!saved.ok) return { generated: false, reason: saved.reason, saved };
             await this.storage.set('tw_last_auto', Date.now());
             return { generated: true, saved };
         } catch (e) {
@@ -178,10 +176,11 @@ export class TimeweaverApp {
     _maybeAutoWeave() {
         if (this._autoChecked) return;
         this._autoChecked = true;
+        const epoch = this.sessionEpoch;
         const p = this.autoWeaveIfDue();
         if (p && typeof p.then === 'function') {
             p.then(res => {
-                if (!res || !res.generated) return;
+                if (epoch !== this.sessionEpoch || !res?.generated) return;
                 this.view.render();
                 try { this.phoneShell?.showNotification?.('织光机', '定期织信：新的一封已收入收藏册', '💌'); } catch (_e) {}
             }).catch(() => {});
@@ -195,6 +194,7 @@ export class TimeweaverApp {
      * @returns {Promise<{title:string, paragraphs:string[], source:'ai'}|null>}
      */
     async composeAILetter() {
+        const epoch = this.sessionEpoch;
         const am = this._vp()?.apiManager || null;
         if (!am || typeof am.callAI !== 'function') {
             this.aiLetter = { loading: false, error: 'API Manager 未初始化，无法 AI 升华', paragraphs: null };
@@ -227,6 +227,7 @@ export class TimeweaverApp {
                 { role: 'system', content: sysPrompt },
                 { role: 'user', content: userPrompt }
             ], { max_tokens: 900, appId: 'timeweaver' });
+            if (epoch !== this.sessionEpoch) return null;
             if (!result || !result.success) {
                 throw new Error((result && result.error) || 'AI 返回失败');
             }
@@ -237,6 +238,7 @@ export class TimeweaverApp {
             this.view.render();
             return { title: '一封被 AI 织起的时光信', paragraphs, source: 'ai' };
         } catch (e) {
+            if (epoch !== this.sessionEpoch) return null;
             this.aiLetter = { loading: false, error: String(e?.message || e), paragraphs: null };
             this.view.render();
             return null;

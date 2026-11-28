@@ -6,6 +6,7 @@
 'use strict';
 import { SUITS, RANKS } from './poker-eval.js';
 
+import { viewText } from '../../../config/view-text.js';
 export class PokerEvalView {
     constructor(app, shell) {
         this.app = app; this.shell = shell;
@@ -43,7 +44,7 @@ export class PokerEvalView {
     }
 
     _html() {
-        const flash = this._flash ? '<div class="pe-flash">' + this._flash + '</div>' : '';
+        const flash = this._flash ? '<div class="pe-flash">' + viewText(this._flash) + '</div>' : '';
         const grid = [];
         for (const s of SUITS) {
             for (const r of RANKS) {
@@ -59,11 +60,11 @@ export class PokerEvalView {
         if (this._picked.length >= 5) {
             const r = this.app.evaluate(this._picked);
             if (r.ok) {
-                result = '<div class="pe-result">' + r.result.label
+                result = '<div class="pe-result">' + viewText(r.result.label)
                     + ' <span class="pe-score">强度 ' + r.result.score + '/8</span></div>'
-                    + '<div class="pe-cards">' + this.app.fmt(r.result.cards) + '</div>';
+                    + '<div class="pe-cards">' + viewText(this.app.fmt(r.result.cards)) + '</div>';
             } else {
-                result = '<div class="pe-none">算不出：' + r.reason + '</div>';
+                result = '<div class="pe-none">算不出：' + viewText(r.reason) + '</div>';
             }
         }
         return (
@@ -73,7 +74,7 @@ export class PokerEvalView {
             + '<div class="pe-count">' + this._picked.length + ' 张</div>'
             + '</div>'
             + flash
-            + '<div class="pe-picked">' + pickedText + '</div>'
+            + '<div class="pe-picked">' + viewText(pickedText) + '</div>'
             + result
             + '<div class="pe-sec-t">点牌（' + SUITS.length + ' 种花色 × ' + RANKS.length + ' 种点数）</div>'
             + '<div class="pe-grid">' + grid.join('') + '</div>'

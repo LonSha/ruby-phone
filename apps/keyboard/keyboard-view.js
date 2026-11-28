@@ -11,6 +11,7 @@ const FACE_META = {
     [KB_FACE.EMPTY]: { label: '空档（还没联想）', tone: 'idle' },
 };
 
+import { viewText } from '../../config/view-text.js';
 export class KeyboardView {
     constructor(app, shell) {
         this.app = app; this.shell = shell;
@@ -50,13 +51,13 @@ export class KeyboardView {
         const app = this.app;
         const face = app.face;
         const meta = FACE_META[face] || FACE_META[KB_FACE.EMPTY];
-        const flash = this._flash ? '<div class="kb-flash">' + this._flash + '</div>' : '';
+        const flash = this._flash ? '<div class="kb-flash">' + viewText(this._flash) + '</div>' : '';
         const cands = app.lastCandidates.length
-            ? app.lastCandidates.map((c) => '<span class="kb-cand">' + c + '</span>').join('')
+            ? app.lastCandidates.map((c) => '<span class="kb-cand">' + viewText(c) + '</span>').join('')
             : '<span class="kb-none">没联想上（不拿输入内容硬凑一条）</span>';
         const slangRow = app.profile.slangs.map((s) => (
-            '<span class="kb-slang">' + s
-            + '<button class="kb-del" type="button" data-act="del" data-slang="' + s + '">x</button></span>'
+            '<span class="kb-slang">' + viewText(s)
+            + '<button class="kb-del" type="button" data-act="del" data-slang="' + viewText(s) + '">x</button></span>'
         )).join('');
         return (
             '<div class="kb-head">'

@@ -495,7 +495,11 @@ test('C5 样式：`.pxv-` 前缀独占、不写 `<img>` 规则（一张图都不
     assert.ok(css.length > 2000, '样式文件必须真有内容');
     /* ★ 必须**剥注释**后再抓类名：文件头注释里写了 `pixiv-illust.js` / `pixiv.css`
      *   这类文件名，未剥注释就会把 `.js` / `.css` 当成类名（判据自己红）。 */
-    const classes = stripComments(css).match(/\.[a-zA-Z][a-zA-Z0-9_-]*/g) || [];
+    // @import 的路径和 @layer 的层名都不是选择器；检查实际投递的两份表。
+    const rules = stripComments(css + '\n' + read('apps/pixiv/pixiv.v4.css'));
+    const selectors = [...rules.matchAll(/(?:^|[{};])\s*([^@{};\s][^{};]*)\s*(?=\{)/g)].map((m) => m[1]);
+    const classes = selectors.join(' ').match(/\.[a-zA-Z][a-zA-Z0-9_-]*/g) || [];
+    assert.ok(classes.includes('.pxv-root') && classes.includes('.pxv-navitem'), '主表和导入表都须取到选择器');
     /* ★ `.is-*` 是本仓既有**状态类**写法（`is-on` / `is-idle` / `is-off` / `is-bad`），
      *   不是别家前缀 —— 首版只放行 `.pxv-`，把四个状态类判成外来的（判据自己红）。 */
     const alien = [...new Set(classes)].filter((c) => c.indexOf('.pxv-') !== 0 && c.indexOf('.is-') !== 0);

@@ -118,7 +118,7 @@ export class MoodView {
         try { shell.setContent(html, 'mood-main'); } catch (_e) { /* 宿主夹具不接收内容：不抛 */ }
         /* setContent 之后容器实体不一定能拿到（夹具里是桩），拿不到就不绑事件。 */
         try {
-            const c = (typeof shell.getContentContainer === 'function') ? shell.getContentContainer() : null;
+            const c = shell.layerHost ? shell.layerHost('mood-main', { create: false }) : shell.getContentContainer?.();
             if (c) this._syncBinding(c);
         } catch (_e) { /* 忽略 */ }
     }
@@ -288,14 +288,15 @@ export class MoodView {
         parts.push('<div class="mood-sec"><div class="mood-sec-title">🧠 规模</div><div class="mood-stats">'
             + '<div class="mood-stat"><b>' + memory.longTermCount + '</b><span>长期</span></div>'
             + '<div class="mood-stat"><b>' + memory.shortTermCount + '</b><span>短期</span></div>'
-            + '<div class="mood-stat"><b>' + memory.consolidated + '</b><span>已巩固</span></div>'
-            + '<div class="mood-stat"><b>' + memory.superseded + '</b><span>已换代</span></div>'
+            + '<div class="mood-stat"><b>' + (memory.consolidated ?? '未知') + '</b><span>已巩固</span></div>'
+            + '<div class="mood-stat"><b>' + (memory.superseded ?? '未知') + '</b><span>已换代</span></div>'
+            + '<div class="mood-stat"><b>' + (memory.tombstoned ?? '未知') + '</b><span>已墓碑</span></div>'
             + '</div></div>');
-        parts.push('<div class="mood-sec"><div class="mood-sec-title">🔐 召回权限</div><div class="mood-stats">'
+        parts.push('<div class="mood-sec"><div class="mood-sec-title">🔐 长期记忆的权限标注</div><div class="mood-stats">'
             + '<div class="mood-stat"><b>' + memory.tier.cite + '</b><span>可引用</span></div>'
             + '<div class="mood-stat"><b>' + memory.tier.cautious + '</b><span>需谨慎</span></div>'
             + '<div class="mood-stat"><b>' + memory.tier.associate + '</b><span>仅联想</span></div>'
-            + '<div class="mood-stat"><b>' + memory.tombstoned + '</b><span>已墓碑</span></div>'
+            + '<div class="mood-stat"><b>' + memory.tier.unlabelled + '</b><span>未标注</span></div>'
             + '</div></div>');
         parts.push('</section>');
         return parts.join('');

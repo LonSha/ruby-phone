@@ -350,8 +350,9 @@ test('v3930 C3. 只读读数口**每次读都重采**（缓存一份陈读数是
 });
 
 test('v3930 C4. 分页容量**取自内核列数**，不得自己写一个 4', () => {
-  const m = HOME.match(/getIconPageCapacity\(\)\s*\{([\s\S]*?)\n    \}/);
-  assert.ok(m, 'getIconPageCapacity 未找到');
+  const m = HOME.match(/_iconColumns\(\)\s*\{([\s\S]*?)\n    \}/);
+  assert.ok(m, '列数方法未找到');
+  assert.match(HOME, /getIconPageCapacity\(\)\s*\{[^}]*this\._iconColumns\(\)/);
   const body = stripComments(m[1]);
   assert.ok(/narrowPlan\(/.test(body), '容量必须从内核 narrowPlan 派生');
   assert.ok(/plan\.cols/.test(body), '必须真取内核给的列数');
@@ -480,12 +481,12 @@ test('v3930 D7. 分页容量不再取自内核列数 ⇒ C4 的同款判据必�
    *   按 C4 的同款抽取口径重新取一遍函数体，判据必须落空。这不是「对原文件断言」——
    *   判据读的是刚写出的副本文件，且 writeMutant 内先 assert.notEqual 确认破坏真发生了。 */
   const src2 = fs.readFileSync(target, 'utf8');
-  const m2 = src2.match(/getIconPageCapacity\(\)\s*\{([\s\S]*?)\n    \}/);
+  const m2 = src2.match(/_iconColumns\(\)\s*\{([\s\S]*?)\n    \}/);
   assert.ok(m2, '破坏副本上方法体仍可抽取');
   assert.ok(!/narrowPlan\(/.test(m2[1]), '破坏副本里容量已不再取自内核 ⇒ C4 判据在副本上必转红');
   assert.ok(/cols:\s*4/.test(m2[1]), '破坏必须真的写死了 4');
   /* 反向自证：同一个抽取口径在**原版**上必须命中（否则这个判据什么也没在判）。 */
-  const m0 = HOME.match(/getIconPageCapacity\(\)\s*\{([\s\S]*?)\n    \}/);
+  const m0 = HOME.match(/_iconColumns\(\)\s*\{([\s\S]*?)\n    \}/);
   assert.ok(/narrowPlan\(/.test(m0[1]), '同款抽取在原版上必须命中');
 });
 

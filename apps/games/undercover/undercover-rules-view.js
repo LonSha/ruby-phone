@@ -8,6 +8,7 @@ import { PLAYER_COUNT, ROLES, UC_REJECT } from './undercover-rules.js';
 
 const ROLE_LABELS = { civilian: '平民', undercover: '卧底' };
 
+import { viewText } from '../../../config/view-text.js';
 export class UndercoverRulesView {
     constructor(app, shell) {
         this.app = app;
@@ -54,15 +55,15 @@ export class UndercoverRulesView {
         const rows = a.players.map((p) => {
             const role = p.role || '';
             const cls = p.alive === false ? 'dead' : (role === 'undercover' ? 'uc' : '');
-            return '<tr class="' + cls + '" data-seat="' + p.seat + '">'
-                + '<td>' + p.seat + '</td>'
-                + '<td>' + (p.isUser ? '你' : String(p.name || '')) + '</td>'
+            return '<tr class="' + cls + '" data-seat="' + viewText(p.seat) + '">'
+                + '<td>' + viewText(p.seat) + '</td>'
+                + '<td>' + (p.isUser ? '你' : viewText(p.name)) + '</td>'
                 + '<td>' + (role ? ROLE_LABELS[role] : '—') + '</td>'
                 + '<td>' + (p.alive === false ? '出局' : '在场') + '</td>'
                 + '<td>'
-                + '<button type="button" data-act="toggle" data-seat="' + p.seat + '">死活</button> '
-                + '<button type="button" data-act="set-uc" data-seat="' + p.seat + '">设卧底</button> '
-                + '<button type="button" data-act="set-cv" data-seat="' + p.seat + '">设平民</button>'
+                + '<button type="button" data-act="toggle" data-seat="' + viewText(p.seat) + '">死活</button> '
+                + '<button type="button" data-act="set-uc" data-seat="' + viewText(p.seat) + '">设卧底</button> '
+                + '<button type="button" data-act="set-cv" data-seat="' + viewText(p.seat) + '">设平民</button>'
                 + '</td></tr>';
         }).join('');
 
@@ -81,16 +82,16 @@ export class UndercoverRulesView {
             + '<button type="button" data-act="deal">发身份</button>'
             + '<button type="button" data-act="speak">当前座位发言</button>'
             + '<button type="button" data-act="vote">结算投票</button>'
-            + '<span class="uc-state">回合 ' + a.round + ' · ' + a.phase + ' · 当前 ' + a.currentSpeakerSeat + ' 号</span>'
+            + '<span class="uc-state">回合 ' + viewText(a.round) + ' · ' + viewText(a.phase) + ' · 当前 ' + viewText(a.currentSpeakerSeat) + ' 号</span>'
             + '</div>'
-            + (this._flash ? '<div class="uc-flash">' + this._flash + '</div>' : '')
+            + (this._flash ? '<div class="uc-flash">' + viewText(this._flash) + '</div>' : '')
             + '<table class="uc-table"><thead><tr><th>座</th><th>谁</th><th>身份</th><th>状态</th><th>操作</th></tr></thead>'
             + '<tbody>' + rows + '</tbody></table>'
             + '<div class="uc-foot">'
-            + '<div>词对：' + (a.wordPair.civilian ? ('平民「' + a.wordPair.civilian + '」/ 卧底「' + a.wordPair.undercover + '」') : '未设（点「发身份」前先设词对）') + '</div>'
-            + '<div>卧底座位：' + (a.undercoverSeat ? a.undercoverSeat + ' 号' : '未发') + '</div>'
-            + '<div>胜负读数：' + verdict + '</div>'
-            + '<div>' + last + '</div>'
+            + '<div>词对：' + (a.wordPair.civilian ? ('平民「' + viewText(a.wordPair.civilian) + '」/ 卧底「' + viewText(a.wordPair.undercover) + '」') : '未设（点「发身份」前先设词对）') + '</div>'
+            + '<div>卧底座位：' + (a.undercoverSeat ? viewText(a.undercoverSeat) + ' 号' : '未发') + '</div>'
+            + '<div>胜负读数：' + viewText(verdict) + '</div>'
+            + '<div>' + viewText(last) + '</div>'
             + '</div>'
             + '<div class="uc-word">'
             + '<label>平民词 <input data-act="word-cv" type="text" value=""></label>'

@@ -24,7 +24,12 @@ function emptyTable() {
     return players;
 }
 
+import { WerewolfRulesView } from './werewolf-rules-view.js';
 export class WerewolfRulesApp {
+    render() {
+        this._view ??= new WerewolfRulesView(this, this.shell);
+        this._view.render();
+    }
     constructor(shell, storage) {
         this.shell = shell;
         this.storage = storage;

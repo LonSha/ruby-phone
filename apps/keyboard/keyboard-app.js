@@ -12,7 +12,12 @@ import { writeReceipt } from '../../config/write-receipt.js';
 const PROFILE_KEY = 'ime_profile_v1';
 const DRAFT_KEY = IME_DRAFT_KEY;
 
+import { KeyboardView } from './keyboard-view.js';
 export class KeyboardApp {
+    render() {
+        this._view ??= new KeyboardView(this, this.shell);
+        this._view.render();
+    }
     constructor(shell, storage) {
         this.shell = shell; this.storage = storage;
         this.profile = { slangs: DEFAULT_SLANGS.slice() };

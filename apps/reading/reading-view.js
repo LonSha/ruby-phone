@@ -980,9 +980,16 @@ export class ReadingView {
 
         if (this.currentBook) {
             q('#rd-back')?.addEventListener('click', () => { this._saveProgress(); this.currentBook = null; this.render(); });
-            q('#rd-chapters')?.addEventListener('change', e => { this._saveProgress(); this.curChapter = Number(e.target.value); this.render(); });
-            q('#rd-prev')?.addEventListener('click', () => { if (this.curChapter > 0) { this._saveProgress(); this.curChapter--; this.render(); } });
-            q('#rd-next')?.addEventListener('click', () => { if (this.curChapter < this.currentBook.chapters.length - 1) { this._saveProgress(); this.curChapter++; this.render(); } });
+            const changeChapter = index => {
+                if (!Number.isInteger(index) || index < 0 || index >= this.currentBook.chapters.length || index === this.curChapter) return;
+                this.curChapter = index;
+                this.anchorPara = null;
+                this._saveProgress();
+                this.render();
+            };
+            q('#rd-chapters')?.addEventListener('change', e => changeChapter(e.target.value === '' ? NaN : Number(e.target.value)));
+            q('#rd-prev')?.addEventListener('click', () => changeChapter(this.curChapter - 1));
+            q('#rd-next')?.addEventListener('click', () => changeChapter(this.curChapter + 1));
             q('#rd-fplus')?.addEventListener('click', () => { this.fontPx = Math.min(24, this.fontPx + 2); this.render(); });
             q('#rd-fminus')?.addEventListener('click', () => { this.fontPx = Math.max(12, this.fontPx - 2); this.render(); });
             q('#rd-theme')?.addEventListener('click', () => {
@@ -1296,6 +1303,8 @@ export class ReadingView {
     }
 
     _loadProgress(bookId) {
+        this.curChapter = 0;
+        this.anchorPara = null;
         try {
             const raw = this.app.storage?.get?.('ruby_reading_progress_' + bookId);
             if (raw) {

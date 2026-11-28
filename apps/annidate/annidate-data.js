@@ -17,6 +17,7 @@
  *   `false → 0`、`true → 1`、`[5] → 5`。0 在这里是**合法读数**（第 0 分钟、第 0 天），
  *   于是「没给」与「给了 0」在同一个读数上塌在一起 —— 而两者处置相反。 */
 import { numOrNull } from '../../config/num-gate.js';
+import { wallClockOf } from '../../config/time-format.js';
 import { toStr } from '../../config/text-face.js';
 export { toStr };
 export const AD_DAY_MS = 24 * 60 * 60 * 1000;
@@ -77,10 +78,9 @@ export function normalizeItems(raw) {
     return out;
 }
 
-/* 同月同日判定（源 setFullYear 周年对齐法）。 */
-function sameMonthDay(aMs, bMs) {
-    const a = new Date(aMs); const b = new Date(bMs);
-    return a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+/* dayStartOf buckets are UTC days; do not reinterpret their midnight in local time. */
+function anniversaryYears(a, b) {
+    return a.mo === b.mo && a.d === b.d ? b.y - a.y : 0;
 }
 
 /* 四类提醒判定（源 checkNotifications 逐支对齐）：
@@ -95,9 +95,12 @@ export function matchReminders(item, nowMs) {
     const tomorrow = today + AD_DAY_MS;
     if (rem.onDay && target === today) out.push({ kind: 'onDay', years: 0, text: '今天是你设置的【' + toStr(it.title) + '】！' });
     if (rem.dayBefore && target === tomorrow) out.push({ kind: 'dayBefore', years: 0, text: '明天就是【' + toStr(it.title) + '】啦，不要忘记哦！' });
-    const years = new Date(today).getFullYear() - new Date(target).getFullYear();
-    if (rem.yearlyOnDay && sameMonthDay(target, today) && years > 0) out.push({ kind: 'yearlyOnDay', years: years, text: '今天是【' + toStr(it.title) + '】' + String(years) + '周年纪念日！' });
-    if (rem.yearlyDayBefore && sameMonthDay(target, tomorrow) && years > 0) out.push({ kind: 'yearlyDayBefore', years: years, text: '明天是【' + toStr(it.title) + '】' + String(years) + '周年纪念日，准备一下吧！' });
+    const utc = { zone: 'utc' };
+    const origin = wallClockOf(target, utc);
+    const years = anniversaryYears(origin, wallClockOf(today, utc));
+    const nextYears = anniversaryYears(origin, wallClockOf(tomorrow, utc));
+    if (rem.yearlyOnDay && years > 0) out.push({ kind: 'yearlyOnDay', years, text: '今天是【' + toStr(it.title) + '】' + years + '周年纪念日！' });
+    if (rem.yearlyDayBefore && nextYears > 0) out.push({ kind: 'yearlyDayBefore', years: nextYears, text: '明天是【' + toStr(it.title) + '】' + nextYears + '周年纪念日，准备一下吧！' });
     return out;
 }
 

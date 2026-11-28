@@ -189,6 +189,8 @@ test('v268-N6 R3 机制 B 证据面：散文串里的文件名不得冒充投递
    *   这样判据是否正确与「当版公告写了什么」彻底解耦。
    *   故意包含 `.` 与 `/` 等正则元字符，顺带验证路径字面量正则的转义（cssAlias 含点号）。 */
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'v268-pn6-'));
+  fs.mkdirSync(path.join(dir, 'phone/design'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'phone/design/rp-entry.css'), '');
   fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
   fs.mkdirSync(path.join(dir, 'apps', 'games'), { recursive: true });
   // 夹具：games.css 是转发壳（登记进 CSS_DELIVERY_EXEMPT），另有一个 JS 只以**散文**提到它
@@ -245,6 +247,8 @@ test('v268-N7 R3c 有效：样式内引用不存在的目标 → exit 1 并点�
    *   构造一个「有投递、但内容指向虚空」的样式文件——这正是被测形态：投递机制判定为绿，
    *   而内容静默 404。 */
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'v268-r3c-'));
+  fs.mkdirSync(path.join(dir, 'phone/design'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'phone/design/rp-entry.css'), '');
   fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
   fs.mkdirSync(path.join(dir, 'apps', 'alpha'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'config', 'apps.js'),
@@ -277,6 +281,8 @@ test('v268-N7 R3c 有效：样式内引用不存在的目标 → exit 1 并点�
 
 test('v268-N8 R3c 对照：引用目标存在时不报警（同夹具先绿后红）', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'v268-r3c2-'));
+  fs.mkdirSync(path.join(dir, 'phone/design'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'phone/design/rp-entry.css'), '');
   fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
   fs.mkdirSync(path.join(dir, 'apps', 'alpha'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'config', 'apps.js'),

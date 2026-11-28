@@ -13,6 +13,35 @@
  *   E 版本锚:下限形(不锁当版读数,下一版抬版无需二次改写)
  * ========================================================= */
 import { test } from 'node:test';
+import { WorkflowDesign, bindDesign } from '../apps/workflow/workflow-design.js';
+
+function checkDraftEdits() {
+    const editor = new WorkflowDesign(null);
+    const saved = { id: 'demo', name: 'demo', steps: [] };
+    editor.host = () => ({ templates: { templates: [saved] } });
+    const loaded = editor.load('demo');
+    assert.notEqual(loaded.steps, saved.steps);
+    assert.equal(editor.add('constructor'), false);
+    for (let i = 0; i < WD_LIMITS.steps; i++) assert.equal(editor.add(WD_ACTION_KEYS[0]), true);
+    const full = editor.draft();
+    assert.equal(editor.add(WD_ACTION_KEYS[0]), false);
+    for (const bad of [null, '', 0.5, -1, full.steps.length]) assert.equal(editor.drop(bad), false);
+    assert.equal(editor.draft(), full);
+    let raw = '';
+    let click;
+    const button = { getAttribute: () => raw, addEventListener: (_, fn) => { click = fn; } };
+    bindDesign({ querySelectorAll: sel => sel === '[data-wf-drop]' ? [button] : [] }, editor);
+    click();
+    assert.equal(editor.draft(), full);
+    raw = '0';
+    click();
+    assert.notEqual(editor.draft(), full);
+    assert.equal(editor.draft().steps.length, WD_LIMITS.steps - 1);
+    assert.equal(full.steps.length, WD_LIMITS.steps);
+    assert.deepEqual(saved.steps, []);
+    editor.reset();
+    assert.deepEqual(editor.draft().steps, []);
+}
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -43,6 +72,7 @@ const {
     normalizeTemplate, normalizeTemplates, moveStep, bindParams, setBranch, setRepeat,
     composeFlow, templateReadings, templateLine, designerSelfCheck,
 } = mod;
+test('草稿增删：上限、按钮索引与模板副本', checkDraftEdits);
 /* ---------- A 结构 ---------- */
 test('A1 内核自检零问题 + 出口齐备', () => {
     const r = designerSelfCheck();

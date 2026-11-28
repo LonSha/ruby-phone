@@ -26,7 +26,7 @@ export class TimeweaverView {
         const model = buildNarrative(this.app.storage, { bucket: 'day' });
         const html = model.empty ? this._empty(model) : this._layout(model);
         this.app.phoneShell.setContent(this._css() + html, 'timeweaver-main');
-        this._bind();
+        this._bind(model);
         const container = this.app.phoneShell.layerHost?.('timeweaver-main') || this.app.phoneShell.getContentContainer?.();
         if (container) { container.querySelector('[data-time-envelopes]')?.remove(); const slot = document.createElement('div'); slot.dataset.timeEnvelopes = ''; container.appendChild(slot); renderEnvelopes(slot, this.app.storage); }
     }
@@ -439,7 +439,7 @@ export class TimeweaverView {
         </div>`;
     }
 
-    _bind() {
+    _bind(model) {
         const root = this.app.phoneShell?.element;
         if (!root) return;
         root.querySelectorAll('.tw-tab').forEach(btn => {
@@ -452,35 +452,36 @@ export class TimeweaverView {
         if (aiBtn) aiBtn.addEventListener('click', () => { const p = this.app.composeAILetter?.(); if (p && typeof p.catch === 'function') p.catch(() => {}); });
         // [v2.15.0] 收藏 / 分享按钮
         const saveBtn = root.querySelector('#tw-save');
-        if (saveBtn) saveBtn.addEventListener('click', () => this._saveCurrent());
         const shareBtn = root.querySelector('#tw-share');
-        if (shareBtn) shareBtn.addEventListener('click', () => this._shareCurrent());
+        const letter = (saveBtn || shareBtn) ? this._currentLetter(model) : null;
+        const epoch = this.app.sessionEpoch;
+        saveBtn?.addEventListener('click', () => { if (epoch === this.app.sessionEpoch) this._saveCurrent(letter); });
+        shareBtn?.addEventListener('click', () => { if (epoch === this.app.sessionEpoch) this._shareCurrent(letter); });
         root.querySelectorAll('[data-letter]').forEach(el => {
             el.addEventListener('click', () => this._shareById(el.dataset.letter));
         });
     }
 
     /* [v2.15.0] 当前要收藏/分享的那封信：AI 升华版优先，否则本地规则版。 */
-    _currentLetter() {
+    _currentLetter(model) {
         const ai = this.app.aiLetter || null;
         if (ai && Array.isArray(ai.paragraphs) && ai.paragraphs.length) {
             return { title: '一封被 AI 织起的时光信', paragraphs: ai.paragraphs, source: 'ai', ts: Number(ai.ts) || Date.now() };
         }
-        const m = buildNarrative(this.app.storage, { bucket: 'day' });
-        if (!m.letter) return null;
-        return { title: m.letter.title, paragraphs: m.letter.paragraphs, source: 'local', ts: Date.now() };
+        if (!model?.letter) return null;
+        return { title: model.letter.title, paragraphs: model.letter.paragraphs, source: 'local', ts: Date.now() };
     }
-    _saveCurrent() {
-        const letter = this._currentLetter();
+    _saveCurrent(letter) {
+        const epoch = this.app.sessionEpoch;
         if (!letter) { this._toast('碎片还太少，织不出一封信'); return; }
         const p = this.app.saveLetter?.(letter);
         Promise.resolve(p).then(res => {
+            if (epoch !== this.app.sessionEpoch) return;
             if (res && res.ok) this._toast(`已收藏（共 ${res.total} 封）`);
             else this._toast((res && res.reason) || '收藏失败');
         }).catch(() => this._toast('收藏失败'));
     }
-    _shareCurrent() {
-        const letter = this._currentLetter();
+    _shareCurrent(letter) {
         if (!letter) { this._toast('碎片还太少，没有可分享的内容'); return; }
         const res = this.app.shareLetterToMoments?.(letter);
         this._toast(res && res.ok ? '已分享到朋友圈' : ((res && res.reason) || '分享失败'));

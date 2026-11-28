@@ -71,6 +71,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { prefixAuditFiles } from './_style_split.mjs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
@@ -795,20 +796,7 @@ test('F3 样式源与 phone.css 逐字同源，且视图产出的每个类名都
 });
 
 test('F4 前缀全仓唯一：.tbo- 只出现在本 App 目录与 phone.css', () => {
-    const walk = (dir, out) => {
-        for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-            /* ★ 判据文件自己也满篇写着 `.tbo-` ——扫描面必须排除 tests/，否则这条检查测的是它自己的字符串。 */
-            if (e.name === '.git' || e.name === 'node_modules') continue;
-            /* 只排除「判据文件自己」（它满篇写着 `.tbo-`）：不能整目录排除 tests/，
-             *   否则别的测试里真出现越界引用就永远查不出来了。 */
-            if (path.resolve(dir, e.name) === path.resolve(fileURLToPath(import.meta.url))) continue;
-            const full = path.join(dir, e.name);
-            if (e.isDirectory()) walk(full, out);
-            else if (/\.(js|css|mjs|json|html)$/.test(e.name)) out.push(full);
-        }
-        return out;
-    };
-    const files = walk(ROOT, []);
+    const files = prefixAuditFiles(ROOT, fileURLToPath(import.meta.url));
     assert.ok(files.length > 200, '扫描面异常小（' + files.length + '）');
     const users = files.filter((f) => fs.readFileSync(f, 'utf8').includes(CSS_PFX));
     assert.ok(users.length > 0, CSS_PFX + ' 必须在仓里被用到');
@@ -820,6 +808,7 @@ test('F4 前缀全仓唯一：.tbo- 只出现在本 App 目录与 phone.css', ()
          *   而整目录放行 tests/ 也不行。所以按**具体目录**放行，而不是按「是不是测试」。
          *   门禁的本意是「前缀不许越界到别人的实现里」，不是「测试不许提它」。 */
         const ok = f.includes('/apps/' + APP_ID + '/')
+            || f === path.join(ROOT, 'tests', 'apps-taobao-v4.test.mjs') // 读取本 App 的布局选择器
             || f.endsWith('phone.css')
             || f.includes('/tests/browser/scenarios/');
         assert.ok(ok, CSS_PFX + ' 只应出现在 apps/' + APP_ID + '/、phone.css 与 tests/browser/scenarios/，实测还有：' + f.replace(ROOT, ''));

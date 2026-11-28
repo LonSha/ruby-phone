@@ -16,7 +16,12 @@ import { writeReceipt } from '../../config/write-receipt.js';
 
 const STATE_KEY = 'diagnose_reason_v1';
 
+import { DiagnoseReasonView } from './diagnose-reason-view.js';
 export class DiagnoseReasonApp {
+    render() {
+        this._view ??= new DiagnoseReasonView(this, this.shell);
+        this._view.render();
+    }
     constructor(shell, storage) {
         this.shell = shell;
         this.storage = storage;

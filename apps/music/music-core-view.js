@@ -5,6 +5,7 @@
  * ======================================================== */
 'use strict';
 
+import { viewText } from '../../config/view-text.js';
 export class MusicCoreView {
     constructor(app, shell) {
         this.app = app;
@@ -74,7 +75,7 @@ export class MusicCoreView {
                 return '<div class="mc-line' + cur + '"><span class="mc-t">' + this._esc(this._sec(l.t)) + '</span><span class="mc-x">' + this._esc(l.txt) + '</span></div>';
             });
             list = '<div class="mc-lines">' + rows.join('') + '</div>'
-                + '<div class="mc-meta">共 ' + o.count + ' 句 · 进度 ' + a.seconds + 's · 当前第 ' + (o.index + 1) + ' 句</div>';
+                + '<div class="mc-meta">共 ' + viewText(o.count) + ' 句 · 进度 ' + viewText(a.seconds) + 's · 当前第 ' + viewText((o.index + 1)) + ' 句</div>';
         }
         return '<div class="mc-head">'
             + '<div class="mc-title">歌词 / 播放模式 试算台</div>'
@@ -86,7 +87,7 @@ export class MusicCoreView {
             + '<button type="button" data-act="seek30">拨到 30s</button>'
             + '<button type="button" data-act="seek65">拨到 65s</button>'
             + '</div>'
-            + (this._flash ? '<div class="mc-flash">' + this._flash + '</div>' : '')
+            + (this._flash ? '<div class="mc-flash">' + viewText(this._flash) + '</div>' : '')
             + list;
     }
 

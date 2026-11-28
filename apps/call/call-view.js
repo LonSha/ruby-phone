@@ -13,6 +13,7 @@ const FACE_META = {
 };
 const SCENE_LABEL = { quiet_room: '静室', rain_fleeing: '雨中疾走', night_drive: '夜车', confined_stealth: '密室潜伏' };
 
+import { viewText } from '../../config/view-text.js';
 export class CallView {
     constructor(app, shell) {
         this.app = app; this.shell = shell;
@@ -53,18 +54,18 @@ export class CallView {
         const st = this.app.state;
         const face = this.app.face;
         const meta = FACE_META[face] || FACE_META[CALL_FACE.IDLE];
-        const flash = this._flash ? '<div class="call-flash">' + this._flash + '</div>' : '';
-        const notes = st.notes.length ? '<div class="call-notes">' + st.notes.map((n) => '<div>' + n + '</div>').join('') + '</div>' : '';
+        const flash = this._flash ? '<div class="call-flash">' + viewText(this._flash) + '</div>' : '';
+        const notes = st.notes.length ? '<div class="call-notes">' + st.notes.map((n) => '<div>' + viewText(n) + '</div>').join('') + '</div>' : '';
 
         const sceneRow = Object.keys(CALL_SCENES).map((id) => (
             '<button class="call-scene' + (st.scene === id ? ' is-on' : '') + '" type="button" data-act="scene" data-scene="' + id + '">' + (SCENE_LABEL[id] || id) + '</button>'
         )).join('');
 
         const acts = st.active
-            ? '<div class="call-live">对象：' + st.active.callerName + ' | 场景：' + (SCENE_LABEL[st.active.scene] || st.active.scene) + '</div>'
+            ? '<div class="call-live">对象：' + viewText(st.active.callerName) + ' | 场景：' + viewText((SCENE_LABEL[st.active.scene] || st.active.scene)) + '</div>'
               + '<button class="call-btn call-btn-hang" type="button" data-act="hang">挂断</button>'
             : '<div class="call-live call-live-idle">当前没有通话</div>'
-              + '<button class="call-btn" type="button" data-act="begin" data-scene="' + st.scene + '">以当前场景发起通话</button>';
+              + '<button class="call-btn" type="button" data-act="begin" data-scene="' + viewText(st.scene) + '">以当前场景发起通话</button>';
 
         const sigRow = '<div class="call-sig">信号 '
             + '<button class="call-step" type="button" data-act="sig" data-dir="-1" aria-label="信号减一">-</button>'
@@ -74,7 +75,7 @@ export class CallView {
 
         const hist = st.history.length
             ? st.history.slice().reverse().slice(0, 10).map((h) => (
-                '<div class="call-hrow">' + h.callerName + ' | ' + (SCENE_LABEL[h.scene] || h.scene) + '</div>'
+                '<div class="call-hrow">' + viewText(h.callerName) + ' | ' + viewText((SCENE_LABEL[h.scene] || h.scene)) + '</div>'
             )).join('')
             : '<div class="call-empty">还没有通话流水</div>';
 

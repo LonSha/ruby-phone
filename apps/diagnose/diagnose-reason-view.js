@@ -6,6 +6,7 @@
  * ======================================================== */
 'use strict';
 
+import { viewText } from '../../config/view-text.js';
 export class DiagnoseReasonView {
     constructor(app, shell) {
         this.app = app;
@@ -49,7 +50,7 @@ export class DiagnoseReasonView {
 
     _html() {
         const o = this.app.lastOut;
-        const out = o ? JSON.stringify(o) : '还没试算过';
+        const out = o ? viewText(JSON.stringify(o)) : '还没试算过';
         return '<div class="dr-head">'
             + '<div class="dr-title">诊断归因文案试算台</div>'
             + '<div class="dr-sub">同一取值 => 同一句话（内核纯函数，不取时钟不造随机）</div>'
@@ -63,7 +64,7 @@ export class DiagnoseReasonView {
             + '<button type="button" data-act="storage">存档健康行</button>'
             + '<button type="button" data-act="unknown">未知取值</button>'
             + '</div>'
-            + (this._flash ? '<div class="dr-flash">' + this._flash + '</div>' : '')
+            + (this._flash ? '<div class="dr-flash">' + viewText(this._flash) + '</div>' : '')
             + '<div class="dr-out">' + out + '</div>';
     }
 

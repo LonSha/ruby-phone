@@ -17,6 +17,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+export function prefixAuditFiles(root, self) {
+  const files = [];
+  function walk(dir) {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (e.name === '.git' || e.name === 'node_modules') continue;
+      if (dir === root && e.name === '.sourcematerial') continue; // Private import inputs, not implementation.
+      const full = path.join(dir, e.name);
+      if (full === self) continue;
+      if (e.isDirectory()) walk(full);
+      else if (/\.(js|css|mjs|json|html)$/.test(e.name)) files.push(full);
+    }
+  }
+  walk(root);
+  return files;
+}
+
 const readOr = (root, rel) => {
   try { return fs.readFileSync(path.join(root, rel), 'utf8'); } catch (_e) { return null; }
 };

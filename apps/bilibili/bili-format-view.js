@@ -5,6 +5,7 @@
  * ======================================================== */
 'use strict';
 
+import { viewText } from '../../config/view-text.js';
 export class BiliFormatView {
     constructor(app, shell) {
         this.app = app;
@@ -52,7 +53,7 @@ export class BiliFormatView {
 
     _html() {
         const o = this.app.lastOut;
-        const out = o ? JSON.stringify(o) : '还没试算过';
+        const out = o ? viewText(JSON.stringify(o)) : '还没试算过';
         return '<div class="bf-head">'
             + '<div class="bf-title">B站 换算试算台</div>'
             + '<div class="bf-sub">同一输入 => 同一结果（内核不自己取时间、不造随机）</div>'
@@ -63,7 +64,7 @@ export class BiliFormatView {
             + '<button type="button" data-act="ago">三小时前</button>'
             + '<button type="button" data-act="id">BV 号</button>'
             + '</div>'
-            + (this._flash ? '<div class="bf-flash">' + this._flash + '</div>' : '')
+            + (this._flash ? '<div class="bf-flash">' + viewText(this._flash) + '</div>' : '')
             + '<div class="bf-out">' + out + '</div>';
     }
 

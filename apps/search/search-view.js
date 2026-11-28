@@ -9,6 +9,7 @@
 /* [v3.66.0 · X2] 派发载荷走唯一一支笔（config/app-open-detail.js）。
  *   本件是**第一处**把靶心（ref）带进 `phone:openApp` 的派发点 ——
  *   不手写对象字面量，免得字段名与核心那支笔漂开。 */
+import { snippetMatch } from './search-core.js';
 import { buildOpenDetail } from '../../config/app-open-detail.js';
 /* [v4.118.0 · R14-O9] 空态分形：搜索的「没搜到」与「来源读失败」分开标注。 */
 import { FACE_ATTR } from '../../config/empty-face.js';
@@ -16,7 +17,6 @@ import { FACE_ATTR } from '../../config/empty-face.js';
  *   为什么接在这里：全局搜索能找到内容，但用户此前看不到这条命中的**来源关系**；
  *   查询与结论仍在内核（`pgRowFace` 四态互不同形），本件只拿回来排版 ——
  *   视图不自查图、不自己拼归因（本仓「视图纯渲染」纪律）。 */
-import { pgRowFace } from '../../config/provenance-graph.js';
 function esc(s) {
     return String(s ?? '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -27,14 +27,12 @@ function esc(s) {
 function highlight(snippet, query) {
     const text = String(snippet || '');
     const q = String(query || '');
-    if (!q) return esc(text);
-    const lowerText = text.toLowerCase();
-    const lowerQ = q.toLowerCase();
-    const idx = lowerText.indexOf(lowerQ);
-    if (idx < 0) return esc(text);
+    const range = snippetMatch(text, q);
+    if (!range) return esc(text);
+    const [idx, end] = range;
     return esc(text.slice(0, idx))
-        + '<mark class="gs-mark">' + esc(text.slice(idx, idx + q.length)) + '</mark>'
-        + esc(text.slice(idx + q.length));
+        + '<mark class="gs-mark">' + esc(text.slice(idx, end)) + '</mark>'
+        + esc(text.slice(end));
 }
 
 export class SearchView {
@@ -504,7 +502,7 @@ export class SearchView {
             /* 宿主挂载点与全仓其余读数点同源（`window.VirtualPhone`）—— 视图不自建实例，
              *   新建的那个会看见另一份图（本仓「读数必须来自真源」同族纪律）。 */
             const vp = (typeof window !== 'undefined') ? window.VirtualPhone : null;
-            face = pgRowFace(vp ? vp._provenanceCache : null, ref);
+            face = vp?.provenanceRowFace?.(ref);
         } catch (_e) { return ''; }
         if (!face || face.why === 'no-graph') return '';
         if (face.found !== true) {

@@ -75,6 +75,16 @@ async function openAppByName(name, viewSel) {
   const up = await waitFor(() => document.querySelector(viewSel), { timeoutMs: 12000 });
   return { ok: up, why: up ? '已渲染 ' + viewSel : '未渲染 ' + viewSel };
 }
+const pageGrid = document.querySelector('.home-screen .app-grid-page');
+const dock = document.querySelector('.home-screen .dock');
+if (pageGrid && dock) {
+  const css = getComputedStyle(pageGrid);
+  const cols = css.gridTemplateColumns.split(' ').length;
+  const want = Number(css.getPropertyValue('--rp-page-cols'));
+  const bottom = Math.max(...Array.from(pageGrid.children, el => el.getBoundingClientRect().bottom));
+  const clearance = Math.round(dock.getBoundingClientRect().top - bottom);
+  report({name:'desktop-columns-and-dock',ok: cols === want && clearance >= 0,detail: `列数 ${cols}/${want}；Dock 净空 ${clearance}px`});
+} else report({name:'desktop-columns-and-dock', ok:false,detail:'桌面网格或 Dock 缺席'});
 const opened = await openAppByName('设置', '#yzp-settings-app, .settings-app');
 const mounted = await waitFor(() => !!panelEl(), { timeoutMs: 12000 });
 report({
@@ -195,5 +205,43 @@ report({
   detail: '「生图」chip 可点=' + chipEnabled + '；点后 tab-image aria-selected=' + !!tabSwitched + '；面板重建=' + !!panelEl() +
     '；状态行=' + JSON.stringify(statusText().slice(0, 50)),
 });
+
+// Only the isolated browser fixture is used here. Hold the first persistence boundary open.
+const reset = document.querySelector('#clear-all-data');
+const memory = window.VirtualPhone.memoryCore;
+const oldConfirm = window.confirm, oldClear = memory.clearShared, oldReset = st.clearAllData;
+let release, laterClears = 0;
+try {
+  window.confirm = () => true;
+  memory.clearShared = () => new Promise(resolve => { release = resolve; });
+  st.clearAllData = async () => { laterClears++; return false; };
+  realClick(reset);
+  const notices = () => document.querySelector('#rp-reset-result')?.textContent || '';
+  const waiting = reset?.disabled && typeof release === 'function' && !notices().includes('手机数据已重置');
+  release?.(false);
+  const failed = await waitFor(() => notices().includes('其他清理未开始'), {timeoutMs: 2000});
+  report({name:'reset-awaits-failed-write', ok: !!waiting && failed && !reset.disabled && laterClears === 0,
+    detail: '等待中禁用=' + !!waiting + '；回执=' + notices() + '；后续清理次数=' + laterClears});
+} finally {
+  window.confirm = oldConfirm;
+  memory.clearShared = oldClear;
+  st.clearAllData = oldReset;
+}
+const directoryRoot = () => document.querySelector('#yzp-settings-app');
+const backFrom = key => {
+  realClick(directoryRoot()?.querySelector('#yzp-settings-home-back'));
+  return directoryRoot()?.dataset.settingsView === 'directory' && document.activeElement?.dataset.category === key;
+};
+report({name: 'image-back-to-directory', ok: backFrom('image'), detail: '返回目录并聚焦图像生成'});
+realClick(directoryRoot()?.querySelector('[data-category="general"]'));
+await waitFor(() => directoryRoot()?.dataset.settingsView === 'detail');
+report({name:'directory-general-roundtrip', ok: directoryRoot()?.querySelector('.yzp-settings-header h2')?.textContent === '通用' && backFrom('general'), detail:'目录 → 通用 → 原目录行'});
+fireInput(document.getElementById('r22-settings-filter'), '字号');
+await waitFor(() => document.querySelector('.r25-ia-hit'));
+realClick(document.querySelector('.r25-ia-hit'));
+await waitFor(() => directoryRoot()?.dataset.settingsView === 'detail');
+const detailTitle = directoryRoot()?.querySelector('.yzp-settings-header h2')?.textContent;
+window.VirtualPhone.settingsApp.handleSwipeBack();
+report({name:'search-detail-swipe-back',ok: !!detailTitle && directoryRoot()?.dataset.settingsView === 'directory',detail: '搜索 → ' + detailTitle + ' → 手势返回目录'});
 
 done();

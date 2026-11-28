@@ -6,6 +6,7 @@
 'use strict';
 import { ROLE_POOL, NIGHT_STEPS, NIGHT_STEP_LABELS, REVEAL_MODES } from './werewolf-rules.js';
 
+import { viewText } from '../../../config/view-text.js';
 export class WerewolfRulesView {
     constructor(app, shell) {
         this.app = app; this.shell = shell;
@@ -43,17 +44,17 @@ export class WerewolfRulesView {
 
     _html() {
         const app = this.app;
-        const flash = this._flash ? '<div class="ww-flash">' + this._flash + '</div>' : '';
+        const flash = this._flash ? '<div class="ww-flash">' + viewText(this._flash) + '</div>' : '';
         const seats = app.players.map((p) => {
             const alive = p.alive !== false;
             const shown = app.revealMode === 'open' || p.isUser ? (p.role || '未发') : '?';
             return (
                 '<div class="ww-seat' + (alive ? '' : ' is-dead') + (p.isUser ? ' is-user' : '') + '">'
-                + '<div class="ww-seatno">' + p.seat + (p.isUser ? ' · 你' : '') + '</div>'
-                + '<div class="ww-role">' + shown + '</div>'
+                + '<div class="ww-seatno">' + viewText(p.seat) + (p.isUser ? ' · 你' : '') + '</div>'
+                + '<div class="ww-role">' + viewText(shown) + '</div>'
                 + '<div class="ww-seatacts">'
-                + '<button class="ww-mini" type="button" data-act="toggle" data-seat="' + p.seat + '">' + (alive ? '杀' : '救') + '</button>'
-                + '<button class="ww-mini" type="button" data-act="cycle" data-seat="' + p.seat + '">换身份</button>'
+                + '<button class="ww-mini" type="button" data-act="toggle" data-seat="' + viewText(p.seat) + '">' + (alive ? '杀' : '救') + '</button>'
+                + '<button class="ww-mini" type="button" data-act="cycle" data-seat="' + viewText(p.seat) + '">换身份</button>'
                 + '</div>'
                 + '</div>'
             );
@@ -79,8 +80,8 @@ export class WerewolfRulesView {
             + '<div class="ww-alive">活 ' + app.aliveCount() + '/' + ROLE_POOL.length + '</div>'
             + '</div>'
             + flash
-            + '<div class="ww-sec-t">判定：' + verdictText + '</div>'
-            + '<div class="ww-sec-t">夜晚步骤（当前该 ' + (cur.ok ? cur.role : '?') + ' 动）</div>'
+            + '<div class="ww-sec-t">判定：' + viewText(verdictText) + '</div>'
+            + '<div class="ww-sec-t">夜晚步骤（当前该 ' + viewText((cur.ok ? cur.role : '?')) + ' 动）</div>'
             + '<div class="ww-steps">' + stepRow
             + '<button class="ww-next" type="button" data-act="nextstep">下一步</button></div>'
             + '<div class="ww-sec-t">揭示模式</div>'

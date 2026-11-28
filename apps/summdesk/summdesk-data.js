@@ -111,11 +111,12 @@ export function parseSummaryText(rawText) {
 }
 
 /* 标题组装（源 finalTitle：标题 - 条数范围 - 日期，日期 2026/10/2 形）。 */
+import { localParts } from '../../config/local-calendar.js';
 export function composeTitle(title, msgRange, nowMs) {
     let out = toStr(title);
     if (msgRange) out += ' ' + toStr(msgRange).split('~').join('-');
-    const d = new Date(numOrNull(nowMs) || Date.now());
-    out += ' ' + String(d.getFullYear()) + '/' + String(d.getMonth() + 1) + '/' + String(d.getDate());
+    const d = localParts(numOrNull(nowMs));
+    if (d) out += ' ' + d.year + '/' + d.month + '/' + d.day;
     return out;
 }
 /* ---------- 双通道自动总结游标（源 checkAutoSummary / checkTrueVectorAutoSummary 的纯算术面）---------- */

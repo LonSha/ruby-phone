@@ -298,11 +298,12 @@ export function two(n) {
     const v = (typeof n === 'number' && isFinite(n)) ? n : 0;
     return v < 10 ? '0' + String(v) : String(v);
 }
+import { localParts } from '../../config/local-calendar.js';
 export function stampOf(ms) {
-    const t = (typeof ms === 'number' && isFinite(ms)) ? ms : Date.now();
-    const d = new Date(t);
-    return String(d.getFullYear()) + DASH + two(d.getMonth() + 1) + DASH + two(d.getDate())
-        + ' ' + two(d.getHours()) + ':' + two(d.getMinutes()) + ':' + two(d.getSeconds());
+    const d = localParts(ms);
+    if (!d) return '';
+    return String(d.year) + DASH + two(d.month) + DASH + two(d.day)
+        + ' ' + two(d.hour) + ':' + two(d.minute) + ':' + two(d.second);
 }
 
 /* ══════════ 第一格：版本面（读不出来不许读成 1） ══════════ */

@@ -90,6 +90,7 @@ function pluginOf(win) {
         const w = resolveWin(win);
         if (!w) return null;
         const p = w[LONSHA_PLUGIN_GLOBAL];
+        if (typeof p?.phoneFactBridgeHandle !== 'function' && typeof p?.engine?.phoneFactBridgeHandle === 'function') return p.engine;
         return (p && typeof p === 'object') ? p : null;
     } catch (_e) { return null; }
 }
@@ -332,6 +333,7 @@ export function assemblePhoneFact(cls, payload) {
         visibility: String(p.visibility || ''),
         summary: String(p.summary || '')
     };
+    if (p.chatId) fact.chatId = String(p.chatId);
     if (typeof p.amount === 'number' && Number.isFinite(p.amount)) fact.amount = p.amount;
     if (p.currency) fact.currency = String(p.currency);
     return fact;

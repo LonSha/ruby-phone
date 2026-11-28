@@ -13,6 +13,7 @@ const FACE_META = {
     [SOCIAL_FACE.EMPTY]: { label: '空档（还没有动态）', tone: 'idle' },
 };
 
+import { viewText } from '../../config/view-text.js';
 export class SocialView {
     constructor(app, shell) {
         this.app = app; this.shell = shell;
@@ -52,18 +53,18 @@ export class SocialView {
         const st = this.app.state;
         const face = this.app.face;
         const meta = FACE_META[face] || FACE_META[SOCIAL_FACE.EMPTY];
-        const flash = this._flash ? '<div class="social-flash">' + this._flash + '</div>' : '';
+        const flash = this._flash ? '<div class="social-flash">' + viewText(this._flash) + '</div>' : '';
         const cards = st.posts.length
             ? st.posts.map((p) => (
-                '<div class="social-card" data-id="' + p.postId + '">'
-                + '<div class="social-meta"><span class="social-author">' + p.author + '</span>'
-                + '<span class="social-tag">' + (PART_LABEL[p.part] || p.part) + ' · ' + (MOOD_LABEL[p.mood] || p.mood) + '</span></div>'
-                + '<div class="social-body">' + p.body + '</div>'
+                '<div class="social-card" data-id="' + viewText(p.postId) + '">'
+                + '<div class="social-meta"><span class="social-author">' + viewText(p.author) + '</span>'
+                + '<span class="social-tag">' + viewText((PART_LABEL[p.part] || p.part)) + ' · ' + viewText((MOOD_LABEL[p.mood] || p.mood)) + '</span></div>'
+                + '<div class="social-body">' + viewText(p.body) + '</div>'
                 + '<div class="social-acts">'
-                + '<button class="social-btn" type="button" data-act="like" data-id="' + p.postId + '">赞 ' + p.likes.length + '</button>'
-                + '<button class="social-btn social-btn-ghost" type="button" data-act="comment" data-id="' + p.postId + '">评论 ' + p.comments.length + '</button>'
+                + '<button class="social-btn" type="button" data-act="like" data-id="' + viewText(p.postId) + '">赞 ' + p.likes.length + '</button>'
+                + '<button class="social-btn social-btn-ghost" type="button" data-act="comment" data-id="' + viewText(p.postId) + '">评论 ' + p.comments.length + '</button>'
                 + '</div>'
-                + '<div class="social-cmts">' + p.comments.map((c) => ('<div>· ' + c.author + '：' + c.text + '</div>')).join('') + '</div>'
+                + '<div class="social-cmts">' + p.comments.map((c) => ('<div>· ' + viewText(c.author) + '：' + viewText(c.text) + '</div>')).join('') + '</div>'
                 + '</div>'
             )).join('')
             : '<div class="social-empty">还没有动态。内容由生成侧给，本界面不代写。</div>';

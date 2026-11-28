@@ -22,12 +22,7 @@ import {
 
 
 
-function emptyDraft() {
-    return { id: '', name: WD_DEFAULT_NAME, steps: [] };
-}
-function cloneDraft(d) {
-    try { return JSON.parse(JSON.stringify(d)); } catch (_e) { return emptyDraft(); }
-}
+import { emptyDraft, copyDraft, appendDraftStep, removeDraftStep } from './workflow-core.js';
 
 export class WorkflowDesign {
     constructor(app) {
@@ -59,22 +54,20 @@ export class WorkflowDesign {
         const rows = (h && h.templates && Array.isArray(h.templates.templates)) ? h.templates.templates : [];
         const hit = rows.find((t) => t.id === String(id || ''));
         if (!hit) { this._note('没有这条模板', true); this._rerender(); return null; }
-        this._draft = cloneDraft({ id: hit.id, name: hit.name, steps: hit.steps || [] });
+        this._draft = copyDraft({ id: hit.id, name: hit.name, steps: hit.steps || [] });
         this._note('已载入「' + hit.name + '」到草稿(改动只在本机,保存才落盘)', false);
         this._rerender();
         return this._draft;
     }
     add(actionKey) {
-        const act = WD_ACTIONS[String(actionKey || '')] || null;
-        if (!act) { this._note('这个动作不在白名单里', true); this._rerender(); return false; }
-        const d = this._draft;
-        if (d.steps.length >= WD_LIMITS.steps) {
-            this._note('草稿步数到顶(' + String(WD_LIMITS.steps) + '),先删一步', true);
+        const result = appendDraftStep(this._draft, actionKey);
+        if (!result.ok) {
+            this._note(result.why === 'full' ? '草稿步数到顶(' + String(WD_LIMITS.steps) + '),先删一步' : '这个动作不在白名单里', true);
             this._rerender();
             return false;
         }
-        this._draft = { id: d.id, name: d.name, steps: d.steps.concat([{ action: act.key, repeat: 1, params: {}, when: null }]) };
-        this._note('已加一步:' + act.label, false);
+        this._draft = result.draft;
+        this._note('已加一步:' + result.label, false);
         this._rerender();
         return true;
     }
@@ -87,12 +80,9 @@ export class WorkflowDesign {
         return true;
     }
     drop(index) {
-        const i = Number(index);
-        const d = this._draft;
-        if (!(i >= 0 && i < d.steps.length)) { this._note('没有这一步', true); this._rerender(); return false; }
-        const steps = d.steps.slice();
-        steps.splice(i, 1);
-        this._draft = { id: d.id, name: d.name, steps: steps };
+        const next = removeDraftStep(this._draft, index);
+        if (!next) { this._note('没有这一步', true); this._rerender(); return false; }
+        this._draft = next;
         this._note('已删这一步', false);
         this._rerender();
         return true;
@@ -342,7 +332,7 @@ export function bindDesign(el, design) {
         const p = String(n.getAttribute('data-wf-move')).split(':');
         design.move(Number(p[0]), Number(p[1]));
     });
-    on('[data-wf-drop]', 'click', function (n) { design.drop(Number(n.getAttribute('data-wf-drop'))); });
+    on('[data-wf-drop]', 'click', function (n) { design.drop(n.getAttribute('data-wf-drop')); });
     on('[data-wf-when]', 'click', function (n) {
         const p = String(n.getAttribute('data-wf-when')).split(':');
         const box = el.querySelector('[data-wf-face="' + p[0] + '"]');

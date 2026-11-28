@@ -114,6 +114,6 @@ test('audit copy uses independent bytes, skips artifacts and cleans up on throw'
 });
 test('settings mounts a separate section after existing binding', () => {
     const src=fs.readFileSync(path.join(ROOT,'apps/settings/settings-app.js'),'utf8');
-    assert.match(src,/this\.bindEvents\(\);\s*mountUsagePattern\(this\._getActiveSettingsRoot\(\), this\.storage\)/);
+    assert.match(src,/this\.bindEvents\(\);\s*(?:mountSettingsDirectory\(this\._getActiveSettingsRoot\(\), this\);\s*)?mountUsagePattern\(this\._getActiveSettingsRoot\(\), this\.storage\)/);
     assert.ok(fs.statSync(path.join(ROOT,'config/usage-pattern.js')).size<=8192);
 });

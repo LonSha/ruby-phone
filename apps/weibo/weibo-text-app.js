@@ -19,7 +19,12 @@ import { writeReceipt } from '../../config/write-receipt.js';
 
 const STATE_KEY = 'weibo_text_v1';
 
+import { WeiboTextView } from './weibo-text-view.js';
 export class WeiboTextApp {
+    render() {
+        this._view ??= new WeiboTextView(this, this.shell);
+        this._view.render();
+    }
     constructor(shell, storage) {
         this.shell = shell;
         this.storage = storage;

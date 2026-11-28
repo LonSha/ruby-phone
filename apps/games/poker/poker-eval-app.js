@@ -26,7 +26,12 @@ const DEMO_HAND = [
     { suit: 'spades', value: 2, label: '2' }
 ];
 
+import { PokerEvalView } from './poker-eval-view.js';
 export class PokerEvalApp {
+    render() {
+        this._view ??= new PokerEvalView(this, this.shell);
+        this._view.render();
+    }
     constructor(shell, storage) {
         this.shell = shell;
         this.storage = storage;

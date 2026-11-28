@@ -14,7 +14,12 @@ import { writeReceipt } from '../../config/write-receipt.js';
 
 const STATE_KEY = 'call_scene_state_v1';
 
+import { CallView } from './call-view.js';
 export class CallApp {
+    render() {
+        this._view ??= new CallView(this, this.shell);
+        this._view.render();
+    }
     constructor(shell, storage) {
         this.shell = shell;
         this.storage = storage;

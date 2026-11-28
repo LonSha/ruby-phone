@@ -151,8 +151,13 @@ export class FocusApp {
 
     saveTasks() {
         try {
-            if (this.storage) this.storage.set(TASKS_KEY, this.tasks);
-        } catch (_e) { /* silent */ }
+            if (this.storage) {
+                this.storage.set(TASKS_KEY, this.tasks);
+                this.face = readFocusFace({ storageOk: true, tasks: this.tasks });
+            }
+        } catch (_e) {
+            this.face = FOCUS_REASONS.storage_absent;
+        }
     }
 
     saveSessions() {

@@ -20,7 +20,12 @@ import { writeReceipt } from '../../config/write-receipt.js';
 /* 会话键：命中 config/storage.js 的 CHAT_DATA_PATTERNS 里 /^share_/，随会话隔离 */
 const STATE_KEY = 'share_nearby_v1';
 
+import { ShareView } from './share-view.js';
 export class ShareApp {
+    render() {
+        this._view ??= new ShareView(this, this.shell);
+        this._view.render();
+    }
     constructor(shell, storage) {
         this.shell = shell;
         this.storage = storage;

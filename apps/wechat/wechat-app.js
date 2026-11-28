@@ -1050,7 +1050,7 @@ export class WechatApp {
 /* 时间戳分组 */
 .message-time-divider {
     text-align: center;
-    margin: 15px 0;
+    margin: 16px 0;
 }
 
 .time-divider-text {

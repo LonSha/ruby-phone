@@ -338,6 +338,20 @@ const cssNotes = [];
 
     }
   }
+  // A linked stylesheet can deliver another app sheet (sourcebook does this).
+  // Follow only real imports rooted at delivered files, not arbitrary CSS URLs.
+  const byPath = new Map(cssNotes.map(note => [note.rel, note]));
+  const pending = new Set(cssNotes.filter(note => note.mode === 'link' || note.mode === 'import').map(note => note.rel));
+  for (const parent of pending) {
+    const css = (read(parent) || '').replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const match of css.matchAll(/@import\s+(?:url\(\s*['"]?([^'")]+)['"]?\s*\)|['"]([^'"]+)['"])/g)) {
+      const target = (match[1] || match[2]).trim().split(/[?#]/)[0];
+      const child = byPath.get(path.posix.join(path.posix.dirname(parent), target));
+      if (!child || /^(?:[a-z]+:|\/)/i.test(target)) continue;
+      if (child.mode === 'missing') child.mode = 'import';
+      pending.add(child.rel);
+    }
+  }
   if (cssTotal < MIN_CSS) {
     console.error(`[registry] 只枚举到 ${cssTotal} 个 App 样式文件（低于下限 15）—— fail-closed 拒判`);
     process.exit(2);

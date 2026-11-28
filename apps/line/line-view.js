@@ -306,8 +306,9 @@ export class LineView {
                 const text = (this._text || '').trim();
                 const sticker = this._sticker || '';
                 if (!text && !sticker) { done('既没正文也没贴图 —— 空的发不出去。'); return; }
-                const id = 'lm_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
-                const r = app.append(roomId, { id: id, from: '__me__', text: text, sticker: sticker, ts: Date.now() });
+                const ts = app.nowMs();
+                const id = 'lm_' + ts.toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+                const r = app.append(roomId, { id: id, from: '__me__', text: text, sticker: sticker, ts });
                 if (!r.ok) { done('没发出去：' + (r.error || '原因不明')); return; }
                 this._text = '';
                 this._sticker = '';

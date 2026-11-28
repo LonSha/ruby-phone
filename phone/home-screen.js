@@ -210,11 +210,11 @@ export class HomeScreen {
                 <div class="time-large yzp-home-time-large">${this.getCurrentTime()}</div>
                 <div class="date yzp-home-date">${this._escapeHtml(dateInfo.date)}${dateInfo.weekday ? ` ${this._escapeHtml(dateInfo.weekday)}` : ''}</div>
             </div>
-            <button type="button" class="rp-home-search" id="rp-home-search" aria-label="搜索应用与消息">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.4 16.4 21 21"/></svg>
-                <span>搜索应用、消息、记忆</span>
+            <button type="button" class="rp-home-search" id="rp-home-search" aria-label="打开应用库">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <span>应用库</span>
             </button>
-            <div class="app-grid-pager yzp-home-app-grid-pager" data-page-count="${pages.length}">
+            <div class="app-grid-pager yzp-home-app-grid-pager" data-page-count="${pages.length}" style="--rp-page-cols:${this._iconColumns()}">
                 ${pages.map((apps, index) => `
                     <div class="app-grid yzp-home-app-grid app-grid-page yzp-home-app-grid-page" data-page-index="${index}">
                         ${apps.map(app => this.renderAppIcon(app)).join('')}
@@ -391,7 +391,7 @@ export class HomeScreen {
         });
     }
 
-    getIconPageCapacity() {
+    _iconColumns() {
         /* [v3.93.0 · R-X9] 列数**从内核派生**（config/access-layers.js 的 narrowPlan）：
          *   320px 窄屏把列数改成 3（phone.css 的 @media 段落实），而容量是 JS 算的 ——
          *   两处各写一个 4 就必然漂移：窄屏上仍按 4 列摆，第 7 行被 dock 压住。
@@ -403,8 +403,17 @@ export class HomeScreen {
             if (w && typeof w.innerWidth === 'number') width = w.innerWidth;
         } catch (_e) { width = NaN; }
         const plan = narrowPlan({ width: width, level: this._accessLevel() });
+        return plan.cols;
+    }
+    getIconPageCapacity() {
+        const viewport = globalThis.window?.innerHeight || 840;
+        const h = Math.min(this.phoneShell?.screen?.clientHeight || viewport, viewport);
+        const columns = this._iconColumns();
         const rows = 5;
-        return plan.cols * rows;
+        if (h <= 660) return columns * 2;
+        if (h <= 800) return columns * 3;
+        if (h <= 900) return columns * 4;
+        return columns * rows;
     }
 
     /** 现读操作层档位（**只读** storage，不写、不缓存）：窄屏列数随档位微调。 */
@@ -490,9 +499,9 @@ export class HomeScreen {
         if (!Number.isFinite(pageCount) || pageCount <= 1) return '';
         const current = this._clampIconPage(this._iconPage ?? 0, pageCount);
         const dots = Array.from({ length: pageCount }, (_, i) =>
-            `<button type="button" class="home-page-dot yzp-home-page-dot${i === current ? ' is-active' : ''}" data-page-index="${i}" aria-label="第 ${i + 1} 页"></button>`
+            `<button type="button" class="home-page-dot yzp-home-page-dot${i === current ? ' is-active' : ''}" data-page-index="${i}" aria-current="${i === current ? 'page' : 'false'}" aria-label="第 ${i + 1} 页"></button>`
         ).join('');
-        return `<div class="home-page-dots yzp-home-page-dots" role="tablist">${dots}</div>`;
+        return `<div class="home-page-dots yzp-home-page-dots" role="group" aria-label="桌面分页">${dots}</div>`;
     }
 
     _clampIconPage(page, pageCount = null) {
@@ -512,12 +521,13 @@ export class HomeScreen {
         this._iconPage = next;
         pager.style.transform = `translate3d(${-next * 100}%, 0, 0)`;
         pager.querySelectorAll('.app-grid-page').forEach((el) => {
-            el.setAttribute('aria-hidden', String(Number(el.dataset.pageIndex) !== next));
+            el.inert = Number(el.dataset.pageIndex) !== next;
+            el.setAttribute('aria-hidden', String(el.inert));
         });
         pager.parentElement?.querySelectorAll?.('.home-page-dot').forEach((dot) => {
             const isActive = Number(dot.dataset.pageIndex) === next;
             dot.classList.toggle('is-active', isActive);
-            dot.setAttribute('aria-selected', String(isActive));
+            dot.setAttribute('aria-current', isActive ? 'page' : 'false');
         });
         return next !== prev;
     }

@@ -8,6 +8,8 @@
 
 import { FOCUS_REASONS, formatDuration } from './focus-data.js';
 
+const PAGES = { timer: '专注', tasks: '任务', stats: '统计', settings: '设置' };
+
 const FACE_META = {
     [FOCUS_REASONS.ready]: { icon: '\u23f1\ufe0f', label: '可以开工', tone: 'ok' },
     [FOCUS_REASONS.no_tasks]: { icon: '\u2615', label: '还没有专注任务', tone: 'warn' },
@@ -21,6 +23,7 @@ export class FocusView {
         this.storage = storage;
         this._root = null;
         this._timerEl = null;
+        this._page = 'timer';
     }
 
     render() {
@@ -28,20 +31,40 @@ export class FocusView {
         if (!container) return;
         container.innerHTML = '';
         this._root = document.createElement('div');
-        this._root.className = 'fc-root';
+        this._root.className = 'fc-root fc-app';
         this._root.innerHTML = this._buildHTML();
         container.appendChild(this._root);
+        this.refresh();
         this._bindEvents();
+        this._showPage(this._page);
     }
 
     refresh() {
         if (!this._root) return;
-        this._root.innerHTML = this._buildHTML();
-        this._bindEvents();
+        // 倒计时可在编辑中结束；只替换读数，不重建表单和导航。
+        for (const [page, draw] of [['timer', this._timerHTML], ['tasks', this._tasksHTML], ['stats', this._statsHTML]]) {
+            const slot = this._root.querySelector('[data-fc-slot="' + page + '"]');
+            if (slot) slot.innerHTML = draw.call(this);
+        }
+        this._timerEl = this._root.querySelector('.fc-timer');
+    }
+
+    _showPage(page, focusNav = false) {
+        if (!Object.hasOwn(PAGES, page)) return;
+        this._page = page;
+        for (const panel of this._root.querySelectorAll('[data-fc-page]')) panel.hidden = panel.dataset.fcPage !== page;
+        for (const btn of this._root.querySelectorAll('[data-fc-nav]')) {
+            if (btn.dataset.fcNav === page) {
+                btn.setAttribute('aria-current', 'page');
+                if (focusNav) btn.focus();
+            } else btn.removeAttribute('aria-current');
+        }
+        if (page === 'timer') this.tick();
     }
 
     /** 每秒只改计时文本，不整页重画（否则正在输入的任务名会被擦掉）。 */
     tick() {
+        if (this._page !== 'timer') return;
         if (!this._timerEl || !this._timerEl.isConnected) {
             this._timerEl = this._root ? this._root.querySelector('.fc-timer') : null;
         }
@@ -56,31 +79,29 @@ export class FocusView {
     }
 
     _buildHTML() {
+        const slots = {
+            timer: '<div data-fc-slot="timer"></div>',
+            tasks: '<div data-fc-slot="tasks"></div>' + this._createHTML(),
+            stats: '<div data-fc-slot="stats"></div>', settings: this._settingsHTML(),
+        };
+        const pages = Object.entries(PAGES);
+        return pages.map(([key, label]) => '<section class="fc-scroll" data-fc-page="' + key + '" hidden aria-label="' + label + '">' +
+            '<div class="fc-header"><h2>' + (key === 'timer' ? '番茄钟' : label) + '</h2></div>' + slots[key] + '</section>').join('') +
+            '<nav class="fc-tabbar" aria-label="番茄钟页面">' + pages.map(([key, label]) =>
+                '<button type="button" data-fc-nav="' + key + '">' + label + '</button>').join('') + '</nav>';
+    }
+
+    _timerHTML() {
         const app = this.app;
         const face = app.faceReason();
         const meta = FACE_META[face] || { icon: '\u2753', label: '未识别的状态：' + String(face), tone: 'warn' };
-        const stats = app.projection();
         const parts = [];
-
-        parts.push('<div class="fc-header"><h2>\u23f1\ufe0f 番茄钟</h2></div>');
 
         // 归因卡
         parts.push('<div class="fc-face fc-face-' + meta.tone + '">');
         parts.push('<span class="fc-face-icon">' + meta.icon + '</span>');
         parts.push('<span class="fc-face-label">' + this._esc(meta.label) + '</span>');
         parts.push('</div>');
-
-        // 统计卡（有记录才出）
-        if (stats && stats.hasHistory) {
-            parts.push('<div class="fc-stats">');
-            parts.push('<div class="fc-stat-row"><span>今日专注</span><span>' + this._esc(this.app.summaryLine()) + '</span></div>');
-            parts.push('<div class="fc-stat-row"><span>累计</span><span>' + stats.totalSessions + ' 次 · ' + this._esc(this._dur(stats.totalSeconds)) + '</span></div>');
-            parts.push('<div class="fc-stat-row"><span>单次平均</span><span>' + this._esc(this._dur(stats.avgSessionSeconds)) + '</span></div>');
-            if (stats.bestDaySeconds > 0) {
-                parts.push('<div class="fc-stat-row"><span>最佳单日</span><span>' + this._esc(this._dur(stats.bestDaySeconds)) + '</span></div>');
-            }
-            parts.push('</div>');
-        }
 
         // 专注屏（有当前任务才出）
         const cur = app.currentTask();
@@ -105,7 +126,25 @@ export class FocusView {
             parts.push('</div>');
         }
 
-        // 任务列表
+        if (!cur) parts.push('<button class="fc-btn fc-btn-primary" id="fc-choose">' +
+            (face === FOCUS_REASONS.no_tasks ? '创建任务' : '选择任务') + '</button>');
+        return parts.join('');
+    }
+
+    _statsHTML() {
+        if (this.app.faceReason() === FOCUS_REASONS.storage_absent) return '<p class="fc-hint">存储不可用，无法读取统计。</p>';
+        const stats = this.app.projection();
+        if (!stats || !stats.hasHistory) return '<p class="fc-hint">还没有专注记录</p>';
+        const rows = [['今日专注', this.app.summaryLine()], ['累计', stats.totalSessions + ' 次 · ' + this._dur(stats.totalSeconds)],
+            ['单次平均', this._dur(stats.avgSessionSeconds)]];
+        if (stats.bestDaySeconds > 0) rows.push(['最佳单日', this._dur(stats.bestDaySeconds)]);
+        return '<div class="fc-stats">' + rows.map(([label, value]) => '<div class="fc-stat-row"><span>' + label +
+            '</span><span>' + this._esc(value) + '</span></div>').join('') + '</div>';
+    }
+
+    _tasksHTML() {
+        const app = this.app;
+        const parts = [];
         const tasks = app.taskList();
         if (tasks.length > 0) {
             parts.push('<div class="fc-tasks">');
@@ -124,7 +163,11 @@ export class FocusView {
             parts.push('</div>');
         }
 
-        // 新建任务
+        return parts.join('');
+    }
+
+    _createHTML() {
+        const parts = [];
         parts.push('<div class="fc-create">');
         parts.push('<h3>\u2795 新建专注任务</h3>');
         parts.push('<input class="fc-input" id="fc-name" type="text" maxlength="40" placeholder="任务名称（如：写代码 / 背单词）">');
@@ -140,7 +183,11 @@ export class FocusView {
         parts.push('<button class="fc-btn fc-btn-primary" id="fc-add">创建任务</button>');
         parts.push('</div>');
 
-        // 设置
+        return parts.join('');
+    }
+
+    _settingsHTML() {
+        const parts = [];
         parts.push('<div class="fc-settings">');
         parts.push('<h3>\u2699\ufe0f 设置</h3>');
         parts.push('<label class="fc-toggle"><input type="checkbox" id="fc-inject" ' + (this.app.settings.injectToPrompt ? 'checked' : '') + '><span>专注进度注入 Prompt</span></label>');
@@ -182,24 +229,20 @@ export class FocusView {
             });
         }
 
-        for (const row of this._root.querySelectorAll('.fc-task')) {
-            const id = row.dataset.id;
-            const startBtn = row.querySelector('.fc-start');
-            const delBtn = row.querySelector('.fc-del');
-            if (startBtn) startBtn.addEventListener('click', () => { app.start(id); this.refresh(); });
-            if (delBtn) delBtn.addEventListener('click', () => { app.removeTask(id); this.refresh(); });
-        }
-
-        const pauseBtn = q('#fc-pause');
-        if (pauseBtn) pauseBtn.addEventListener('click', () => { app.pause(); this.refresh(); });
-        const resumeBtn = q('#fc-resume');
-        if (resumeBtn) resumeBtn.addEventListener('click', () => { app.resume(); this.refresh(); });
-        const pokeBtn = q('#fc-poke');
-        if (pokeBtn) pokeBtn.addEventListener('click', () => { app.poke(); this.refresh(); });
-        const finishBtn = q('#fc-finish');
-        if (finishBtn) finishBtn.addEventListener('click', () => { app.finish(); this.refresh(); });
-        const giveUpBtn = q('#fc-giveup');
-        if (giveUpBtn) giveUpBtn.addEventListener('click', () => { app.giveUp(); this.refresh(); });
+        this._root.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            if (btn.dataset.fcNav) return this._showPage(btn.dataset.fcNav);
+            if (btn.id === 'fc-choose') return this._showPage('tasks', true);
+            const row = btn.closest('.fc-task');
+            if (row && btn.matches('.fc-start') && app.start(row.dataset.id)) this._showPage('timer', true);
+            if (row && btn.matches('.fc-del')) { app.removeTask(row.dataset.id); this.refresh(); }
+            if (btn.id === 'fc-pause') app.pause();
+            if (btn.id === 'fc-resume') app.resume();
+            if (btn.id === 'fc-poke') app.poke();
+            if (btn.id === 'fc-finish') app.finish();
+            if (btn.id === 'fc-giveup') app.giveUp();
+        });
 
         const inject = q('#fc-inject');
         if (inject) inject.addEventListener('change', (e) => {
@@ -232,6 +275,7 @@ export class FocusView {
     _esc(s) {
         return String(s === null || s === undefined ? '' : s)
             .replace(/&/g, '&amp;')
+            .replace(/"/g, '\x26quot;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
     }

@@ -29,6 +29,7 @@
 'use strict';
 import { phoneConfirm } from '../../config/phone-feedback.js';
 import { WP_STYLES } from './worldpulse-engine.js';
+import { projectFeed } from './worldpulse-core.js';
 
 function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -130,14 +131,13 @@ export class WorldpulseView {
      *   · 有动态但这颗筛片没有 —— 报出总数，别让人误以为世界空了。
      */
     _renderFeedList() {
-        const history = this.app.getHistory().slice().reverse();
-        const rows = this._filter === 'all' ? history : history.filter((e) => e.style === this._filter);
+        const { rows, total } = projectFeed(this.app.getHistory(), this._filter);
         if (!rows.length) {
-            if (history.length) {
+            if (total) {
                 return `<div class="wp-empty" data-wp-empty="filtered">
                     <div class="wp-empty-icon">🔍</div>
                     <div>这颗筛片下还没有动态</div>
-                    <div class="wp-empty-sub">共 ${history.length} 条动态 —— 换一颗筛片，或点「全部」。</div>
+                    <div class="wp-empty-sub">共 ${total} 条动态 —— 换一颗筛片，或点「全部」。</div>
                 </div>`;
             }
             return `<div class="wp-empty" data-wp-empty="none">

@@ -3189,7 +3189,6 @@ renderChatRoom(chat) {
                             <div class="message-time-divider" style="
                                 display: flex;
                                 justify-content: center;
-                                margin: 15px 0;
                             ">
                                 <span class="time-divider-text" style="
                                     padding: 3px 10px;
@@ -3237,7 +3236,6 @@ renderChatRoom(chat) {
             <div class="message-time-divider wechat-manual-time-marker" data-message-id="${this._escapeHtml(messageId)}" data-message-index="${Number(messageIndex)}" style="
                 display: flex;
                 justify-content: center;
-                margin: 15px 0;
                 position: relative;
             ">
                 <span class="time-divider-text" style="

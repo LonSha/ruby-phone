@@ -559,6 +559,7 @@ export class CalendarView {
                 </span>
                 <div class="yzp-calendar-memo-copy">
                     <div class="yzp-calendar-memo-text">${memoLine}</div>
+                    ${isHoliday ? '' : `<label><input type="checkbox" data-calendar-memory="${this.escapeAttr(memoId)}" ${memo.memoryScope ? 'checked' : ''}> 允许记忆读取</label>`}
                 </div>
                 <button type="button" class="yzp-calendar-global-reminder-btn ${isGlobalReminder ? 'is-active' : ''}" ${isHoliday ? `data-holiday-global-reminder="${this.escapeAttr(memo.holidayId || '')}"` : `data-memo-global-reminder="${this.escapeAttr(memoId)}"`} aria-label="全局提醒">
                     <i class="fa-regular fa-clock"></i>
@@ -1067,7 +1068,7 @@ export class CalendarView {
             item.addEventListener('mouseleave', clearPress);
             item.addEventListener('contextmenu', openDelete);
             item.addEventListener('click', (e) => {
-                if (e.target?.closest?.('.yzp-calendar-delete-btn, .yzp-calendar-global-reminder-btn')) return;
+                if (e.target?.closest?.('.yzp-calendar-delete-btn, .yzp-calendar-global-reminder-btn, [data-calendar-memory]')) return;
                 if (longPressOpened) {
                     longPressOpened = false;
                     return;
@@ -1236,6 +1237,18 @@ export class CalendarView {
                 e.stopPropagation();
                 this.app.calendarData.deleteHoliday(btn.dataset.holidayDelete);
                 this.activeDeleteMemoId = '';
+                this.render();
+            });
+        });
+        root.querySelectorAll('[data-calendar-memory]').forEach(btn => {
+            btn.addEventListener('click', event => {
+                event.stopPropagation();
+                const enabled = btn.checked;
+                if (!this.app.calendarData.setMemoryAccess(btn.dataset.calendarMemory, enabled)) {
+                    this.app.phoneShell?.showNotification?.('日历', '未找到当前聊天，授权未更改');
+                    btn.checked = !enabled;
+                    return;
+                }
                 this.render();
             });
         });

@@ -39,10 +39,10 @@
     padding: 14px 24px 18px;
 }
 #phone-panel-content .phone-screen [data-rp-desktop="2"] .home-time .time-large {
-    font-size: 64px;
-    line-height: 1.02;
-    font-weight: 250;
-    letter-spacing: -2.2px;
+    font-size: 54px;
+    line-height: 1.05;
+    font-weight: 350;
+    letter-spacing: 0;
     font-variant-numeric: tabular-nums;
     color: #fff;
     text-shadow: 0 2px 14px rgba(0, 0, 0, .34);
@@ -61,7 +61,7 @@
 
 /* ---------- 3. 图标网格：4 列、呼吸更大的行距、图标底板统一 58 圆角 17 ---------- */
 #phone-panel-content .phone-screen [data-rp-desktop="2"] .app-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(var(--rp-page-cols, 4), minmax(0, 1fr));
     gap: 18px 14px;
     padding: 2px 18px 0;
     align-content: start;
@@ -146,10 +146,20 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 12px 0 10px;
+    gap: 0;
+    padding: 0;
 }
 #phone-panel-content .phone-screen [data-rp-desktop="2"] .home-page-dot {
+    display: grid;
+    place-items: center;
+    min-height: 28px;
+    min-width: 28px;
+    background: transparent;
+    padding: 0;
+    border: 0;
+}
+#phone-panel-content .phone-screen [data-rp-desktop="2"] .home-page-dot::before {
+    content: '';
     width: 6px;
     height: 6px;
     min-width: 0;
@@ -159,7 +169,7 @@
     background: rgba(255, 255, 255, .38);
     transition: width .22s ease, background .22s ease;
 }
-#phone-panel-content .phone-screen [data-rp-desktop="2"] .home-page-dot.is-active {
+#phone-panel-content .phone-screen [data-rp-desktop="2"] .home-page-dot.is-active::before {
     width: 16px;
     border-radius: 3px;
     background: #fff;
@@ -210,7 +220,7 @@
 #phone-panel-content .phone-screen [data-rp-desktop="2"].home-layout-cards .home-time-card .time-large {
     font-size: 44px;
     font-weight: 250;
-    letter-spacing: -1.4px;
+    letter-spacing: 0;
     color: #fff;
 }
 #phone-panel-content .phone-screen [data-rp-desktop="2"].home-layout-cards .home-widget-card {

@@ -152,7 +152,7 @@ export class MusicdeskApp {
         /* ★ 「现在几点」只许有一个出处：外部显式给过就用它，否则用系统时钟。
          *   两处各自取 —— 落盘时用外部给的时间、回读时用系统时钟 —— 会让
          *   冷却读数当场分岔（这一帧「还剩 30 秒」、下一帧「已经过了」）。 */
-        this._now = 0;
+        this._now = null;
         /* ★ 构造末尾就取一次数：否则读数与曲库在 render() 之前是空的 ——
          *   任何先读后画的路径都会把「还没取数」看成「一条都没有」。 */
         this.probe();
@@ -161,7 +161,7 @@ export class MusicdeskApp {
     nowOf(at) {
         const n = numOrNull(at);
         if (n !== null) return n;
-        if (this._now) return this._now;
+        if (this._now !== null) return this._now;
         return Date.now();
     }
     /**
@@ -784,7 +784,7 @@ export class MusicdeskApp {
     }
     queueKeepOf() { return this.queueKeep; }
     _receipt(row) {
-        const at = todayKeyOf ? todayKeyOf() : '';
+        const at = todayKeyOf(this.nowOf());
         const one = {
             at: toStr(row.at) || at,
             kind: toStr(row.kind),
@@ -904,7 +904,7 @@ export class MusicdeskApp {
         this._current = '';
         this._draft = '';
         this._tab = 'shelf';
-        this._now = 0;
+        this._now = null;
         this._lastKey = '';
         this.probe();
         if (this._view) this._view.refresh();

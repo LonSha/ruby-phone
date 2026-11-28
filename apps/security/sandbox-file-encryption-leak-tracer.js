@@ -1,3 +1,4 @@
+import { planAccessRecord } from './security-core.js';
 /* ============================================================
  * sandbox-file-encryption-leak-tracer.js
  * [v4.137.0 · V20 史诗级双计划 · R20-9]
@@ -39,9 +40,9 @@ export function recordUnauthorizedAccess(state, fileId, { actor, action = 'SCREE
   if (!state || !state.vaultFiles[fileId]) return null;
   const file = state.vaultFiles[fileId];
 
-  file.accessLog.push(`[${new Date().toISOString()}] ${actor} 执行了高危操作: ${action}`);
-  file.leakIndex = Math.min(1.0, +(file.leakIndex + 0.45).toFixed(2));
-
+  const next = planAccessRecord(file, actor, action, new Date().toISOString());
+  file.accessLog.push(next.line);
+  file.leakIndex = next.leakIndex;
   return file;
 }
 

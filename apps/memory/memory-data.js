@@ -170,8 +170,17 @@ export class MemoryCore {
          *   若先过门再吸块，这种回复会早退，块永远进不了桶
          *   （实测量到：只写块的那一楼 record 返回 null，pendingMemoryBlock 有读数而桶是空的）。 */
         if (block && block.present && !block.empty && block.items.length) {
-            try { this._absorbMemoryBlock(block, role, meta); } catch (_e) { /* 解析出的块坏了不阻断采集 */ }
+            this._absorbMemoryBlock(block, role, meta);
+            if (![SHARED_LEVELS.WORLD, SHARED_LEVELS.SHARED].includes(meta?.sharedLevel)) {
+                for (const item of block.items) {
+                    this._recordLocalContent(role, item.text, context, meta, true);
+                }
+            }
         }
+        return this._recordLocalContent(role, content, context, meta);
+    }
+
+    _recordLocalContent(role, content, context, meta, fromBlock = false) {
         if (!content) return null;
 
         const emotion = this.emotion.analyze(content);
@@ -191,12 +200,13 @@ export class MemoryCore {
             importance = Math.max(importance, 7);
         }
 
-        if (!meta?.pinned && importance < this.config.minImportance) return null; // 低价值普通消息不采集
+        if (!fromBlock && !meta?.pinned && importance < this.config.minImportance) return null;
 
         const entry = {
             id: 'stm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
             role,
             content: content.slice(0, 500),
+            ...(fromBlock ? { source: 'memory-block' } : {}),
             importance,
             emotion,
             tags: context.tags || this._extractTags(content),
@@ -231,39 +241,51 @@ export class MemoryCore {
         return this._sharedStore;
     }
 
-    _persistShared(store) {
-        this._sharedStore = store;
-        this._sharedLoaded = true;
-        this._sharedWriteCount += 1;
-        try { this.storage?.set?.(SHARED_MEMORY_KEY, JSON.stringify(store)); } catch (_e) { /* 全局桶写失败不阻断本会话记忆 */ }
+    async _persistShared(store) {
+        try {
+            const writer = this.storage?.setGlobalConfirmed || this.storage?.set;
+            if (!writer || await writer.call(this.storage, SHARED_MEMORY_KEY, JSON.stringify(store), true) === false) return false;
+            this._sharedStore = store;
+            this._sharedLoaded = true;
+            this._sharedWriteCount += 1;
+            return true;
+        } catch { return false; }
     }
 
-    /** 结构化块 → 跨卡桶。层级由调用方经 `meta.sharedLevel` 指定，默认 world：
+    _queueShared(fn) {
+        this._sharedPending = (this._sharedPending || Promise.resolve()).then(fn, fn);
+        return this._sharedPending;
+    }
+
+    /** 只有显式指定 world 或 shared 的结构化块才允许发布到跨卡桶。
      *  「共同经历」需要知道**是谁**的经历，而块里只有文本 —— 名字得由调用方给。 */
     _absorbMemoryBlock(block, role, meta) {
-        const level = (meta && meta.sharedLevel === SHARED_LEVELS.SHARED) ? SHARED_LEVELS.SHARED : SHARED_LEVELS.WORLD;
+        const level = meta?.sharedLevel;
+        if (level !== SHARED_LEVELS.WORLD && level !== SHARED_LEVELS.SHARED) {
+            return this._lastSharedWrite = { added: 0, skipped: block.items.length, level: SHARED_LEVELS.SAVE, bucket: 'save' };
+        }
         const cardId = String((meta && meta.cardId) || '');
         const chatId = String((meta && meta.chatId) || '');
         const name = String((meta && meta.character) || '');
-        let store = this._sharedStoreNow();
-        let added = 0;
-        for (const item of block.items) {
-            const res = sharedRemember(store, level, item.text, {
-                kind: item.kind, cardId: cardId, chatId: chatId, name: name, source: 'memory-block'
-            });
-            store = res.store;
-            if (res.added) added += 1;
-        }
-        this._lastSharedWrite = { added: added, skipped: block.items.length - added, level: level, bucket: level === SHARED_LEVELS.SHARED ? ('shared:' + name) : 'world' };
-        if (added > 0) this._persistShared(store);
-        return this._lastSharedWrite;
+        return this._queueShared(async () => {
+            let store = this._sharedStoreNow();
+            let added = 0;
+            for (const item of block.items) {
+                const res = sharedRemember(store, level, item.text, {kind: item.kind, cardId, chatId, name, source: 'memory-block'});
+                store = res.store;
+                if (res.added) added++;
+            }
+            const saved = !added || await this._persistShared(store);
+            return this._lastSharedWrite = { added: saved ? added : 0, skipped: block.items.length - added, saved, level, bucket: level === SHARED_LEVELS.SHARED ? 'shared:' + name : 'world' };
+        });
     }
 
     /** 三级检索：跨卡两档 + 本档。**逐档标注来源**（诊断页必须能回答
      *  「这条是跨卡层来的还是本会话来的」，揉成一列后两张卡的同名角色就分不开了）。 */
     recallShared(query = {}, limit = 8) {
         const q = (typeof query === 'string') ? { text: query } : (query || {});
-        const saveRecords = this.longTerm.map(function (m) { return { text: m.content, at: m.createdAt || '' }; });
+        const saveRecords = this.longTerm.concat((this.shortTerm || []).filter(m => m.source === 'memory-block'))
+            .map(m => ({ text: m.content, at: m.createdAt || '' }));
         const score = function (a, b) {
             const needle = String(a || '').trim();
             const hay = String(b || '');
@@ -290,8 +312,7 @@ export class MemoryCore {
 
     /** 跨卡桶清空（用户必须能清掉全局桶，否则它是一块看不见也删不掉的污渍）。 */
     clearShared() {
-        this._persistShared(emptyStore());
-        return true;
+        return this._queueShared(() => this._persistShared(emptyStore()));
     }
 
     _extractTags(text) {
@@ -653,7 +674,8 @@ export class MemoryCore {
             });
     }
 
-    clear() {
+    async clear() {
+        if (!await this.clearShared()) return false;
         this.longTerm = [];
         this.shortTerm = [];
         this.pool.clear();
@@ -663,8 +685,8 @@ export class MemoryCore {
          *   同一语义（连全局设置都清），留着跨卡桶会让用户以为清干净了。
          *   「清当前数据」走 clearCurrentChat()，那里**不动**跨卡桶 —— 跨卡层正是
          *   为了不被会话边界切碎才存在的。两者处置相反，故不共用一条实现。 */
-        this.clearShared();
-        this._save();
+        this._save(true);
+        return true;
     }
 
     /** 切换会话时重载记忆数据，防止跨聊天串味 */

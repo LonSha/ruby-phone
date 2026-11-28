@@ -1,0 +1,17 @@
+#yzp-settings-app[data-settings-view] { --dir-bg:#f2f2f7; --dir-row:#fff; --dir-ink:#161618; --dir-sep:#dedee3; color:var(--dir-ink); }
+#yzp-settings-app[data-settings-view]:not(.settings-has-wallpaper) {background:var(--dir-bg)}
+#yzp-settings-app[data-settings-view] .yzp-settings-tabs,
+#yzp-settings-app[data-settings-view] .rp-settings-directory[hidden],
+#yzp-settings-app[data-settings-view] .yzp-settings-body[hidden] {display:none}
+#yzp-settings-app[data-settings-view="directory"] {overflow-y:auto}
+#yzp-settings-app[data-settings-view="directory"] .yzp-settings-header h2 {font:700 30px/1.12 system-ui !important;color:var(--dir-ink) !important}
+#yzp-settings-app[data-settings-view] .yzp-settings-header {background:var(--dir-bg) !important}
+#yzp-settings-app[data-settings-view] .yzp-settings-header h2 {color:var(--dir-ink) !important}
+#yzp-settings-app[data-settings-view] .rp-settings-directory {display:grid;flex:none;margin:8px 12px 24px;overflow:hidden;border-radius:16px;background:var(--dir-row)}
+#yzp-settings-app[data-settings-view] .rp-settings-directory button {display:grid;grid-template-columns:30px minmax(0,1fr) 20px;gap:12px;align-items:center;min-height:48px;padding:8px 14px;border:0;border-bottom:1px solid var(--dir-sep);border-radius:0;background:var(--dir-row);color:var(--dir-ink);font:500 16px/1.35 system-ui;text-align:start;cursor:pointer}
+#yzp-settings-app .rp-settings-directory button:last-child {border-bottom:0}
+#yzp-settings-app .rp-settings-directory button i:first-child {display:grid;place-items:center;width:30px;height:30px;border-radius:7px;color:white;font-size:15px}
+#yzp-settings-app .rp-settings-directory button i:last-child {color:#85858d;font-size:13px}
+#yzp-settings-app .rp-settings-directory button:focus-visible {outline:2px solid #1675d1;outline-offset:-3px}
+#yzp-settings-app[data-settings-view="detail"] .r22-settings-filter-wrap,#yzp-settings-app[data-settings-view="detail"] #r22-settings-filter-status,#yzp-settings-app[data-settings-view="detail"] #r25-ia-panel {display:none}
+@media(prefers-color-scheme:dark){#yzp-settings-app[data-settings-view]{--dir-bg:#101012;--dir-row:#202023;--dir-ink:#f6f6f8;--dir-sep:#39393d}}

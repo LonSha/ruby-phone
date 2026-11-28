@@ -17,7 +17,12 @@ import { writeReceipt } from '../../config/write-receipt.js';
 
 const STATE_KEY = 'phone_text_v1';
 
+import { PhoneTextView } from './phone-text-view.js';
 export class PhoneTextApp {
+    render() {
+        this._view ??= new PhoneTextView(this, this.shell);
+        this._view.render();
+    }
     constructor(shell, storage) {
         this.shell = shell;
         this.storage = storage;

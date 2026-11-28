@@ -4,6 +4,7 @@
  * ======================================================== */
 'use strict';
 
+import { viewText } from '../../config/view-text.js';
 export class HoneyTextView {
     constructor(app, shell) {
         this.app = app;
@@ -47,7 +48,7 @@ export class HoneyTextView {
 
     _html() {
         const o = this.app.lastOut;
-        const out = o ? JSON.stringify(o) : '还没试算过';
+        const out = o ? viewText(JSON.stringify(o)) : '还没试算过';
         return '<div class="ht-head">'
             + '<div class="ht-title">蜜语 文本清洗试算台</div>'
             + '<div class="ht-sub">同一输入 => 同一结果（内核纯函数，不取时钟不造随机）</div>'
@@ -60,7 +61,7 @@ export class HoneyTextView {
             + '<button type="button" data-act="image">参考图归一</button>'
             + '<button type="button" data-act="comment">评论行归一</button>'
             + '</div>'
-            + (this._flash ? '<div class="ht-flash">' + this._flash + '</div>' : '')
+            + (this._flash ? '<div class="ht-flash">' + viewText(this._flash) + '</div>' : '')
             + '<div class="ht-out">' + out + '</div>';
     }
 

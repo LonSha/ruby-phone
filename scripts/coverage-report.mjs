@@ -118,20 +118,13 @@ function diskFilesByApp(appDirs) {
 /** 真跑一次全量覆盖，返回 { text, ms }。日志落仓外（不在门禁观测的树里写文件）。 */
 function runCoverage() {
     const t0 = Date.now();
+    const files = globTestFiles();
+    if (!files.length) return { text: '', ms: 0, code: 2 };
     const r = spawnSync(process.execPath, [
-        '--test',
-        '--experimental-test-coverage',
-        'tests/'
-    ], { cwd: ROOT, encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, timeout: 60 * 60 * 1000 });
-    const ms = Date.now() - t0;
-    /* `tests/` 目录形式 Node 不接受（实测 MODULE_NOT_FOUND），改用与 package.json 同款的 glob。 */
-    if (r.status !== 0 && !r.stdout) {
-        const r2 = spawnSync(process.execPath, [
-            '--test', '--experimental-test-coverage'
-        ].concat(globTestFiles()), { cwd: ROOT, encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, timeout: 60 * 60 * 1000 });
-        return { text: (r2.stdout || '') + (r2.stderr || ''), ms: Date.now() - t0, code: r2.status };
-    }
-    return { text: (r.stdout || '') + (r.stderr || ''), ms, code: r.status };
+        '--test', '--test-concurrency=1', '--experimental-test-coverage', '--test-reporter=spec', ...files
+    ], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, NODE_TEST_CONTEXT: undefined, FORCE_COLOR: '0' },
+         maxBuffer: 512 * 1024 * 1024, timeout: 60 * 60 * 1000 });
+    return { text: r.stdout || '', ms: Date.now() - t0, code: r.status };
 }
 
 function globTestFiles() {
@@ -171,6 +164,7 @@ function selfCheck() {
     /* ① 目录集合必须与磁盘逐项相等 —— 新 app 不许「自动」以 0% 混进账本还读成没退步。 */
     const disk = appDirsOnDisk();
     const inBase = Object.keys(base.dirs || {}).sort();
+    if (base.totals?.app_dirs !== inBase.length) problems.push('totals.app_dirs 与账本目录数不符');
     const added = disk.filter((d) => !inBase.includes(d));
     const gone = inBase.filter((d) => !disk.includes(d));
     if (added.length) problems.push('磁盘新增 app 目录未进账本 ' + added.length + ' 个（' + added.join('、') + '）—— 请 `--write` 刷新读数');
@@ -250,6 +244,10 @@ function main() {
     } else {
         say('[coverage] 真跑全量覆盖（约 11 分钟）……');
         const r = runCoverage();
+        if (r.code !== 0) {
+            console.error('[coverage] 拒判：覆盖采集子进程未成功结束（rc=' + r.code + '）');
+            return 2;
+        }
         text = r.text;
         runMs = r.ms;
         if (!text || text.trim() === '') {
@@ -258,6 +256,20 @@ function main() {
         }
     }
 
+    if (!/^ℹ start of coverage report\s*$/m.test(text) || !/^ℹ end of coverage report\s*$/m.test(text)) {
+        console.error('[coverage] 拒判：覆盖报告不完整');
+        return 2;
+    }
+    if (WRITE && FROM) {
+        const count = name => {
+            const hits = [...text.matchAll(new RegExp('^ℹ ' + name + ' (\\d+)$', 'gm'))];
+            return hits.length === 1 ? Number(hits[0][1]) : NaN;
+        };
+        if (!(count('tests') > 0 && count('pass') > 0 && count('fail') === 0 && count('cancelled') === 0)) {
+            console.error('[coverage] 拒判：离线写账需要完整且无失败、无取消的测试汇总');
+            return 2;
+        }
+    }
     const live = buildLive(text);
     if (!live.rows.length) {
         console.error('[coverage] 拒判：覆盖表里一条文件行都没解析到 —— 证据全无，不得读成「覆盖率 100%」');
@@ -315,6 +327,7 @@ function main() {
             },
             dirs: live.dirs
         };
+        fs.writeFileSync(path.join(ROOT, 'tests/audit/coverage_source.log'), text);
         fs.writeFileSync(path.join(ROOT, BASE_REL), JSON.stringify(doc, null, 2) + '\n');
         say('[coverage] 账本已写盘：' + BASE_REL + '（app 目录 ' + live.appDirs.length +
             ' 个 · 盘上文件 ' + totalFiles + ' · 零覆盖文件 ' + totalZero + '）');

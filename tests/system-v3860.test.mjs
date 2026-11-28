@@ -414,7 +414,9 @@ test('v3860 C3. 诊断协议面纯渲染：只读宿主缓存与内核口径，�
 
 test('v3860 C4. 搜索行面纯渲染：只在图上有这一条时才加一行，没图不说话', () => {
     const view = read(A_SEARCH);
-    assert.ok(view.includes("import { pgRowFace } from '../../config/provenance-graph.js'"), '行面口径必须来自内核');
+    assert.ok(view.includes('vp?.provenanceRowFace?.(ref)'), '搜索只读宿主当前图');
+    assert.match(read(IDX), /function provenanceRowFace\(ref\)\s*\{\s*return pgRowFace\(window\.VirtualPhone\?\._provenanceCache, ref\);/);
+    assert.match(read(IDX), /applyProvenanceJump: applyProvenanceJump,\s*provenanceRowFace,/);
     assert.ok(view.includes('_provRowHtml(ref) {'), '行面读数必须由本件排版');
     assert.ok(view.includes("face.why === 'no-graph') return ''"), '图没跑就不说话（既不夸也不冤）');
     assert.ok(view.includes('来源链：'), '命中时须把来源链读数摆出来');

@@ -18440,6 +18440,16 @@ html[data-still="1"] .games-catbox-cat.is-home {
  *    仍是 `running` 状态（`document.getAnimations()` 里看得见），Chromium 131 复现。
  *    两个属性分工：`data-still` 管用户偏好（跨前后台成立），`data-bg` 管当下处境
  *    （恢复后必须立刻消失）—— 塌成一个会让「用户自己选的减动」与「系统帮它省电」同形。 */
+/* Background chrome includes the panel frame and its battery transition. */
+html[data-bg] #phone-panel,
+html[data-bg] #phone-panel *,
+html[data-bg] #phone-panel *::before,
+html[data-bg] #phone-panel *::after {
+    transition-property: none !important;
+    animation-play-state: paused !important;
+}
+/* Match the specificity of the active record's animation shorthand. */
+html[data-bg] #phone-panel #phone-panel-content .home-vinyl-record { animation-play-state: paused !important; }
 html[data-bg] .phone-screen *,
 html[data-bg] .phone-screen *::before,
 html[data-bg] .phone-screen *::after {

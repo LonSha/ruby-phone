@@ -12,7 +12,12 @@ import { writeReceipt } from '../../config/write-receipt.js';
 
 const STATE_KEY = 'daily_fabric_v1';
 
+import { DailyView } from './daily-view.js';
 export class DailyApp {
+    render() {
+        this._view ??= new DailyView(this, this.shell);
+        this._view.render();
+    }
     constructor(shell, storage) {
         this.shell = shell; this.storage = storage;
         this.state = defaultDailyState();

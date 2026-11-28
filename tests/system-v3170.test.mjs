@@ -366,7 +366,7 @@ test('v3170 B8. [v3.60.0 · 计划 O2] 全历史扫描片间真的让出事件�
 /* ══════════════ C ── 控制器与视图面 ══════════════ */
 /** 小仓库：把搜索链路整条复制过去（负控制副本与行为判据共用一份）。 */
 const CLOSURE = [
-    GSE, APP, VIEW, 'config/world-bridge.js',
+    GSE, APP, VIEW, 'apps/search/search-core.js', 'config/world-bridge.js',
     // [v3.66.0 · X2] 搜索内核新增两个 config 依赖（跨 App 靶心协议件 / 数值门）：
     //   闭包不带它们，副本 import 直接 ERR_MODULE_NOT_FOUND，
     //   负控制就变成「因缺文件而红」而不是「因破坏而红」。

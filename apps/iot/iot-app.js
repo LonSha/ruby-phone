@@ -20,7 +20,12 @@ import { writeReceipt } from '../../config/write-receipt.js';
 /* 会话键：必须命中 config/storage.js 的 CHAT_DATA_PATTERNS 里 /^iot_/，否则跨会话串味 */
 const STATE_KEY = 'iot_state';
 
+import { IotView } from './iot-view.js';
 export class IotApp {
+    render() {
+        this._view ??= new IotView(this, this.shell);
+        this._view.render();
+    }
     constructor(shell, storage) {
         this.shell = shell;
         this.storage = storage;

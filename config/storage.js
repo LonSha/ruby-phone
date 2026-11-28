@@ -963,9 +963,10 @@ export class PhoneStorage {
             if (!saveResponse.ok) {
                 console.error('[PhoneStorage] 保存到服务器失败');
             }
-
+            return saveResponse.ok;
         } catch (e) {
             console.error('[PhoneStorage] 手动保存设置异常:', e);
+            return false;
         }
     }
 
@@ -1072,6 +1073,40 @@ export class PhoneStorage {
      *        那始终由 CHAT_DATA_PATTERNS（_isChatData）决定。
      *        历史上它是被 set(key, value) 签名静默丢弃的死参数（全仓库 18 处调用点）。
      */
+    async _confirmHostSettings(ctx, matches) {
+        // The host save may resolve after reporting an error. Check its persisted namespace.
+        if (typeof ctx?.saveSettings === 'function') await ctx.saveSettings();
+        else {
+            const host = await import('/script.js');
+            await host.saveSettings();
+        }
+        const response = await fetch('/api/settings/get', {
+            method: 'POST', headers: ctx.getRequestHeaders(), body: '{}', cache: 'no-store'
+        });
+        if (!response.ok) throw new Error('Cannot verify host settings');
+        const { settings } = await response.json();
+        const saved = typeof settings === 'string' ? JSON.parse(settings) : settings;
+        const ns = saved?.extension_settings?.[this.NAMESPACE];
+        if (!ns || !matches(ns)) throw new Error('Host readback mismatch');
+    }
+
+    async setGlobalConfirmed(key, value) {
+        if (this._isChatData(key)) throw new Error('Expected global storage key');
+        const store = this._getExtensionSettingsStore();
+        const localKey = this._getLegacyLocalStorageKey(key, false);
+        if (!store) { globalThis.localStorage.setItem(localKey, value); return; }
+        const had = Object.hasOwn(store, key), before = store[key];
+        store[key] = value;
+        try {
+            await this._confirmHostSettings(this.getContext(), saved => saved[key] === value);
+        } catch (err) {
+            if (had) store[key] = before; else delete store[key];
+            throw err;
+        }
+        // A stale offline copy must not resurrect an erased bucket.
+        globalThis.localStorage.setItem(localKey, value);
+    }
+
     async set(key, value, immediate = false) {
         // [v2.84.0] null / undefined 一律按「删除该键」处理，不再把它写进存档。
         //
@@ -1743,13 +1778,7 @@ export class PhoneStorage {
                 context2.extensionSettings[this.NAMESPACE] = {};
 
                 // 保存到服务器
-                if (typeof context2.saveSettingsDebounced === 'function') {
-                    context2.saveSettingsDebounced();
-                } else if (typeof saveSettingsDebounced === 'function') {
-                    saveSettingsDebounced();
-                } else {
-                    this._queuedSaveExtensionSettings();
-                }
+                await this._confirmHostSettings(context2, saved => Object.keys(saved).length === 0);
             }
 
             // 3️⃣ 清理 localStorage（所有带插件命名空间的键）
@@ -1763,10 +1792,10 @@ export class PhoneStorage {
                 }
             });
 
-            console.log('[PhoneStorage] 恢复出厂设置完成：所有数据已清空');
-
+            return true;
         } catch (e) {
             console.error('[PhoneStorage] 清空所有数据失败:', e);
+            return false;
         }
     }
 }

@@ -13,6 +13,7 @@ import { phoneNotice, phoneConfirm, phonePrompt } from '../../config/phone-feedb
 import { parseJsonTolerant } from '../../config/json-symbol-repair.js';
 import { filterSettings as _r22FilterSettings, settingsFilterNote } from '../../config/settings-filter.js?v=4.157.0&r=20261116-r22';
 import { a11yAudit as _r22A11yAudit, a11yNote } from '../../config/a11y-audit.js?v=4.157.0&r=20261116-r22';
+import { mountSettingsDirectory } from './settings-directory.js';
 import { mountIaPanel } from './settings-ia-panel.js?v=4.157.0&r=20261119-r25o5';
 /* [v4.199.0 · R27-U1] 手机取色纯函数族：字符串 -> 颜色与 rgb <-> hsv 的唯一真源。
  *   本节只消费，不再本地实现：此前 7 个函数 + 1 个常量写在本文件里（149~231 行），
@@ -1166,7 +1167,10 @@ export class SettingsApp {
         const currentView = document.querySelector('.phone-view-current');
         if (!currentView?.querySelector('.settings-app')) return;
 
-        // 设置页面没有子页面，直接返回主屏幕
+        if (this._settingsDetail) {
+            currentView.querySelector('#yzp-settings-home-back')?.click();
+            return;
+        }
         window.dispatchEvent(new CustomEvent('phone:goHome'));
     }
 
@@ -2945,8 +2949,9 @@ export class SettingsApp {
 
                             <div class="setting-item setting-button">
                                 <button class="setting-btn" id="clear-all-data" style="padding: 4px 10px; font-size: 11px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); border: none; border-radius: 4px; color: #ff3b30; box-shadow: 0 1px 4px rgba(0,0,0,0.12);">
-                                    清空所有角色数据
+                                    重置手机数据
                                 </button>
+                                <span id="rp-reset-result" role="status" aria-live="polite"></span>
                             </div>
                             ${this.renderRecycleBinSection()}
                             </div>
@@ -3547,6 +3552,7 @@ export class SettingsApp {
             const ar = _r22A11yAudit({ nodes }); this._r22A11yFace = { face: ar.face, interactive: ar.interactive, gapCount: ar.gapCount, note: a11yNote(ar) };
         }
         this.bindEvents();
+        mountSettingsDirectory(this._getActiveSettingsRoot(), this);
         mountUsagePattern(this._getActiveSettingsRoot(), this.storage);
         mountDeviceRuntimeSection(this._getActiveSettingsRoot(), this.storage);
         /* R25-O5：组目录 / 跨 tab 搜索可见 / 统一恢复默认。判据在 config/settings-ia.js、DOM 在 settings-ia-panel.js，
@@ -11769,13 +11775,25 @@ export class SettingsApp {
         });
         
         // 清空所有数据
-        document.getElementById('clear-all-data')?.addEventListener('click', () => {
-            if (phoneConfirm('⚠️ 警告！\n\n确定清空所有角色的手机数据（含蜜语生成内容）？\n此操作将删除所有聊天记录、消息、联系人，并恢复微信/微博自定义 CSS！\n\n此操作不可恢复！')) {
-                if (phoneConfirm('再次确认：真的要删除所有数据吗？')) {
-                    window.dispatchEvent(new CustomEvent('phone:clearAllData'));
-                    phoneNotice('✅ 所有数据已清空！');
-                }
-            }
+        document.getElementById('clear-all-data')?.addEventListener('click', async (event) => {
+            const button = event.currentTarget;
+            if (button.disabled || !phoneConfirm('重置当前聊天的手机数据、跨卡共享记忆、全局设置和本机手机缓存？不会逐个删除其他酒馆聊天存档。')) return;
+            if (!phoneConfirm('此操作不可撤销。确定重置吗？')) return;
+            button.disabled = true;
+            const status = button.parentElement.querySelector('#rp-reset-result');
+            const notify = message => { if (status) status.textContent = message; phoneNotice(message); };
+            if (status) status.textContent = '正在重置…';
+            try {
+                let completion;
+                window.dispatchEvent(new CustomEvent('phone:clearAllData', {
+                    detail: { respondWith(result) { completion = result; } }
+                }));
+                if (!completion) return notify('重置服务未就绪，未开始清理。');
+                const result = await completion;
+                notify(result.ok ? '手机数据已重置。' : result.message);
+            } catch {
+                notify('重置未完成，部分数据可能已清理。请检查存储后重试。');
+            } finally { button.disabled = false; }
         });
 
         // 🗑️ 回收站（[v4.104.0 · R13-O8]）

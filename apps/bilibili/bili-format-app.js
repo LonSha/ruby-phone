@@ -20,7 +20,12 @@ const STATE_KEY = 'bili_format_v1';
 /** 试算用的固定时刻（毫秒）。nowMs 一律由调用方给，内核不自己取时间。 */
 const DEMO_NOW = 1763808000000;
 
+import { BiliFormatView } from './bili-format-view.js';
 export class BiliFormatApp {
+    render() {
+        this._view ??= new BiliFormatView(this, this.shell);
+        this._view.render();
+    }
     constructor(shell, storage) {
         this.shell = shell;
         this.storage = storage;

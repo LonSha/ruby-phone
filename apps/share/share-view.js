@@ -18,6 +18,7 @@ const FACE_META = {
 
 const KIND_LABEL = { text: '文字', contactCard: '名片', file: '文件', snippet: '片段' };
 
+import { viewText } from '../../config/view-text.js';
 export class ShareView {
     constructor(app, shell) {
         this.app = app;
@@ -64,17 +65,17 @@ export class ShareView {
         const st = app.state;
         const face = app.face;
         const meta = FACE_META[face] || FACE_META[SHARE_FACE.IDLE];
-        const flash = this._flash ? ('<div class="share-flash">' + this._flash + '</div>') : '';
+        const flash = this._flash ? ('<div class="share-flash">' + viewText(this._flash) + '</div>') : '';
 
         const cards = st.nearby.length
             ? st.nearby.map((d) => (
                 '<div class="share-card">'
-                + '<div class="share-card-head"><span class="share-name">' + d.name + '</span>'
-                + '<span class="share-signal">信号 ' + d.signal + '</span></div>'
+                + '<div class="share-card-head"><span class="share-name">' + viewText(d.name) + '</span>'
+                + '<span class="share-signal">信号 ' + viewText(d.signal) + '</span></div>'
                 + '<div class="share-acts">'
-                + '<button class="share-btn" type="button" data-act="send" data-dev="' + d.id + '" data-kind="contactCard">发名片</button>'
-                + '<button class="share-btn" type="button" data-act="send" data-dev="' + d.id + '" data-kind="text">发文字</button>'
-                + '<button class="share-btn share-btn-ghost" type="button" data-act="leave" data-dev="' + d.id + '">离开</button>'
+                + '<button class="share-btn" type="button" data-act="send" data-dev="' + viewText(d.id) + '" data-kind="contactCard">发名片</button>'
+                + '<button class="share-btn" type="button" data-act="send" data-dev="' + viewText(d.id) + '" data-kind="text">发文字</button>'
+                + '<button class="share-btn share-btn-ghost" type="button" data-act="leave" data-dev="' + viewText(d.id) + '">离开</button>'
                 + '</div>'
                 + '</div>'
             )).join('')
@@ -93,8 +94,8 @@ export class ShareView {
 
         const hist = st.history.length
             ? st.history.slice().reverse().slice(0, 12).map((h) => (
-                '<div class="share-hrow"><span class="share-hk">' + (KIND_LABEL[h.kind] || h.kind) + '</span>'
-                + '<span class="share-hd">' + (h.title || '（无标题）') + ' ->  ' + h.deviceName + '</span></div>'
+                '<div class="share-hrow"><span class="share-hk">' + viewText((KIND_LABEL[h.kind] || h.kind)) + '</span>'
+                + '<span class="share-hd">' + viewText((h.title || '（无标题）')) + ' ->  ' + viewText(h.deviceName) + '</span></div>'
             )).join('')
             : '<div class="share-empty">还没有流水。</div>';
 
@@ -107,7 +108,7 @@ export class ShareView {
             + flash
             + '<div class="share-sec-t">范围内 ' + st.nearby.length + ' 台</div>'
             + '<div class="share-cards">' + cards + '</div>'
-            + '<div class="share-sec-t">派发预览：' + previewLine + '</div>'
+            + '<div class="share-sec-t">派发预览：' + viewText(previewLine) + '</div>'
             + '<div class="share-sec-t">流水（' + st.history.length + ' 条）</div>'
             + '<div class="share-hist">' + hist + '</div>'
             + '<div class="share-foot">'

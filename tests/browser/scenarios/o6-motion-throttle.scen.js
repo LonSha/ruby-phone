@@ -42,7 +42,7 @@ function animsIn(scopeSel) {
     let name = ''; let it = null;
     try { name = String(a.animationName || ''); } catch (_e) { /* 忽略 */ }
     try { it = a.effect.getTiming().iterations; } catch (_e) { it = null; }
-    out.push({ name: name, iterations: it === null ? null : String(it), state: String(a.playState) });
+    out.push({ name: name || a.transitionProperty || '', target: t.id || t.className, iterations: it === null ? null : String(it), state: String(a.playState) });
   }
   return out;
 }
@@ -152,6 +152,7 @@ report({
     && beforeHide.pet.playing > 0 && afterHide.pet.playing === 0
     && afterHide.stats.sampler && afterHide.stats.sampler.armed === false,
   detail: 'data-bg=' + String(afterHide.bg)
+    + ' remaining=' + JSON.stringify(afterHide.anims.filter(r => r.state === 'running').map(r => [r.name, r.target]))
     + ' runningAnims before=' + runningAny(beforeHide.anims) + ' after=' + runningAny(afterHide.anims)
     + ' petPlaying before=' + beforeHide.pet.playing + ' after=' + afterHide.pet.playing
     + ' samplerArmed before=' + String(beforeHide.stats && beforeHide.stats.sampler && beforeHide.stats.sampler.armed)

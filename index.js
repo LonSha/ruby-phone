@@ -737,7 +737,7 @@ const ST_PHONE_CURRENT_UPDATE = {
         "【存量判据的交棒改写（三处，两类性质不同）】① v246 J8 与 v311 C1~C3 属「判据钉了位置」：J8 原来只画首屏就断言「在场分组与楼层真被画出来」，C1~C3 原来只画首屏就断言诊断卡在场；卡片按格分组后首屏自然没有了。判据的真不变式是「这些内容真被画出来」，不是「必须落在第一格」，于是三处统一改成把四格各渲染一遍、合并看到的 DOM 再判在场（v311 三处先把 el.innerHTML 改成累计变量 html 再 includes）。② v310 C1「到访次数进 DOM」是**本版自己抓到的缺陷**（不是判据过时）：改造时漏把 `_visitHistoryCard` 放进「这里」格，修法是补一行而不是改判据——这条必须与①分开记，否则下次会把真缺陷当判据噪音顺手改掉。",
         "【基线刷新（v3770 B1/B2）】本仓新增一个 .css 后，v3770 的计数基线族读到的枚举面变了（after_motion_css.css_files_scanned 229 → 235 等 13 处），B1/B2「计数段与基线逐字段相等」因此转红。这是**基线过时**而非本版缺陷：用仓内既有的 tools/refresh_baselines_v3930.py 先 dry-run 列出 13 处待写（longlist 2 / schedule_conflict 2 / branch_play 2 / long_chat 2 / lifecycle_declarative 5）再 --write，脚本零手抄、幂等、冻结 measured_at、*_pct 口径归一。刷新后 v324 / v325 / v326 / v327 / v3770 复跑 84/84。",
         "【判据对本版行为的约束（可复算）】PL_FACES 四行（here / who / go / more）；`const head = this._reasonCard(face);` 在面分派函数里只出现 1 次；`_btmNavHtml` 恰好 2 次（定义 + 调用）；`data-pl-face` 3 处（模板定义 + 属性名 + 绑定委托）；here 格含 source / summary / current / header / tree / visitHistory 六张卡；who 格含 presence / coPresence / presenceBand；go 格含 roam / district；more 格含 settings / diag；视图零 setTimeout / setInterval / alert。这些数字都是判据的落点，改结构时必须跟着复算。",
-        "【运行时验证边界】本版只验到结构面与静态判据：四格在真机上的滚动手感、切格后的重画成本（十三张卡按格分摊后单次绘制量应下降，但还没真机实测）、底栏在 data-rp-ds=2 与 data-rp-ios=3 各档下的观感、以及「到访史」留在第一格是否真的够用，都还没在真机看过。真机复现后再修。"
+        "【运行时验证边界】静态检查不能保证真机上没有「看起来没坏但显示不对」的问题。本版只验到结构面与静态判据：四格在真机上的滚动手感、切格后的重画成本（十三张卡按格分摊后单次绘制量应下降，但还没真机实测）、底栏在 data-rp-ds=2 与 data-rp-ios=3 各档下的观感、以及「到访史」留在第一格是否真的够用，都还没在真机看过。真机复现后再修。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）
@@ -4724,9 +4724,12 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
      *   与 R-X1 的 open 同一族：**跳转是导航不是状态**，账本一个字不改；
      *   跳不过去**如实回报，并带回可执行的替代定位**（验收②）。
      */
+    function provenanceRowFace(ref) {
+        return pgRowFace(window.VirtualPhone?._provenanceCache, ref);
+    }
     function applyProvenanceJump(ref) {
         try {
-            const face = pgRowFace(window.VirtualPhone ? window.VirtualPhone._provenanceCache : null, ref);
+            const face = provenanceRowFace(ref);
             if (!face.found) {
                 const whyText = face.why === 'no-graph' ? '这一轮还没取到来源图（等下一次刷新）'
                     : (face.why === 'blocked' ? '这一条被隔离了（' + String(face.blockReason || '') + '），不给跳转'
@@ -11732,6 +11735,7 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                 /* [v3.86.0 · 拓展计划 R-X2] 来源图跳转的**唯一写入口**：
                  *   视图只把靶心交上来，图上查不到就如实回报（并给替代定位）。 */
                 applyProvenanceJump: applyProvenanceJump,
+                provenanceRowFace,
                 /* [v3.87.0 · 拓展计划 R-X3] 财务提交的**唯一写入口**：
                  *   视图只把动作交上来，落账 / 回读 / 撤销都在咽喉这一处做。 */
                 applyFinanceCommitAction: applyFinanceCommitAction,
@@ -13069,7 +13073,19 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                 ]);
             });
 
-            window.addEventListener('phone:clearAllData', async () => { // 🔥 加上 async
+            let pendingReset;
+            window.addEventListener('phone:clearAllData', (event) => {
+                pendingReset ??= resetPhoneData().catch(error => {
+                    console.warn('[ST-Phone] 重置未完成:', error);
+                    return { ok: false, message: '重置未完成，部分数据可能已清理。请检查存储后重试。' };
+                }).finally(() => { pendingReset = null; });
+                if (event.detail?.respondWith) event.detail.respondWith(pendingReset);
+                else pendingReset.then(r => { if (!r.ok) window.VirtualPhone?.phoneShell?.showNotification?.('设置', r.message); });
+            });
+            async function resetPhoneData() {
+                if (!await window.VirtualPhone?.memoryCore?.clear?.()) {
+                    return { ok: false, message: '共享记忆重置未获确认，其他清理未开始。请检查存储后重试。' };
+                }
                 await cleanupWechatManagedMessageImagesBeforeStorageClear();
                 if (window.VirtualPhone?.honeyApp) {
                     try {
@@ -13082,8 +13098,7 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                         console.warn('[ST-Phone] 清理 Honey 生成图片失败:', e);
                     }
                 }
-                try { window.VirtualPhone?.memoryCore?.clear?.(); } catch (e) {}
-                storage.clearAllData();
+                if (!await storage.clearAllData()) throw new Error('Phone storage reset not confirmed');
                 await clearGlobalCustomCssSettings();
                 // [v2.18.0] 清数据时同步丢弃落账层内存缓存（含挂起防抖写入），防止已清通知复活
                 _chatSessionGeneration += 1;
@@ -13183,7 +13198,8 @@ function showUnifiedPhoneNotification(title, message, icon = '📱', options = {
                     /<Honey>[\s\S]*?<\/Honey>/gi,
                     /<\s*短信\s*>[\s\S]*?<\s*\/\s*短信\s*>/gi
                 ]);
-            });
+                return { ok: true };
+            }
 
             // 连接到酒馆
             const context = getContext();

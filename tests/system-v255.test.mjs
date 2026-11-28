@@ -87,6 +87,7 @@ test('A4 rebindLazyApps 定义为函数且逐个安全调用', () => {
 
 test('A5 表中每个 App 自身都实现了 onChatChanged', () => {
   const dirMap = {
+    lineApp: 'line',
     tiebaApp: 'tieba', xhsApp: 'xhs', gachaApp: 'gacha', readingApp: 'reading', tarotApp: 'tarot',
     healthApp: 'health', achievementApp: 'achievement', playbookApp: 'playbook',
     bilibiliApp: 'bilibili', theaterApp: 'theater', placeApp: 'place', cheatApp: 'cheat',

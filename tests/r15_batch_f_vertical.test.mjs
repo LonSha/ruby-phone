@@ -140,3 +140,8 @@ test('R15-Batch-F: 虚拟滚动切片、角色主题与数字遗物解密 (R15-O
     assert.match(successAttempt.decryptedContent, /如果有一天我忘记了/);
     assert.equal(vault.listRelics()[0].isUnlocked, true);
 });
+test('Offline review keeps story time zero, falls back for invalid timestamps and preserves equal-time order', () => {
+    const rows = Object.freeze([{ id: 'a', storyTimestamp: '', timestamp: 3 }, { id: 'b', storyTimestamp: 0, timestamp: 20 }, { id: 'c', storyTimestamp: 'bad', timestamp: 3 }]);
+    assert.deepEqual(reorderOfflineNotifications(rows).map(r => r.id), ['b', 'a', 'c']);
+    assert.deepEqual(rows.map(r => r.id), ['a', 'b', 'c']);
+});

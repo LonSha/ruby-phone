@@ -241,6 +241,7 @@ function loadMutant(replacements, tag) {
   const file = path.join(appDir, 'line-data.js');
   fs.writeFileSync(file, src, 'utf8');
   fs.copyFileSync(path.join(ROOT, 'config', 'num-gate.js'), path.join(dir, 'config', 'num-gate.js'));
+  fs.copyFileSync(path.join(ROOT, 'config', 'local-calendar.js'), path.join(dir, 'config', 'local-calendar.js'));
   return import(pathToFileURL(file).href + `?t=${Date.now()}`);
 }
 

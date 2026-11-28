@@ -1,3 +1,4 @@
+import { projectMomentReactions } from './moments-core.js';
 /* ============================================================
  * npc-social-graph-dynamic-moments.js — [v4.138.0 · V21-R15]
  * 社交朋友圈多 NPC 情感互动网络与自主演化评论场 (Dynamic Moments Social Graph)
@@ -29,37 +30,5 @@ function storyNowOrWall(win) {
  * @param {object|null} win 宿主（`window`）；装配层透传，判据环境不传即显式降级
  */
 export function generateMomentReactions(postContent = "", inSceneCharacters = [], win = null) {
-    const comments = [];
-    const likes = [];
-    const now = storyNowOrWall(win);
-
-    for (const char of inSceneCharacters) {
-        const name = String(char.name || "NPC");
-        const relation = String(char.relation || "friend");
-
-        if (relation === "crush" || relation === "lover") {
-            likes.push(name);
-            comments.push({
-                author: name,
-                text: "...拍得真好看。下次、下次也带我一起去嘛！",
-                timestamp: now
-            });
-        } else if (relation === "rival") {
-            comments.push({
-                author: name,
-                text: "呵，这种无聊的地方有什么好炫耀的。",
-                /* `+5000` 是「隔了几秒才阴阳一句」的**相对偏移**：建在同一个钟上，
-                 *   否则剧情钟与墙钟混用会让这条评论排到别的评论前面。 */
-                timestamp: now + 5000
-            });
-        } else {
-            likes.push(name);
-        }
-    }
-
-    return {
-        postContent,
-        likes,
-        comments
-    };
+    return projectMomentReactions(postContent, inSceneCharacters, storyNowOrWall(win));
 }

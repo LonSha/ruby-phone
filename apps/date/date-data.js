@@ -178,24 +178,23 @@ export function msOfTime(v) {
     return numOrNull(v);
 }
 
+import { localParts, localDayStart } from '../../config/local-calendar.js';
 /** 本地时区的日期串（源用 `toISOString().split('T')[0]` —— 那是 UTC 日期）。 */
 export function localDateStr(ms) {
     const t = msOfTime(ms);
     if (t === null) return '';
-    const d = new Date(t);
-    if (!Number.isFinite(d.getTime())) return '';
+    const d = localParts(t);
+    if (!d) return '';
     const p = (x) => String(x).padStart(2, '0');
-    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    return d.year + '-' + p(d.month) + '-' + p(d.day);
 }
 
 /** 本地日期串 → 当天 0 点毫秒；形状不对 ⇒ null（不许把 `2026-02-30` 顺延成 3-02）。 */
 export function startOfLocalDay(ms) {
     const t = msOfTime(ms);
     if (t === null) return null;
-    const d = new Date(t);
-    if (!Number.isFinite(d.getTime())) return null;
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
+    const d = localParts(t);
+    return d ? localDayStart(d.year, d.month, d.day) : null;
 }
 
 export function parseDateInput(v) {
@@ -210,10 +209,7 @@ export function parseDateInput(v) {
     const mo = Math.round(numOrNull(m[2]) ?? -1);
     const da = Math.round(numOrNull(m[3]) ?? -1);
     if (y < 1970 || y > 3000 || mo < 1 || mo > 12 || da < 1 || da > 31) return null;
-    const d = new Date(y, mo - 1, da, 0, 0, 0, 0);
-    /* 反查：`2026-02-30` 会被 Date 顺延成 3-02，回读对不上即拒收。 */
-    if (d.getFullYear() !== y || d.getMonth() !== mo - 1 || d.getDate() !== da) return null;
-    return d.getTime();
+    return localDayStart(y, mo, da);
 }
 
 export function isValidDateStr(s) { return parseDateInput(s) !== null; }

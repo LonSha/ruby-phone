@@ -38,6 +38,7 @@ function fmt(key, v) {
     return String(v);
 }
 
+import { viewText } from '../../config/view-text.js';
 export class IotView {
     constructor(app, shell) {
         this.app = app;
@@ -88,9 +89,9 @@ export class IotView {
             '<button class="iot-scene" type="button" data-act="scene" data-scene="' + id + '">' + IOT_SCENES[id].label + '</button>'
         )).join('');
         const cards = IOT_DEVICES.map((dev) => this._card(dev)).join('');
-        const flash = this._flash ? ('<div class="iot-flash">' + this._flash + '</div>') : '';
+        const flash = this._flash ? ('<div class="iot-flash">' + viewText(this._flash) + '</div>') : '';
         const notes = (app.notes && app.notes.length)
-            ? ('<div class="iot-notes">' + app.notes.map((n) => ('<div>' + n + '</div>')).join('') + '</div>')
+            ? ('<div class="iot-notes">' + app.notes.map((n) => ('<div>' + viewText(n) + '</div>')).join('') + '</div>')
             : '';
         return (
             '<div class="iot-head">'
@@ -99,7 +100,7 @@ export class IotView {
             + '<div class="iot-face iot-face-' + meta.tone + '">' + meta.label + '</div>'
             + '</div>'
             + '<div class="iot-scenes">' + sceneRow + '</div>'
-            + '<div class="iot-scene-line">当前场景：<strong>' + proj.scene + '</strong></div>'
+            + '<div class="iot-scene-line">当前场景：<strong>' + viewText(proj.scene) + '</strong></div>'
             + flash
             + '<div class="iot-cards">' + cards + '</div>'
             + notes
@@ -121,7 +122,7 @@ export class IotView {
             if (key === 'mode') {
                 rows.push(
                     '<div class="iot-row"><span class="iot-k">模式</span>'
-                    + '<button class="iot-step" type="button" data-act="mode" data-dev="' + dev.id + '">' + fmt('mode', st.mode) + '</button>'
+                    + '<button class="iot-step" type="button" data-act="mode" data-dev="' + dev.id + '">' + viewText(fmt('mode', st.mode)) + '</button>'
                     + '</div>'
                 );
                 continue;
@@ -130,7 +131,7 @@ export class IotView {
             rows.push(
                 '<div class="iot-row"><span class="iot-k">' + key + '</span>'
                 + '<button class="iot-step" type="button" data-act="step" data-dev="' + dev.id + '" data-key="' + key + '" data-dir="-1" aria-label="' + (KEY_LABEL[key] || key) + ' 减小">-</button>'
-                + '<span class="iot-v">' + fmt(key, st[key]) + '</span>'
+                + '<span class="iot-v">' + viewText(fmt(key, st[key])) + '</span>'
                 + '<button class="iot-step" type="button" data-act="step" data-dev="' + dev.id + '" data-key="' + key + '" data-dir="1" aria-label="' + (KEY_LABEL[key] || key) + ' 增大">+</button>'
                 + '<span class="iot-range">' + range[0] + '~' + range[1] + '</span>'
                 + '</div>'

@@ -10,6 +10,7 @@
  * ======================================================== */
 'use strict';
 import { MoodView } from './mood-view.js';
+import { projectMoodMemory } from './mood-core.js';
 
 export class MoodApp {
     constructor(phoneShell, storage) {
@@ -46,26 +47,7 @@ export class MoodApp {
     // 读取记忆系统统计 (window.VirtualPhone.memoryCore)
     _getMemoryStats() {
         try {
-            const core = (window.VirtualPhone && window.VirtualPhone.memoryCore) || null;
-            if (!core) return null;
-            const st = core.stats || {};
-            const longTerm = Array.isArray(core.longTerm) ? core.longTerm : [];
-            const supersededCount = longTerm.filter(m => m && m.metadata && m.metadata._superseded === 'superseded').length;
-            const tier = { cite: 0, cautious: 0, associate: 0 };
-            for (const m of longTerm) {
-                const perm = m.metadata && m.metadata._permission;
-                if (perm === 'cite') tier.cite++;
-                else if (perm === 'cautious') tier.cautious++;
-                else if (perm === 'associate-only') tier.associate++;
-            }
-            return {
-                longTermCount: longTerm.length,
-                shortTermCount: Array.isArray(core.shortTerm) ? core.shortTerm.length : 0,
-                consolidated: st.consolidated || 0,
-                superseded: st.superseded || 0,
-                tombstoned: st.tombstoned || 0,
-                tier
-            };
+            return projectMoodMemory(globalThis.window?.VirtualPhone?.memoryCore);
         } catch (e) { return null; }
     }
 

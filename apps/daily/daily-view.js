@@ -11,6 +11,7 @@ const FACE_META = {
     [DAILY_FACE.EMPTY]: { label: '空档（还没触发）', tone: 'idle' },
 };
 
+import { viewText } from '../../config/view-text.js';
 export class DailyView {
     constructor(app, shell) {
         this.app = app; this.shell = shell;
@@ -50,7 +51,7 @@ export class DailyView {
         const st = this.app.state;
         const face = this.app.face;
         const meta = FACE_META[face] || FACE_META[DAILY_FACE.EMPTY];
-        const flash = this._flash ? '<div class="daily-flash">' + this._flash + '</div>' : '';
+        const flash = this._flash ? '<div class="daily-flash">' + viewText(this._flash) + '</div>' : '';
         const ruleRow = LIFE_RULES.map((r) => (
             '<button class="daily-rule' + (this._rule === r.ruleId ? ' is-on' : '') + '" type="button" data-act="rule" data-rule="' + r.ruleId + '">'
             + r.ruleId + ' → ' + LIFE_APPS[r.app] + '</button>'
@@ -59,8 +60,8 @@ export class DailyView {
         const events = st.events.length
             ? st.events.slice().reverse().slice(0, 12).map((e) => (
                 '<div class="daily-row"><span class="daily-app">' + LIFE_APPS[e.app] + '</span>'
-                + '<span class="daily-hit">命中「' + e.hit + '」</span>'
-                + '<span class="daily-snip">' + e.snippet + '</span></div>'
+                + '<span class="daily-hit">命中「' + viewText(e.hit) + '」</span>'
+                + '<span class="daily-snip">' + viewText(e.snippet) + '</span></div>'
             )).join('')
             : '<div class="daily-empty">还没有事件</div>';
         return (

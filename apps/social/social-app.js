@@ -13,7 +13,12 @@ import { writeReceipt } from '../../config/write-receipt.js';
 
 const STATE_KEY = 'social_feed_v1';
 
+import { SocialView } from './social-view.js';
 export class SocialApp {
+    render() {
+        this._view ??= new SocialView(this, this.shell);
+        this._view.render();
+    }
     constructor(shell, storage) {
         this.shell = shell; this.storage = storage;
         this.state = defaultSocialState();

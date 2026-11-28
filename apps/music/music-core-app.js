@@ -31,7 +31,12 @@ const DEMO_LRC = [
     '[01:05.00]尾声'
 ].join('\n');
 
+import { MusicCoreView } from './music-core-view.js';
 export class MusicCoreApp {
+    render() {
+        this._view ??= new MusicCoreView(this, this.shell);
+        this._view.render();
+    }
     constructor(shell, storage) {
         this.shell = shell;
         this.storage = storage;

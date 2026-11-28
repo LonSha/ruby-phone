@@ -19,7 +19,12 @@ import { writeReceipt } from '../../config/write-receipt.js';
 
 const STATE_KEY = 'honey_text_v1';
 
+import { HoneyTextView } from './honey-text-view.js';
 export class HoneyTextApp {
+    render() {
+        this._view ??= new HoneyTextView(this, this.shell);
+        this._view.render();
+    }
     constructor(shell, storage) {
         this.shell = shell;
         this.storage = storage;

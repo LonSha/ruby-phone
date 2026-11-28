@@ -127,7 +127,8 @@ test('「无上界门」这条欠账真的关了：PLAN.md 点名的三个大文
   /* [v4.162.0] 12802 → 12809：本项快照之后的提交在 settings-app.js 里长了 7 行（存量，非本版引入；
    *   干净快照 `git archive HEAD` 上现读就是 12809）。判据钉的是「台账是快照」，故跟着真读数走。 */
   /* [v4.199.0] 12809 → 12750：配色纯函数族搬到 config/phone-color-face.js（−59），天花板跟着压下来。 */
-  assert.equal(ledger.files['apps/settings/settings-app.js'].lines_max, 12750);
+  // 设置目录接线、重置确认与结果回读净增 18 行。
+  assert.equal(ledger.files['apps/settings/settings-app.js'].lines_max, 12768);
   assert.ok(rows.every((r) => r.lines <= DEFAULT_MAX || r.path in ledger.files), '存在未被记账的大文件');
 });
 

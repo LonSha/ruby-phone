@@ -18,6 +18,16 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+test('search view marks original text after Unicode case expansion', async () => {
+    const { SearchView } = await import('../apps/search/search-view.js');
+    const view = new SearchView(null);
+    const row = (title, q) => view._row({ title, sourceLabel: 'test' }, q);
+    const mark = s => '<mark class="gs-mark">' + s + '</mark>';
+    assert.ok(row('\u0130<A.B>', 'a.b').includes('\u0130&lt;' + mark('A.B') + '&gt;'));
+    assert.ok(row('\u0130x', 'i\u0307').includes(mark('\u0130') + 'x'));
+    assert.ok(!row('axb', 'a.b').includes('<mark'));
+});
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const rel = (p) => path.join(ROOT, p);
 const read = (p) => readFileSync(rel(p), 'utf8');
@@ -121,7 +131,7 @@ async function probeStaleResult(dir) {
 const TMP_ROOT = mkdtempSync(path.join(os.tmpdir(), 'rp-v281-'));
 // 依赖闭包（只含搜索链路真正会 import 的文件；cheat/dirtytalk 是 buildDefaultSources 的纯数据依赖）
 const CLOSURE = [
-    ENGINE_REL, APP_REL, VIEW_REL,
+    ENGINE_REL, APP_REL, VIEW_REL, 'apps/search/search-core.js',
     // [v2.97.0] 搜索内核改走单一真源读桥（readPushProbe），破坏副本必须带上该依赖，
     //   否则副本 import 直接 ERR_MODULE_NOT_FOUND，负控制变成「因缺文件而红」而不是「因破坏而红」。
     'config/world-bridge.js',

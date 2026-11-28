@@ -63,18 +63,7 @@ export class NeedsimView {
         this._draft = { reply: '', wtitle: '', wdesc: '' };
         this._boundRoot = null;
     }
-    /* [v4.215.0 · 照现实] v4 分层样式走 link 幂等注入投递。 */
-    _loadV4CSS() {
-        if (typeof document === 'undefined' || !document.head) return;
-        if (document.getElementById('nsm-v4-css')) return;
-        const link = document.createElement('link');
-        link.id = 'nsm-v4-css'; link.rel = 'stylesheet';
-        link.href = new URL('./needsim.v4.css', import.meta.url).href;
-        document.head.appendChild(link);
-    }
-
     render() {
-        this._loadV4CSS();
         const container = this.shell && this.shell.getContentContainer ? this.shell.getContentContainer() : null;
         if (!container) return;
         container.innerHTML = '';

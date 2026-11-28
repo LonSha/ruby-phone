@@ -14,6 +14,7 @@
 import {
     ND_GROUP_STATES, digestOf, digestLine, mutedOf, groupRefsOf, normalizeMuteRule
 } from '../../config/notice-digest.js';
+import { orderOfflineRows } from './notifications-core.js';
 import { renderAwayReview } from './away-review-view.js';
 import { getAwayMode } from '../../config/away-mode.js';
 /* [v4.119.0 · R14-O3] 跨 App 靶心：通知中心点一条要能落到**那一条**上（日记那一篇 / 日历那一则），
@@ -32,11 +33,7 @@ import { tierOf, TIER_TABLE, summarizeReceipts } from '../../config/notify-tiers
  * @returns {Array<Object>} 按故事逻辑时间严格升序排列的通知列表
  */
 export function reorderOfflineNotifications(notifications = []) {
-    return (notifications || []).slice().sort((a, b) => {
-        const tA = Number(a.storyTimestamp || a.timestamp || 0);
-        const tB = Number(b.storyTimestamp || b.timestamp || 0);
-        return tA - tB;
-    });
+    return orderOfflineRows(notifications);
 }
 
 function esc(s) {

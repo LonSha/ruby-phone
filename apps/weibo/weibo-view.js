@@ -2298,11 +2298,7 @@ export class WeiboView {
             btn.onclick = (ev) => {
                 if (ev) { ev.preventDefault(); ev.stopPropagation(); }
                 const what = btn.dataset.what || '该入口';
-                try {
-                    if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-                        window.alert('「' + what + '」本机未实现。');
-                    }
-                } catch (_e) { /* 宿主无 alert 时不制造新崩溃 */ }
+                phoneNotice('「' + what + '」本机未实现。');
             };
         });
 

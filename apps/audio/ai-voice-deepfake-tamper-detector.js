@@ -1,3 +1,4 @@
+import { scoreVoiceFeatures } from './audio-core.js';
 /* ============================================================
  * ai-voice-deepfake-tamper-detector.js
  * [v4.137.0 · V20 史诗级双计划 · R20-10]
@@ -37,23 +38,7 @@ export function analyzeAudioClip({
   phaseDiscontinuity = 0.05,
   spectralArtifactNoise = 0.05
 } = {}) {
-  let score = 0.1;
-  const artefacts = [];
-
-  if (frequencyJitter < 0.01) {
-    score += 0.45;
-    artefacts.push('缺失人类生理声带神经自然微抖动 (Jitter < 0.01)');
-  }
-  if (phaseDiscontinuity > 0.5) {
-    score += 0.25;
-    artefacts.push('频段拼接处出现非连续相位突变');
-  }
-  if (spectralArtifactNoise > 0.7) {
-    score += 0.25;
-    artefacts.push('20kHz以上检出高频扩散截断噪声与生成模型水印');
-  }
-
-  const isSyntheticDeepfake = score >= 0.85;
+  const { score, artefacts, isSyntheticDeepfake } = scoreVoiceFeatures(frequencyJitter, phaseDiscontinuity, spectralArtifactNoise);
   return {
     clipId: clipId || 'clip_' + Date.now(),
     callerName: callerName || '未知来源',

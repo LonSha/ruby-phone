@@ -891,6 +891,7 @@ function stageTree() {
     temps.push(dir);
     fs.mkdirSync(path.join(dir, 'config'), { recursive: true });
     fs.copyFileSync(path.join(ROOT, 'config', 'storage.js'), path.join(dir, 'config', 'storage.js'));
+    fs.copyFileSync(path.join(ROOT, 'config', 'local-calendar.js'), path.join(dir, 'config', 'local-calendar.js'));
     fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));
     /* [v3.58.0 · 计划 O5] diagdesk 已把写回执接进唯一实现，副本树必须带上它。 */
     fs.copyFileSync(path.join(ROOT, 'config', 'write-receipt.js'), path.join(dir, 'config', 'write-receipt.js'));

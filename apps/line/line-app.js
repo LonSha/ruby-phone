@@ -24,6 +24,7 @@ import {
     describeKind, stickerById, formatClock, roomOf,
 } from './line-data.js';
 import { LineView } from './line-view.js';
+import { storyNowWallFallback } from '../../config/time-source.js';
 import { writeReceipt } from '../../config/write-receipt.js';
 
 /* 会话键：必须匹配 config/storage.js 的 CHAT_DATA_PATTERNS 中 `/^line_/`，
@@ -69,7 +70,7 @@ export class LineApp {
             this.state = emptyLineState();
         }
         this.face = readLineFace({ storageOk, hasAny: hasAny(this.state) });
-        this._proj = storageOk ? projectLine(this.state, this.settings, Date.now()) : null;
+        this._proj = storageOk ? projectLine(this.state, this.settings, this.nowMs()) : null;
     }
     faceReason() { return this.face; }
     projection() { return this._proj; }
@@ -78,7 +79,8 @@ export class LineApp {
     stickers() { return LINE_STICKERS.slice(); }
     stickerName(id) { const s = stickerById(id); return s ? s.name : ''; }
     kindText(kind) { return describeKind(kind); }
-    clockText(ts) { return formatClock(ts); }
+    nowMs() { return storyNowWallFallback(this._win()).ms; }
+    clockText(ts) { return formatClock(ts, this.nowMs()); }
     stateSnapshot() { return normalizeLineState(this.state); }
     room(roomId) { return roomOf(this.state, roomId); }
     unread() { return unreadTotal(this.state, this.settings); }
@@ -132,7 +134,7 @@ export class LineApp {
     /** 生成侧注入块：只注入事实（见数据层 linePromptBlock）。 */
     promptBlock() {
         if (!this.settings.injectToPrompt) return '';
-        const proj = this._proj || projectLine(this.state, this.settings, Date.now());
+        const proj = this._proj || projectLine(this.state, this.settings, this.nowMs());
         return linePromptBlock(proj, this.settings);
     }
     /** 一行读数（给状态条 / 桌面摘要用）。 */

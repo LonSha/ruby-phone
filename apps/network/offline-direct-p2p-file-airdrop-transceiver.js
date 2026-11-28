@@ -1,3 +1,4 @@
+import { completedTransfer } from './network-core.js';
 /* ============================================================
  * offline-direct-p2p-file-airdrop-transceiver.js
  * [v4.137.0 · V20 史诗级双计划 · R20-16]
@@ -42,16 +43,7 @@ export function initiateIncomingP2PTransfer(state, { transferId, senderPeerName,
   if (!state || !fileName) return null;
 
   const id = transferId || 'p2p_' + Date.now();
-  const transfer = {
-    transferId: id,
-    senderPeerName: senderPeerName || '隔空投送者',
-    fileName,
-    fileSizeMB,
-    progress: 100,
-    status: 'COMPLETED',
-    receivedAt: new Date().toISOString()
-  };
-
+  const transfer = completedTransfer(id, senderPeerName, fileName, fileSizeMB, new Date().toISOString());
   state.incomingTransfers.push(transfer);
   state.completedFiles.push(fileName);
   return transfer;

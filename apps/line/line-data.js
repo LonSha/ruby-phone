@@ -180,22 +180,24 @@ export function stickerById(id) {
 }
 
 /** 时间读数：只到「几点几分」，跨天补「昨天 / N 天前」（不猜时区，用本地钟）。 */
-export function formatClock(ts) {
+import { localParts } from '../../config/local-calendar.js';
+export function formatClock(ts, referenceMs) {
     const t = Number(ts);
     if (!Number.isFinite(t) || t <= 0) return '没记时间';
-    const d = new Date(t);
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mm = String(d.getMinutes()).padStart(2, '0');
+    const d = localParts(t);
+    if (!d) return '没记时间';
+    const hh = String(d.hour).padStart(2, '0');
+    const mm = String(d.minute).padStart(2, '0');
     const hm = hh + ':' + mm;
-    try {
-        const now = new Date();
-        const sameDay = now.getFullYear() === d.getFullYear() && now.getMonth() === d.getMonth() && now.getDate() === d.getDate();
-        if (sameDay) return hm;
-        const days = Math.floor((Date.now() - t) / 86400000);
+    const now = localParts(referenceMs);
+    if (now) {
+        const ordinal = (v) => Date.UTC(v.year, v.month - 1, v.day) / 86400000;
+        const days = ordinal(now) - ordinal(d);
+        if (days === 0) return hm;
         if (days === 1) return '昨天 ' + hm;
         if (days > 1 && days < 30) return days + ' 天前';
-        return (d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')) + ' ' + hm;
-    } catch (_e) { return hm; }
+    }
+    return d.year + '-' + String(d.month).padStart(2, '0') + '-' + String(d.day).padStart(2, '0') + ' ' + hm;
 }
 
 /** 找房间（找不到返回 `null`，不返回空壳）。 */
@@ -325,7 +327,7 @@ export function timelineOf(state, limit) {
 export function projectLine(state, settings, now) {
     const base = normalizeLineState(state);
     const s = normalizeLineSettings(settings);
-    const t = Number(now) || Date.now();
+    const t = numOf(now, 0);
     const rooms = base.rooms.map((r) => {
         const msgs = r.messages;
         const last = msgs.length ? msgs[msgs.length - 1] : null;
@@ -335,7 +337,7 @@ export function projectLine(state, settings, now) {
             unread: unreadOf(base, r, s), muted: r.muted,
             last: last ? { id: last.id, from: last.from, text: last.text, sticker: last.sticker,
                 stickerName: (stickerById(last.sticker) || {}).name || '', ts: last.ts,
-                clock: formatClock(last.ts), recalled: last.recalled, truncated: last.truncated } : null,
+                clock: formatClock(last.ts, t), recalled: last.recalled, truncated: last.truncated } : null,
         };
     });
     rooms.sort((a, b) => ((b.last ? b.last.ts : 0) - (a.last ? a.last.ts : 0)) || String(a.name).localeCompare(String(b.name)));

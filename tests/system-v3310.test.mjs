@@ -89,6 +89,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { prefixAuditFiles } from './_style_split.mjs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
@@ -705,19 +706,7 @@ test('H3 样式源与 phone.css 逐字同源，且视图产出的每个类名都
 });
 
 test('H4 前缀全仓唯一：.dat- 只出现在本 App 目录与 phone.css', () => {
-    const walk = (dir, out) => {
-        for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-            if (e.name === '.git' || e.name === 'node_modules') continue;
-            /* ★ 只排除「判据文件自己」（它满篇写着 `.dat-`）：不能整目录排除 tests/，
-             *   否则别的测试里真出现越界引用就永远查不出来了。 */
-            if (path.resolve(dir, e.name) === path.resolve(fileURLToPath(import.meta.url))) continue;
-            const full = path.join(dir, e.name);
-            if (e.isDirectory()) walk(full, out);
-            else if (/\.(js|css|mjs|json|html)$/.test(e.name)) out.push(full);
-        }
-        return out;
-    };
-    const files = walk(ROOT, []);
+    const files = prefixAuditFiles(ROOT, fileURLToPath(import.meta.url));
     assert.ok(files.length > 200, '扫描面异常小（' + files.length + '）');
     /* ★ **发行说明面豁免**（v3300 起的既有口径，本件沿用并显式写明）：
      *   `update-log.json`（更新弹窗的真源）与 `index.js` 的内置公告块是**面向用户的
@@ -760,16 +749,12 @@ test('H5 四件套齐备、data 层是纯函数，且源里六块禁区一条都
     }
     const data = read(DATA_REL);
     const code = stripComments(data);
-    /* ★ 头一条就是本件的立身之本：data 层是**纯函数内核**：只能有一条 import，
-     *   且必须是**全仓唯一的取数门**（`config/num-gate.js`）—— 本仓铁律。
-     *   不碰 DOM / window / 存储 / 网络 / 聊天层 / 数据库 / 定时器。
-     *   ★ 本条第一版写成「零 import」，而实现里就地写了一份弱口径取数（`Number.isFinite(Number(x))`）
-     *   —— 它会把 `''` / `[]` / `true` 全读成 0，被本仓 weak-coercion 门当场抳中。
-     *   修法不是放宽判据，而是**改成引唯一实现**，判据跟着改成「只准这一条」。 */
+    /* Only explicit calendar conversions and the canonical numeric gate. */
     const imports = data.match(/^\s*import\s.*$/gm) || [];
-    assert.equal(imports.length, 1, DATA_REL + ' 只能有一条 import（实测 ' + imports.length + '）');
-    assert.ok(imports[0].includes("from '../../config/num-gate.js'"), DATA_REL + ' 那一条 import 必须是唯一取数门');
-    assert.ok(/import\s*\{\s*numOrNull\s*\}/.test(imports[0]), DATA_REL + ' 必须只引入 numOrNull');
+    assert.deepEqual(imports.map(s => s.trim()).sort(), [
+        "import { localParts, localDayStart } from '../../config/local-calendar.js';",
+        "import { numOrNull } from '../../config/num-gate.js';",
+    ]);
     assert.equal(code.includes('Number.isFinite(Number('), false, DATA_REL + ' 不得就地再写一份弱口径取数');
     for (const banned of ['document', 'window', 'localStorage', 'sessionStorage',
         'fetch(', 'XMLHttpRequest', 'indexedDB', 'Dexie', 'openDB', 'geolocation',
@@ -855,8 +840,8 @@ test('I1 三条新键必须在 keys 门账本里登记且 scope=chat（会话隔
 const DAMAGE = {
     /* 假日期不再反查 ⇒ 「2026-02-30 必须拒」转红。 */
     d1: [DATA_REL,
-        '    if (d.getFullYear() !== y || d.getMonth() !== mo - 1 || d.getDate() !== da) return null;',
-        '    if (y < 0) return null;'],
+        '    return localDayStart(y, mo, da);',
+        '    return localDayStart(y, mo, da) ?? localDayStart(y, mo, 1);'],
     /* `Date` 不再显式取毫秒 ⇒ 「传了 Date 被读成没传」转红。 */
     d2: [DATA_REL,
         '    if (v instanceof Date) return numOrNull(v.getTime());',
@@ -965,6 +950,7 @@ function loadDamagedCopy(rel, from, to) {
      *   被加载的模块现在从它取有界取数（口径唯一），缺了会 ERR_MODULE_NOT_FOUND ——
      *   那与破坏本身无关（假红）。刻意用 copyFileSync 而不是手写桩：副本就是真件的副本。 */
     fs.copyFileSync(new URL('../config/num-clamp.js', import.meta.url), path.join(gateDir, 'num-clamp.js'));
+    fs.copyFileSync(new URL('../config/local-calendar.js', import.meta.url), path.join(gateDir, 'local-calendar.js'));
     return import(pathToFileURL(target).href);
 }
 
@@ -1089,6 +1075,7 @@ test('K2 破坏表自证：锚点必须在场（恰 1 次）、不落在注释�
     fs.copyFileSync(path.join(ROOT, DATA_REL), realCopy);
     fs.mkdirSync(path.join(tmp, 'config'), { recursive: true });
     fs.writeFileSync(path.join(tmp, 'config', 'num-gate.js'), NUM_GATE_STUB);
+    fs.copyFileSync(path.join(ROOT, 'config', 'local-calendar.js'), path.join(tmp, 'config', 'local-calendar.js'));
     return import(pathToFileURL(realCopy).href).then((m) => {
         assert.equal(m.sourceOfFunds('aa', 7).userPart, 3,
             '副本按真目录结构摊开后必须能加载且行为同真件（只引唯一取数门）');

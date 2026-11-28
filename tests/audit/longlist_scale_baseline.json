@@ -73,7 +73,7 @@
     "rendered_lines_n4000": 800,
     "after_motion_css": {
       "stage": "v3.79.0 收口：扫描面由 phone.css 扩为递归全仓，判定由计数改为按动画名 + 分类闭合",
-      "css_files_scanned": 235,
+      "css_files_scanned": 260,
       "infinite_sites": 28,
       "infinite_names": 25,
       "decorative_names": 15,
@@ -146,7 +146,7 @@
       "desc": "全仓（递归）每处带 infinite 的动画都被降频规则覆盖，且分类闭合：装饰类按名出现在 data-still/data-motion=still 的覆盖里、状态类不得出现在其中、挂 body 的浮层被显式列出（修前该三值均为 0；本判据曾只扫 phone.css，收口修正按名扩面）",
       "pass": true,
       "got": "css=211 infinite=28 names=25 unclassified=0 decorUncovered=0 phantom=0 stateInStill=0 floatUncovered=0 reduceMedia=9 playStatePaused=3 data-bg=6",
-      "got_text": "css=235 infinite=28 names=25 unclassified=0 decorUncovered=0 phantom=0 stateInStill=0 floatUncovered=0 reduceMedia=9 playStatePaused=3 data-bg=6"
+      "got_text": "css=260 infinite=28 names=25 unclassified=0 decorUncovered=0 phantom=0 stateInStill=0 floatUncovered=0 reduceMedia=9 playStatePaused=3 data-bg=6"
     }
   ],
   "verdict": "准入判据全绿：媒体指令契约 / 单条 DOM 代价（三点 500/1500/4000 不漂移）/ 身份面 / 可复算 / 动效降频覆盖（全仓递归 CSS，按动画名 + 分类闭合）五类在真渲染函数与真样式表上成立（读数见 readings 与 timing）",

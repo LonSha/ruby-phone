@@ -1032,12 +1032,14 @@ export function faceOf(bundle) {
  * ★ 与第 3 层各件同款：只此一处口径，视图不许自己取时钟。
  * ★ 不用 padStart，逐位补零（避免依赖运行环境的小版本差异）。
  */
+import { localParts } from '../../config/local-calendar.js';
 export function todayKeyOf(nowMs) {
     const n = numOrNullLocal(nowMs);
-    const d = new Date(n === null ? Date.now() : n);
-    const m = d.getMonth() + 1;
-    const day = d.getDate();
-    return String(d.getFullYear()) + '-'
+    const d = localParts(n);
+    if (!d) return '';
+    const m = d.month;
+    const day = d.day;
+    return String(d.year) + '-'
         + (m < 10 ? '0' : '') + String(m) + '-'
         + (day < 10 ? '0' : '') + String(day);
 }
