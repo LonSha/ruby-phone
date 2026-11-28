@@ -176,7 +176,13 @@ export function narrowPlan(input) {
      *   猜成窄屏会让桌面用户看到 320 布局；猜成宽屏会让 320 用户挤成一团。 */
     const narrow = known && w <= AX_NARROW_WIDTH;
     const big = level === AX_LEVELS.LARGE || level === AX_LEVELS.ENHANCED;
-    const cols = narrow ? (big ? 3 : 4) : (big ? 3 : 4);
+    /* ★ 列数必须与 phone.css 的 @media (max-width: 320px) 同口径。
+     *   修前这里写的是 `narrow ? (big ? 3 : 4) : (big ? 3 : 4)` —— 两个分支一模一样，
+     *   窄屏那一段等于没写，标准档在 320 上仍返回 4 列，而 CSS 已经是 3 列。
+     *   后果不是「不好看」而是容量算错：JS 按 4 列算出 4×2=8 格的页容量，
+     *   实际每行只摆 3 格 ⇒ 8 个格子占 3 行，与 dock 叠在一起、图标互相压。
+     *   static 判据读不出「两个分支相同」，只有把两边读数放在一起比才看得见。 */
+    const cols = narrow ? 3 : (big ? 3 : 4);
     const iconSize = narrow ? (big ? AX_ICON_SIZES.narrow + 6 : AX_ICON_SIZES.narrow)
         : (big ? AX_ICON_SIZES.large : AX_ICON_SIZES.normal);
     return {

@@ -1,0 +1,60 @@
+/* ============================================================
+   rp-home-fix.css — 桌面 / dock 几何兜底层（v4.216.0）
+   ------------------------------------------------------------
+   为什么要这一层：
+     旧 UI 的全部样式在 phone/design/legacy-phone.css（19945 行，由根 phone.css
+     生成，进了 @layer rp.legacy）。生成时把 2008 处 !important 全部摘掉——这是
+     必要的（层内不能再靠 !important 打架）。但摘掉之后，legacy 层内部原先靠
+     !important 强制生效的那几条，被同一层里特异性更高的 ID 选择器反压。
+
+     实测（Chromium 131）：
+       .phone-screen .home-screen .app-grid-page { padding-bottom: 146px }
+         特异性 (0,3,0)，在 rp.legacy 层；
+       而 #phone-panel-content .phone-screen .app-grid { padding: 4% 5% }
+         特异性 (1,2,0)，也在 rp.legacy 层 → 简写覆盖单边，146px 净空归零。
+       结果：末行图标压到 dock 上（用户截图里「圆块错位」的同族缺陷）。
+
+   怎么修的：
+     不改 legacy 那 19945 行（风险不可控），而是把这几条必须赢的规则
+     写进 rp.components 层。层序里 rp.components 在 rp.legacy 之后 → 天然压过，
+     与特异性和 !important 都无关。这就是这套分层设计本来该有的用法。
+
+   几何契约（改这三个数之前先量一遍）：
+     · dock 高约 63px（bottom:8%），页码点在其上方约 19px
+     · 故 home-screen 底部留 146px 净空，图标的滚动区永远碰不到 dock
+     · 桌面图标区 = 时间 + 搜索 之后的剩余高度，超出则纵向滚动，绝不溢出
+   ============================================================ */
+@layer rp.components {
+
+  /* 一、把 .home-screen 变成纵向 flex：时间/搜索固定，图标区吃剩余高度。
+        图标区一旦吃满高度，就不再有「内容比容器高、溢出压住 dock」这件事。 */
+  .phone-screen .home-screen.home-layout-icons {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    padding-bottom: 146px;          /* dock 净空：内容区永不到 dock 之下 */
+    overflow: hidden;
+  }
+
+  /* 二、图标轨道吃剩余高度，内部纵向滚动；横向翻页手势仍由分页器接管。 */
+  .phone-screen .home-screen.home-layout-icons .app-grid-pager {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+
+  /* 三、单页不再自己兜 dock 净空（净空已在父级 padding 里），
+        否则滚动区里会多出一段假空白。 */
+  .phone-screen .home-screen.home-layout-icons .app-grid-page {
+    flex: 0 0 100%;
+    align-content: start;
+    grid-auto-rows: min-content;
+    max-height: none;
+    min-height: 0;
+    padding-bottom: 0;
+  }
+}

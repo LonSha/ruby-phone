@@ -302,6 +302,40 @@ export function createFontScaleManager(deps) {
         applyGlobalFontScale(phoneFontScale);
     }
 
+    /** [v4.216.0] 设计系统样式自证 + 兜底自注入（幂等）。
+     *  返回 { loaded, injected, href, rules }：
+     *    loaded=true  宿主已按 manifest 的 css 入口加载（正常态）
+     *    loaded=false 没加载 → 本函数自己追加 <link>，并打一条 warn 让用户能看见
+     *  为什么需要它：@import 链或宿主加载失败都是**静默**的，页面上只剩裸 DOM。
+     *  有了这条读数，「样式没加载」就能和「样式加载了但被压死」区分开。 */
+    function ensureDesignSystemLoaded() {
+        const HREF = new URL('../phone/design/rp-entry.css', import.meta.url).href;
+        const readRules = (sheet) => { try { return sheet && sheet.cssRules ? sheet.cssRules.length : -1; } catch (_e) { return -1; } };
+        const findSheet = () => {
+            try {
+                for (const sh of Array.from(document.styleSheets)) {
+                    if (sh.href && sh.href.split('?')[0] === HREF) return sh;
+                }
+            } catch (_e) { /* 跨域表读不到：按「没找到」处理 */ }
+            return null;
+        };
+        const found = findSheet();
+        if (found) return { loaded: true, injected: false, href: HREF, rules: readRules(found) };
+        let link = document.querySelector('link[data-rp-design-system="entry"]');
+        if (!link) {
+            link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.setAttribute('data-rp-design-system', 'entry');
+            link.href = HREF;
+            document.head.appendChild(link);
+        }
+        try {
+            console.warn('[RubyPhone] 宿主未加载设计系统样式（phone/design/rp-entry.css），已自行注入兜底。'
+                + ' 若界面看起来仍不对，请强制刷新（清扩展缓存）后重试。');
+        } catch (_e) { /* 无 console：不影响功能 */ }
+        return { loaded: false, injected: true, href: HREF, rules: 0 };
+    }
+
     async function ensureGlobalPhoneCSS() {
         /* [v4.200.0 · 样图层收口] 这里**不再**把根 phone.css 原样注入 <style>。
          * ------------------------------------------------------------
@@ -325,6 +359,12 @@ export function createFontScaleManager(deps) {
          *
          * 为什么保留这个函数名与签名：调用点（index.js 4 处 + browser 场景）与
          *   font-scale.test.mjs 的方法表都以它为契约；改名会牵动无关面。 */
+        /* [v4.216.0] 先证明「设计系统真的在页面里」，再谈摘旧注入。
+         *   背景：整份 UI 样式只从 manifest 的 css 入口（rp-entry.css）进来。
+         *   宿主没读到这一步时（旧版 SillyTavern / 扩展缓存 / manifest 未生效），
+         *   浏览器不会报错，页面只剩零散规则 —— 用户看到的就是「背景黑的烂的、
+         *   UI 不像 iOS」。这是环境事实，必须由代码自己量出来，不能靠猜。 */
+        ensureDesignSystemLoaded();
         const styleId = 'st-phone-global-css';
         const existing = document.getElementById(styleId);
         /* 旧注入（任何版本）都必须摘掉：它带着 2008 处 !important，留着就继续压皮肤层。
@@ -390,5 +430,6 @@ export function createFontScaleManager(deps) {
         applyGlobalTextColor,
         initColors,
         ensureGlobalPhoneCSS,
+        ensureDesignSystemLoaded,
     };
 }

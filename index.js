@@ -476,7 +476,7 @@ const ST_PHONE_BASE_URL = new URL('./', import.meta.url).href;
 // （由 tests/entry-integrity.test.mjs 断言锁定，与记忆插件 v3.77 同款做法）
 // 此前此处长期停留 1.5.5：远程更新检查用 compareSemver(远端, 本地) 判断，
 // 导致升级后仍被判为「发现新版本」，每小时提示一次。
-const ST_PHONE_VERSION = '4.215.0';
+const ST_PHONE_VERSION = '4.216.0';
 const ST_PHONE_CSS_REVISION = '20261127-place-bottomnav';
 const ST_PHONE_HONEY_ASSET_REVISION = '20260902-avatar-gender';
 const ST_PHONE_GLOBAL_CSS_URL = new URL(`./phone.css?v=${ST_PHONE_VERSION}&r=${ST_PHONE_CSS_REVISION}`, import.meta.url).href;
@@ -723,21 +723,21 @@ function stStringifyState(value) {
 }
 const ST_PHONE_CURRENT_UPDATE = {
     version: ST_PHONE_VERSION,
-    date: "2026-11-27",
+    date: "2026-11-28",
     items: [
-        "【版本升至 4.215.0（五源同源）】本版照客户端形态重排地点图景：改造前这一页是十三张卡片一路往下堆（归因 / 来源 / 规模摘要 / 当前 / 场景头 / 层级树 / 到访史 / 在场 / 同楼同刻 / 行踪带 / 探索 / 街区 / 设置 / 诊断），想问「这栋楼里现在有谁」得滚过七张卡，想改设置得滚到底。现在按客户端形态分成底栏四格：这里 / 在场 / 去哪 / 更多。",
-        "【为什么是这四格】四件事的回答路径不同：我在哪（位置、层级、来时路）、谁在这儿（在场与同楼同刻）、还能去哪（探索与街区机会）、换一种看法或改设置。十三张卡同处一列时，每一张都在抢同一块纵向空间，读者只能从头往下读；而「我在哪」「谁在」本来是两个时刻的问题，混在一列里读者会拿「到访史」当「在场」。",
-        "【第一格·这里】归因 / 数据来源 / 规模摘要 / 当前位置 / 场景头 / 层级树 / 到访史 —— 这一格回答「我现在站在哪、我从哪来」。到访史留在这里而不是挪去「更多」，因为它和层级树合起来才是「来时路」，拆开就只剩两堆数字。",
-        "【第二格·在场】在场 / 同楼同刻 / 行踪带 —— 回答「这会儿这栋楼里有谁」。三张卡的分工是：谁在（当前在场）、同一楼层同一时刻还发生了什么（同楼同刻）、这些人最近的移动痕迹（行踪带）。",
-        "【第三格·去哪】探索 / 街区 —— 回答「从这儿还能往哪走」。探索是可达点，街区是机会面；两者混在「在场」格里时，读者会以为街区里的人是此刻在场的。",
-        "【第四格·更多】设置 / 诊断 —— 前两格是「看」，这一格是「查与改」。设置卡与诊断卡都是低频、且改动会立刻影响其它三格读数的控件，放在最后一格是为了让前三格的读数先立住。",
-        "【归因卡逐格兑现（本版关键取舍）】归因卡（读不到时先说读不到、五态分开）**在每一格的最前面各出现一次**，写在面分派函数开头只取一次（`const head = this._reasonCard(face);`），四格的每个返回分支都把它拼在首位。为什么不能只留在「这里」格：同一句「读不到」在其余三格上会被分别误读成「没有在场的人」「没有可去的地方」「没有设置」—— 三种不同的故障会长成同一张脸。本仓一直守的「读不到 ≠ 世界是空的」这条，按格分区之后必须逐格兑现，而不是在第一格兑现完就算完。",
-        "【样式】新增 apps/place/place.v4.css（102 行）：底栏进正常流、不用 position: fixed；滚动层自己写 min-height: 0（否则在 flex 列里会被内容撑开、底栏被顶出视口）；底栏格热区下限 min-height 48 / min-width 44，四等分用 grid-template-columns: repeat(4, 1fr)；按钮规则全部进 @layer rp.apps（否则宿主 data-rp-ds=2 的 all: revert-layer 会把底栏按钮回滚成 UA 默认）；经 phone/design/rp-entry.css 的 @import 投递（registry 门的机制 C）。",
-        "【判据】tests/apps-place-v4.test.mjs 13 条：A1 四格与 PL_FACES 单一真源 / A2 面判定只许一处（who、go、more 各恰好 1 次）/ A3 底栏排在内容层之后且只渲染一次 / A4 aria 双标（aria-current 与 aria-selected）/ A5 样式纪律（@layer 内、无 position: fixed、热区下限）/ A6 归因卡四格都在（逐个返回分支检查，缺一格就红）/ A7 标题跟着当前格走 / A8 切格不写盘 / A9 @import 真投递 / A10 不走原生 alert 且不自己起定时器；外加 N1~N3 三条破坏副本（删掉「去哪」格、热区压到 30px、面判定复制一份）必须让对应判据转红。",
-        "【存量判据的交棒改写（三处，两类性质不同）】① v246 J8 与 v311 C1~C3 属「判据钉了位置」：J8 原来只画首屏就断言「在场分组与楼层真被画出来」，C1~C3 原来只画首屏就断言诊断卡在场；卡片按格分组后首屏自然没有了。判据的真不变式是「这些内容真被画出来」，不是「必须落在第一格」，于是三处统一改成把四格各渲染一遍、合并看到的 DOM 再判在场（v311 三处先把 el.innerHTML 改成累计变量 html 再 includes）。② v310 C1「到访次数进 DOM」是**本版自己抓到的缺陷**（不是判据过时）：改造时漏把 `_visitHistoryCard` 放进「这里」格，修法是补一行而不是改判据——这条必须与①分开记，否则下次会把真缺陷当判据噪音顺手改掉。",
-        "【基线刷新（v3770 B1/B2）】本仓新增一个 .css 后，v3770 的计数基线族读到的枚举面变了（after_motion_css.css_files_scanned 229 → 235 等 13 处），B1/B2「计数段与基线逐字段相等」因此转红。这是**基线过时**而非本版缺陷：用仓内既有的 tools/refresh_baselines_v3930.py 先 dry-run 列出 13 处待写（longlist 2 / schedule_conflict 2 / branch_play 2 / long_chat 2 / lifecycle_declarative 5）再 --write，脚本零手抄、幂等、冻结 measured_at、*_pct 口径归一。刷新后 v324 / v325 / v326 / v327 / v3770 复跑 84/84。",
-        "【判据对本版行为的约束（可复算）】PL_FACES 四行（here / who / go / more）；`const head = this._reasonCard(face);` 在面分派函数里只出现 1 次；`_btmNavHtml` 恰好 2 次（定义 + 调用）；`data-pl-face` 3 处（模板定义 + 属性名 + 绑定委托）；here 格含 source / summary / current / header / tree / visitHistory 六张卡；who 格含 presence / coPresence / presenceBand；go 格含 roam / district；more 格含 settings / diag；视图零 setTimeout / setInterval / alert。这些数字都是判据的落点，改结构时必须跟着复算。",
-        "【运行时验证边界】静态检查不能保证真机上没有「看起来没坏但显示不对」的问题。本版只验到结构面与静态判据：四格在真机上的滚动手感、切格后的重画成本（十三张卡按格分摊后单次绘制量应下降，但还没真机实测）、底栏在 data-rp-ds=2 与 data-rp-ios=3 各档下的观感、以及「到访史」留在第一格是否真的够用，都还没在真机看过。真机复现后再修。"
+        "【版本升至 4.216.0（五源同源）】本版不新增 App，只修「判据全绿但真机是坏的」这一族缺陷。起点是用户贴出的真机截图：桌面只有 12 格 3 行、下方一大块空白、dock 前三格只有底色没有图形、dock 上方两团错位圆块、整体不像 iOS。而当时的静态判据 7/7 全绿。",
+        "【缺陷 A：15 格被切成 12+3 两页（截图主症状）】buildDesktopTiles() 产出固定 15 格（8 核心 + 7 聚合壳），而 getIconPageCapacity() 按「屏幕高度 → 行数」的固定断点表算容量：clientHeight ≤ 800 判 3 行，4 列 × 3 行 = 12 格。15 > 12 ⇒ 必然裂成「首页 12 格 + 末页 3 格」。首页下方那一大块空白不是没做完，是分页把第 4 行推走了。断点表与真实行高无关，同一台机器改字号或改 DPR 就会算出不同行数。",
+        "【缺陷 A 的修法：容量改成一页固定 5 行】getIconPageCapacity(minTiles) 现在在默认路径直接返回 columns × 5（4 列 20 格 / 3 列 15 格），桌面 15 格在任何宽度下都只占 1 页；原断点表只保留在 need > perPage 的兜底分支里（将来桌面格数真的变多才用得上）。同时 buildIconPages 传入本次要铺的格数，让「容量」和「真要铺的量」不再是两个各算一次的真源。",
+        "【缺陷 B：!important 被摘掉后 legacy 层内部互相反压】整份旧 UI 样式（19945 行）由 scripts/gen-legacy-layer.mjs 从根 phone.css 生成，去 !important + 整份包进 @layer rp.legacy。去 !important 是必要的（层内不能再靠它打架），但副作用没验：.phone-screen .home-screen .app-grid-page { padding-bottom: 146px } 特异性 (0,3,0)，被同一层里 #phone-panel-content .phone-screen .app-grid { padding: 4% 5% }（特异性 (1,2,0)，简写覆盖单边）压成 0。146px 的 dock 净空因此归零 —— 实测 320x568 下末行图标直接压在 dock 上。",
+        "【缺陷 B 的修法：把必须赢的几条写进 rp.components】新增 phone/design/rp-home-fix.css，由 rp-entry.css 以 layer(rp.components) 导入。层序里 rp.components 晚于 rp.legacy ⇒ 天然压过，与特异性和 !important 都无关 —— 这才是这套分层设计本来该有的用法。不动 legacy 那 19945 行（风险不可控）。",
+        "【缺陷 C：矮屏一页排不下时溢出，而不是滚动】rp-home-fix.css 把 .home-screen.home-layout-icons 变成纵向 flex（时间/搜索固定、图标区吃剩余高度、底部留 146px 净空），图标轨道 flex:1 / min-height:0 / overflow-y:auto —— 排不下就滚，绝不再溢出压住 dock。这是「宁可滚，也不重叠」的取舍：320x568 这类极小屏本来放不下 15 格 5 行。",
+        "【缺陷 D：窄屏列数分支写重了（等于没写）】config/access-layers.js 的 narrowPlan 原文是 `const cols = narrow ? (big ? 3 : 4) : (big ? 3 : 4);` —— 两个分支完全相同，窄屏那一段是死代码。改成 `narrow ? 3 : (big ? 3 : 4)`，与 phone.css 的 @media (max-width: 320px) 三列同口径，也让 JS 容量与 CSS 列数重新对齐。",
+        "【缺陷 E：样式链路完全不可观测】设计系统只从 manifest 的 css 入口（rp-entry.css）进来，靠 20+ 条 @import 串起 32 个文件。@import 路径写错、宿主没读到 manifest.css，浏览器都是**静默失败**：不报错、不抛异常、单元判据也看不到，页面只剩零散规则 —— 用户看到的就是「背景黑的烂的」。新增 phone/font-scale.js 的 ensureDesignSystemLoaded()：运行时遍历 document.styleSheets 找 rp-entry.css，找不到就自己追加 <link> 兜底并 console.warn 一句「宿主未加载设计系统样式」。这条把「样式没加载」和「样式加载了但被压死」两类故障彻底分开。",
+        "【新增浏览器判据：tests/browser/scenarios/home-render.scen.js（进 gate 扫描面）】五条判据：① desktop-pages 必须 1 页；② dock-icons-load 用 new Image() 真加载 SVG data URI 读 naturalWidth（不再只看属性有没有设）；③ icon-overlap / icons-vs-dock 用 getBoundingClientRect 量几何重叠（>12px² 即 FAIL，并考虑裁剪容器的可视区，避免把「被滚出视口」误判成「压住 dock」）；④ no-float-circles 抓脱离布局的绝对定位圆块。修前 320x568 实测 6 个图标压 dock，修后 0。",
+        "【新增静态判据：tests/system-v4217.test.mjs（5 条）】CSS-1 @import 链上每个文件必须真实存在（递归解析，相对路径按各自文件目录）；CSS-2 @import 必须位于所有普通规则之前（违反则后面的 @import 被浏览器丢弃）；CSS-3 rp-home-fix.css 必须被导入且落在 rp.components 层，并钉住 146px 净空与 overflow-y:auto 两条几何契约；CSS-4 layer 语句里 rp.components 必须排在 rp.legacy 之后；CSS-5 一页容量必须是 列数×5 的单一真源，断点表只许留在兜底分支。",
+        "【判据交棒：system-v3930 C4 的写法修正】原断言用 /getIconPageCapacity\\(\\)\\s*\\{[^}]*this\\._iconColumns\\(\\)/ 钉死空参数表 + 跨 } 匹配。签名加可选参数后转红，而方法体里现在有 if 块，[^}]* 也跨不过去。改成位置断言（方法起点之后 600 字符内必须出现 this._iconColumns()），参数表交给 tests/system-v4950 的行为断言覆盖 —— 钉死参数表会让「容量不得小于桌面格数」这条修复无法落地。",
+        "【真机对照读数（可复算）】Chromium 131 / --headless=old：390x844 与 390x780 下桌面 15 格 4 行、pager 1 页、dock 5 格且每格 .px-dock-icon 的 SVG 内有 5 个图形元素、.wallpaper 计算值 rgba(255,255,255,0.95) + background-image url(phone-background.jpg)、#phone-panel 带 data-rp-ds=2 / data-rp-ui=2 / data-rp-ios=3 / data-rp-refresh=4。320x568 下改前 6 个图标压 dock，改后 0（pager 可视底边 384 ≤ dock 顶边 385）。",
+        "【运行时验证边界（必须写清楚）】本版仍没在用户真机上验收过。「背景黑的烂的、不像 iOS 26/27」这条，本地构建量到的背景是白的、属性是齐的，因此存在三种未排除的可能：① 用户手机上跑的是 SillyTavern 缓存的旧构建；② 宿主没读到 manifest 的 css 入口；③ 用户看到的是卡片布局或另一个代码副本。本版新增的 ensureDesignSystemLoaded() 就是为把 ① 和 ② 变成可观测事实（控制台会明说）。请用户在拉取后**强制刷新**再看，并把控制台里是否出现「宿主未加载设计系统样式」这句反馈回来。"
     ]
 };
 // 🔥 防重复加载检查（放在最前面，避免任何代码执行）

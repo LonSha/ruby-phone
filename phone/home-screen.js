@@ -405,15 +405,25 @@ export class HomeScreen {
         const plan = narrowPlan({ width: width, level: this._accessLevel() });
         return plan.cols;
     }
-    getIconPageCapacity() {
-        const viewport = globalThis.window?.innerHeight || 840;
-        const h = Math.min(this.phoneShell?.screen?.clientHeight || viewport, viewport);
+    getIconPageCapacity(minTiles = 0) {
         const columns = this._iconColumns();
-        const rows = 5;
-        if (h <= 660) return columns * 2;
-        if (h <= 800) return columns * 3;
-        if (h <= 900) return columns * 4;
-        return columns * rows;
+        /* 一页固定 5 行上限（与 .app-grid-page 的 4x5=20 格设计同口径）。
+         * 不再用「屏幕高度 -> 行数」的固定断点表：那张表与真实行高无关，
+         * 390x780 会算出 3 行(12 格) 而实际能放 4 行(15 格) ⇒ 15 格裂成
+         * 12+3：「首页摆满 12 格、下方留一整块空白、末页 3 格」（用户截图形状）。
+         * 现在一页容量恒等于 列数x5：桌面 15 格在任何宽度下都只占 1 页。
+         * 矮屏（如 320x568）一页可能排不下，由 rp-home-fix.css 给 pager 开纵向滚动
+         * 并用 146px 的 dock 净空护住末行，不再溢出压到 dock 上。 */
+        const perPage = columns * 5;
+        const need = Number(minTiles) > 0 ? Number(minTiles) : 0;
+        if (need > perPage) {
+            /* 桌面格数将来真超过一页上限时，才退回按可用高度分页（保底 2 行）。*/
+            const viewport = globalThis.window?.innerHeight || 840;
+            const h = Math.min(this.phoneShell?.screen?.clientHeight || viewport, viewport);
+            const rows = h <= 660 ? 2 : h <= 800 ? 3 : h <= 900 ? 4 : 5;
+            return Math.max(columns * rows, columns);
+        }
+        return perPage;
     }
 
     /** 现读操作层档位（**只读** storage，不写、不缓存）：窄屏列数随档位微调。 */
@@ -486,7 +496,7 @@ export class HomeScreen {
             .map((t, i) => ({ t, i, r: rankOfTile(t) }))
             .sort((x, y) => (x.r - y.r) || (x.i - y.i))   // 同档内保持原序（稳定）
             .map((x) => x.t);
-        const capacity = this.getIconPageCapacity();
+        const capacity = this.getIconPageCapacity(ordered.length);
         if (ordered.length <= capacity) return [ordered];
         const pages = [];
         for (let i = 0; i < ordered.length; i += capacity) {

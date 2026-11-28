@@ -352,7 +352,13 @@ test('v3930 C3. 只读读数口**每次读都重采**（缓存一份陈读数是
 test('v3930 C4. 分页容量**取自内核列数**，不得自己写一个 4', () => {
   const m = HOME.match(/_iconColumns\(\)\s*\{([\s\S]*?)\n    \}/);
   assert.ok(m, '列数方法未找到');
-  assert.match(HOME, /getIconPageCapacity\(\)\s*\{[^}]*this\._iconColumns\(\)/);
+  /* 容量必须真从 _iconColumns() 取列数。方法体里可能有 if 块，故不能用 [^}]* 跨块匹配；
+   * 改用「方法起点之后 600 字符内出现 this._iconColumns()」这个位置断言。
+   * 参数表不钉死：v4.216.0 起签名带 minTiles，行为契约由 tests/system-v4950 覆盖。 */
+  const capAt = HOME.indexOf('getIconPageCapacity(');
+  assert.ok(capAt > 0, 'getIconPageCapacity 方法未找到');
+  const capBody = HOME.slice(capAt, capAt + 600);
+  assert.ok(/this\._iconColumns\(\)/.test(capBody), '容量必须在方法体开头就从内核列数取列数');
   const body = stripComments(m[1]);
   assert.ok(/narrowPlan\(/.test(body), '容量必须从内核 narrowPlan 派生');
   assert.ok(/plan\.cols/.test(body), '必须真取内核给的列数');

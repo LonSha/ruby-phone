@@ -239,7 +239,7 @@
 
 | 量 | 读数 | 出处 |
 |---|---|---|
-| 版本 | **v4.215.0**（五源同源） | `update-log.json` latest / `package.json` |
+| 版本 | **v4.216.0**（五源同源） | `update-log.json` latest / `package.json` |
 | 门禁 | `npm run check` **二十一道静态门全过**；全量 `node --test tests/*.test.mjs` **586 套件实跑（存量红在案，逐项见 TODO 顶部与当版条目）** | `package.json` scripts.check / `tests/` 实跑 |
 | 体量 | **v4.215.0 机器台账复算**：apps **102 个 App 目录**（`config/apps.js` **106 条 id**）、config **414** 件、tests **586** 套件、scripts **38** 件；`index.js` **977954 字节 / 15619 行**；`phone.css` **664375 字节** | `tools/gen_status_ledger.mjs` / `tests/audit/status-ledger.json` |
 | 跨仓消费 | 已接入上游全部 **5 面**；本仓→上游 **1 面**（`ruby.lonshaBridge` · v3.23.4 登记，R12 对账） | `bridge-contract` 门 / `open_face_registry.tsv` |
